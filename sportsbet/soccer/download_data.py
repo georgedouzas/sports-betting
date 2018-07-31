@@ -4,28 +4,10 @@
 Download and prepare soccer historical data from various leagues.
 """
 
-from os.path import join
+from os.path import join, dirname
 from re import sub
-from itertools import product
 import pandas as pd
-
-
-MAIN_URL = 'http://www.football-data.co.uk/mmz4281'
-YEARS_URLS = ['1314', '1415', '1516', '1617', '1718']
-LEAGUES_URLS = ['E0', 'E1', 'D1', 'D2', 'I1', 'I2', 'SP1',
-                'SP2', 'F1', 'F2', 'N1', 'P1']
-SUFFIX_URLS = [join(league, year) for league, year in product(YEARS_URLS, LEAGUES_URLS)]
-URLS = [join(MAIN_URL, suffix) for suffix in SUFFIX_URLS]
-ID_FEATURES = ['Div', 'Date', 'Season', 'HomeTeam', 'AwayTeam']
-RESULTS_FEATURES = ['FTHG', 'FTAG', 'FTR']
-ODDS_FEATURES = [agent + result for agent, result in product(
-    ['B365', 'BW', 'IW', 'LB', 'PS', 'VC', 'BbMx', 'BbAv'],
-    ['H', 'D', 'A'])]
-GOALS_ODDS_FEATURES = ['BbMx>2.5', 'BbAv>2.5', 'BbMx<2.5', 'BbAv<2.5']
-ASIAN_ODDS_FEATURES = ['BbMxAHH', 'BbAvAHH', 'BbMxAHA', 'BbAvAHA', 'BbAHh']
-CLOSING_ODDS = ['PSCH', 'PSCD', 'PSCA']
-TOTAL_DATA_FEATURES = ID_FEATURES + RESULTS_FEATURES + ODDS_FEATURES + GOALS_ODDS_FEATURES + ASIAN_ODDS_FEATURES + CLOSING_ODDS
-TRAINING_FEATURES = ['TimeIndex', 'Progress', 'Div', 'Season', 'HomeTeam', 'AwayTeam'] + ODDS_FEATURES + GOALS_ODDS_FEATURES + ASIAN_ODDS_FEATURES + CLOSING_ODDS
+from sportsbet.soccer import MAIN_URL, URLS, TOTAL_DATA_FEATURES, RESULTS_MAPPING, TRAINING_FEATURES
 
 
 def download_datasets():
@@ -34,7 +16,7 @@ def download_datasets():
     for url in URLS:
         season = sub('^' + MAIN_URL, '', url).split('/')[1]
         data = pd.read_csv(url)
-        data['Season'] = season
+        data['Season'] = season[:2] + '-' + season[2:]
         data_list.append(data)
     return data_list
 
@@ -54,6 +36,7 @@ def extract_features(data):
     data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%y')
     data['FTHG'] = data['FTHG'].astype(int)
     data['FTAG'] = data['FTAG'].astype(int)
+    data['FTR'] = data['FTR'].apply(lambda result: RESULTS_MAPPING[result])
     date_range = data.groupby(['Div', 'Season']).agg({'Date': [min, max]}).reset_index()
     date_range.columns = ['Div', 'Season', 'MinDate', 'MaxDate']
     data = pd.merge(data, date_range, on=['Div', 'Season'])
@@ -72,5 +55,5 @@ if __name__ =='__main__':
     data = extract_features(data)
     training_odds_data = data.loc[:,  TRAINING_FEATURES + ['FTR']]
     training_over_under_data = data.loc[:, TRAINING_FEATURES + ['TotalGoals']]
-    training_odds_data.to_csv(join('data', 'training_odds_data.csv'), index=False)
-    training_over_under_data.to_csv(join('data', 'training_over_under_data.csv'), index=False)
+    training_odds_data.to_csv(join(dirname(__file__), '..', '..', 'data', 'training_odds_data.csv'), index=False)
+    training_over_under_data.to_csv(join(dirname(__file__), '..', '..', 'data', 'training_over_under_data.csv'), index=False)
