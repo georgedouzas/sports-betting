@@ -7,7 +7,7 @@ Download and prepare soccer historical data from various leagues.
 from os.path import join, dirname
 from re import sub
 import pandas as pd
-from sportsbet.soccer import MAIN_URL, URLS, TOTAL_DATA_FEATURES, RESULTS_MAPPING, TRAINING_FEATURES
+from sportsbet.soccer import MAIN_URL, URLS, DATA_FEATURES, RESULTS_MAPPING, TRAINING_FEATURES
 
 
 def download_datasets():
@@ -25,7 +25,7 @@ def combine_datasets(data_list):
     """Combine various datasets."""
     data = pd.DataFrame()
     for league_data in data_list:
-        data = data.append(league_data.loc[:, TOTAL_DATA_FEATURES])
+        data = data.append(league_data.loc[:, DATA_FEATURES])
     data.reset_index(drop=True, inplace=True)
     data = data[~data.Div.isnull()]
     return data

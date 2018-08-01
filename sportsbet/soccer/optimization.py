@@ -1,21 +1,13 @@
 from os.path import join
 import pandas as pd
-from sklearn.base import BaseEstimator, ClassifierMixin
-from xgboost import XGBClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Imputer
 from category_encoders import OrdinalEncoder
-from sportsbet.soccer import (
-    RESULTS_MAPPING,
-    BETTING_INTERVAL,
-    TEST_SEASON,
-    ODDS_FEATURES,
-    GOALS_ODDS_FEATURES,
-    ASIAN_ODDS_FEATURES,
-    CLOSING_ODDS_FEATURES
-)
+from . import RESULTS_MAPPING
+from .classification import OddsEstimator
 
-BASELINE_NUM_FEATURES = ODDS_FEATURES + GOALS_ODDS_FEATURES + ASIAN_ODDS_FEATURES + CLOSING_ODDS_FEATURES
+TEST_SEASON = '17-18'
+BETTING_INTERVAL = 7
 
 
 def select_odd(clf, X, agent):
@@ -33,38 +25,6 @@ def calculate_profit(y_true, y_pred, odd, select):
     return 100 * profit
 
 
-class BaselineEstimator(BaseEstimator, ClassifierMixin):
-    """Predict the result based on the odds given by betting agents."""
-
-    def __init__(self, agent='B365', starting_index=None):
-        self.agent = agent
-        self.starting_index = starting_index
-
-    def fit(self, X, y, sample_weight=None):
-        """No actual fitting occurs."""
-        starting_index = self.starting_index
-        if starting_index is None:
-            starting_index = X.shape[1] - len(BASELINE_NUM_FEATURES) + ODDS_FEATURES.index(self.agent + 'H')
-        self.features_indices_ = list(range(starting_index, starting_index + 3))
-        return self
-
-    def predict(self, X):
-        """Predict class labels for samples in X.
-
-        Parameters
-        ----------
-        X : {array-like, sparse matrix}, shape = [n_samples, n_features]
-            Samples.
-
-        Returns
-        -------
-        C : array, shape = [n_samples]
-            Predicted class label per sample.
-        """
-        predictions = X[:, self.features_indices_].argmin(axis=1)
-        return predictions
-
-
 training_odds_data = pd.read_csv(join('data', 'training_odds_data.csv'))
 weeks = pd.cut(training_odds_data.TimeIndex, range(0, max(training_odds_data.TimeIndex) + BETTING_INTERVAL, BETTING_INTERVAL), False)
 weeks_test_season = weeks[training_odds_data.Season == TEST_SEASON].cat.remove_unused_categories()
@@ -79,7 +39,7 @@ for week_test in weeks_test_season.cat.categories:
 
     agent = 'IW'
 
-    clf = XGBClassifier()
+    clf = OddsEstimator()
 
     pipeline = make_pipeline(OrdinalEncoder(), Imputer(), clf)
     pipeline.fit(X_train, y_train)
