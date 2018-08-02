@@ -7,22 +7,26 @@ results and a time series cross validator.
 # License: BSD 3 clause
 
 import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import NotFittedError, check_array
 from sklearn.model_selection._split import _BaseKFold, _num_samples
 from sklearn.utils import indexable
-from .. import ODDS_FEATURES
+from . import ODDS_FEATURES, TOTAL_ODDS_FEATURES, BETTING_INTERVAL
 
 
 class OddsEstimator(BaseEstimator, ClassifierMixin):
     """Predict the result based on the odds given by betting agents."""
 
+    def __init__(self, odd_features=None):
+        self.odds_features = odd_features
+
     def fit(self, X, y):
         """No actual fitting occurs."""
         check_classification_targets(y)
         self.classes_ = np.unique(y)
-        self.odds_features_ = range(len(ODDS_FEATURES))
+        self.odds_features_ = range(len(ODDS_FEATURES)) if self.odds_features is None else self.odds_features
         return self
 
     def predict(self, X):
@@ -78,9 +82,10 @@ class SeasonTimeSeriesSplit(_BaseKFold):
         in the [0.0, 1.0] range.
     """
 
-    def __init__(self, n_splits=5, time_index=None, season_index):
-        super().__init__(n_splits, shuffle=False, random_state=None)
-        self.test_sizes = test_sizes
+    def __init__(self, time_index=None, season_index=None, betting_interval=None):
+        self.time_index = time_index
+        self.season_index = season_index
+        self.betting_interval = betting_interval
 
     def split(self, X, y=None, groups=None):
         """Generates indices to split data into training and test set.
@@ -104,19 +109,22 @@ class SeasonTimeSeriesSplit(_BaseKFold):
         X, y, groups = indexable(X, y, groups)
         n_samples = _num_samples(X)
         indices = np.arange(n_samples)
-        test_size = int(n_samples * self.test_percentage)
-        test_starts = [n_samples - test_size * ind for ind in range(1, self.n_splits + 1)]
-        test_ends = [n_samples - test_size * ind for ind in range(0, self.n_splits)]
-        for test_start, test_end in zip(test_starts, test_ends):
-            train_indices = indices[0:test_start]
-            test_indices = indices[test_start:test_end]
+
+        self.time_index_ = len(TOTAL_ODDS_FEATURES) if self.time_index is None else self.time_index
+        self.season_index_ = len(TOTAL_ODDS_FEATURES) + 3 if self.season_index is None else self.season_index
+        self.betting_interval_ = BETTING_INTERVAL if self.betting_interval is None else self.betting_interval
+
+        try:
+            time, seasons = X[:, self.time_index_], X[:, self.season_index_]
+        except TypeError:
+            time, seasons = X.iloc[:, self.time_index_].values, X.iloc[:, self.season_index_].values
+        time_intervals = pd.cut(time, range(0, max(time) + self.betting_interval_, self.betting_interval_), False)
+        season_time_intervals = time_intervals[seasons == seasons[-1]].remove_unused_categories().categories
+        self.n_splits = len(season_time_intervals)
+
+        for time_interval in season_time_intervals:
+            train_indices = indices[time_intervals < time_interval]
+            test_indices = indices[time_intervals == time_interval]
             yield (train_indices, test_indices)
 
-import pandas as pd
-from os.path import join
-from sportsbet.soccer import BETTING_INTERVAL, TEST_SEASON
-training_odds_data = pd.read_csv(join('data', 'training_odds_data.csv'))
-X, y = training_odds_data.iloc[:, :-1], training_odds_data.iloc[:, -1]
-weeks = pd.cut(training_odds_data.TimeIndex, range(0, max(training_odds_data.TimeIndex) + BETTING_INTERVAL, BETTING_INTERVAL), False)
-weeks_test_season = weeks[training_odds_data.Season == TEST_SEASON].cat.remove_unused_categories()
-X, y, groups = indexable(X, y, None)
+
