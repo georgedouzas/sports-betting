@@ -16,6 +16,8 @@ ASIAN_ODDS_BETTING_AGENTS = ['BbMx', 'BbAv']
 
 # Parameters
 RESULTS_MAPPING = OrderedDict({'H': 0, 'D': 1, 'A': 2})
+TEST_SEASON = '17-18'
+BETTING_INTERVAL = 7
 
 # Features
 DATA_ID_FEATURES = ['Div', 'Date', 'Season', 'HomeTeam', 'AwayTeam']

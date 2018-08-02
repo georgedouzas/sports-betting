@@ -6,9 +6,6 @@ from category_encoders import OrdinalEncoder
 from . import RESULTS_MAPPING
 from .classification import OddsEstimator
 
-TEST_SEASON = '17-18'
-BETTING_INTERVAL = 7
-
 
 def select_odd(clf, X, agent):
     """Select odds based on predictions."""
