@@ -2,33 +2,64 @@ from collections import OrderedDict
 from os.path import join
 from itertools import product
 
-# Downloading URLs
-MAIN_URL = 'http://www.football-data.co.uk/mmz4281'
-YEARS_URLS = ['1314', '1415', '1516', '1617', '1718']
-LEAGUES_URLS = ['E0', 'E1', 'D1', 'D2', 'I1', 'I2', 'SP1', 'SP2', 'F1', 'F2', 'N1', 'P1']
-SUFFIX_URLS = [join(league, year) for league, year in product(YEARS_URLS, LEAGUES_URLS)]
-URLS = [join(MAIN_URL, suffix) for suffix in SUFFIX_URLS]
-
-# Betting agents
-ODDS_BETTING_AGENTS = ['B365', 'BW', 'IW', 'LB', 'PS', 'VC', 'BbMx', 'BbAv']
-GOALS_ODDS_BETTING_AGENTS = ['BbMx', 'BbAv']
-ASIAN_ODDS_BETTING_AGENTS = ['BbMx', 'BbAv']
-
 # Parameters
+TEAMS_MAPPING = OrderedDict({
+    'Borussia Monchengladbach': "M'gladbach",
+    'Brighton and Hove Albion': 'Brighton',
+    'Deportivo La Coruña': 'La Coruna',
+    'Internazionale': 'Inter',
+    'Chievo Verona': 'Chievo'
+})
+LEAGUES_MAPPING = OrderedDict({
+    'Barclays Premier League': 'E0',
+    'German Bundesliga': 'D1',
+    'Italy Serie A': 'I1',
+    'Spanish Primera Division': 'SP1'
+})
+SPI_FEATURES_MAPPING = OrderedDict({
+    'date': 'Date',
+    'league': 'League',
+    'team1': 'HomeTeam',
+    'team2': 'AwayTeam',
+    'spi1': 'HomeTeamSPI',
+    'spi2': 'AwayTeamSPI',
+    'prob1': 'ProbHomeTeamSPI',
+    'prob2': 'ProbAwayTeamSPI',
+    'probtie': 'ProbDrawSPI'
+})
+FD_FEATURES_MAPPING = OrderedDict({
+    'Div': 'League',
+    'FTR': 'Target'
+})
 RESULTS_MAPPING = OrderedDict({'H': 0, 'D': 1, 'A': 2})
-TEST_SEASON = '17-18'
-BETTING_INTERVAL = 7
+YEARS = ['1617', '1718']
+MIN_N_MATCHES = 20
+SEASON_STARTING_DAY = {'16-17': 0, '17-18': 363}
 
-# Features
-DATA_ID_FEATURES = ['Div', 'Date', 'Season', 'HomeTeam', 'AwayTeam']
-TRAINING_ID_FEATURES = ['TimeIndex', 'Progress', 'Div', 'Season', 'HomeTeam', 'AwayTeam']
-RESULTS_FEATURES = ['FTHG', 'FTAG', 'FTR']
+# SPI data
+SPI_URL = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
+SPI_DATA_FEATURES = ['date', 'league', 'team1', 'team2', 'spi1', 'spi2', 'prob1', 'prob2', 'probtie']
 
-ODDS_FEATURES = [agent + result for agent in ODDS_BETTING_AGENTS for result in RESULTS_MAPPING.keys()]
-GOALS_ODDS_FEATURES = [agent + token for agent in GOALS_ODDS_BETTING_AGENTS for token in ['>2.5', '<2.5']]
-ASIAN_ODDS_FEATURES = [agent + token for agent in ASIAN_ODDS_BETTING_AGENTS for token in ['AHH', 'AHA']] + ['BbAHh']
-CLOSING_ODDS_FEATURES = ['PSCH', 'PSCD', 'PSCA']
-TOTAL_ODDS_FEATURES = ODDS_FEATURES + GOALS_ODDS_FEATURES + ASIAN_ODDS_FEATURES + CLOSING_ODDS_FEATURES
+# Football data
+FD_URL = 'http://www.football-data.co.uk/mmz4281'
+FD_SUFFIX = [join(year, league) for year, league in product(YEARS, LEAGUES_MAPPING.values())]
+FD_URLS = [join(FD_URL, suffix) for suffix in FD_SUFFIX]
 
-DATA_FEATURES = TOTAL_ODDS_FEATURES + DATA_ID_FEATURES + RESULTS_FEATURES
-TRAINING_FEATURES = TOTAL_ODDS_FEATURES + TRAINING_ID_FEATURES
+FD_MAX_ODDS, FD_AVG_ODDS = 'BbMx', 'BbAv'
+FD_MAX_ODDS_FEATURES = [FD_MAX_ODDS + result for result in RESULTS_MAPPING.keys()]
+FD_AVG_ODDS_FEATURES = [FD_AVG_ODDS + result for result in RESULTS_MAPPING.keys()]
+FD_ID_FEATURES = ['Div', 'Date', 'Season', 'HomeTeam', 'AwayTeam']
+FD_DATA_FEATURES = FD_MAX_ODDS_FEATURES + FD_AVG_ODDS_FEATURES + FD_ID_FEATURES + ['FTR']
+
+# Training data
+SPI_FEATURES = ['HomeTeamSPI', 'AwayTeamSPI']
+PROB_SPI_FEATURES = ['ProbHomeTeamSPI', 'ProbDrawSPI', 'ProbAwayTeamSPI']
+PROB_FD_FEATURES = ['ProbHomeTeamFD', 'ProbDrawFD', 'ProbAwayTeamFD']
+ID_FEATURES = ['Day', 'Season', 'League', 'HomeTeam', 'AwayTeam', 'Target']
+TRAINING_FEATURES = SPI_FEATURES + PROB_SPI_FEATURES + PROB_FD_FEATURES + ID_FEATURES
+
+# ID features
+KEYS_FEATURES = ['Date', 'League', 'HomeTeam', 'AwayTeam']
+
+
+
