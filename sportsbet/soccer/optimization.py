@@ -11,6 +11,7 @@ from sklearn.utils.validation import check_array
 from sklearn.model_selection._split import _BaseKFold, _num_samples
 from sklearn.utils import indexable
 from sklearn.metrics import precision_score
+from sklearn.model_selection import GridSearchCV
 import progressbar
 from . import (
     MIN_N_MATCHES,
@@ -22,7 +23,8 @@ from . import (
     FD_MAX_ODDS
 )
 
-RESULTS_COLUMNS = ['Days', 'Profit', 'Total profit', 'Precision', 'Bets precision', 'Predictions', 'Matches']
+RESULTS_COLUMNS = ['Days', 'Profit', 'Total profit', 'Precision', 'Bets precision', 'Predictions', 'Matches', 'Threshold']
+ODDS_THRESHOLD = 3.75
 
 
 class SeasonTimeSeriesSplit(_BaseKFold):
@@ -132,8 +134,17 @@ def calculate_profit(y_true, y_pred, odds, odds_threshold, min_n_bets):
     return profit.mean(), n_bets, correct_bets.sum()
 
 
-def simulate_results(estimator, training, odds_data, odds_threshold, min_n_bets, min_n_matches, predicted_result):
+def simulate_results(estimator, param_grid, training, odds_data, min_n_matches, min_n_bets, predicted_result):
     """Evaluate the profit by nested cross-validation."""
+
+    gscv = GridSearchCV(
+        estimator=estimator,
+        param_grid=param_grid,
+        scoring='precision',
+        cv=SeasonTimeSeriesSplit(min_n_matches=min_n_matches),
+        refit=True,
+        n_jobs=-1
+    )
 
     X, y = training.iloc[:, :-1], training.iloc[:, -1]
     y = y.apply(lambda result: 1 if RESULTS_MAPPING[predicted_result] == result else 0)
@@ -148,7 +159,12 @@ def simulate_results(estimator, training, odds_data, odds_threshold, min_n_bets,
     for ind, (train_indices, test_indices) in enumerate(scv.split(X, y)):
 
         X_train, X_test, y_train, y_test = X.iloc[train_indices, :], X.iloc[test_indices, :], y[train_indices], y[test_indices]
-        y_pred = estimator.fit(X_train, y_train).predict(X_test)
+        if len(param_grid) > 0:
+            y_pred = gscv.fit(X_train, y_train).predict(X_test)
+            odds_threshold = 1 / gscv.best_score_
+        else:
+            y_pred = estimator.fit(X_train, y_train).predict(X_test)
+            odds_threshold = ODDS_THRESHOLD
 
         precision = precision_score(y_test, y_pred)
 
@@ -159,7 +175,7 @@ def simulate_results(estimator, training, odds_data, odds_threshold, min_n_bets,
         n_predictions = y_pred.sum()
         days = (X.Day[test_indices[0]] - starting_day, X.Day[test_indices[-1]] - starting_day)
 
-        result = (days, profit, total_profit, precision, n_correct_bets / n_bets, n_predictions, n_matches)
+        result = (days, profit, total_profit, precision, n_correct_bets / n_bets, n_predictions, n_matches, odds_threshold)
         results.append(result)
 
         bar.update(ind)
