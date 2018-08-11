@@ -13,17 +13,19 @@ from sklearn.utils import indexable
 from sklearn.metrics import precision_score
 from sklearn.model_selection import GridSearchCV
 import progressbar
-from . import (
+from sportsbet.soccer import (
     MIN_N_MATCHES,
     SPI_FEATURES,
     PROB_SPI_FEATURES,
     PROB_FD_FEATURES,
     SEASON_STARTING_DAY,
     RESULTS_MAPPING,
-    FD_MAX_ODDS
+    FD_MAX_ODDS,
+    ID_FEATURES
 )
 
-RESULTS_COLUMNS = ['Days', 'Profit', 'Total profit', 'Precision', 'Bets precision', 'Predictions', 'Matches', 'Threshold']
+RESULTS_COLUMNS = ['Days', 'Profit', 'Total profit', 'Precision', 'Bets precision',
+                   'Bets precision ratio', 'Predictions ratio', 'Threshold']
 ODDS_THRESHOLD = 3.75
 
 
@@ -131,12 +133,13 @@ def calculate_profit(y_true, y_pred, odds, odds_threshold, min_n_bets):
     correct_bets = y_true == y_pred
     profit = correct_bets * (odds - 1)
     profit[profit == 0] = -1
-    return profit.mean(), n_bets, correct_bets.sum()
+    return np.average(profit), n_bets, correct_bets.sum()
 
 
-def simulate_results(estimator, param_grid, training, odds_data, min_n_matches, min_n_bets, predicted_result):
+def simulate_betting(estimator, param_grid, training, odds_data, min_n_matches, min_n_bets, predicted_result):
     """Evaluate the profit by nested cross-validation."""
 
+    # Define grid search object
     gscv = GridSearchCV(
         estimator=estimator,
         param_grid=param_grid,
@@ -146,19 +149,33 @@ def simulate_results(estimator, param_grid, training, odds_data, min_n_matches, 
         n_jobs=-1
     )
 
+    # Extract training data and binarize target
     X, y = training.iloc[:, :-1], training.iloc[:, -1]
     y = y.apply(lambda result: 1 if RESULTS_MAPPING[predicted_result] == result else 0)
 
+    # Extract odds data
     odds = odds_data[FD_MAX_ODDS + predicted_result]
 
-    results, total_profit = [], 0
-
+    # Define parameters
+    total_profit = 0
     starting_day = SEASON_STARTING_DAY['17-18']
+
+    # Main results placeholders
+    results = []
+    matches = pd.DataFrame()
+
+    # Define time series cross-validator
     scv = SeasonTimeSeriesSplit(starting_day=starting_day, min_n_matches=min_n_matches)
+
+    # Define progress bar
     bar = progressbar.ProgressBar(max_value=scv.get_n_splits(X, y) - 1)
+
     for ind, (train_indices, test_indices) in enumerate(scv.split(X, y)):
 
+        # Split train and test data
         X_train, X_test, y_train, y_test = X.iloc[train_indices, :], X.iloc[test_indices, :], y[train_indices], y[test_indices]
+
+        # Perform nested cross-validation and make predictions
         if len(param_grid) > 0:
             y_pred = gscv.fit(X_train, y_train).predict(X_test)
             odds_threshold = 1 / gscv.best_score_
@@ -166,21 +183,60 @@ def simulate_results(estimator, param_grid, training, odds_data, min_n_matches, 
             y_pred = estimator.fit(X_train, y_train).predict(X_test)
             odds_threshold = ODDS_THRESHOLD
 
+        # Define parameters
+        partial_odds = odds[test_indices]
+        boolean_mask = y_pred.astype(bool) & (partial_odds > odds_threshold)
+
+        # Calculate main results
         precision = precision_score(y_test, y_pred)
-
-        profit, n_bets, n_correct_bets = calculate_profit(y_test, y_pred, odds[test_indices], odds_threshold, min_n_bets)
+        profit, n_bets, n_correct_bets = calculate_profit(y_test, y_pred, partial_odds, odds_threshold, min_n_bets)
         total_profit += profit
-
         n_matches = y_pred.size
         n_predictions = y_pred.sum()
         days = (X.Day[test_indices[0]] - starting_day, X.Day[test_indices[-1]] - starting_day)
 
-        result = (days, profit, total_profit, precision, n_correct_bets / n_bets, n_predictions, n_matches, odds_threshold)
-        results.append(result)
+        result = (days, profit, total_profit, precision, n_correct_bets / n_bets,
+                  '%s / %s' % (n_correct_bets, n_bets), '%s / %s' % (n_predictions, n_matches), odds_threshold)
+        partial_matches = pd.concat([
+            X_test.loc[boolean_mask, ID_FEATURES[:-1]],
+            partial_odds[boolean_mask],
+            y_test[boolean_mask],
+        ], axis=1).rename(columns={(FD_MAX_ODDS + predicted_result): 'Odds', 'Target': 'Result'})
 
+        # Append results
+        results.append(result)
+        matches = matches.append(partial_matches)
+
+        # Update progress bar
         bar.update(ind)
 
-    results = pd.DataFrame(results, columns=RESULTS_COLUMNS)
+    return pd.DataFrame(results, columns=RESULTS_COLUMNS), matches.reset_index(drop=True)
 
-    return results
+
+if __name__ == '__main__':
+
+    from os.path import join, dirname
+    from collections import Counter
+    from warnings import filterwarnings
+    from category_encoders import OrdinalEncoder
+    from imblearn.pipeline import make_pipeline
+    from imblearn.over_sampling import SMOTE
+    from xgboost import XGBClassifier
+    filterwarnings('ignore')
+
+    def ratio(y):
+        return {1: int(1.2 * Counter(y)[0])}
+
+    estimator = make_pipeline(
+        OrdinalEncoder(return_df=False),
+        SMOTE(random_state=0, k_neighbors=2, ratio=ratio),
+        XGBClassifier(max_depth=3, n_estimators=125, learning_rate=0.01, random_state=1)
+    )
+    param_grid = {}
+
+    training = pd.read_csv(join(dirname(__file__), '..', '..', 'data', 'training.csv'))
+    odds_data = pd.read_csv(join(dirname(__file__), '..', '..', 'data', 'odds_data.csv'))
+
+    results, matches = simulate_betting(estimator, param_grid, training, odds_data, 20, 1, 'D')
+
 
