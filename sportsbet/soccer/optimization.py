@@ -134,6 +134,8 @@ class Betting:
         correct_bets = (y_true == y_pred)
         profit = correct_bets * (odds - 1)
         profit[profit == 0] = -1
+        if profit.size == 0:
+            return 0.0
         if use_weights:
             profit = np.average(profit, weights=np.exp(odds))
         else:
