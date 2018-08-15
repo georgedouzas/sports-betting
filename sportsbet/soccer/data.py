@@ -8,9 +8,12 @@ from os.path import join, dirname
 from re import sub
 from difflib import get_close_matches
 import pandas as pd
-from sportsbet.soccer import (
-    LEAGUES_MAPPING,
+from .configuration import (
+    TEAMS_MAPPING,
+    LEAGUES_MAPPING,   
     SPI_FEATURES_MAPPING,
+    FD_FEATURES_MAPPING,
+    RESULTS_MAPPING,
     SPI_URL,
     SPI_DATA_FEATURES,
     FD_URL,
@@ -18,12 +21,9 @@ from sportsbet.soccer import (
     FD_DATA_FEATURES,
     FD_AVG_ODDS_FEATURES,
     FD_MAX_ODDS_FEATURES,
-    PROB_FD_FEATURES,
-    FD_FEATURES_MAPPING,
-    TEAMS_MAPPING,
-    TRAINING_FEATURES,
-    KEYS_FEATURES,
-    RESULTS_MAPPING,
+    TRAIN_PROB_FD_FEATURES,
+    TRAIN_FEATURES,
+    KEYS_FEATURES
 )
 
 
@@ -55,7 +55,7 @@ def extract_training_data(spi_data, fd_data):
 
     # Probabilities data
     probs = 1 / fd_data.loc[:, FD_AVG_ODDS_FEATURES].values
-    probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=PROB_FD_FEATURES)
+    probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=TRAIN_PROB_FD_FEATURES)
     probs_data = pd.concat([probs, fd_data], axis=1)
     probs_data['Date'] = pd.to_datetime(probs_data['Date'], format='%d/%m/%y')
     probs_data['FTR'] = probs_data['FTR'].apply(lambda result: RESULTS_MAPPING[result])
@@ -77,23 +77,15 @@ def extract_training_data(spi_data, fd_data):
     training_data = pd.merge(spi_data, probs_data, on=KEYS_FEATURES)
     training_data.sort_values(KEYS_FEATURES, inplace=True)
     training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
-    training_data = training_data[TRAINING_FEATURES]
+    training_data = training_data[TRAIN_FEATURES]
 
     return training_data
 
 
 def extract_odds_dataset(fd_data):
-    """Extract the odds data from"""
+    """Extract the odds data from football-data.co.uk."""
     fd_data = fd_data.rename(columns={'Div': 'League'})
     odds_data = fd_data.loc[:, ['Season'] + KEYS_FEATURES + FD_MAX_ODDS_FEATURES]
     odds_data['Date'] = pd.to_datetime(odds_data['Date'], format='%d/%m/%y')
     odds_data = odds_data.sort_values(KEYS_FEATURES).drop(columns=['Date'])
     return odds_data
-
-
-if __name__ == '__main__':
-    spi_data, fd_data = fetch_raw_data()
-    training_data = extract_training_data(spi_data, fd_data)
-    odds_data = extract_odds_dataset(fd_data)
-    training_data.to_csv(join(dirname(__file__), '..', '..', 'data', 'training_data.csv'), index=False)
-    odds_data.to_csv(join(dirname(__file__), '..', '..', 'data', 'odds_data.csv'), index=False)

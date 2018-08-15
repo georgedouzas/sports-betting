@@ -1,31 +1,30 @@
 """
-Includes classes and functions to select the optimal betting strategy.
+Includes classes and functions to test and select the optimal 
+betting strategy on historical and current data.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: BSD 3 clause
 
+from os.path import join, dirname
 import numpy as np
 import pandas as pd
 from sklearn.utils.validation import check_array
 from sklearn.model_selection._split import _BaseKFold, _num_samples
 from sklearn.utils import indexable
 from sklearn.metrics import precision_score
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, ParameterGrid
 import progressbar
-from . import (
+from .configuration import (
     MIN_N_MATCHES,
-    SPI_FEATURES,
-    PROB_SPI_FEATURES,
-    PROB_FD_FEATURES,
+    TRAIN_SPI_FEATURES,
+    TRAIN_PROB_SPI_FEATURES,
+    TRAIN_PROB_FD_FEATURES,
     SEASON_STARTING_DAY,
     RESULTS_MAPPING,
-    FD_MAX_ODDS
+    FD_MAX_ODDS,
+    RESULTS_FEATURES
 )
-
-RESULTS_COLUMNS = ['Days', 'Profit', 'Total profit', 'Precision', 'Bets precision',
-                   'Bets precision ratio', 'Predictions ratio', 'Threshold']
-ODDS_THRESHOLD = 3.75
 
 
 class SeasonTimeSeriesSplit(_BaseKFold):
@@ -48,7 +47,7 @@ class SeasonTimeSeriesSplit(_BaseKFold):
     def _generate_breakpoints(self, X, y=None, groups=None):
         """Generates breakpoints to split data into training and test sets."""
         X, y, groups = indexable(X, y, groups)
-        length_num_features = len(SPI_FEATURES + PROB_SPI_FEATURES + PROB_FD_FEATURES)
+        length_num_features = len(TRAIN_SPI_FEATURES + TRAIN_PROB_SPI_FEATURES + TRAIN_PROB_FD_FEATURES)
 
         self.n_samples_ = _num_samples(X)
         self.day_index_ = length_num_features if self.day_index is None else self.day_index
@@ -124,51 +123,60 @@ class SeasonTimeSeriesSplit(_BaseKFold):
 
 class Betting:
 
-    def __init__(self, training_data, odds_data):
-        self.training_data = training_data
-        self.odds_data = odds_data
+    def __init__(self, estimator=None, param_grid=None):
+        self.estimator = estimator
+        self.param_grid = param_grid
 
     @staticmethod
-    def _calculate_profit(y_true, y_pred, odds, use_weights):
+    def _calculate_profit(y_true, y_pred, odds, generate_weights):
         """Calculate mean profit."""
         correct_bets = (y_true == y_pred)
         if correct_bets.size == 0:
             return 0.0
         profit = correct_bets * (odds - 1)
         profit[profit == 0] = -1
-        if use_weights:
-            profit = np.average(profit, weights=np.exp(odds))
+        if generate_weights is not None:
+            profit = np.average(profit, weights=generate_weights(odds))
         else:
             profit = profit.mean()
         return profit
 
-    def simulate(self, estimator, param_grid, min_n_matches, predicted_result, fix_threshold=True, use_weights=True):
+    def simulate_results(self, training_data, odds_data, test_season, predicted_result, 
+                         min_n_matches, odds_threshold, generate_weights, random_state):
         """Evaluate the profit by nested cross-validation."""
-        pass
 
         # Define grid search object
         gscv = GridSearchCV(
-            estimator=estimator,
-            param_grid=param_grid,
+            estimator=self.estimator,
+            param_grid=self.param_grid,
             scoring='precision',
             cv=SeasonTimeSeriesSplit(min_n_matches=min_n_matches),
             refit=True,
             n_jobs=-1
         )
 
+        # Set random state
+        if random_state is not None:
+            parameters = gscv.get_params()
+            for name, _ in gscv.estimator.steps:
+                param_key = 'estimator__%s__%s' % (name, 'random_state')
+                if param_key in parameters.keys():
+                    gscv.set_params(**{param_key: random_state})
+
         # Extract training data and binarize target
-        X, y = self.training_data.iloc[:, :-1], self.training_data.iloc[:, -1]
+        X, y = training_data.iloc[:, :-1], training_data.iloc[:, -1]
         y = y.apply(lambda result: 1 if RESULTS_MAPPING[predicted_result] == result else 0)
 
         # Extract odds data
-        odds = self.odds_data[FD_MAX_ODDS + predicted_result]
+        odds = odds_data[FD_MAX_ODDS + predicted_result]
 
         # Define parameters
         total_profit = 0
-        starting_day = SEASON_STARTING_DAY['17-18']
+        starting_day = SEASON_STARTING_DAY[test_season]
 
-        # Main results placeholder
+        # Placeholders
         results = []
+        thresholds = []
 
         # Define time series cross-validator
         scv = SeasonTimeSeriesSplit(starting_day=starting_day, min_n_matches=min_n_matches)
@@ -183,19 +191,28 @@ class Betting:
             odds_test = odds[test_indices]
 
             # Perform nested cross-validation and make predictions
-            if len(param_grid) == 0 and fix_threshold:
-                y_pred = estimator.fit(X_train, y_train).predict(X_test)
-            else:
+            if odds_threshold is None:
                 y_pred = gscv.fit(X_train, y_train).predict(X_test)
-            odds_threshold = ODDS_THRESHOLD if fix_threshold else 1 / gscv.best_score_
+                thresholds.append(1 / gscv.best_score_)
+            else:
+                parameters = list(ParameterGrid(self.param_grid)) 
+                if len(parameters) == 1:
+                    self.estimator.set_params(**parameters[0])
+                    y_pred = self.estimator.fit(X_train, y_train).predict(X_test)
+                else:
+                    y_pred = gscv.fit(X_train, y_train).predict(X_test)
+                thresholds.append(odds_threshold)
+
+            # Calculate mean odds threshold
+            mean_odds_threshold = np.mean(thresholds)
 
             # Filter bets
-            boolean_mask = y_pred.astype(bool) & (odds_test > odds_threshold)
+            boolean_mask = y_pred.astype(bool) & (odds_test > mean_odds_threshold)
             y_test_sel, y_pred_sel, odds_test_sel = y_test[boolean_mask], y_pred[boolean_mask], odds_test[boolean_mask]
 
             # Calculate main results
             days = (X.Day[test_indices[0]] - starting_day, X.Day[test_indices[-1]] - starting_day)
-            profit = self._calculate_profit(y_test_sel, y_pred_sel, odds_test_sel, use_weights)
+            profit = self._calculate_profit(y_test_sel, y_pred_sel, odds_test_sel, generate_weights)
             total_profit += profit
             precision = precision_score(y_test, y_pred)
             bets_precision = precision_score(y_test_sel, y_pred_sel)
@@ -209,7 +226,7 @@ class Betting:
                 precision, bets_precision,
                 '%s / %s' % (n_correct_bets, n_bets),
                 '%s / %s' % (n_predictions, n_matches),
-                odds_threshold
+                mean_odds_threshold
             )
 
             # Append results
@@ -218,7 +235,6 @@ class Betting:
             # Update progress bar
             bar.update(ind)
 
-        results = pd.DataFrame(results, columns=RESULTS_COLUMNS)
+        results = pd.DataFrame(results, columns=RESULTS_FEATURES)
 
         return results
-
