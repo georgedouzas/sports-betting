@@ -74,8 +74,12 @@ RESULTS_FEATURES = ['Days', 'Profit', 'Total profit', 'Precision', 'Bets precisi
                    'Bets precision ratio', 'Predictions ratio', 'Threshold']
 
 # Simulation parameters
-def over(y): 
+def RATIO_1(y): 
+    return {1: int(1.1 * Counter(y)[0])}
+def RATIO_2(y): 
     return {1: int(1.2 * Counter(y)[0])}
+def RATIO_3(y): 
+    return {1: int(1.3 * Counter(y)[0])}
 ODDS_THRESHOLD = 3.75
 GENERATE_WEIGHTS = np.exp
 ESTIMATOR = make_pipeline(
@@ -84,11 +88,11 @@ ESTIMATOR = make_pipeline(
     XGBClassifier()
 )
 PARAM_GRID = dict(
-    smote__k_neighbors=[2],
-    smote__ratio=[over],
+    smote__k_neighbors=[2, 3],
+    smote__ratio=['auto', RATIO_1, RATIO_2, RATIO_3],
     xgbclassifier__max_depth=[3],
-    xgbclassifier__n_estimators=[125],
-    xgbclassifier__learning_rate=[0.01]
+    xgbclassifier__n_estimators=[1000],
+    xgbclassifier__learning_rate=[0.005, 0.01, 0.02]
 )
 
 
