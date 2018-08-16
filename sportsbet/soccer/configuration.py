@@ -80,8 +80,8 @@ def RATIO_2(y):
     return {1: int(1.2 * Counter(y)[0])}
 def RATIO_3(y): 
     return {1: int(1.3 * Counter(y)[0])}
-def RATIO_5(y): 
-    return {1: int(1.5 * Counter(y)[0])}
+def RATIO_4(y): 
+    return {1: int(1.4 * Counter(y)[0])}
 ODDS_THRESHOLD = 3.75
 GENERATE_WEIGHTS = np.exp
 ESTIMATOR = make_pipeline(
@@ -90,11 +90,11 @@ ESTIMATOR = make_pipeline(
     XGBClassifier()
 )
 PARAM_GRID = dict(
-    smote__k_neighbors=[2, 3],
-    smote__ratio=['auto', RATIO_1, RATIO_2, RATIO_3, RATIO_5],
-    xgbclassifier__max_depth=[2, 3],
+    smote__k_neighbors=[2, 4],
+    smote__ratio=['auto', RATIO_1, RATIO_2, RATIO_3, RATIO_4],
+    xgbclassifier__max_depth=[3],
     xgbclassifier__n_estimators=[1000],
-    xgbclassifier__learning_rate=[0.001, 0.005, 0.01, 0.02, 0.05]
+    xgbclassifier__learning_rate=[0.005, 0.01, 0.02]
 )
 FIT_PARAMS = dict(
     test_size=0.05,
