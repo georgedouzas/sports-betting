@@ -9,7 +9,14 @@ from os.path import join
 from warnings import filterwarnings
 import numpy as np
 import pandas as pd
-from .configuration import MIN_N_MATCHES, ESTIMATOR, PARAM_GRID, ODDS_THRESHOLD, GENERATE_WEIGHTS
+from .configuration import ( 
+    ESTIMATOR, 
+    PARAM_GRID,
+    FIT_PARAMS,
+    MIN_N_MATCHES,
+    ODDS_THRESHOLD, 
+    GENERATE_WEIGHTS
+)
 from .data import fetch_raw_data, extract_training_data, extract_odds_dataset
 from .optimization import Betting
 
@@ -25,13 +32,13 @@ def fetch_simulation_data(dirpath=None):
     return training_data, odds_data
 
 
-def generate_simulation_results(estimator=ESTIMATOR, param_grid=PARAM_GRID, dirpath='data', test_season='17-18', 
-                                predicted_result='D', min_matches=MIN_N_MATCHES, odds_threshold=ODDS_THRESHOLD,
-                                generate_weights=GENERATE_WEIGHTS, random_state=None):
+def generate_simulation_results(estimator=ESTIMATOR, param_grid=PARAM_GRID, dirpath='data', fit_params=FIT_PARAMS,
+                                test_season='17-18', predicted_result='D', min_matches=MIN_N_MATCHES, 
+                                odds_threshold=ODDS_THRESHOLD, generate_weights=GENERATE_WEIGHTS, random_state=None):
     """Run betting simulation and generate the results."""
     filterwarnings('ignore')
     training_data = pd.read_csv(join(dirpath, 'training_data.csv'))
     odds_data = pd.read_csv(join(dirpath, 'odds_data.csv'))
-    betting = Betting(estimator, param_grid)
+    betting = Betting(estimator, param_grid, fit_params)
     results = betting.simulate_results(training_data, odds_data, test_season, predicted_result, min_matches, odds_threshold, generate_weights, random_state)
     return results

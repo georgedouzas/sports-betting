@@ -13,7 +13,7 @@ from sklearn.utils.validation import check_array
 from sklearn.model_selection._split import _BaseKFold, _num_samples
 from sklearn.utils import indexable
 from sklearn.metrics import precision_score
-from sklearn.model_selection import GridSearchCV, ParameterGrid
+from sklearn.model_selection import GridSearchCV, ParameterGrid, train_test_split
 import progressbar
 from .configuration import (
     MIN_N_MATCHES,
@@ -123,9 +123,10 @@ class SeasonTimeSeriesSplit(_BaseKFold):
 
 class Betting:
 
-    def __init__(self, estimator=None, param_grid=None):
+    def __init__(self, estimator=None, param_grid=None, fit_params=None):
         self.estimator = estimator
         self.param_grid = param_grid
+        self.fit_params = fit_params
 
     @staticmethod
     def _calculate_profit(y_true, y_pred, odds, generate_weights):
@@ -173,6 +174,22 @@ class Betting:
         # Define parameters
         total_profit = 0
         starting_day = SEASON_STARTING_DAY[test_season]
+        parameters = list(ParameterGrid(self.param_grid if self.param_grid is not None else {}))
+        test_size_defined = False
+        if self.fit_params is not None:
+            fitting_params = self.fit_params.copy()
+            clf_name = self.estimator.steps[-1][0]
+            if 'test_size' in fitting_params:
+                test_size_defined = True
+                test_size = fitting_params.pop('test_size')
+            if clf_name == 'xgbclassifier':
+                key = 'xgbclassifier__eval_set'
+            if odds_threshold is not None and len(parameters) == 1:
+                if clf_name == 'xgbclassifier':
+                    key = 'eval_set'
+                fitting_params = {param.replace(clf_name + '__', ''):vals for param, vals in fitting_params.items()}
+        else:
+            fitting_params = {}
 
         # Placeholders
         results = []
@@ -186,21 +203,27 @@ class Betting:
 
         for ind, (train_indices, test_indices) in enumerate(scv.split(X, y)):
 
-            # Split train and test data
+            # Split to train and test data
             X_train, X_test, y_train, y_test = X.iloc[train_indices, :], X.iloc[test_indices, :], y[train_indices], y[test_indices]
             odds_test = odds[test_indices]
 
+            # Split to train and validation data
+            if test_size_defined:
+                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=test_size)
+                X_val = self.estimator.steps[0][1].fit_transform(X_val, y_val)
+                if clf_name == 'xgbclassifier':
+                    fitting_params[key] = [(X_val, y_val)]
+
             # Perform nested cross-validation and make predictions
             if odds_threshold is None:
-                y_pred = gscv.fit(X_train, y_train).predict(X_test)
+                y_pred = gscv.fit(X_train, y_train, **fitting_params).predict(X_test)
                 thresholds.append(1 / gscv.best_score_)
-            else:
-                parameters = list(ParameterGrid(self.param_grid)) 
+            else: 
                 if len(parameters) == 1:
                     self.estimator.set_params(**parameters[0])
-                    y_pred = self.estimator.fit(X_train, y_train).predict(X_test)
+                    y_pred = self.estimator.fit(X_train, y_train, **fitting_params).predict(X_test)
                 else:
-                    y_pred = gscv.fit(X_train, y_train).predict(X_test)
+                    y_pred = gscv.fit(X_train, y_train, **fitting_params).predict(X_test)
                 thresholds.append(odds_threshold)
 
             # Calculate mean odds threshold
