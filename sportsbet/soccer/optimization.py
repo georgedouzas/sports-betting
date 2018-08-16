@@ -175,19 +175,11 @@ class Betting:
         total_profit = 0
         starting_day = SEASON_STARTING_DAY[test_season]
         parameters = list(ParameterGrid(self.param_grid if self.param_grid is not None else {}))
-        test_size_defined = False
         if self.fit_params is not None:
             fitting_params = self.fit_params.copy()
             clf_name = self.estimator.steps[-1][0]
             if 'test_size' in fitting_params:
-                test_size_defined = True
                 test_size = fitting_params.pop('test_size')
-            if clf_name == 'xgbclassifier':
-                key = 'xgbclassifier__eval_set'
-            if odds_threshold is not None and len(parameters) == 1:
-                if clf_name == 'xgbclassifier':
-                    key = 'eval_set'
-                fitting_params = {param.replace(clf_name + '__', ''):vals for param, vals in fitting_params.items()}
         else:
             fitting_params = {}
 
@@ -208,11 +200,11 @@ class Betting:
             odds_test = odds[test_indices]
 
             # Split to train and validation data
-            if test_size_defined:
+            if self.fit_params is not None and 'test_size' in self.fit_params:
                 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=test_size)
                 X_val = self.estimator.steps[0][1].fit_transform(X_val, y_val)
                 if clf_name == 'xgbclassifier':
-                    fitting_params[key] = [(X_val, y_val)]
+                    fitting_params['xgbclassifier__eval_set'] = [(X_val, y_val)]
 
             # Perform nested cross-validation and make predictions
             if odds_threshold is None:
@@ -227,7 +219,7 @@ class Betting:
                 thresholds.append(odds_threshold)
 
             # Calculate mean odds threshold
-            mean_odds_threshold = np.mean(thresholds)
+            mean_odds_threshold = np.mean(thresholds[-3:])
 
             # Filter bets
             boolean_mask = y_pred.astype(bool) & (odds_test > mean_odds_threshold)
