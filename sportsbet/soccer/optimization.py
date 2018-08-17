@@ -201,7 +201,7 @@ class Betting:
 
             # Split to train and validation data
             if self.fit_params is not None and 'test_size' in self.fit_params:
-                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=test_size)
+                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=test_size, shuffle=False)
                 X_val = self.estimator.steps[0][1].fit_transform(X_val, y_val)
                 if clf_name == 'xgbclassifier':
                     fitting_params['xgbclassifier__eval_set'] = [(X_val, y_val)]
