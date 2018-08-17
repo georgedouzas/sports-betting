@@ -217,9 +217,10 @@ class Betting:
                 else:
                     y_pred = gscv.fit(X_train, y_train, **fitting_params).predict(X_test)
                 thresholds.append(odds_threshold)
+            est_params = self.estimator.get_params() if len(parameters) == 1 else gscv.best_params_
 
             # Calculate mean odds threshold
-            mean_odds_threshold = np.mean(thresholds[-3:])
+            mean_odds_threshold = np.mean(thresholds[-4:])
 
             # Filter bets
             boolean_mask = y_pred.astype(bool) & (odds_test > mean_odds_threshold)
@@ -235,13 +236,14 @@ class Betting:
             n_bets = y_pred_sel.size
             n_predictions = y_pred.sum()
             n_matches = y_pred.size
+            est_params = {param:val for param, val in est_params.items() if param in self.param_grid}
 
             result = (
                 days, profit, total_profit,
                 precision, bets_precision,
                 '%s / %s' % (n_correct_bets, n_bets),
                 '%s / %s' % (n_predictions, n_matches),
-                mean_odds_threshold
+                mean_odds_threshold, est_params
             )
 
             # Append results
