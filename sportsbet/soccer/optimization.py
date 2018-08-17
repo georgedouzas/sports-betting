@@ -20,7 +20,6 @@ from .configuration import (
     TRAIN_SPI_FEATURES,
     TRAIN_PROB_SPI_FEATURES,
     TRAIN_PROB_FD_FEATURES,
-    SEASON_STARTING_DAY,
     RESULTS_MAPPING,
     FD_MAX_ODDS,
     RESULTS_FEATURES
@@ -171,9 +170,13 @@ class Betting:
         # Extract odds data
         odds = odds_data[FD_MAX_ODDS + predicted_result]
 
+        # Filter data
+        seasons_mask = (training_data.Season <= test_season)
+        training_data, y, odds = training_data[seasons_mask], y[seasons_mask], odds[seasons_mask]
+
         # Define parameters
         total_profit = 0
-        starting_day = SEASON_STARTING_DAY[test_season]
+        starting_day = training_data.loc[training_data.Season == test_season, 'Day'].values[0]
         parameters = list(ParameterGrid(self.param_grid if self.param_grid is not None else {}))
         if self.fit_params is not None:
             fitting_params = self.fit_params.copy()
@@ -223,8 +226,8 @@ class Betting:
             mean_odds_threshold = np.mean(thresholds[-4:])
 
             # Filter bets
-            boolean_mask = y_pred.astype(bool) & (odds_test > mean_odds_threshold)
-            y_test_sel, y_pred_sel, odds_test_sel = y_test[boolean_mask], y_pred[boolean_mask], odds_test[boolean_mask]
+            bets_mask = y_pred.astype(bool) & (odds_test > mean_odds_threshold)
+            y_test_sel, y_pred_sel, odds_test_sel = y_test[bets_mask], y_pred[bets_mask], odds_test[bets_mask]
 
             # Calculate main results
             days = (X.Day[test_indices[0]] - starting_day, X.Day[test_indices[-1]] - starting_day)
