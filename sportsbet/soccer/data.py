@@ -7,6 +7,7 @@ Download and prepare soccer historical data from various leagues.
 from os.path import join, dirname
 from re import sub
 from difflib import get_close_matches
+from requests import head
 import pandas as pd
 from .configuration import (
     TEAMS_MAPPING,
@@ -41,6 +42,8 @@ def fetch_raw_data():
     # Football data
     fd_data = pd.DataFrame()
     for url in FD_URLS:
+        if head(url).status_code != 200:
+            continue
         data = pd.read_csv(url)
         season = sub('^' + FD_URL, '', url).split('/')[1]
         data['Season'] = season[:2] + '-' + season[2:]
