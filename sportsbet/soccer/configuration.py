@@ -13,7 +13,9 @@ TEAMS_MAPPING = OrderedDict({
     'Brighton and Hove Albion': 'Brighton',
     'Deportivo La Coruña': 'La Coruna',
     'Internazionale': 'Inter',
-    'Chievo Verona': 'Chievo'
+    'Chievo Verona': 'Chievo',
+    'Wolverhampton': 'Wolves',
+    'Cardiff City': 'Cardiff'
 })
 LEAGUES_MAPPING = OrderedDict({
     'Barclays Premier League': 'E0',
@@ -42,8 +44,7 @@ RESULTS_MAPPING = OrderedDict({
 
 # General parameters
 MIN_N_MATCHES = 20
-SEASON_STARTING_DAY = {'16-17': 0, '17-18': 363}
-YEARS = [season.replace('-', '') for season in SEASON_STARTING_DAY.keys()]
+YEARS = ['1617', '1718', '1819']
 
 # URLs
 SPI_URL = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
@@ -71,7 +72,7 @@ TRAIN_FEATURES = TRAIN_SPI_FEATURES + TRAIN_PROB_SPI_FEATURES + TRAIN_PROB_FD_FE
 # Various features
 KEYS_FEATURES = ['Date', 'League', 'HomeTeam', 'AwayTeam']
 RESULTS_FEATURES = ['Days', 'Profit', 'Total profit', 'Precision', 'Bets precision',
-                   'Bets precision ratio', 'Predictions ratio', 'Threshold']
+                   'Bets precision ratio', 'Predictions ratio', 'Threshold', 'Hyperparameters']
 
 # Simulation parameters
 def RATIO_1(y): 
@@ -90,11 +91,12 @@ ESTIMATOR = make_pipeline(
     XGBClassifier()
 )
 PARAM_GRID = dict(
-    smote__k_neighbors=[2, 4],
-    smote__ratio=['auto', RATIO_1, RATIO_2, RATIO_3, RATIO_4],
-    xgbclassifier__max_depth=[3],
-    xgbclassifier__n_estimators=[1000],
-    xgbclassifier__learning_rate=[0.005, 0.01, 0.02]
+    smote__k_neighbors=[2],
+    smote__ratio=[RATIO_2],
+    xgbclassifier__max_depth=[3, 4],
+    xgbclassifier__n_estimators=[10],
+    xgbclassifier__learning_rate=[0.01],
+    xgbclassifier__reg_lambda=[1.0, 1.2, 1.5]
 )
 FIT_PARAMS = dict(
     test_size=0.05,
@@ -102,6 +104,3 @@ FIT_PARAMS = dict(
     xgbclassifier__early_stopping_rounds=10,
     xgbclassifier__verbose=False
 )
-
-
-

@@ -32,7 +32,17 @@ def fetch_simulation_data(dirpath=None):
     return training_data, odds_data
 
 
-def generate_simulation_results(estimator=ESTIMATOR, param_grid=PARAM_GRID, dirpath='data', fit_params=FIT_PARAMS,
+def generate_grid_scores(estimator=ESTIMATOR, param_grid=PARAM_GRID, fit_params=FIT_PARAMS, dirpath='data',
+                                test_season='17-18', predicted_result='D', min_matches=MIN_N_MATCHES, random_state=None):
+    """Generate the grid scores of a test season."""
+    filterwarnings('ignore')
+    training_data = pd.read_csv(join(dirpath, 'training_data.csv'))
+    betting = Betting(estimator, param_grid, fit_params)
+    grid_scores = betting.return_grid_scores(training_data, test_season, predicted_result, min_matches, random_state)
+    return grid_scores
+
+
+def generate_simulation_results(estimator=ESTIMATOR, param_grid=PARAM_GRID, fit_params=FIT_PARAMS, dirpath='data',
                                 test_season='17-18', predicted_result='D', min_matches=MIN_N_MATCHES, 
                                 odds_threshold=ODDS_THRESHOLD, generate_weights=GENERATE_WEIGHTS, random_state=None):
     """Run betting simulation and generate the results."""

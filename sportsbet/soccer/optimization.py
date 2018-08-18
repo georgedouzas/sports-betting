@@ -141,6 +141,55 @@ class Betting:
             profit = profit.mean()
         return profit
 
+    def return_grid_scores(self, training_data, test_season, predicted_result, min_n_matches, random_state):
+        """Return the score of a hyperparameter grid."""
+
+        # Extract training data and binarize target
+        X, y = training_data.iloc[:, :-1], training_data.iloc[:, -1]
+        y = y.apply(lambda result: 1 if RESULTS_MAPPING[predicted_result] == result else 0)
+
+        # Filter data
+        seasons_mask = (training_data.Season <= test_season)
+        X, y = training_data[seasons_mask], y[seasons_mask]
+
+        # Define starting day
+        starting_day = X.loc[X.Season == test_season, 'Day'].values[0]
+
+        # Split to train and validation data
+        if self.fit_params is not None:
+            fitting_params = self.fit_params.copy()
+            if 'test_size' in fitting_params:
+                test_size = fitting_params.pop('test_size')
+                X, X_val, y, y_val = train_test_split(X, y, test_size=test_size, shuffle=False)
+                X_val = self.estimator.steps[0][1].fit_transform(X_val, y_val)
+                if self.estimator.steps[-1][0] == 'xgbclassifier':
+                    fitting_params['xgbclassifier__eval_set'] = [(X_val, y_val)]
+        else:
+            fitting_params = {}
+
+        # Define grid search object
+        gscv = GridSearchCV(
+            estimator=self.estimator,
+            param_grid=self.param_grid,
+            scoring='precision',
+            cv=SeasonTimeSeriesSplit(starting_day=starting_day, min_n_matches=min_n_matches),
+            refit=False,
+            n_jobs=-1
+        )
+
+        # Set random state
+        if random_state is not None:
+            parameters = gscv.get_params()
+            for name, _ in gscv.estimator.steps:
+                param_key = 'estimator__%s__%s' % (name, 'random_state')
+                if param_key in parameters.keys():
+                    gscv.set_params(**{param_key: random_state})
+
+        # Fit grid search object
+        gscv.fit(X, y, **fitting_params)
+        
+        return gscv.grid_scores_
+
     def simulate_results(self, training_data, odds_data, test_season, predicted_result, 
                          min_n_matches, odds_threshold, generate_weights, random_state):
         """Evaluate the profit by nested cross-validation."""
@@ -170,13 +219,13 @@ class Betting:
         # Extract odds data
         odds = odds_data[FD_MAX_ODDS + predicted_result]
 
-        # Filter data
-        seasons_mask = (training_data.Season <= test_season)
-        training_data, y, odds = training_data[seasons_mask], y[seasons_mask], odds[seasons_mask]
+        # Filter seasons
+        seasons_mask = (X.Season <= test_season)
+        X, y, odds = X[seasons_mask], y[seasons_mask], odds[seasons_mask]
 
         # Define parameters
         total_profit = 0
-        starting_day = training_data.loc[training_data.Season == test_season, 'Day'].values[0]
+        starting_day = X.loc[X.Season == test_season, 'Day'].values[0]
         parameters = list(ParameterGrid(self.param_grid if self.param_grid is not None else {}))
         if self.fit_params is not None:
             fitting_params = self.fit_params.copy()
