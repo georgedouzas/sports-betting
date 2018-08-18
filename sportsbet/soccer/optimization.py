@@ -150,7 +150,7 @@ class Betting:
 
         # Filter data
         seasons_mask = (training_data.Season <= test_season)
-        X, y = training_data[seasons_mask], y[seasons_mask]
+        X, y = X[seasons_mask], y[seasons_mask]
 
         # Define starting day
         starting_day = X.loc[X.Season == test_season, 'Day'].values[0]
@@ -174,7 +174,8 @@ class Betting:
             scoring='precision',
             cv=SeasonTimeSeriesSplit(starting_day=starting_day, min_n_matches=min_n_matches),
             refit=False,
-            n_jobs=-1
+            n_jobs=-1,
+            return_train_score=True
         )
 
         # Set random state
@@ -187,8 +188,10 @@ class Betting:
 
         # Fit grid search object
         gscv.fit(X, y, **fitting_params)
+
+        grid_scores = pd.DataFrame(gscv.cv_results_)[['params', 'mean_test_score', 'mean_train_score']]
         
-        return gscv.grid_scores_
+        return grid_scores
 
     def simulate_results(self, training_data, odds_data, test_season, predicted_result, 
                          min_n_matches, odds_threshold, generate_weights, random_state):
@@ -201,7 +204,8 @@ class Betting:
             scoring='precision',
             cv=SeasonTimeSeriesSplit(min_n_matches=min_n_matches),
             refit=True,
-            n_jobs=-1
+            n_jobs=-1,
+            return_train_score=False
         )
 
         # Set random state

@@ -92,14 +92,14 @@ ESTIMATOR = make_pipeline(
 )
 PARAM_GRID = dict(
     smote__k_neighbors=[2],
-    smote__ratio=[RATIO_2],
+    smote__ratio=['auto', RATIO_2, RATIO_3, RATIO_4],
     xgbclassifier__max_depth=[3, 4],
-    xgbclassifier__n_estimators=[10],
-    xgbclassifier__learning_rate=[0.01],
-    xgbclassifier__reg_lambda=[1.0, 1.2, 1.5]
+    xgbclassifier__n_estimators=[1000],
+    xgbclassifier__learning_rate=[0.01, 0.02],
+    xgbclassifier__reg_lambda=[0.1, 1.0, 1.2, 1.5]
 )
 FIT_PARAMS = dict(
-    test_size=0.05,
+    test_size=0.1,
     xgbclassifier__eval_metric='map',
     xgbclassifier__early_stopping_rounds=10,
     xgbclassifier__verbose=False
