@@ -78,7 +78,7 @@ def extract_training_data(spi_data, fd_data):
 
     # Combine data
     training_data = pd.merge(spi_data, probs_data, on=KEYS_FEATURES)
-    training_data.sort_values(KEYS_FEATURES, inplace=True)
+    training_data = training_data.sort_values(KEYS_FEATURES).reset_index(drop=True)
     training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
     training_data = training_data[TRAIN_FEATURES]
 
