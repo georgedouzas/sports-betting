@@ -12,17 +12,18 @@ import pandas as pd
 from sklearn.utils.validation import check_array
 from sklearn.model_selection._split import _BaseKFold, _num_samples
 from sklearn.utils import indexable
-from sklearn.metrics import precision_score
+from sklearn.metrics import precision_score, SCORERS
 from sklearn.model_selection import GridSearchCV, ParameterGrid, train_test_split
 import progressbar
 from .configuration import (
+    _calculate_profit,
     MIN_N_MATCHES,
     TRAIN_SPI_FEATURES,
     TRAIN_PROB_SPI_FEATURES,
     TRAIN_PROB_FD_FEATURES,
     RESULTS_MAPPING,
     FD_MAX_ODDS,
-    RESULTS_FEATURES
+    RESULTS_FEATURES,
 )
 
 
@@ -127,22 +128,12 @@ class Betting:
         self.param_grid = param_grid
         self.fit_params = fit_params
 
-    @staticmethod
-    def _calculate_profit(y_true, y_pred, odds, generate_weights):
-        """Calculate mean profit."""
-        correct_bets = (y_true == y_pred)
-        if correct_bets.size == 0:
-            return 0.0
-        profit = correct_bets * (odds - 1)
-        profit[profit == 0] = -1
-        if generate_weights is not None:
-            profit = np.average(profit, weights=generate_weights(odds))
-        else:
-            profit = profit.mean()
-        return profit
-
-    def return_grid_scores(self, training_data, test_season, predicted_result, min_n_matches, random_state):
+    def return_grid_scores(self, scoring, training_data, test_season, min_n_matches, random_state):
         """Return the score of a hyperparameter grid."""
+
+        # Extract parameters
+        predicted_result = list(scoring.values())[0].predicted_result
+        scoring.update({'precision': SCORERS['precision']})
 
         # Extract training data and binarize target
         X, y = training_data.iloc[:, :-1], training_data.iloc[:, -1]
@@ -171,7 +162,7 @@ class Betting:
         gscv = GridSearchCV(
             estimator=self.estimator,
             param_grid=self.param_grid,
-            scoring='precision',
+            scoring=scoring,
             cv=SeasonTimeSeriesSplit(starting_day=starting_day, min_n_matches=min_n_matches),
             refit=False,
             n_jobs=-1,
@@ -189,7 +180,9 @@ class Betting:
         # Fit grid search object
         gscv.fit(X, y, **fitting_params)
 
-        grid_scores = pd.DataFrame(gscv.cv_results_)[['params', 'mean_test_score', 'mean_train_score']]
+        # Extract results
+        test_scores_cols = [col for col in gscv.cv_results_.keys() if 'mean_test' in col]
+        grid_scores = pd.DataFrame(gscv.cv_results_)[['params'] + test_scores_cols]
         
         return grid_scores
 
@@ -284,7 +277,7 @@ class Betting:
 
             # Calculate main results
             days = (X.Day[test_indices[0]] - starting_day, X.Day[test_indices[-1]] - starting_day)
-            profit = self._calculate_profit(y_test_sel, y_pred_sel, odds_test_sel, generate_weights)
+            profit = _calculate_profit(y_test_sel, y_pred_sel, odds_test_sel, generate_weights)
             total_profit += profit
             precision = precision_score(y_test, y_pred)
             bets_precision = precision_score(y_test_sel, y_pred_sel)
