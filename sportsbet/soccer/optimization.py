@@ -7,65 +7,64 @@ betting strategy on historical and current data.
 # License: BSD 3 clause
 
 from os.path import join, dirname
+from collections import Counter
+
 import numpy as np
 import pandas as pd
-from sklearn.utils.validation import check_array
-from sklearn.model_selection._split import _BaseKFold, _num_samples
-from sklearn.utils import indexable
-from sklearn.metrics import precision_score, SCORERS
-from sklearn.model_selection import GridSearchCV, ParameterGrid, train_test_split
+from sklearn.utils import check_array, check_X_y
+from sklearn.model_selection._split import BaseCrossValidator, _num_samples
+from sklearn.metrics import precision_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from imblearn.pipeline import Pipeline
 import progressbar
-from .configuration import (
-    _calculate_profit,
-    MIN_N_MATCHES,
-    TRAIN_SPI_FEATURES,
-    TRAIN_PROB_SPI_FEATURES,
-    TRAIN_PROB_FD_FEATURES,
-    RESULTS_MAPPING,
-    FD_MAX_ODDS,
-    RESULTS_FEATURES,
-)
+
+from .data import _fetch_spi_data, _fetch_fd_data, _match_teams_names, LEAGUES_MAPPING
 
 
-class SeasonTimeSeriesSplit(_BaseKFold):
+class Ratio:
+    """Return dictionary for the ratio parameter of oversamplers."""
+
+    def __init__(self, ratio):
+        self.ratio = ratio
+    
+    def __call__(self, y):
+        return {1: int(self.ratio * Counter(y)[0])}
+
+    def __repr__(self):
+        return str(self.ratio)
+
+
+class SeasonTimeSeriesSplit(BaseCrossValidator):
     """Season time series cross-validator.
     Parameters
     ----------
-    day_index : int
-        The index of the day feature.
-    starting_day : int
-        The starting day of the first test set.
-    min_n_matches: int
-        The minimum number of matches to include in each test set.
+    test_season : str, default='17-18'
+        The testing season.
+    max_day_range: int
+        The maximum day range of each test fold.
     """
 
-    def __init__(self, day_index=None, starting_day=None, min_n_matches=None):
-        self.day_index = day_index
-        self.starting_day = starting_day
-        self.min_n_matches = min_n_matches
+    def __init__(self, test_year=2, max_day_range=6):
+        self.test_year = test_year
+        self.max_day_range = max_day_range
 
-    def _generate_breakpoints(self, X, y=None, groups=None):
-        """Generates breakpoints to split data into training and test sets."""
-        X, y, groups = indexable(X, y, groups)
-        length_num_features = len(TRAIN_SPI_FEATURES + TRAIN_PROB_SPI_FEATURES + TRAIN_PROB_FD_FEATURES)
+    def _generate_season_indices(self, X):
+        """Generate season indices to use in test set."""
 
-        self.n_samples_ = _num_samples(X)
-        self.day_index_ = length_num_features if self.day_index is None else self.day_index
-        self.days_ = pd.Series(check_array(X, dtype=None)[:, self.day_index_])
-        self.starting_day_ = int(np.mean([min(self.days_), max(self.days_)])) if self.starting_day is None else self.starting_day
-        self.min_n_matches_ = MIN_N_MATCHES if self.min_n_matches is None else self.min_n_matches
+        # Check input array
+        X = check_array(X, dtype=None)
+        
+        # Define days
+        self.days_ = X[:, 0]
 
-        test_days = self.days_[self.days_ >= self.starting_day_]
-        count_matches = test_days.groupby(test_days).size()
-        total_matches, self.breakpoints_ = 0, []
-        for day, n_matches in count_matches.items():
-            total_matches += n_matches
-            if total_matches >= self.min_n_matches_:
-                total_matches = 0
-                self.breakpoints_.append(day)
-        if self.days_.values[-1] not in self.breakpoints_:
-            self.breakpoints_.append(self.days_.values[-1])
-        self.n_splits = len(self.breakpoints_)
+        # Define all and season indices
+        indices = np.arange(_num_samples(X))
+        start_day, end_day = 365 * (self.test_year - 1), 365 * self.test_year
+        season_indices = indices[(self.days_ >= start_day) & (self.days_ < end_day)]
+
+        return season_indices
+
 
     def split(self, X, y=None, groups=None):
         """Generates indices to split data into training and test set.
@@ -80,24 +79,25 @@ class SeasonTimeSeriesSplit(_BaseKFold):
             Always ignored, exists for compatibility.
         Returns
         -------
-        train : ndarray
+        train_indices : ndarray
             The training set indices for that split.
-        test : ndarray
+        test_indices : ndarray
             The testing set indices for that split.
         """
-        self._generate_breakpoints(X, y, groups)
-        indices = np.arange(self.n_samples_)
 
-        yield (indices[self.days_ < self.starting_day_],
-               indices[(self.starting_day_ <= self.days_) & (self.days_ <= self.breakpoints_[0])])
+        # Generate season indices
+        season_indices = self._generate_season_indices(X)
 
-        intervals = list(zip(self.breakpoints_[:-1], self.breakpoints_[1:]))
-        for start, end in intervals:
-            train_indices = indices[self.days_ <= start]
-            test_indices = indices[(start < self.days_) & (self.days_ <= end)]
-            yield (train_indices, test_indices)
+        # Yield train and test indices
+        start_ind = season_indices[0]
+        for ind in season_indices:
+            if self.days_[ind] - self.days_[start_ind] >= self.max_day_range:
+                train_indices = np.arange(0, start_ind)
+                test_indices = np.arange(start_ind, ind)
+                start_ind = ind
+                yield (train_indices, test_indices)
 
-    def get_n_splits(self, X=None, y=None, groups=None):
+    def get_n_splits(self, X, y=None, groups=None):
         """Returns the number of splitting iterations in the cross-validator
 
         Parameters
@@ -117,190 +117,229 @@ class SeasonTimeSeriesSplit(_BaseKFold):
         n_splits : int
             Returns the number of splitting iterations in the cross-validator.
         """
-        self._generate_breakpoints(X, y, groups)
-        return len(self.breakpoints_)
 
+        # Generate season indices
+        season_indices = self._generate_season_indices(X)
 
-class Betting:
-
-    def __init__(self, estimator=None, param_grid=None, fit_params=None):
-        self.estimator = estimator
-        self.param_grid = param_grid
-        self.fit_params = fit_params
-
-    def return_grid_scores(self, scoring, training_data, test_season, min_n_matches, random_state):
-        """Return the score of a hyperparameter grid."""
-
-        # Extract parameters
-        predicted_result = list(scoring.values())[0].predicted_result
-        scoring.update({'precision': SCORERS['precision']})
-
-        # Extract training data and binarize target
-        X, y = training_data.iloc[:, :-1], training_data.iloc[:, -1]
-        y = y.apply(lambda result: 1 if RESULTS_MAPPING[predicted_result] == result else 0)
-
-        # Filter data
-        seasons_mask = (training_data.Season <= test_season)
-        X, y = X[seasons_mask], y[seasons_mask]
-
-        # Define starting day
-        starting_day = X.loc[X.Season == test_season, 'Day'].values[0]
-
-        # Split to train and validation data
-        if self.fit_params is not None:
-            fitting_params = self.fit_params.copy()
-            if 'test_size' in fitting_params:
-                test_size = fitting_params.pop('test_size')
-                X, X_val, y, y_val = train_test_split(X, y, test_size=test_size, shuffle=False)
-                X_val = self.estimator.steps[0][1].fit_transform(X_val, y_val)
-                if self.estimator.steps[-1][0] == 'xgbclassifier':
-                    fitting_params['xgbclassifier__eval_set'] = [(X_val, y_val)]
-        else:
-            fitting_params = {}
-
-        # Define grid search object
-        gscv = GridSearchCV(
-            estimator=self.estimator,
-            param_grid=self.param_grid,
-            scoring=scoring,
-            cv=SeasonTimeSeriesSplit(starting_day=starting_day, min_n_matches=min_n_matches),
-            refit=False,
-            n_jobs=-1,
-            return_train_score=True
-        )
-
-        # Set random state
-        if random_state is not None:
-            parameters = gscv.get_params()
-            for name, _ in gscv.estimator.steps:
-                param_key = 'estimator__%s__%s' % (name, 'random_state')
-                if param_key in parameters.keys():
-                    gscv.set_params(**{param_key: random_state})
-
-        # Fit grid search object
-        gscv.fit(X, y, **fitting_params)
-
-        # Extract results
-        test_scores_cols = [col for col in gscv.cv_results_.keys() if 'mean_test' in col]
-        grid_scores = pd.DataFrame(gscv.cv_results_)[['params'] + test_scores_cols]
+        # Calculate number of splits
+        start_ind, n_splits = season_indices[0], 0
+        for ind in season_indices:
+            if self.days_[ind] - self.days_[start_ind] >= self.max_day_range:
+                n_splits += 1
+                start_ind = ind
         
-        return grid_scores
+        return n_splits
 
-    def simulate_results(self, training_data, odds_data, test_season, predicted_result, 
-                         min_n_matches, odds_threshold, generate_weights, random_state):
-        """Evaluate the profit by nested cross-validation."""
 
-        # Define grid search object
-        gscv = GridSearchCV(
-            estimator=self.estimator,
-            param_grid=self.param_grid,
-            scoring='precision',
-            cv=SeasonTimeSeriesSplit(min_n_matches=min_n_matches),
-            refit=True,
-            n_jobs=-1,
-            return_train_score=False
-        )
+class BettingAgent:
 
-        # Set random state
-        if random_state is not None:
-            parameters = gscv.get_params()
-            for name, _ in gscv.estimator.steps:
-                param_key = 'estimator__%s__%s' % (name, 'random_state')
-                if param_key in parameters.keys():
-                    gscv.set_params(**{param_key: random_state})
+    data_path = join(dirname(__file__), '..', '..', 'data', 'training_data.csv')
 
-        # Extract training data and binarize target
-        X, y = training_data.iloc[:, :-1], training_data.iloc[:, -1]
-        y = y.apply(lambda result: 1 if RESULTS_MAPPING[predicted_result] == result else 0)
+    def __init__(self, leagues='all'):
+        self.leagues = leagues
 
-        # Extract odds data
-        odds = odds_data[FD_MAX_ODDS + predicted_result]
-
-        # Filter seasons
-        seasons_mask = (X.Season <= test_season)
-        X, y, odds = X[seasons_mask], y[seasons_mask], odds[seasons_mask]
+    def fetch_training_data(self, load=True, save=True, only_numerical=True, return_df=True):
+        """Fetch the training data."""
 
         # Define parameters
-        total_profit = 0
-        starting_day = X.loc[X.Season == test_season, 'Day'].values[0]
-        parameters = list(ParameterGrid(self.param_grid if self.param_grid is not None else {}))
-        if self.fit_params is not None:
-            fitting_params = self.fit_params.copy()
-            clf_name = self.estimator.steps[-1][0]
-            if 'test_size' in fitting_params:
-                test_size = fitting_params.pop('test_size')
+        X_numerical_features = ['HomeSPI', 'AwaySPI', 'HomeSPIProb', 'AwaySPIProb', 'DrawSPIProb', 'HomeFDProb', 'AwayFDProb', 'DrawFDProb', 'DiffSPI', 'DiffSPIProb', 'DiffFDProb']
+        X_categorical_features = ['Season', 'League', 'HomeTeam', 'AwayTeam']
+        odds_features = ['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd']
+
+        if load:
+
+            # Load data
+            training_data = pd.read_csv(self.data_path)
+        
+            # Check consistency
+            if self.leagues == 'all':
+                leagues, _ = zip(*LEAGUES_MAPPING.values())
+            elif leagues == 'main':
+                leagues = [league_id for league_id, league_type in LEAGUES_MAPPING.values() if league_type == 'main']
+            else:
+                leagues = self.leagues
+            if set(training_data.League.unique()) != set(leagues):
+                raise RuntimeError('Saved data do not correspond to selected leagues. Set `load` parameter to False.')
+
         else:
-            fitting_params = {}
+    
+            # Define parameters
+            avg_odds_features = ['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']
+            keys = ['Date', 'League', 'HomeTeam', 'AwayTeam', 'HomeGoals', 'AwayGoals']
 
-        # Placeholders
-        results = []
-        thresholds = []
+            # Fetch data
+            spi_data = _fetch_spi_data(self.leagues)
+            fd_data = _fetch_fd_data(self.leagues)
 
-        # Define time series cross-validator
-        scv = SeasonTimeSeriesSplit(starting_day=starting_day, min_n_matches=min_n_matches)
+            # Teams names matching
+            mapping = _match_teams_names(spi_data, fd_data)
+            spi_data['HomeTeam'] = spi_data['HomeTeam'].apply(lambda team: mapping[team])
+            spi_data['AwayTeam'] = spi_data['AwayTeam'].apply(lambda team: mapping[team])
+
+            # Probabilities data
+            probs = 1 / fd_data.loc[:, avg_odds_features].values
+            probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['HomeFDProb', 'AwayFDProb', 'DrawFDProb'])
+            probs_data = pd.concat([probs, fd_data], axis=1)
+            probs_data.drop(columns=avg_odds_features, inplace=True)
+
+            # Combine data
+            training_data = pd.merge(spi_data, probs_data, on=keys)
+            training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
+
+            # Create features
+            training_data['DiffSPI'] = training_data['HomeSPI'] - training_data['AwaySPI']
+            training_data['DiffSPIProb'] = training_data['HomeSPIProb'] - training_data['AwaySPIProb']
+            training_data['DiffFDProb'] = training_data['HomeFDProb'] - training_data['AwayFDProb']
+
+            # Sort data
+            training_data = training_data.sort_values(keys[:-2]).reset_index(drop=True)
+
+        # Save data
+        if save:
+            training_data.to_csv(self.data_path, index=False)
+
+        # Split data
+        X = training_data.loc[:, ['Day'] + X_numerical_features if only_numerical else ['Day'] + X_categorical_features + X_numerical_features]
+        y = (training_data['HomeGoals'] - training_data['AwayGoals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
+        odds = training_data.loc[:, odds_features]
+
+        # Check arrays
+        if not return_df:
+            X, y = check_X_y(X, y, dtype=None)
+            odds = check_array(odds, dtype=None)
+
+        return X, y, odds    
+    
+    @staticmethod
+    def _calculate_profit(y_true, y_pred, odds, weights_func):
+        """Calculate mean profit."""
+        correct_bets = (y_true == y_pred)
+        if correct_bets.size == 0:
+            return 0.0
+        profit = correct_bets * (odds - 1)
+        profit[profit == 0] = -1
+        if weights_func is not None:
+            profit = np.average(profit, weights=weights_func(odds))
+        else:
+            profit = profit.mean()
+        return profit
+
+    def backtest(self, predicted_result=None, test_year=2, max_day_range=6, estimator=None, load=True, only_numerical=True, **fit_params):
+        """Apply backtesting to betting agent."""
+        
+        # Load data
+        X, y, odds = self.fetch_training_data(load=load, save=not load, only_numerical=only_numerical, return_df=False)
+
+        # Define label encoder
+        if predicted_result is None:
+            encoder = LabelEncoder()
+            y = encoder.fit_transform(y)
+        else:
+            y = (y == predicted_result).astype(int)
+
+        # Define parameters
+        validation_size = fit_params.pop('validation_size') if 'validation_size' in fit_params else None
+        results_mapping = {'H': 0, 'A': 1, 'D': 2}
+
+        # Define train and test indices
+        indices = list(SeasonTimeSeriesSplit(test_year=test_year, max_day_range=max_day_range).split(X, y))
 
         # Define progress bar
-        bar = progressbar.ProgressBar(max_value=scv.get_n_splits(X, y) - 1)
+        bar = progressbar.ProgressBar(min_value=1, max_value=len(indices))
+        
+        # Define results placeholder
+        self.results = []
 
-        for ind, (train_indices, test_indices) in enumerate(scv.split(X, y)):
-
+        # Run cross-validation
+        for ind, (train_indices, test_indices) in enumerate(indices):
+            
             # Split to train and test data
-            X_train, X_test, y_train, y_test = X.iloc[train_indices, :], X.iloc[test_indices, :], y[train_indices], y[test_indices]
-            odds_test = odds[test_indices]
+            X_train, X_test, y_train, y_test = X[train_indices, 1:], X[test_indices, 1:], y[train_indices], y[test_indices]
+            if predicted_result is not None:
+                odds_test = odds[test_indices, results_mapping[predicted_result]]
 
-            # Split to train and validation data
-            if self.fit_params is not None and 'test_size' in self.fit_params:
-                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=test_size, shuffle=False)
-                X_val = self.estimator.steps[0][1].fit_transform(X_val, y_val)
-                if clf_name == 'xgbclassifier':
-                    fitting_params['xgbclassifier__eval_set'] = [(X_val, y_val)]
+            # Append validation data
+            if validation_size is not None:
+                
+                # Split to train and validation data
+                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_size, shuffle=False)
+                
+                # Apply transformation to validation data
+                if isinstance(estimator, Pipeline):
+                    X_val = estimator.steps[0][1].fit_transform(X_val, y_val)
+                
+                # Define parameter name
+                param = '%s__eval_set' % estimator.steps[-1][0] if isinstance(estimator, Pipeline) else 'eval_set'
+                
+                # Update fitting parameters
+                fit_params[param] = [(X_val, y_val)]
 
-            # Perform nested cross-validation and make predictions
-            if odds_threshold is None:
-                y_pred = gscv.fit(X_train, y_train, **fitting_params).predict(X_test)
-                thresholds.append(1 / gscv.best_score_)
-            else: 
-                if len(parameters) == 1:
-                    self.estimator.set_params(**parameters[0])
-                    y_pred = self.estimator.fit(X_train, y_train, **fitting_params).predict(X_test)
-                else:
-                    y_pred = gscv.fit(X_train, y_train, **fitting_params).predict(X_test)
-                thresholds.append(odds_threshold)
-            est_params = self.estimator.get_params() if len(parameters) == 1 else gscv.best_params_
+            # Get test predictions
+            y_pred = estimator.fit(X_train, y_train, **fit_params).predict(X_test)
 
-            # Calculate mean odds threshold
-            mean_odds_threshold = np.mean(thresholds[-4:])
+            # Append results
+            self.results.append((y_test, y_pred, odds_test))
 
-            # Filter bets
-            bets_mask = y_pred.astype(bool) & (odds_test > mean_odds_threshold)
-            y_test_sel, y_pred_sel, odds_test_sel = y_test[bets_mask], y_pred[bets_mask], odds_test[bets_mask]
+            # Update progress bar
+            bar.update(ind + 1)
 
-            # Calculate main results
-            days = (X.Day[test_indices[0]] - starting_day, X.Day[test_indices[-1]] - starting_day)
-            profit = _calculate_profit(y_test_sel, y_pred_sel, odds_test_sel, generate_weights)
-            total_profit += profit
+    def calculate_statistics(self, odds_threshold=1.0, weights_func=None, factor=1.5, credit_limit=5.0):
+
+        # Initialize parameters
+        statistics = []
+        capital = 1.0
+        bet_amount = 1.0
+
+        for y_test, y_pred, odds_test in self.results:
+            
+            # Select predictions
+            mask = y_pred.astype(bool)
+            y_test_sel, y_pred_sel, odds_test_sel = y_test[mask], y_pred[mask], odds_test[mask]
+
+            # Select bets above threshold
+            if odds_threshold > 1.0:
+                mask = (odds_test_sel > odds_threshold)
+                y_test_sel, y_pred_sel, odds_test_sel = y_test_sel[mask], y_pred_sel[mask], odds_test_sel[mask]
+            
+            # Selects proportion of top odds
+            else:
+                indices = np.argsort(odds_test_sel)[::-1]
+                indices = indices[:int(len(indices) * odds_threshold)]
+                y_test_sel, y_pred_sel, odds_test_sel = y_test_sel[indices], y_pred_sel[indices], odds_test_sel[indices]
+
+            # Calculate profit
+            profit = bet_amount * self._calculate_profit(y_test_sel, y_pred_sel, odds_test_sel, weights_func)
+            
+            # Calculate capital
+            capital += profit
+
+            # Adjust bet amount
+            bet_amount = bet_amount * factor if profit < 0.0 else 1.0
+
+            # Calculate credit
+            max_credit = capital + credit_limit
+            if bet_amount > max_credit:
+                bet_amount = max_credit
+                
+            # Calculate precision
             precision = precision_score(y_test, y_pred)
             bets_precision = precision_score(y_test_sel, y_pred_sel)
-            n_correct_bets = (y_test_sel == y_pred_sel).sum()
+                
+            # Calculate number of bets, predictions and matches
             n_bets = y_pred_sel.size
             n_predictions = y_pred.sum()
             n_matches = y_pred.size
-            est_params = {param:val for param, val in est_params.items() if param in self.param_grid}
-
-            result = (
-                days, profit, total_profit,
-                precision, bets_precision,
-                '%s / %s' % (n_correct_bets, n_bets),
-                '%s / %s' % (n_predictions, n_matches),
-                mean_odds_threshold, est_params
-            )
+                
+            # Generate statistic
+            statistic = (capital, profit, bets_precision, precision, n_bets, n_predictions, n_matches)
 
             # Append results
-            results.append(result)
+            statistics.append(statistic)
 
-            # Update progress bar
-            bar.update(ind)
+            if bet_amount == 0:
+                break
 
-        results = pd.DataFrame(results, columns=RESULTS_FEATURES)
+        # Define statistics dataframe
+        statistics = pd.DataFrame(statistics, columns=['Capital', 'Profit', 'Bets precision', 'Precision', 'Bets', 'Predictions', 'Matches'])
 
-        return results
+        return statistics
