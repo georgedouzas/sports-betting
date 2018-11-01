@@ -11,11 +11,13 @@ from collections import Counter
 
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.utils import check_array, check_X_y
 from sklearn.model_selection._split import BaseCrossValidator, _num_samples
 from sklearn.metrics import precision_score
-from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.dummy import DummyClassifier
 from imblearn.pipeline import Pipeline
 import progressbar
 
@@ -33,6 +35,37 @@ class Ratio:
 
     def __repr__(self):
         return str(self.ratio)
+
+
+class ProfitEstimator(BaseEstimator, RegressorMixin):
+    """Wrapper class of an estimator."""
+
+    def __init__(self, estimator):
+        self.estimator = estimator
+
+    def fit(self, X, y, **fit_params):
+        self.estimator_ = clone(self.estimator)
+        self.estimator_.fit(X[:, :-1], y, **fit_params)
+        return self
+        
+    def predict(self, X):
+        profit = self.estimator_.predict(X[:, :-1]) * (X[:, -1] - 1)
+        return profit
+
+
+def total_profit_score(y_true, y_pred):
+    """Calculate tota; profit for a profit estimator."""
+    
+    mask = y_pred > 0
+    y_true_sel, y_pred_sel = y_true[mask], y_pred[mask]
+    
+    if y_pred_sel.size == 0:
+        return 0.0
+    
+    profit = y_true_sel * y_pred_sel
+    profit[profit == 0.0] = -1.0
+
+    return profit.sum()
 
 
 class SeasonTimeSeriesSplit(BaseCrossValidator):
@@ -135,111 +168,90 @@ class BettingAgent:
 
     data_path = join(dirname(__file__), '..', '..', 'data', 'training_data.csv')
 
-    def __init__(self, leagues='all'):
-        self.leagues = leagues
-
-    def fetch_training_data(self, load=True, save=True, only_numerical=True, return_df=True):
+    def fetch_training_data(self, leagues='all'):
         """Fetch the training data."""
 
-        # Define parameters
-        X_numerical_features = ['HomeSPI', 'AwaySPI', 'HomeSPIProb', 'AwaySPIProb', 'DrawSPIProb', 'HomeFDProb', 'AwayFDProb', 'DrawFDProb', 'DiffSPI', 'DiffSPIProb', 'DiffFDProb']
-        X_categorical_features = ['Season', 'League', 'HomeTeam', 'AwayTeam']
-        odds_features = ['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd']
+        # Validate input
+        valid_leagues = [league_id for league_id, _ in LEAGUES_MAPPING.values()]
+        if leagues not in ('all', 'main') and not set(leagues).issubset(valid_leagues):
+            msg = "The `leagues` parameter should be either equal to 'all' or 'main' or a list of valid league ids. Got {} instead."
+            raise ValueError(msg.format(leagues))
 
-        if load:
+        # Define parameters 
+        avg_odds_features = ['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']
+        keys = ['Date', 'League', 'HomeTeam', 'AwayTeam', 'HomeGoals', 'AwayGoals']
 
-            # Load data
-            training_data = pd.read_csv(self.data_path)
-        
-            # Check consistency
-            if self.leagues == 'all':
-                leagues, _ = zip(*LEAGUES_MAPPING.values())
-            elif leagues == 'main':
-                leagues = [league_id for league_id, league_type in LEAGUES_MAPPING.values() if league_type == 'main']
-            else:
-                leagues = self.leagues
-            if set(training_data.League.unique()) != set(leagues):
-                raise RuntimeError('Saved data do not correspond to selected leagues. Set `load` parameter to False.')
+        # Fetch data
+        spi_data = _fetch_spi_data(leagues)
+        fd_data = _fetch_fd_data(leagues)
 
-        else:
-    
-            # Define parameters
-            avg_odds_features = ['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']
-            keys = ['Date', 'League', 'HomeTeam', 'AwayTeam', 'HomeGoals', 'AwayGoals']
+        # Teams names matching
+        mapping = _match_teams_names(spi_data, fd_data)
+        spi_data['HomeTeam'] = spi_data['HomeTeam'].apply(lambda team: mapping[team])
+        spi_data['AwayTeam'] = spi_data['AwayTeam'].apply(lambda team: mapping[team])
 
-            # Fetch data
-            spi_data = _fetch_spi_data(self.leagues)
-            fd_data = _fetch_fd_data(self.leagues)
+        # Probabilities data
+        probs = 1 / fd_data.loc[:, avg_odds_features].values
+        probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['HomeFDProb', 'AwayFDProb', 'DrawFDProb'])
+        probs_data = pd.concat([probs, fd_data], axis=1)
+        probs_data.drop(columns=avg_odds_features, inplace=True)
 
-            # Teams names matching
-            mapping = _match_teams_names(spi_data, fd_data)
-            spi_data['HomeTeam'] = spi_data['HomeTeam'].apply(lambda team: mapping[team])
-            spi_data['AwayTeam'] = spi_data['AwayTeam'].apply(lambda team: mapping[team])
+        # Combine data
+        training_data = pd.merge(spi_data, probs_data, on=keys)
 
-            # Probabilities data
-            probs = 1 / fd_data.loc[:, avg_odds_features].values
-            probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['HomeFDProb', 'AwayFDProb', 'DrawFDProb'])
-            probs_data = pd.concat([probs, fd_data], axis=1)
-            probs_data.drop(columns=avg_odds_features, inplace=True)
+        # Create features
+        training_data['DiffSPIGoals'] = training_data['HomeSPIGoals'] - training_data['AwaySPIGoals']
+        training_data['DiffSPI'] = training_data['HomeSPI'] - training_data['AwaySPI']
+        training_data['DiffSPIProb'] = training_data['HomeSPIProb'] - training_data['AwaySPIProb']
+        training_data['DiffFDProb'] = training_data['HomeFDProb'] - training_data['AwayFDProb']
 
-            # Combine data
-            training_data = pd.merge(spi_data, probs_data, on=keys)
-            training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
+        # Create day index
+        training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
 
-            # Create features
-            training_data['DiffSPI'] = training_data['HomeSPI'] - training_data['AwaySPI']
-            training_data['DiffSPIProb'] = training_data['HomeSPIProb'] - training_data['AwaySPIProb']
-            training_data['DiffFDProb'] = training_data['HomeFDProb'] - training_data['AwayFDProb']
+        # Sort data
+        training_data = training_data.sort_values(keys[:-2]).reset_index(drop=True)
 
-            # Sort data
-            training_data = training_data.sort_values(keys[:-2]).reset_index(drop=True)
+        # Drop features
+        training_data.drop(columns=['Date', 'Season', 'League', 'HomeTeam', 'AwayTeam'], inplace=True)
 
         # Save data
-        if save:
-            training_data.to_csv(self.data_path, index=False)
+        training_data.to_csv(self.data_path, index=False) 
 
-        # Split data
-        X = training_data.loc[:, ['Day'] + X_numerical_features if only_numerical else ['Day'] + X_categorical_features + X_numerical_features]
+    def load_modeling_data(self, predicted_result='A'):
+        """Load the data used for modeling."""
+
+        # Load data
+        training_data = pd.read_csv(self.data_path)
+
+        # Split and prepare data
+        X = training_data.drop(columns=['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd', 'HomeGoals', 'AwayGoals'])
+        X = X[['Day'] + X.columns[:-1].tolist()]
         y = (training_data['HomeGoals'] - training_data['AwayGoals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        odds = training_data.loc[:, odds_features]
+        y = (y == predicted_result).astype(int)
+        odds = training_data.loc[:, {'H': 'HomeMaximumOdd', 'A': 'AwayMaximumOdd', 'D': 'DrawMaximumOdd'}[predicted_result]] 
 
         # Check arrays
-        if not return_df:
-            X, y = check_X_y(X, y, dtype=None)
-            odds = check_array(odds, dtype=None)
+        X, y = check_X_y(X, y, dtype=None)
+        odds = check_array(odds, dtype=None, ensure_2d=False)
 
-        return X, y, odds    
-    
-    @staticmethod
-    def _calculate_profit(y_true, y_pred, odds, weights_func):
-        """Calculate mean profit."""
-        correct_bets = (y_true == y_pred)
-        if correct_bets.size == 0:
-            return 0.0
-        profit = correct_bets * (odds - 1)
-        profit[profit == 0] = -1
-        if weights_func is not None:
-            profit = np.average(profit, weights=weights_func(odds))
-        else:
-            profit = profit.mean()
-        return profit
+        # Normalize array
+        X = np.hstack([X[:, 0].reshape(-1, 1), MinMaxScaler().fit_transform(X[:, 1: ])])
 
-    def backtest(self, predicted_result=None, test_year=2, max_day_range=6, estimator=None, load=True, only_numerical=True, **fit_params):
+        return X, y, odds
+
+    def backtest(self, estimator=None, fit_params=None, predicted_result='A', test_year=2, max_day_range=6):
         """Apply backtesting to betting agent."""
-        
-        # Load data
-        X, y, odds = self.fetch_training_data(load=load, save=not load, only_numerical=only_numerical, return_df=False)
 
-        # Define label encoder
-        if predicted_result is None:
-            encoder = LabelEncoder()
-            y = encoder.fit_transform(y)
-        else:
-            y = (y == predicted_result).astype(int)
+        # Load backtesting_data
+        X, y, odds = self.load_modeling_data(predicted_result)
+
+        # Prepare data
+        X = np.hstack((X, odds.reshape(-1, 1)))
 
         # Define parameters
-        validation_size = fit_params.pop('validation_size') if 'validation_size' in fit_params else None
-        results_mapping = {'H': 0, 'A': 1, 'D': 2}
+        self.estimator_ = ProfitEstimator(estimator) if estimator is not None else ProfitEstimator(DummyClassifier(strategy='constant', constant=1))
+        self.fit_params_ = {} if fit_params is None else fit_params.copy()
+        validation_size = self.fit_params_.pop('validation_size') if 'validation_size' in self.fit_params_ else None
 
         # Define train and test indices
         indices = list(SeasonTimeSeriesSplit(test_year=test_year, max_day_range=max_day_range).split(X, y))
@@ -248,15 +260,13 @@ class BettingAgent:
         bar = progressbar.ProgressBar(min_value=1, max_value=len(indices))
         
         # Define results placeholder
-        self.results = []
+        self.backtest_results_ = []
 
         # Run cross-validation
         for ind, (train_indices, test_indices) in enumerate(indices):
             
             # Split to train and test data
             X_train, X_test, y_train, y_test = X[train_indices, 1:], X[test_indices, 1:], y[train_indices], y[test_indices]
-            if predicted_result is not None:
-                odds_test = odds[test_indices, results_mapping[predicted_result]]
 
             # Append validation data
             if validation_size is not None:
@@ -264,82 +274,70 @@ class BettingAgent:
                 # Split to train and validation data
                 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_size, shuffle=False)
                 
-                # Apply transformation to validation data
-                if isinstance(estimator, Pipeline):
-                    X_val = estimator.steps[0][1].fit_transform(X_val, y_val)
-                
-                # Define parameter name
-                param = '%s__eval_set' % estimator.steps[-1][0] if isinstance(estimator, Pipeline) else 'eval_set'
-                
                 # Update fitting parameters
-                fit_params[param] = [(X_val, y_val)]
+                self.fit_params_['xgbclassifier__eval_set'] = [(X_val[:, :-1], y_val)]
 
             # Get test predictions
-            y_pred = estimator.fit(X_train, y_train, **fit_params).predict(X_test)
+            y_pred = self.estimator_.fit(X_train, y_train, **self.fit_params_).predict(X_test)
 
             # Append results
-            self.results.append((y_test, y_pred, odds_test))
+            self.backtest_results_.append((y_test, y_pred))
 
             # Update progress bar
             bar.update(ind + 1)
 
-    def calculate_statistics(self, odds_threshold=1.0, weights_func=None, factor=1.5, credit_limit=5.0):
+    def calculate_backtest_stats(self, bet_factor=1.5, credit_exponent=3):
 
         # Initialize parameters
-        statistics = []
-        capital = 1.0
-        bet_amount = 1.0
+        statistics, precisions = [], []
+        capital, bet_amount = 1.0, 1.0
+        y_test_all, y_pred_all = np.array([]), np.array([])
+        
 
-        for y_test, y_pred, odds_test in self.results:
-            
-            # Select predictions
-            mask = y_pred.astype(bool)
-            y_test_sel, y_pred_sel, odds_test_sel = y_test[mask], y_pred[mask], odds_test[mask]
+        for y_test, y_pred in self.backtest_results_:
 
-            # Select bets above threshold
-            if odds_threshold > 1.0:
-                mask = (odds_test_sel > odds_threshold)
-                y_test_sel, y_pred_sel, odds_test_sel = y_test_sel[mask], y_pred_sel[mask], odds_test_sel[mask]
+            # Append results and predictions
+            y_test_all, y_pred_all = np.hstack((y_test, y_test_all)), np.hstack((y_pred, y_pred_all))
             
-            # Selects proportion of top odds
-            else:
-                indices = np.argsort(odds_test_sel)[::-1]
-                indices = indices[:int(len(indices) * odds_threshold)]
-                y_test_sel, y_pred_sel, odds_test_sel = y_test_sel[indices], y_pred_sel[indices], odds_test_sel[indices]
+            # Convert to binary
+            y_pred_bin = (y_pred > 0).astype(int)
+
+            # Calculate number of bets and matches
+            n_bets = y_pred_bin.sum()
+            n_matches = y_pred.size
+
+            # Calculate precision
+            precision = precision_score(y_test, y_pred_bin) if n_bets > 0 else np.nan
+            precisions.append(precision)
 
             # Calculate profit
-            profit = bet_amount * self._calculate_profit(y_test_sel, y_pred_sel, odds_test_sel, weights_func)
+            profit = bet_amount * total_profit_score(y_test, y_pred) / n_bets if n_bets > 0 else 0.0
             
             # Calculate capital
             capital += profit
 
             # Adjust bet amount
-            bet_amount = bet_amount * factor if profit < 0.0 else 1.0
+            bet_amount = bet_amount * bet_factor if profit < 0.0 else 1.0
 
             # Calculate credit
-            max_credit = capital + credit_limit
+            max_credit = capital + bet_factor ** credit_exponent
             if bet_amount > max_credit:
                 bet_amount = max_credit
                 
-            # Calculate precision
-            precision = precision_score(y_test, y_pred)
-            bets_precision = precision_score(y_test_sel, y_pred_sel)
-                
-            # Calculate number of bets, predictions and matches
-            n_bets = y_pred_sel.size
-            n_predictions = y_pred.sum()
-            n_matches = y_pred.size
-                
             # Generate statistic
-            statistic = (capital, profit, bets_precision, precision, n_bets, n_predictions, n_matches)
+            statistic = (capital, profit, bet_amount, n_bets, n_matches, precision)
 
-            # Append results
+            # Append statistic
             statistics.append(statistic)
 
             if bet_amount == 0:
                 break
 
         # Define statistics dataframe
-        statistics = pd.DataFrame(statistics, columns=['Capital', 'Profit', 'Bets precision', 'Precision', 'Bets', 'Predictions', 'Matches'])
+        statistics = pd.DataFrame(statistics, columns=['Capital', 'Profit', 'Bet amount', 'Bets', 'Matches', 'Precision'])
+
+        # Define attributes
+        self.profit_per_bet_ = total_profit_score(y_test_all, y_pred_all) / y_pred_all.size
+        self.precision_ = np.nanmean(precisions)
 
         return statistics
