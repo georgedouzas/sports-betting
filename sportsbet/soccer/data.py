@@ -8,7 +8,6 @@ from difflib import SequenceMatcher
 
 import pandas as pd
 
-
 LEAGUES_MAPPING = {
     'Argentina Primera Division': ('ARG', 'extra'),
     'Austrian T-Mobile Bundesliga': ('AUT', 'extra'),
@@ -60,7 +59,9 @@ def _fetch_spi_data(leagues='all'):
         'spi2': 'AwaySPI',
         'prob1': 'HomeSPIProb',
         'prob2': 'AwaySPIProb',
-        'probtie': 'DrawSPIProb'
+        'probtie': 'DrawSPIProb',
+        'proj_score1': 'HomeSPIGoals',
+        'proj_score2': 'AwaySPIGoals'
     }
 
     # Download data
@@ -100,12 +101,12 @@ def _fetch_fd_data(leagues='all'):
     url_part_main, url_part_extra = 'mmz4281', 'new'
 
     # Append leagues type
-    if leagues is 'all':
+    if leagues == 'all':
         leagues_types = LEAGUES_MAPPING.values()
     elif leagues == 'main':
         leagues_types = [(league_id, league_type) for league_id, league_type in LEAGUES_MAPPING.values() if league_type == 'main']
     else:
-        leagues_types = [(league_id, league_type) for league_id, league_type in leagues_types if league_id in leagues]
+        leagues_types = [(league_id, league_type) for league_id, league_type in LEAGUES_MAPPING.values() if league_id in leagues]
 
     # Define urls
     suffixes = []
