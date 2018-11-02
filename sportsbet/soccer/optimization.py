@@ -18,6 +18,7 @@ from sklearn.metrics import precision_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.dummy import DummyClassifier
+from sklearn.utils import Parallel, delayed
 from imblearn.pipeline import Pipeline
 from tqdm import tqdm
 
@@ -200,6 +201,18 @@ class BettingAgent:
 
         return X, y, odds
 
+    @staticmethod
+    def _fit_predict(estimator, X, y, train_indices, test_indices, **fit_params):
+        """Fit estimator and predict for a backtesting stage."""
+
+        # Fit estimator
+        estimator.fit(X[train_indices], y[train_indices], **fit_params)
+
+        # Predict on test set
+        y_pred = estimator.predict(X[test_indices])
+        
+        return y[test_indices], y_pred
+
     def backtest(self, estimator=None, fit_params=None, predicted_result='A', test_year=2, max_day_range=6):
         """Apply backtesting to betting agent."""
 
@@ -215,21 +228,13 @@ class BettingAgent:
 
         # Define train and test indices
         indices = list(SeasonTimeSeriesSplit(test_year=test_year, max_day_range=max_day_range).split(X, y))
-        
-        # Define results placeholder
-        self.backtest_results_ = []
 
         # Run cross-validation
-        for train_indices, test_indices in tqdm(indices, desc='Backtesting stage: '):
-            
-            # Split to train and test data
-            X_train, X_test, y_train, y_test = X[train_indices], X[test_indices], y[train_indices], y[test_indices]
-
-            # Get test predictions
-            y_pred = self.estimator_.fit(X_train, y_train, **self.fit_params_).predict(X_test)
-
-            # Append results
-            self.backtest_results_.append((y_test, y_pred))
+        self.backtest_results_ = Parallel(n_jobs=-1)(delayed(self._fit_predict)(self.estimator_, 
+                                                                     X, y, 
+                                                                     train_indices, test_indices, 
+                                                                     **self.fit_params_)
+                                          for train_indices, test_indices in tqdm(indices, desc='Backtesting stages: '))
 
     def calculate_backtest_stats(self, bet_factor=1.5, credit_exponent=3):
 
