@@ -234,7 +234,7 @@ class BettingAgent:
                                                                      X, y, 
                                                                      train_indices, test_indices, 
                                                                      **self.fit_params_)
-                                          for train_indices, test_indices in tqdm(indices, desc='Backtesting stages: '))
+                                          for train_indices, test_indices in tqdm(indices, desc='Backtesting: '))
 
     def calculate_backtest_stats(self, bet_factor=1.5, credit_exponent=3):
 
