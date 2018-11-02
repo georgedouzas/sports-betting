@@ -37,12 +37,20 @@ class ProfitEstimator(BaseEstimator, RegressorMixin):
         self.estimator = estimator
 
     def fit(self, X, y, **fit_params):
+
+        # Clone estimator
         self.estimator_ = clone(self.estimator)
-        self.estimator_.fit(X[:, :-1], y, **fit_params)
+
+        # Exclude time index and maximum odds
+        self.estimator_.fit(X[:, 1:-1], y, **fit_params)
+        
         return self
         
     def predict(self, X):
-        profit = self.estimator_.predict(X[:, :-1]) * (X[:, -1] - 1)
+
+        # Exclude time index and maximum odds
+        profit = self.estimator_.predict(X[:, 1:-1]) * (X[:, -1] - 1)
+        
         return profit
 
 # Function for total profit score

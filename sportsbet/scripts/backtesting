@@ -14,6 +14,7 @@ from sklearnext.over_sampling import SMOTE
 import pandas as pd
 from sportsbet import PATH
 from sportsbet.soccer import BettingAgent
+from tqdm import trange
 
 DEFAULT_CLASSIFIERS = {
     'trivial': DummyClassifier(strategy='constant', constant=1),
@@ -64,12 +65,20 @@ def apply_backtest(clf_name, num_runs, predicted_result, test_year, max_day_rang
 
     # Backtest
     betting_agents = []
-    for random_state in range(num_runs):
+    for random_state in trange(num_runs, desc='Runs: '):
+
+        # Set random state
         set_random_state(classifier, random_state)
+
+        # Create betting agent
         betting_agent = BettingAgent()
+
+        # Backtest agent
         betting_agent.backtest(classifier, None, predicted_result, test_year, max_day_range)
+
+        # Append agent
         betting_agents.append(betting_agent)
-    
+        
     return betting_agents
 
 

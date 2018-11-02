@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.dummy import DummyClassifier
 from imblearn.pipeline import Pipeline
-import progressbar
+from tqdm import tqdm
 
 from .. import PATH, ProfitEstimator, total_profit_score
 from .data import _fetch_spi_data, _fetch_fd_data, _match_teams_names, LEAGUES_MAPPING
@@ -212,40 +212,24 @@ class BettingAgent:
         # Define parameters
         self.estimator_ = ProfitEstimator(estimator) if estimator is not None else ProfitEstimator(DummyClassifier(strategy='constant', constant=1))
         self.fit_params_ = {} if fit_params is None else fit_params.copy()
-        validation_size = self.fit_params_.pop('validation_size') if 'validation_size' in self.fit_params_ else None
 
         # Define train and test indices
         indices = list(SeasonTimeSeriesSplit(test_year=test_year, max_day_range=max_day_range).split(X, y))
-
-        # Define progress bar
-        bar = progressbar.ProgressBar(min_value=1, max_value=len(indices))
         
         # Define results placeholder
         self.backtest_results_ = []
 
         # Run cross-validation
-        for ind, (train_indices, test_indices) in enumerate(indices):
+        for train_indices, test_indices in tqdm(indices, desc='Backtesting stage: '):
             
             # Split to train and test data
-            X_train, X_test, y_train, y_test = X[train_indices, 1:], X[test_indices, 1:], y[train_indices], y[test_indices]
-
-            # Append validation data
-            if validation_size is not None:
-                
-                # Split to train and validation data
-                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_size, shuffle=False)
-                
-                # Update fitting parameters
-                self.fit_params_['xgbclassifier__eval_set'] = [(X_val[:, :-1], y_val)]
+            X_train, X_test, y_train, y_test = X[train_indices], X[test_indices], y[train_indices], y[test_indices]
 
             # Get test predictions
             y_pred = self.estimator_.fit(X_train, y_train, **self.fit_params_).predict(X_test)
 
             # Append results
             self.backtest_results_.append((y_test, y_pred))
-
-            # Update progress bar
-            bar.update(ind + 1)
 
     def calculate_backtest_stats(self, bet_factor=1.5, credit_exponent=3):
 

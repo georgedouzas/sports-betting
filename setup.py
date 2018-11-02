@@ -10,7 +10,7 @@ setup(
         'pandas==0.23.4',
         'scikit-learn==0.20',
         'imbalanced-learn==0.4.2',
-        'progressbar2==3.38.0'
+        'tqdm==4.28.1'
     ],
     scripts=[
         'sportsbet/scripts/fetch_training_data',
