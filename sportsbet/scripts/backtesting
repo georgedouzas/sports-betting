@@ -7,12 +7,19 @@ Update the training data.
 from os import linesep
 from argparse import ArgumentParser
 
-import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.dummy import DummyClassifier
 from imblearn.pipeline import make_pipeline
 from sklearnext.over_sampling import SMOTE
+import pandas as pd
+from sportsbet import PATH
 from sportsbet.soccer import BettingAgent
+
+DEFAULT_CLASSIFIERS = {
+    'trivial': DummyClassifier(strategy='constant', constant=1),
+    'random': DummyClassifier(),
+    'baseline': make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs'))
+}
 
 
 def parse_args():
@@ -22,7 +29,7 @@ def parse_args():
     parser = ArgumentParser('Backtest a classifier multiple times.')
     
     # Add arguments
-    parser.add_argument('--classifier', default='random', help='The classifier to predict the results.')
+    parser.add_argument('--clf-name', default='trivial', help='The classifier name to predict the results.')
     parser.add_argument('--num-runs', default=5, type=int, help='Number of backtesting repetitions.')
     parser.add_argument('--predicted-result', default='A', help='Predicted result (H or A or D).')
     parser.add_argument('--test-year', default=2, type=int, help='Test year (2 or 3).')
@@ -33,20 +40,32 @@ def parse_args():
     return parser.parse_args()
 
 
-def apply_backtest(classifier, num_runs, predicted_result, test_year, max_day_range):
+def set_random_state(classifier, random_state):
+    """Set the random state of all estimators."""
+    for param in classifier.get_params():
+        if 'random_state' in param:
+            classifier.set_params(**{param: random_state})
+
+def import_custom_classifiers():
+    """Try to import custom classifier."""
+    try:
+        from configuration import CLASSIFIERS
+        CLASSIFIERS.update(DEFAULT_CLASSIFIERS)
+    except ImportError:
+        CLASSIFIERS = DEFAULT_CLASSIFIERS
+    return CLASSIFIERS
+
+
+def apply_backtest(clf_name, num_runs, predicted_result, test_year, max_day_range):
 
     # Define estimator
-    if classifier == 'random':
-        classifier = DummyClassifier()
-        params = ['random_state']
-    elif classifier == 'baseline':
-        classifier = make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs'))
-        params = ['smote__random_state', 'logisticregression__random_state']
+    classifiers = import_custom_classifiers()
+    classifier = classifiers[clf_name]
 
     # Backtest
     betting_agents = []
     for random_state in range(num_runs):
-        classifier.set_params(**{param: random_state for param in params})
+        set_random_state(classifier, random_state)
         betting_agent = BettingAgent()
         betting_agent.backtest(classifier, None, predicted_result, test_year, max_day_range)
         betting_agents.append(betting_agent)
@@ -62,11 +81,15 @@ def print_results(betting_agents):
     for betting_agent in betting_agents:
         statistics = betting_agent.calculate_backtest_stats(args['bet_factor'], args['credit_exponent'])
         results.append((statistics['Capital'].values[-1], betting_agent.precision_, betting_agent.profit_per_bet_))
-    
-    # Print results
     results = pd.DataFrame(results, columns=['Capital', 'Precision', 'Profit per bet'])
+    
+    # Define basic print messages
     msgs = (u'Average capital: {:.1f}', u'Average precision: {:.1f}% ', u'Average profit per bet: {:.1f}% ')
+
+    # Aggregate results
     aggregated_results = zip(results.mean().values, results.std().values, msgs)
+    
+    # Iterate results
     two_lines = 2 * linesep
     for ind, (avg_val, std_val, msg) in enumerate(aggregated_results):
         if len(results) == 1:
@@ -82,8 +105,9 @@ def print_results(betting_agents):
                 avg_val *= 100
                 std_val *= 100
                 msg += ' \xb1 {:.1f}%'
+        
+        # Print result
         print(msg.format(avg_val, std_val))
-
 
 
 if __name__ == '__main__':
@@ -92,7 +116,7 @@ if __name__ == '__main__':
     args = vars(parse_args())
     
     # Backtesting
-    betting_agents = apply_backtest(args['classifier'], args['num_runs'], args['predicted_result'], args['test_year'], args['max_day_range'])
+    betting_agents = apply_backtest(args['clf_name'], args['num_runs'], args['predicted_result'], args['test_year'], args['max_day_range'])
     
     # Print results
     print_results(betting_agents)

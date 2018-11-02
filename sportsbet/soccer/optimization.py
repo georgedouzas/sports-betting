@@ -8,7 +8,6 @@ betting strategy on historical and current data.
 
 from pathlib import Path
 from os.path import join
-from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -22,54 +21,10 @@ from sklearn.dummy import DummyClassifier
 from imblearn.pipeline import Pipeline
 import progressbar
 
-from .. import PATH
+from .. import PATH, ProfitEstimator, total_profit_score
 from .data import _fetch_spi_data, _fetch_fd_data, _match_teams_names, LEAGUES_MAPPING
 
 DATA_PATH = join(PATH, 'training_data.csv')
-
-
-class Ratio:
-    """Return dictionary for the ratio parameter of oversamplers."""
-
-    def __init__(self, ratio):
-        self.ratio = ratio
-    
-    def __call__(self, y):
-        return {1: int(self.ratio * Counter(y)[0])}
-
-    def __repr__(self):
-        return str(self.ratio)
-
-
-class ProfitEstimator(BaseEstimator, RegressorMixin):
-    """Wrapper class of an estimator."""
-
-    def __init__(self, estimator):
-        self.estimator = estimator
-
-    def fit(self, X, y, **fit_params):
-        self.estimator_ = clone(self.estimator)
-        self.estimator_.fit(X[:, :-1], y, **fit_params)
-        return self
-        
-    def predict(self, X):
-        profit = self.estimator_.predict(X[:, :-1]) * (X[:, -1] - 1)
-        return profit
-
-
-def total_profit_score(y_true, y_pred):
-    """Calculate tota; profit for a profit estimator."""
-    
-    mask = y_pred > 0
-    y_true_sel, y_pred_sel = y_true[mask], y_pred[mask]
-    
-    if y_pred_sel.size == 0:
-        return 0.0
-    
-    profit = y_true_sel * y_pred_sel
-    profit[profit == 0.0] = -1.0
-
-    return profit.sum()
 
 
 class SeasonTimeSeriesSplit(BaseCrossValidator):
