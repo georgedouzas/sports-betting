@@ -4,6 +4,7 @@
 Update the training data.
 """
 
+from os import linesep
 from argparse import ArgumentParser
 
 import pandas as pd
@@ -52,6 +53,39 @@ def apply_backtest(classifier, num_runs, predicted_result, test_year, max_day_ra
     
     return betting_agents
 
+
+def print_results(betting_agents):
+    """Print the backtestings results"""
+
+    # Parse results
+    results = []
+    for betting_agent in betting_agents:
+        statistics = betting_agent.calculate_backtest_stats(args['bet_factor'], args['credit_exponent'])
+        results.append((statistics['Capital'].values[-1], betting_agent.precision_, betting_agent.profit_per_bet_))
+    
+    # Print results
+    results = pd.DataFrame(results, columns=['Capital', 'Precision', 'Profit per bet'])
+    msgs = (u'Average capital: {:.1f}', u'Average precision: {:.1f}% ', u'Average profit per bet: {:.1f}% ')
+    aggregated_results = zip(results.mean().values, results.std().values, msgs)
+    two_lines = 2 * linesep
+    for ind, (avg_val, std_val, msg) in enumerate(aggregated_results):
+        if len(results) == 1:
+            if ind == 0:
+                print(linesep, statistics, end=two_lines)
+            else:
+                avg_val *= 100
+            std_val = ''
+        else:
+            if ind == 0:
+                msg = linesep + msg + ' \xb1 {:.1f}'
+            else:
+                avg_val *= 100
+                std_val *= 100
+                msg += ' \xb1 {:.1f}%'
+        print(msg.format(avg_val, std_val))
+
+
+
 if __name__ == '__main__':
     
     # Parse arguments
@@ -60,16 +94,7 @@ if __name__ == '__main__':
     # Backtesting
     betting_agents = apply_backtest(args['classifier'], args['num_runs'], args['predicted_result'], args['test_year'], args['max_day_range'])
     
-    # Calculate statistics
-    results = []
-    for betting_agent in betting_agents:
-        statistics = betting_agent.calculate_backtest_stats(args['bet_factor'], args['credit_exponent'])
-        results.append((statistics['Capital'].values[-1], betting_agent.precision_, betting_agent.profit_per_bet_))
-    
     # Print results
-    results = pd.DataFrame(results, columns=['Capital', 'Precision', 'Profit per bet'])
-    print(u'\n\nAverage capital: {:.1f} \xb1 {:.1f}'.format(results['Capital'].mean(), results['Capital'].std()), 
-          u'\nAverage precision: {:.1f}% \xb1 {:.1f}%'.format(100 * results['Precision'].mean(), 100 * results['Precision'].std()),
-          u'\nAverage profit per bet: {:.2f}% \xb1 {:.1f}%\n'.format(100 * results['Profit per bet'].mean(), 100 * results['Profit per bet'].std())
-    )
+    print_results(betting_agents)
+
     
