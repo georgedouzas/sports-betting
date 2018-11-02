@@ -1,6 +1,3 @@
-pyenv
-.idea
-data
 *.egg-info
 __pycache__
 .vscode
