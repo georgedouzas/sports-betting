@@ -6,7 +6,8 @@ betting strategy on historical and current data.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: BSD 3 clause
 
-from os.path import join, dirname
+from pathlib import Path
+from os.path import join
 from collections import Counter
 
 import numpy as np
@@ -21,7 +22,10 @@ from sklearn.dummy import DummyClassifier
 from imblearn.pipeline import Pipeline
 import progressbar
 
+from .. import PATH
 from .data import _fetch_spi_data, _fetch_fd_data, _match_teams_names, LEAGUES_MAPPING
+
+DATA_PATH = join(PATH, 'training_data.csv')
 
 
 class Ratio:
@@ -166,8 +170,6 @@ class SeasonTimeSeriesSplit(BaseCrossValidator):
 
 class BettingAgent:
 
-    data_path = join(dirname(__file__), '..', '..', 'data', 'training_data.csv')
-
     def fetch_training_data(self, leagues='all'):
         """Fetch the training data."""
 
@@ -215,13 +217,17 @@ class BettingAgent:
         training_data.drop(columns=['Date', 'Season', 'League', 'HomeTeam', 'AwayTeam'], inplace=True)
 
         # Save data
-        training_data.to_csv(self.data_path, index=False) 
+        Path(PATH).mkdir(exist_ok=True)
+        training_data.to_csv(DATA_PATH, index=False) 
 
     def load_modeling_data(self, predicted_result='A'):
         """Load the data used for modeling."""
 
         # Load data
-        training_data = pd.read_csv(self.data_path)
+        try:
+            training_data = pd.read_csv(DATA_PATH)
+        except FileNotFoundError:
+            raise FileNotFoundError('Training data do not exist. Fetch training data before loading modeling data.')
 
         # Split and prepare data
         X = training_data.drop(columns=['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd', 'HomeGoals', 'AwayGoals'])
