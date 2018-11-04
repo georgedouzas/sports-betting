@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Run backtesting.
+Run backtesting using a classifer.
 """
 
 from os import linesep
@@ -11,6 +11,7 @@ import pandas as pd
 from sportsbet.utils import set_random_state
 from sportsbet.soccer import BettingAgent
 from sportsbet.soccer.optimization import DEFAULT_CLASSIFIERS
+from sportsbet.config import CLASSIFIERS
 from tqdm import trange
 
 
@@ -26,27 +27,16 @@ def parse_args():
     parser.add_argument('--predicted-result', default='A', help='Predicted result (H or A or D).')
     parser.add_argument('--test-year', default=2, type=int, help='Test year (2 or 3).')
     parser.add_argument('--max-day-range', default=6, type=int, help='Maximum day range between bets.')
-    parser.add_argument('--bet-factor', default=1.5, type=float, help='Factor to multiple betting amount in the case of loss.')  
+    parser.add_argument('--bet-factor', default=2, type=float, help='Factor to multiple betting amount in the case of loss.')  
     parser.add_argument('--credit-exponent', default=3, type=int, help='Exponent to raise bet factor. Returns the available credit.')
       
     return parser.parse_args()
 
 
-def import_custom_classifiers():
-    """Try to import custom classifier."""
-    try:
-        from configuration import CLASSIFIERS
-        CLASSIFIERS.update(DEFAULT_CLASSIFIERS)
-    except ImportError:
-        CLASSIFIERS = DEFAULT_CLASSIFIERS
-    return CLASSIFIERS
-
-
-def apply_backtest(clf_name, num_runs, predicted_result, test_year, max_day_range):
+def backtest(clf_name, num_runs, predicted_result, test_year, max_day_range):
 
     # Define classifier and fitting parameters
-    classifiers = import_custom_classifiers()
-    classifier, fit_params = classifiers[clf_name]
+    classifier, fit_params = CLASSIFIERS[clf_name]
 
     # Backtest
     betting_agents = []
@@ -110,7 +100,7 @@ if __name__ == '__main__':
     args = vars(parse_args())
 
     # Backtesting
-    betting_agents = apply_backtest(args['clf_name'], args['num_runs'], args['predicted_result'], args['test_year'], args['max_day_range'])
+    betting_agents = backtest(args['clf_name'], args['num_runs'], args['predicted_result'], args['test_year'], args['max_day_range'])
     
     # Print results
     print_results(betting_agents)

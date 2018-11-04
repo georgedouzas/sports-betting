@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+"""
+Fit and dump a selected classifier.
+"""
+
+from argparse import ArgumentParser
+
+from sportsbet.soccer import BettingAgent
+from sportsbet.config import CLASSIFIERS
+
+
+def parse_args():
+    """Parse command line arguments."""
+    
+    # Create parser
+    parser = ArgumentParser('Fit and dump a selected classifier.')
+    
+    # Add arguments
+    parser.add_argument('--predicted-result', default='A', help='Predicted result (H or A or D).')
+    parser.add_argument('--clf-name', default='trivial', help='The classifier name to fit and dump.')
+      
+    return parser.parse_args()
+
+
+def fit_dump_classifier(predicted_result, clf_name):
+
+    # Define classifier and fitting parameters
+    classifier, fit_params = CLASSIFIERS[clf_name]
+
+    # Create betting agent
+    betting_agent = BettingAgent()
+
+    # Fit and dump classifier
+    betting_agent.fit_dump_classifier(predicted_result, classifier, fit_params)
+
+
+if __name__ == '__main__':
+    
+    # Parse arguments
+    args = vars(parse_args())
+    
+    # Backtesting
+    fit_dump_classifier(**args)

@@ -4,46 +4,31 @@
 Apply cross-validation to evaluate classifier.
 """
 
-from os import linesep
 from argparse import ArgumentParser
 
-import pandas as pd
-from sportsbet.utils import set_random_state
 from sportsbet.soccer import BettingAgent
-from sportsbet.soccer.optimization import DEFAULT_CLASSIFIERS
-from tqdm import trange
+from sportsbet.config import CLASSIFIERS
 
 
 def parse_args():
     """Parse command line arguments."""
     
     # Create parser
-    parser = ArgumentParser('Backtest a classifier multiple times.')
+    parser = ArgumentParser('Apply cross-validation to evaluate a classifier.')
     
     # Add arguments
     parser.add_argument('--clf-name', default='trivial', help='The classifier name to predict the results.')
     parser.add_argument('--predicted-result', default='A', help='Predicted result (H or A or D).')
-    parser.add_argument('--n-splits', default=10, type=int, help='The number of cross-validation splits.')
+    parser.add_argument('--n-splits', default=5, type=int, help='The number of cross-validation splits.')
     parser.add_argument('--random-state', default=0, type=int, help='The random state for cross-validation splitting and classifiers.')
       
     return parser.parse_args()
 
 
-def import_custom_classifiers():
-    """Try to import custom classifier."""
-    try:
-        from configuration import CLASSIFIERS
-        CLASSIFIERS.update(DEFAULT_CLASSIFIERS)
-    except ImportError:
-        CLASSIFIERS = DEFAULT_CLASSIFIERS
-    return CLASSIFIERS
-
-
 def evaluate_classifier(clf_name, predicted_result, n_splits, random_state):
 
     # Define classifier and fitting parameters
-    classifiers = import_custom_classifiers()
-    classifier, fit_params = classifiers[clf_name]
+    classifier, fit_params = CLASSIFIERS[clf_name]
 
     # Create betting agent
     betting_agent = BettingAgent()

@@ -8,6 +8,7 @@ betting strategy on historical and current data.
 
 from pathlib import Path
 from os.path import join
+from pickle import dump
 
 import numpy as np
 import pandas as pd
@@ -26,13 +27,10 @@ from tqdm import tqdm
 from .. import PATH
 from ..utils import ProfitEstimator, total_profit_score, mean_profit_score, set_random_state, _fit_predict
 from .data import _fetch_spi_data, _fetch_fd_data, _match_teams_names, LEAGUES_MAPPING
+from ..config import DEFAULT_CLASSIFIERS
 
 DATA_PATH = join(PATH, 'training_data.csv')
-DEFAULT_CLASSIFIERS = {
-    'trivial': (DummyClassifier(strategy='constant', constant=1), {}),
-    'random': (DummyClassifier(), {}),
-    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs')), {})
-}
+CLF_PATH = join(PATH, 'classifier.pkl')
 
 
 class SeasonTimeSeriesSplit(BaseCrossValidator):
@@ -227,7 +225,7 @@ class BettingAgent:
 
         return classifier, fit_params
 
-    def evaluate_classifier(self, classifier=None, fit_params=None, predicted_result='A', n_splits=10, random_state=None):
+    def evaluate_classifier(self, classifier=None, fit_params=None, predicted_result='A', n_splits=5, random_state=None):
         """Evaluate classifier performance using the profit scores."""
 
         # Load and prepare data
@@ -252,6 +250,22 @@ class BettingAgent:
 
         return total_profit, mean_profit
 
+    def fit_dump_classifier(self, predicted_result, classifier, fit_params):
+        """Fit and dump a classifier."""
+
+        # Load modelling data
+        X, y, _ = self.load_modeling_data(predicted_result)
+
+        # Remove time index
+        X = X[:, 1:]
+
+        # Fit classifier
+        classifier.fit(X, y, **fit_params)
+
+        # Dump classifier
+        with open(CLF_PATH, 'wb') as file:
+            dump(classifier, file)
+
     def backtest(self, classifier=None, fit_params=None, predicted_result='A', test_year=2, max_day_range=6):
         """Apply backtesting to betting agent."""
 
@@ -271,7 +285,7 @@ class BettingAgent:
                                                                            **fit_params)
                                           for train_indices, test_indices in tqdm(indices, desc='Backtesting: '))
 
-    def calculate_backtest_results(self, bet_factor=1.5, credit_exponent=3):
+    def calculate_backtest_results(self, bet_factor=2, credit_exponent=3):
 
         # Initialize parameters
         statistics, precisions = [], []

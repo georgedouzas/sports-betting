@@ -1,5 +1,5 @@
 """
-Defines constants and helper functions/classes.
+Defines helper functions and classes.
 """
 
 from collections import Counter
@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.metrics import SCORERS, make_scorer
 
-# Class for sampling strategy
+
 class SamplingStrategy:
     """Helper class for the sampling strategy parameter of oversamplers."""
 
@@ -21,7 +21,7 @@ class SamplingStrategy:
     def __repr__(self):
         return str(self.ratio)
 
-# Class for the profit estimation
+
 class ProfitEstimator(BaseEstimator, RegressorMixin):
     """Wrapper class of an estimator."""
 
@@ -45,7 +45,7 @@ class ProfitEstimator(BaseEstimator, RegressorMixin):
         
         return profit
 
-# Functions for profit score
+
 def _profit_score(y_true, y_pred):
 
     # Filter positive class preditions
@@ -62,6 +62,7 @@ def _profit_score(y_true, y_pred):
 
     return profit
 
+
 def mean_profit_score(y_true, y_pred):
     """Calculate total profit for a profit estimator."""
     
@@ -69,7 +70,6 @@ def mean_profit_score(y_true, y_pred):
 
     return profit.mean()
 
-SCORERS['mean_profit'] = make_scorer(mean_profit_score)
 
 def total_profit_score(y_true, y_pred):
     """Calculate total profit for a profit estimator."""
@@ -78,16 +78,14 @@ def total_profit_score(y_true, y_pred):
 
     return profit.sum()
 
-SCORERS['total_profit'] = make_scorer(total_profit_score)
 
-# Set the random state
 def set_random_state(classifier, random_state):
     """Set the random state of all estimators."""
     for param in classifier.get_params():
         if 'random_state' in param:
             classifier.set_params(**{param: random_state})
 
-# Fit and predict function
+
 def _fit_predict(classifier, X, y, train_indices, test_indices, **fit_params):
     """Fit estimator and predict for a set of train and test indices."""
 
@@ -101,3 +99,13 @@ def _fit_predict(classifier, X, y, train_indices, test_indices, **fit_params):
     y_pred = classifier.predict(X[test_indices])
         
     return y_test, y_pred
+
+
+def import_custom_classifiers(default_classifiers):
+    """Try to import custom classifiers."""
+    try:
+        from extra_config import CLASSIFIERS
+        CLASSIFIERS.update(default_classifiers)
+    except ImportError:
+        CLASSIFIERS = default_classifiers
+    return CLASSIFIERS
