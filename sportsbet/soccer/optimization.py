@@ -11,21 +11,28 @@ from os.path import join
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.utils import check_array, check_X_y
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.model_selection._split import BaseCrossValidator, _num_samples
 from sklearn.metrics import precision_score
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.utils import Parallel, delayed
-from imblearn.pipeline import Pipeline
+from imblearn.pipeline import make_pipeline
+from imblearn.over_sampling import SMOTE
 from tqdm import tqdm
 
-from .. import PATH, ProfitEstimator, total_profit_score
+from .. import PATH
+from ..utils import ProfitEstimator, total_profit_score, mean_profit_score, set_random_state, _fit_predict
 from .data import _fetch_spi_data, _fetch_fd_data, _match_teams_names, LEAGUES_MAPPING
 
 DATA_PATH = join(PATH, 'training_data.csv')
+DEFAULT_CLASSIFIERS = {
+    'trivial': (DummyClassifier(strategy='constant', constant=1), {}),
+    'random': (DummyClassifier(), {}),
+    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs')), {})
+}
 
 
 class SeasonTimeSeriesSplit(BaseCrossValidator):
@@ -201,42 +208,70 @@ class BettingAgent:
 
         return X, y, odds
 
-    @staticmethod
-    def _fit_predict(estimator, X, y, train_indices, test_indices, **fit_params):
-        """Fit estimator and predict for a backtesting stage."""
+    def _load_prepare_data(self, predicted_result):
 
-        # Fit estimator
-        estimator.fit(X[train_indices], y[train_indices], **fit_params)
-
-        # Predict on test set
-        y_pred = estimator.predict(X[test_indices])
-        
-        return y[test_indices], y_pred
-
-    def backtest(self, estimator=None, fit_params=None, predicted_result='A', test_year=2, max_day_range=6):
-        """Apply backtesting to betting agent."""
-
-        # Load backtesting_data
+        # Load modelling data
         X, y, odds = self.load_modeling_data(predicted_result)
 
         # Prepare data
         X = np.hstack((X, odds.reshape(-1, 1)))
 
-        # Define parameters
-        self.estimator_ = ProfitEstimator(estimator) if estimator is not None else ProfitEstimator(DummyClassifier(strategy='constant', constant=1))
-        self.fit_params_ = {} if fit_params is None else fit_params.copy()
+        return X, y
+
+    @staticmethod
+    def _check_classifier(classifier, fit_params):
+
+        # Check classifier and its fitting parameters
+        classifier = ProfitEstimator(classifier) if classifier is not None else ProfitEstimator(DEFAULT_CLASSIFIERS['trivial'][0])
+        fit_params = fit_params.copy() if fit_params is not None else DEFAULT_CLASSIFIERS['trivial'][1]
+
+        return classifier, fit_params
+
+    def evaluate_classifier(self, classifier=None, fit_params=None, predicted_result='A', n_splits=10, random_state=None):
+        """Evaluate classifier performance using the profit scores."""
+
+        # Load and prepare data
+        X, y = self._load_prepare_data(predicted_result)
+
+        # Check classifier and its fitting parameters
+        classifier, fit_params = self._check_classifier(classifier, fit_params)
+
+        # Set random state
+        set_random_state(classifier, random_state)
+
+        # Run cross-validation
+        gscv = GridSearchCV(estimator=classifier, param_grid={}, scoring=['total_profit', 'mean_profit'], 
+                            cv=StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state), 
+                            n_jobs=-1, refit=False, iid=True, return_train_score=False)
+        gscv.fit(X, y, **fit_params)
+
+        # Extract results
+        columns = ['mean_test_total_profit', 'std_test_total_profit', 'mean_test_mean_profit', 'std_test_mean_profit']
+        results = pd.DataFrame(gscv.cv_results_)[columns].values.reshape(-1)
+        total_profit, mean_profit = results[0:2].tolist(), results[2:].tolist()
+
+        return total_profit, mean_profit
+
+    def backtest(self, classifier=None, fit_params=None, predicted_result='A', test_year=2, max_day_range=6):
+        """Apply backtesting to betting agent."""
+
+        # Load and prepare data
+        X, y = self._load_prepare_data(predicted_result)
+
+        # Check classifier and its fitting parameters
+        classifier, fit_params = self._check_classifier(classifier, fit_params)
 
         # Define train and test indices
         indices = list(SeasonTimeSeriesSplit(test_year=test_year, max_day_range=max_day_range).split(X, y))
 
         # Run cross-validation
-        self.backtest_results_ = Parallel(n_jobs=-1)(delayed(self._fit_predict)(self.estimator_, 
-                                                                     X, y, 
-                                                                     train_indices, test_indices, 
-                                                                     **self.fit_params_)
+        self.backtest_results_ = Parallel(n_jobs=-1)(delayed(_fit_predict)(classifier, 
+                                                                           X, y, 
+                                                                           train_indices, test_indices, 
+                                                                           **fit_params)
                                           for train_indices, test_indices in tqdm(indices, desc='Backtesting: '))
 
-    def calculate_backtest_stats(self, bet_factor=1.5, credit_exponent=3):
+    def calculate_backtest_results(self, bet_factor=1.5, credit_exponent=3):
 
         # Initialize parameters
         statistics, precisions = [], []
@@ -287,7 +322,7 @@ class BettingAgent:
         statistics = pd.DataFrame(statistics, columns=['Capital', 'Profit', 'Bet amount', 'Bets', 'Matches', 'Precision'])
 
         # Define attributes
-        self.profit_per_bet_ = total_profit_score(y_test_all, y_pred_all) / y_pred_all.size
-        self.precision_ = np.nanmean(precisions)
+        mean_precision = np.nanmean(precisions)
+        profit_per_bet = mean_profit_score(y_test_all, y_pred_all)
 
-        return statistics
+        return statistics, mean_precision, profit_per_bet

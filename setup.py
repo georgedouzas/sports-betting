@@ -15,5 +15,6 @@ setup(
     scripts=[
         'sportsbet/scripts/fetch_training_data',
         'sportsbet/scripts/backtesting',
+        'sportsbet/scripts/evaluate_classifier'
     ]
 )

@@ -3,18 +3,10 @@ Defines constants and helper functions/classes.
 """
 
 from collections import Counter
-from pathlib import Path
-from os.path import join
-from sys import path
 
+import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.metrics import SCORERS, make_scorer
-
-# Define default path
-PATH = join(str(Path.home()), '.sports-betting')
-
-# Append default path
-path.append(PATH)
 
 # Class for sampling strategy
 class SamplingStrategy:
@@ -53,20 +45,59 @@ class ProfitEstimator(BaseEstimator, RegressorMixin):
         
         return profit
 
-# Function for total profit score
-def total_profit_score(y_true, y_pred):
-    """Calculate total profit for a profit estimator."""
-    
+# Functions for profit score
+def _profit_score(y_true, y_pred):
+
+    # Filter positive class preditions
     mask = y_pred > 0
     y_true_sel, y_pred_sel = y_true[mask], y_pred[mask]
     
+    # No preidictions case
     if y_pred_sel.size == 0:
-        return 0.0
+        return np.array([0.0])
     
+    # Calculate profit
     profit = y_true_sel * y_pred_sel
     profit[profit == 0.0] = -1.0
 
+    return profit
+
+def mean_profit_score(y_true, y_pred):
+    """Calculate total profit for a profit estimator."""
+    
+    profit = _profit_score(y_true, y_pred)
+
+    return profit.mean()
+
+SCORERS['mean_profit'] = make_scorer(mean_profit_score)
+
+def total_profit_score(y_true, y_pred):
+    """Calculate total profit for a profit estimator."""
+    
+    profit = _profit_score(y_true, y_pred)
+
     return profit.sum()
 
-# Append total profit to scorers
 SCORERS['total_profit'] = make_scorer(total_profit_score)
+
+# Set the random state
+def set_random_state(classifier, random_state):
+    """Set the random state of all estimators."""
+    for param in classifier.get_params():
+        if 'random_state' in param:
+            classifier.set_params(**{param: random_state})
+
+# Fit and predict function
+def _fit_predict(classifier, X, y, train_indices, test_indices, **fit_params):
+    """Fit estimator and predict for a set of train and test indices."""
+
+    # Fit classifier
+    classifier.fit(X[train_indices], y[train_indices], **fit_params)
+
+    # Filter test samples
+    y_test = y[test_indices]
+
+    # Predict on test set
+    y_pred = classifier.predict(X[test_indices])
+        
+    return y_test, y_pred
