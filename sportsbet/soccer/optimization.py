@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 from .. import PATH
 from ..utils import ProfitEstimator, total_profit_score, mean_profit_score, set_random_state, _fit_predict
-from .data import _fetch_spi_data, _fetch_fd_data, _match_teams_names, LEAGUES_MAPPING
+from .data import _fetch_historical_spi_data, _fetch_historical_fd_data, _match_teams_names, LEAGUES_MAPPING
 from ..config import DEFAULT_CLASSIFIERS
 
 DATA_PATH = join(PATH, 'training_data.csv')
@@ -145,8 +145,8 @@ class BettingAgent:
         keys = ['Date', 'League', 'HomeTeam', 'AwayTeam', 'HomeGoals', 'AwayGoals']
 
         # Fetch data
-        spi_data = _fetch_spi_data(leagues)
-        fd_data = _fetch_fd_data(leagues)
+        spi_data = _fetch_historical_spi_data(leagues)
+        fd_data = _fetch_historical_fd_data(leagues)
 
         # Teams names matching
         mapping = _match_teams_names(spi_data, fd_data)

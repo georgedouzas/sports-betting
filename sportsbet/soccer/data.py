@@ -41,7 +41,7 @@ LEAGUES_MAPPING = {
 }
 
 
-def _fetch_spi_data(leagues='all'):
+def _fetch_spi_data(leagues):
     """Fetch the data containing match-by-match SPI ratings."""
 
     # Define url
@@ -80,7 +80,21 @@ def _fetch_spi_data(leagues='all'):
         leagues = [league_id for league_id, _ in LEAGUES_MAPPING.values()]
     elif leagues == 'main':
         leagues = [league_id for league_id, league_type in LEAGUES_MAPPING.values() if league_type == 'main']
-    data = data[(~data.HomeGoals.isna()) & (~data.AwayGoals.isna()) & (data.League.isin(leagues))]
+    else:
+        leagues = [league_id for league_id, _ in LEAGUES_MAPPING.values() if league_id in leagues]
+    data = data[data.League.isin(leagues)]
+
+    return data
+    
+
+def _fetch_historical_spi_data(leagues):
+    """Fetch historical data containing match-by-match SPI ratings."""
+
+    # Fetch data
+    data = _fetch_spi_data(leagues)
+
+    # Filter historical data
+    data = data[(~data.HomeGoals.isna()) & (~data.AwayGoals.isna())]
 
     # Cast columns
     data['Date'] = pd.to_datetime(data['Date'], format='%Y-%m-%d')
@@ -93,7 +107,19 @@ def _fetch_spi_data(leagues='all'):
     return data
 
 
-def _fetch_fd_data(leagues='all'):
+def _fetch_future_spi_data(leagues):
+    """Fetch data containing future match-by-match SPI ratings."""
+
+    # Fetch data
+    data = _fetch_spi_data(leagues)
+
+    # Filter future data
+    data = data[(data.HomeGoals.isna()) & (data.AwayGoals.isna())]
+
+    return data
+
+
+def _fetch_historical_fd_data(leagues):
     """Fetch the data from football-data.co.uk."""
 
     # Define common parameters
