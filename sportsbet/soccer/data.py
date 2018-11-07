@@ -3,42 +3,50 @@ Download and prepare soccer historical data from various leagues.
 """
 
 from os.path import join
+from urllib.request import urljoin
 from itertools import product
 from difflib import SequenceMatcher
 
 import pandas as pd
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 
-LEAGUES_MAPPING = {
-    'Argentina Primera Division': ('ARG', 'extra'),
-    'Austrian T-Mobile Bundesliga': ('AUT', 'extra'),
-    'Barclays Premier League': ('E0', 'main'),
-    'Belgian Jupiler League': ('B1', 'main'),
-    'Brasileiro Série A': ('BRA', 'extra'),
-    'Chinese Super League': ('CHN', 'extra'),
-    'Danish SAS-Ligaen': ('DNK', 'extra'),
-    'Dutch Eredivisie': ('N1', 'main'),
-    'English League Championship': ('E1', 'main'),
-    'English League One': ('E2', 'main'),
-    'English League Two': ('E3', 'main'),
-    'French Ligue 1': ('F1', 'main'),
-    'French Ligue 2': ('F2', 'main'),
-    'German Bundesliga': ('D1', 'main'),
-    'German 2. Bundesliga': ('D2', 'main'),
-    'Greek Super League': ('G1', 'main'),
-    'Italy Serie A': ('I1', 'main'),
-    'Italy Serie B': ('I2', 'main'),
-    'Japanese J League': ('JPN', 'extra'),
-    'Major League Soccer': ('USA', 'extra'),
-    'Norwegian Tippeligaen': ('NOR', 'extra'),
-    'Portuguese Liga': ('P1', 'main'),
-    'Russian Premier Liga': ('RUS', 'extra'),
-    'Scottish Premiership': ('SC0', 'main'),
-    'Spanish Primera Division': ('SP1', 'main'),
-    'Spanish Segunda Division': ('SP2', 'main'),
-    'Swedish Allsvenskan': ('SWE', 'extra'),
-    'Swiss Raiffeisen Super League': ('SWZ', 'extra'),
-    'Turkish Turkcell Super Lig': ('T1', 'main')
-}
+LEAGUES_MAPPING = [
+    ('Argentina Primera Division', ('ARG', 'extra'), ('argentina', 'superliga')),
+    ('Austrian T-Mobile Bundesliga', ('AUT', 'extra'), ('austria', 'tipico-bundesliga')),
+    ('Barclays Premier League', ('E0', 'main'), ('england', 'premier-league')),
+    ('Belgian Jupiler League', ('B1', 'main'), ('belgium', 'jupiler-pro-league')),
+    ('Brasileiro Série A', ('BRA', 'extra'), ('brazil', 'serie-a')),
+    ('Chinese Super League', ('CHN', 'extra'), ('china' , 'super-league')),
+    ('Danish SAS-Ligaen', ('DNK', 'extra'), ('denmark', 'superliga')),
+    ('Dutch Eredivisie', ('N1', 'main'), ('netherlands', 'eerste-divisie')),
+    ('English League Championship', ('E1', 'main'), ('england', 'championship')),
+    ('English League One', ('E2', 'main'), ('england', 'league-1')),
+    ('English League Two', ('E3', 'main'), ('england', 'league-2')),
+    ('French Ligue 1', ('F1', 'main'), ('france', 'ligue-1')),
+    ('French Ligue 2', ('F2', 'main'), ('france', 'ligue-2')),
+    ('German Bundesliga', ('D1', 'main'), ('germany', 'bundesliga')),
+    ('German 2. Bundesliga', ('D2', 'main'), ('germany', '2-bundesliga')),
+    ('Greek Super League', ('G1', 'main'), ('greece', 'super-league')),
+    ('Italy Serie A', ('I1', 'main'), ('italy', 'serie-a')),
+    ('Italy Serie B', ('I2', 'main'), ('italy', 'serie-b')),
+    ('Japanese J League', ('JPN', 'extra'), ('japan', 'j-league')),
+    ('Major League Soccer', ('USA', 'extra'), ('usa', 'mls')),
+    ('Norwegian Tippeligaen', ('NOR', 'extra'), ('norway', 'eliteserien')),
+    ('Portuguese Liga', ('P1', 'main'), ('portugal', 'primeira-liga')),
+    ('Russian Premier Liga', ('RUS', 'extra'), ('russia', 'premier-league')),
+    ('Scottish Premiership', ('SC0', 'main'), ('scotland', 'premiership')),
+    ('Spanish Primera Division', ('SP1', 'main'), ('spain', 'primera-division')),
+    ('Spanish Segunda Division', ('SP2', 'main'), ('spain', 'segunda-division')),
+    ('Swedish Allsvenskan', ('SWE', 'extra'), ('sweden', 'allsvenskan')),
+    ('Swiss Raiffeisen Super League', ('SWZ', 'extra'), ('switzerland', 'super-league')),
+    ('Turkish Turkcell Super Lig', ('T1', 'main'), ('turkey', 'super-lig'))
+]
 
 
 def _fetch_spi_data(leagues):
@@ -47,7 +55,7 @@ def _fetch_spi_data(leagues):
     # Define url
     url = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
     
-    # Define columns mapping
+    # Define mappings
     columns_mapping = {
         'league': 'League',
         'date': 'Date',
@@ -63,6 +71,7 @@ def _fetch_spi_data(leagues):
         'proj_score1': 'HomeSPIGoals',
         'proj_score2': 'AwaySPIGoals'
     }
+    leagues_mapping = dict([(league, league_tpl) for league, league_tpl, *_ in LEAGUES_MAPPING])
 
     # Download data
     data = pd.read_csv(url)
@@ -72,16 +81,18 @@ def _fetch_spi_data(leagues):
     data.rename(columns=columns_mapping, inplace=True)
 
     # Filter and rename leagues
-    data = data[data.League.isin(LEAGUES_MAPPING.keys())]
-    data['League'] = data['League'].apply(lambda league: LEAGUES_MAPPING[league][0])
+    data = data[data.League.isin(leagues_mapping.keys())]
+    data['League'] = data['League'].apply(lambda league: leagues_mapping[league][0])
 
-    # Filter matches
+    # Extract leagues
     if leagues == 'all':
-        leagues = [league_id for league_id, _ in LEAGUES_MAPPING.values()]
+        leagues = [league_id for league_id, _ in leagues_mapping.values()]
     elif leagues == 'main':
-        leagues = [league_id for league_id, league_type in LEAGUES_MAPPING.values() if league_type == 'main']
+        leagues = [league_id for league_id, league_type in leagues_mapping.values() if league_type == 'main']
     else:
-        leagues = [league_id for league_id, _ in LEAGUES_MAPPING.values() if league_id in leagues]
+        leagues = [league_id for league_id, _ in leagues_mapping.values() if league_id in leagues]
+    
+    # Filter matches
     data = data[data.League.isin(leagues)]
 
     return data
@@ -126,13 +137,16 @@ def _fetch_historical_fd_data(leagues):
     base_url = 'http://www.football-data.co.uk'
     url_part_main, url_part_extra = 'mmz4281', 'new'
 
-    # Append leagues type
+    # Define mapping
+    leagues_mapping = dict([(league, league_tpl) for league, league_tpl, *_ in LEAGUES_MAPPING])
+
+    # Extract leagues type
     if leagues == 'all':
-        leagues_types = LEAGUES_MAPPING.values()
+        leagues_types = leagues_mapping.values()
     elif leagues == 'main':
-        leagues_types = [(league_id, league_type) for league_id, league_type in LEAGUES_MAPPING.values() if league_type == 'main']
+        leagues_types = [(league_id, league_type) for league_id, league_type in leagues_mapping.values() if league_type == 'main']
     else:
-        leagues_types = [(league_id, league_type) for league_id, league_type in LEAGUES_MAPPING.values() if league_id in leagues]
+        leagues_types = [(league_id, league_type) for league_id, league_type in leagues_mapping.values() if league_id in leagues]
 
     # Define urls
     suffixes = []
@@ -227,3 +241,137 @@ def _match_teams_names(spi_data, fd_data):
     mapping = dict(zip(matching.x, matching.y))
 
     return mapping
+
+
+def _scrape_op_data():
+    """Scrape upcoming matches data from Odds Portal."""
+
+    # Define base url
+    base_url = 'https://www.oddsportal.com'
+
+    # Extract leagues
+    leagues = [(league_tpl[0], join('soccer', *league_op)) for _, league_tpl, league_op, *_ in LEAGUES_MAPPING if league_tpl[1] == 'extra']
+
+    # Create driver
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+
+    # Define data placeholder
+    data = []
+    
+    for league_id, suffix_url in leagues:
+
+        # Parse league data
+        driver.get(urljoin(base_url, suffix_url))
+        driver.get(urljoin(base_url, suffix_url))
+        try:
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'table-participant'))
+            )
+        except TimeoutException:
+            print('League %s was not scrapped.' % league_id)
+            continue
+        finally:
+            parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('td', {'class': 'table-participant'})
+        
+        # Parse matches data
+        matches = [list(match.children)[-1] for match in parsed_data]
+        matches_urls = [(match.text.split(' - '), match.attrs['href']) for match in matches if match.name == 'a']
+
+        print('League %s. Scrapping %s odds.' % (league_id, len(matches_urls)))
+
+        for (home_team, away_team), suffix_url in matches_urls:
+
+            # Parse match data
+            driver.get(urljoin(base_url, suffix_url))
+            try:
+                WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, 'aver'))
+                )
+            except TimeoutException:
+                print('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
+                continue
+            finally:
+                parsed_data = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            # Define odds placeholder
+            odds = []
+
+            # Populate average and maximum odds
+            for class_value in ['aver', 'highest']:
+                elements = parsed_data.findAll('tr', {'class': class_value})[0]
+                odds.append([float(element.text) for element in elements.findAll(attrs={'class': 'right'})])
+
+            # Append data
+            data.append((league_id, home_team, away_team, odds[0], odds[1]))
+    
+    return data
+
+
+def _scrape_bb_data():
+    """Scrape upcoming matches data from BetBrain."""
+
+    # Define base url
+    base_url = 'https://www.betbrain.com/'
+
+    # Extract leagues
+    leagues = [(league_tpl[0], join('football', *league_op)) for _, league_tpl, league_op, *_ in LEAGUES_MAPPING if league_tpl[1] == 'main']
+
+    # Create driver
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+
+    # Define data placeholder
+    data = []
+
+    for league_id, suffix_url in leagues:
+
+        # Parse league data
+        driver.get(urljoin(base_url, suffix_url))
+        try:
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'MatchTitleLink'))
+            )
+        except TimeoutException:
+            print('League %s was not scrapped.' % league_id)
+            continue
+        finally:
+            parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('a', {'class': 'MatchTitleLink'})
+        
+        
+        # Parse matches data
+        matches_urls = [(match.attrs['title'].split(' - '), match.attrs['href']) for match in parsed_data if 'home-draw-away' in match.attrs['href']]
+        matches_urls = [((home_team, away_team[:-5]), suffix_url) for (home_team, away_team), suffix_url in matches_urls]
+
+        print('League %s. Scrapping %s odds.' % (league_id, len(matches_urls)))
+
+        for (home_team, away_team), suffix_url in matches_urls:
+
+            # Parse match data
+            driver.get(urljoin(base_url, suffix_url))
+            try:
+                WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, 'IsAverage'))
+                )
+            except TimeoutException:
+                print('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
+                continue
+            finally:
+                parsed_data = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            # Define odds placeholder
+            odds = []
+
+            # Populate average and maximum odds
+            for class_value in ['IsAverage', 'HighestOdds']:
+                elements = parsed_data.findAll('li', {'class': class_value})[:3]
+                odds.append([float(element.text) for element in elements])
+
+            # Append data
+            data.append((league_id, home_team, away_team, odds[0], odds[1]))
+    
+    return data
+            
+        
