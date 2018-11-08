@@ -148,6 +148,15 @@ class BettingAgent:
             msg = "The `leagues` parameter should be either equal to 'all' or 'main' or a list of valid league ids. Got {} instead."
             raise ValueError(msg.format(leagues))
 
+    @staticmethod
+    def _check_classifier(classifier, fit_params):
+
+        # Check classifier and its fitting parameters
+        classifier = ProfitEstimator(classifier) if classifier is not None else ProfitEstimator(DEFAULT_CLASSIFIERS['trivial'][0])
+        fit_params = fit_params.copy() if fit_params is not None else DEFAULT_CLASSIFIERS['trivial'][1]
+
+        return classifier, fit_params
+
     def fetch_training_data(self, leagues='all'):
         """Fetch the training data."""
 
@@ -297,17 +306,8 @@ class BettingAgent:
 
         return X, y
 
-    @staticmethod
-    def _check_classifier(classifier, fit_params):
-
-        # Check classifier and its fitting parameters
-        classifier = ProfitEstimator(classifier) if classifier is not None else ProfitEstimator(DEFAULT_CLASSIFIERS['trivial'][0])
-        fit_params = fit_params.copy() if fit_params is not None else DEFAULT_CLASSIFIERS['trivial'][1]
-
-        return classifier, fit_params
-
-    def evaluate_classifier(self, classifier=None, fit_params=None, predicted_result='A', n_splits=5, random_state=None):
-        """Evaluate classifier performance using the profit scores."""
+    def cross_validate(self, classifier=None, fit_params=None, predicted_result='A', n_splits=5, random_state=None):
+        """Evaluate classifier performance using cross-validation."""
 
         # Load and prepare data
         X, y = self._load_prepare_data(predicted_result)
@@ -330,22 +330,6 @@ class BettingAgent:
         total_profit, mean_profit = results[0:2].tolist(), results[2:].tolist()
 
         return total_profit, mean_profit
-
-    def fit_dump_classifier(self, predicted_result, classifier, fit_params):
-        """Fit and dump a classifier."""
-
-        # Load modelling data
-        X, y, _ = self.load_modeling_data(predicted_result)
-
-        # Remove time index
-        X = X[:, 1:]
-
-        # Fit classifier
-        classifier.fit(X, y, **fit_params)
-
-        # Dump classifier
-        with open(CLF_PATH, 'wb') as file:
-            dump(classifier, file)
 
     def backtest(self, classifier=None, fit_params=None, predicted_result='A', test_year=2, max_day_range=6):
         """Apply backtesting to betting agent."""
@@ -421,3 +405,19 @@ class BettingAgent:
         profit_per_bet = mean_profit_score(y_test_all, y_pred_all)
 
         return statistics, mean_precision, profit_per_bet
+
+    def fit_dump_classifier(self, predicted_result, classifier, fit_params):
+        """Fit and dump a classifier."""
+
+        # Load modelling data
+        X, y, _ = self.load_modeling_data(predicted_result)
+
+        # Remove time index
+        X = X[:, 1:]
+
+        # Fit classifier
+        classifier.fit(X, y, **fit_params)
+
+        # Dump classifier
+        with open(CLF_PATH, 'wb') as file:
+            dump(classifier, file)

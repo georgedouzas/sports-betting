@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Fit and dump a selected classifier.
+Train a selected classifier.
 """
 
 from argparse import ArgumentParser
@@ -14,7 +14,7 @@ def parse_args():
     """Parse command line arguments."""
     
     # Create parser
-    parser = ArgumentParser('Fit and dump a selected classifier.')
+    parser = ArgumentParser('Train a selected classifier.')
     
     # Add arguments
     parser.add_argument('--predicted-result', default='A', help='Predicted result (H or A or D).')

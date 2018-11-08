@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Update the training and odds data.
+Download the training and odds data.
 """
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
@@ -13,7 +13,7 @@ from sportsbet.soccer import BettingAgent
 def fetch_data():
     
     # Parse the leagues parameter
-    description = 'Parse the leagues parameter from the following leagues:\n\n'
+    description = 'Select the leagues parameter from the following leagues:\n\n'
     for league_name, (league_id, _), _ in LEAGUES_MAPPING:
         description += '{} ({})\n'.format(league_id, league_name)
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)

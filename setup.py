@@ -13,9 +13,8 @@ setup(
         'tqdm==4.28.1'
     ],
     scripts=[
-        'sportsbet/scripts/fetch_data',
-        'sportsbet/scripts/backtest_classifier',
-        'sportsbet/scripts/evaluate_classifier',
-        'sportsbet/scripts/fit_dump_classifier'
+        'sportsbet/scripts/download',
+        'sportsbet/scripts/evaluate',
+        'sportsbet/scripts/train'
     ]
 )
