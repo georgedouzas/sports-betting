@@ -211,112 +211,15 @@ def _fetch_historical_fd_data(leagues):
     return data
 
 
-def _match_teams_names(spi_data, fd_data):
-    """Match teams names between spi and fd data."""
-
-    # Define merge keys
-    keys = ['Date', 'League', 'HomeGoals', 'AwayGoals']
-
-    # Define columns to select
-    columns = ['HomeTeam_x', 'HomeTeam_y', 'AwayTeam_x', 'AwayTeam_y']
-
-    # Merge data
-    teams_names = pd.merge(spi_data, fd_data, on=keys, how='left').dropna().loc[:, columns].reset_index(drop=True)
-
-    # Calculate similarity index
-    similarity = teams_names.apply(lambda row: SequenceMatcher(None, row[0], row[1]).ratio() * SequenceMatcher(None, row[2], row[3]).ratio(), axis=1)
-
-    # Append similarity index
-    teams_names_similarity = pd.concat([teams_names, similarity], axis=1)
-
-    # Filter correct matches
-    indices = teams_names_similarity.groupby(['HomeTeam_x'])[0].idxmax().values
-    teams_names_matching = teams_names.take(indices)
-
-    # Generate mapping
-    matching1 = teams_names_matching.iloc[:, 0:2].drop_duplicates()
-    matching2 = teams_names_matching.iloc[:, 2:].drop_duplicates()
-    matching1.columns, matching2.columns = ['x', 'y'], ['x', 'y']
-    matching = matching1.append(matching2).drop_duplicates()
-    mapping = dict(zip(matching.x, matching.y))
-
-    return mapping
-
-
-def _scrape_op_data():
-    """Scrape upcoming matches data from Odds Portal."""
-
-    # Define base url
-    base_url = 'https://www.oddsportal.com'
+def _scrape_bb_data(leagues):
+    """Scrape upcoming matches data from BetBrain."""
 
     # Extract leagues
-    leagues = [(league_tpl[0], join('soccer', *league_op)) for _, league_tpl, league_op, *_ in LEAGUES_MAPPING if league_tpl[1] == 'extra']
-
-    # Create driver
-    options = Options()
-    options.add_argument('--headless')
-    driver = webdriver.Chrome(options=options)
-
-    # Define data placeholder
-    data = []
-    
-    for league_id, suffix_url in leagues:
-
-        # Parse league data
-        driver.get(urljoin(base_url, suffix_url))
-        driver.get(urljoin(base_url, suffix_url))
-        try:
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'table-participant'))
-            )
-        except TimeoutException:
-            print('League %s was not scrapped.' % league_id)
-            continue
-        finally:
-            parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('td', {'class': 'table-participant'})
-        
-        # Parse matches data
-        matches = [list(match.children)[-1] for match in parsed_data]
-        matches_urls = [(match.text.split(' - '), match.attrs['href']) for match in matches if match.name == 'a']
-
-        print('League %s. Scrapping %s odds.' % (league_id, len(matches_urls)))
-
-        for (home_team, away_team), suffix_url in matches_urls:
-
-            # Parse match data
-            driver.get(urljoin(base_url, suffix_url))
-            try:
-                WebDriverWait(driver, 30).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, 'aver'))
-                )
-            except TimeoutException:
-                print('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
-                continue
-            finally:
-                parsed_data = BeautifulSoup(driver.page_source, 'html.parser')
-            
-            # Define odds placeholder
-            odds = []
-
-            # Populate average and maximum odds
-            for class_value in ['aver', 'highest']:
-                elements = parsed_data.findAll('tr', {'class': class_value})[0]
-                odds.append([float(element.text) for element in elements.findAll(attrs={'class': 'right'})])
-
-            # Append data
-            data.append((league_id, home_team, away_team, odds[0], odds[1]))
-    
-    return data
-
-
-def _scrape_bb_data():
-    """Scrape upcoming matches data from BetBrain."""
+    leagues = [(league_tpl[0], join('football', *league_op)) for _, league_tpl, league_op, *_ in LEAGUES_MAPPING 
+                if league_tpl[1] == 'main' and (league_tpl[0] in leagues if leagues not in ('main', 'all') else True)]
 
     # Define base url
     base_url = 'https://www.betbrain.com/'
-
-    # Extract leagues
-    leagues = [(league_tpl[0], join('football', *league_op)) for _, league_tpl, league_op, *_ in LEAGUES_MAPPING if league_tpl[1] == 'main']
 
     # Create driver
     options = Options()
@@ -367,11 +270,142 @@ def _scrape_bb_data():
             # Populate average and maximum odds
             for class_value in ['IsAverage', 'HighestOdds']:
                 elements = parsed_data.findAll('li', {'class': class_value})[:3]
-                odds.append([float(element.text) for element in elements])
+                parsed_odds = [float(element.text) for element in elements] 
+                odds.append([parsed_odds[0], parsed_odds[2], parsed_odds[1]])
+
+            # Append data
+            data.append((league_id, home_team, away_team, odds[0], odds[1]))
+
+    data = pd.DataFrame(data, columns=['League', 'HomeTeam', 'AwayTeam', 'AverageOdd', 'MaximumOdd'])
+    
+    return data
+
+
+def _scrape_op_data(leagues):
+    """Scrape upcoming matches data from Odds Portal."""
+
+    if leagues == 'main':
+        return []
+
+    # Extract leagues
+    leagues = [(league_tpl[0], join('soccer', *league_op)) for _, league_tpl, league_op, *_ in LEAGUES_MAPPING 
+                if league_tpl[1] == 'extra' and (league_tpl[0] in leagues if leagues != 'all' else True)]
+
+    # Define base url
+    base_url = 'https://www.oddsportal.com'
+
+    # Create driver
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+
+    # Define data placeholder
+    data = []
+    
+    for league_id, suffix_url in leagues:
+
+        # Parse league data
+        driver.get(urljoin(base_url, suffix_url))
+        try:
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'table-participant'))
+            )
+        except TimeoutException:
+            print('League %s was not scrapped.' % league_id)
+            continue
+        finally:
+            parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('td', {'class': 'table-participant'})
+        
+        # Parse matches data
+        matches = [list(match.children)[-1] for match in parsed_data]
+        matches_urls = [(match.text.split(' - '), match.attrs['href']) for match in matches if match.name == 'a']
+
+        print('League %s. Scrapping %s odds.' % (league_id, len(matches_urls)))
+
+        for (home_team, away_team), suffix_url in matches_urls:
+
+            # Parse match data
+            driver.get(urljoin(base_url, suffix_url))
+            try:
+                WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, 'aver'))
+                )
+            except TimeoutException:
+                print('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
+                continue
+            finally:
+                parsed_data = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            # Define odds placeholder
+            odds = []
+
+            # Populate average and maximum odds
+            for class_value in ['aver', 'highest']:
+                elements = parsed_data.findAll('tr', {'class': class_value})[0]
+                parsed_odds = [float(element.text) for element in elements.findAll(attrs={'class': 'right'})]
+                odds.append([parsed_odds[0], parsed_odds[2], parsed_odds[1]])
 
             # Append data
             data.append((league_id, home_team, away_team, odds[0], odds[1]))
     
+    data = pd.DataFrame(data, columns=['League', 'HomeTeam', 'AwayTeam', 'AverageOdd', 'MaximumOdd'])
+
     return data
-            
-        
+
+
+def _match_teams_names_historical(spi_data, fd_data):
+    """Match teams names between spi and fd historical data."""
+
+    # Define merge keys
+    keys = ['Date', 'League', 'HomeGoals', 'AwayGoals']
+
+    # Define columns to select
+    columns = ['HomeTeam_x', 'HomeTeam_y', 'AwayTeam_x', 'AwayTeam_y']
+
+    # Merge data
+    teams_names = pd.merge(spi_data, fd_data, on=keys, how='left').dropna().loc[:, columns].reset_index(drop=True)
+
+    # Calculate similarity index
+    similarity = teams_names.apply(lambda row: SequenceMatcher(None, row[0], row[1]).ratio() * SequenceMatcher(None, row[2], row[3]).ratio(), axis=1)
+
+    # Append similarity index
+    teams_names_similarity = pd.concat([teams_names, similarity], axis=1)
+
+    # Filter correct matches
+    indices = teams_names_similarity.groupby(['HomeTeam_x'])[0].idxmax().values
+    teams_names_matching = teams_names.take(indices)
+
+    # Generate mapping
+    matching1 = teams_names_matching.iloc[:, 0:2].drop_duplicates()
+    matching2 = teams_names_matching.iloc[:, 2:].drop_duplicates()
+    matching1.columns, matching2.columns = ['x', 'y'], ['x', 'y']
+    matching = matching1.append(matching2).drop_duplicates()
+    mapping = dict(zip(matching.x, matching.y))
+
+    return mapping
+
+
+def _match_teams_names_future(spi_future_data, scraped_data):
+    """Match teams names between spi and fd historical data."""
+
+    # Define merge keys
+    keys = ['League', 'HomeTeam', 'AwayTeam']
+
+    # Merge data
+    teams_names = pd.merge(scraped_data[keys], spi_future_data[keys], how='outer', on='League')
+
+    # Calculate similarity index
+    similarity = teams_names.apply(lambda row: SequenceMatcher(None, row[1], row[3]).ratio() * SequenceMatcher(None, row[2], row[4]).ratio(), axis=1)
+
+    # Append similarity index
+    teams_names_similarity = pd.concat([teams_names, similarity], axis=1)
+
+    # Filter correct matches
+    indices = teams_names_similarity.groupby(['HomeTeam_x', 'AwayTeam_x'])[0].idxmax().values
+    teams_names_matching = teams_names.take(indices)
+
+    # Generate mapping
+    mapping = {name1: name2 for name1, name2 in teams_names_matching[['HomeTeam_y', 'HomeTeam_x']].values}
+    mapping.update({name1: name2 for name1, name2 in teams_names_matching[['AwayTeam_y', 'AwayTeam_x']].values})
+
+    return mapping

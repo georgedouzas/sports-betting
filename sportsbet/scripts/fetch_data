@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Update the training data.
+Update the training and odds data.
 """
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
@@ -10,11 +10,11 @@ from sportsbet.soccer.data import LEAGUES_MAPPING
 from sportsbet.soccer import BettingAgent
 
 
-def fetch_training_data():
+def fetch_data():
     
     # Parse the leagues parameter
     description = 'Parse the leagues parameter from the following leagues:\n\n'
-    for league_name, (league_id, _) in LEAGUES_MAPPING.items():
+    for league_name, (league_id, _), _ in LEAGUES_MAPPING:
         description += '{} ({})\n'.format(league_id, league_name)
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
     help_msg = 'One of all, main or any league ids from above.'
@@ -24,12 +24,13 @@ def fetch_training_data():
     # Create betting agent
     betting_agent = BettingAgent()
 
-    # Fetch training data
+    # Fetch training and odds data
     leagues = args.leagues
     if len(leagues) == 1 and leagues[0] in ('all', 'main'):
         leagues = leagues[0]
     betting_agent.fetch_training_data(leagues=leagues)
+    betting_agent.fetch_odds_data(leagues=leagues)
 
 
 if __name__ == '__main__':
-    fetch_training_data()
+    fetch_data()

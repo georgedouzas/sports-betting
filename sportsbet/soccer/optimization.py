@@ -16,7 +16,6 @@ from sklearn.utils import check_array, check_X_y
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.model_selection._split import BaseCrossValidator, _num_samples
 from sklearn.metrics import precision_score
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils import Parallel, delayed
@@ -26,10 +25,20 @@ from tqdm import tqdm
 
 from .. import PATH
 from ..utils import ProfitEstimator, total_profit_score, mean_profit_score, set_random_state, _fit_predict
-from .data import _fetch_historical_spi_data, _fetch_historical_fd_data, _match_teams_names, LEAGUES_MAPPING
+from .data import (
+    _fetch_historical_spi_data, 
+    _fetch_historical_fd_data, 
+    _fetch_future_spi_data,
+    _scrape_op_data,
+    _scrape_bb_data,
+    _match_teams_names_historical, 
+    _match_teams_names_future,
+    LEAGUES_MAPPING
+)
 from ..config import DEFAULT_CLASSIFIERS
 
-DATA_PATH = join(PATH, 'training_data.csv')
+TRAINING_DATA_PATH = join(PATH, 'training_data.csv')
+ODDS_DATA_PATH = join(PATH, 'odds_data.csv')
 CLF_PATH = join(PATH, 'classifier.pkl')
 
 
@@ -131,14 +140,19 @@ class SeasonTimeSeriesSplit(BaseCrossValidator):
 
 class BettingAgent:
 
-    def fetch_training_data(self, leagues='all'):
-        """Fetch the training data."""
-
-        # Validate input
-        valid_leagues = [league_id for league_id, _ in LEAGUES_MAPPING.values()]
+    @staticmethod
+    def _validate_leagues(leagues):
+        """Validate leagues input."""
+        valid_leagues = [league_id for _, (league_id, _), _ in LEAGUES_MAPPING]
         if leagues not in ('all', 'main') and not set(leagues).issubset(valid_leagues):
             msg = "The `leagues` parameter should be either equal to 'all' or 'main' or a list of valid league ids. Got {} instead."
             raise ValueError(msg.format(leagues))
+
+    def fetch_training_data(self, leagues='all'):
+        """Fetch the training data."""
+
+        # Validate leagues
+        self._validate_leagues(leagues)
 
         # Define parameters 
         avg_odds_features = ['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']
@@ -149,7 +163,7 @@ class BettingAgent:
         fd_data = _fetch_historical_fd_data(leagues)
 
         # Teams names matching
-        mapping = _match_teams_names(spi_data, fd_data)
+        mapping = _match_teams_names_historical(spi_data, fd_data)
         spi_data['HomeTeam'] = spi_data['HomeTeam'].apply(lambda team: mapping[team])
         spi_data['AwayTeam'] = spi_data['AwayTeam'].apply(lambda team: mapping[team])
 
@@ -179,14 +193,34 @@ class BettingAgent:
 
         # Save data
         Path(PATH).mkdir(exist_ok=True)
-        training_data.to_csv(DATA_PATH, index=False) 
+        training_data.to_csv(TRAINING_DATA_PATH, index=False)
+
+    def fetch_odds_data(self, leagues='all'):
+        """Fetch odds data."""
+
+        # Validate leagues
+        self._validate_leagues(leagues)
+
+        # Get data
+        odds_data = pd.concat([_scrape_op_data(leagues), _scrape_bb_data(leagues)]).reset_index(drop=True)
+
+        # Expand columns
+        odds_data[['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']] = pd.DataFrame(odds_data.AverageOdd.tolist())
+        odds_data[['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd']] = pd.DataFrame(odds_data.MaximumOdd.tolist())
+
+        # Drop columns
+        odds_data.drop(columns=['AverageOdd', 'MaximumOdd'], inplace=True)
+
+        # Save data
+        Path(PATH).mkdir(exist_ok=True)
+        odds_data.to_csv(ODDS_DATA_PATH, index=False)
 
     def load_modeling_data(self, predicted_result='A'):
         """Load the data used for modeling."""
 
         # Load data
         try:
-            training_data = pd.read_csv(DATA_PATH)
+            training_data = pd.read_csv(TRAINING_DATA_PATH)
         except FileNotFoundError:
             raise FileNotFoundError('Training data do not exist. Fetch training data before loading modeling data.')
 
@@ -201,10 +235,57 @@ class BettingAgent:
         X, y = check_X_y(X, y, dtype=None)
         odds = check_array(odds, dtype=None, ensure_2d=False)
 
-        # Normalize array
-        X = np.hstack([X[:, 0].reshape(-1, 1), MinMaxScaler().fit_transform(X[:, 1: ])])
-
         return X, y, odds
+
+
+    def load_predictions_data(self):
+
+        # Load data
+        try:
+            odds_data = pd.read_csv(ODDS_DATA_PATH)
+        except FileNotFoundError:
+            raise FileNotFoundError('Odds data do not exist. Fetch odds data before loading predictions data.')
+
+        # Define parameters 
+        avg_odds_features = ['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']
+
+        # Fetch spi data for future matches
+        leagues = odds_data.League.unique().tolist()
+        spi_future_data = _fetch_future_spi_data(leagues)
+
+        # Team names matching
+        mapping = _match_teams_names_future(spi_future_data, odds_data)
+        spi_future_data['HomeTeam'] = spi_future_data['HomeTeam'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
+        spi_future_data['AwayTeam'] = spi_future_data['AwayTeam'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
+
+        # Combine data
+        predictions_data = pd.merge(odds_data, spi_future_data).drop(columns=['HomeGoals', 'AwayGoals'])
+
+        # Sort values by date
+        predictions_data['Date'] = pd.to_datetime(predictions_data['Date'])
+        predictions_data = predictions_data.sort_values('Date').reset_index(drop=True)
+
+        # Split data
+        X = predictions_data[['HomeSPI', 'AwaySPI', 'HomeSPIProb', 'AwaySPIProb',
+                              'DrawSPIProb', 'HomeSPIGoals', 'AwaySPIGoals', 
+                              'HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']]
+        odds = predictions_data[['Date', 'League', 'HomeTeam', 'AwayTeam', 'HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd']]
+
+        # Probabilities data
+        probs = 1 / X.loc[:, avg_odds_features].values
+        probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['HomeFDProb', 'AwayFDProb', 'DrawFDProb'])
+        X = pd.concat([X, probs], axis=1).drop(columns=avg_odds_features)
+
+        # Create features
+        X['DiffSPIGoals'] = X['HomeSPIGoals'] - X['AwaySPIGoals']
+        X['DiffSPI'] = X['HomeSPI'] - X['AwaySPI']
+        X['DiffSPIProb'] = X['HomeSPIProb'] - X['AwaySPIProb']
+        X['DiffFDProb'] = X['HomeFDProb'] - X['AwayFDProb']
+
+        # Check array
+        X = check_array(X, dtype=None)
+
+        return X, odds
 
     def _load_prepare_data(self, predicted_result):
 
