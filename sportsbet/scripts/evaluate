@@ -8,6 +8,7 @@ from os import linesep
 from argparse import ArgumentParser
 
 import pandas as pd
+from sklearn.utils import check_random_state
 from sportsbet.utils import set_random_state
 from sportsbet.soccer import BettingAgent
 from sportsbet.soccer.optimization import DEFAULT_CLASSIFIERS
@@ -36,17 +37,21 @@ def parse_args():
     return parser.parse_args()
 
 
-def backtest(clf_name, n_runs, predicted_result, test_year, max_day_range):
+def backtest(clf_name, n_runs, predicted_result, test_year, max_day_range, random_state):
 
     # Define classifier and fitting parameters
     classifier, fit_params = CLASSIFIERS[clf_name]
 
-    # Backtest
+    # Define random states
+    random_state = check_random_state(random_state)
+    random_states = [random_state.randint(0, 2 ** 32 - 1, dtype='uint32') for _ in range(n_runs)]
+
+    # Backtesting
     betting_agents = []
-    for random_state in trange(n_runs, desc='Runs: '):
+    for run in trange(n_runs, desc='Runs: '):
 
         # Set random state
-        set_random_state(classifier, random_state)
+        set_random_state(classifier, random_states[run])
 
         # Create betting agent
         betting_agent = BettingAgent()
@@ -129,5 +134,5 @@ if __name__ == '__main__':
         print_cross_validation_results(total_profit, mean_profit)
         
     elif args['type'] == 'backtesting':
-        betting_agents = backtest(args['clf_name'], args['n_runs'], args['predicted_result'], args['test_year'], args['max_day_range'])
+        betting_agents = backtest(args['clf_name'], args['n_runs'], args['predicted_result'], args['test_year'], args['max_day_range'], args['random_state'])
         print_backtesting_results(betting_agents)

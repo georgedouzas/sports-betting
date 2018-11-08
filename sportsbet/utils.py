@@ -16,7 +16,10 @@ class SamplingStrategy:
         self.ratio = ratio
     
     def __call__(self, y):
-        return {1: int(self.ratio * Counter(y)[0])}
+        counter = Counter(y)
+        majority_label, majority_n_samples = counter.most_common()[0]
+        sampling_strategy = {label: int(self.ratio * majority_n_samples) if label != majority_label else majority_n_samples for label in counter.keys()}
+        return sampling_strategy
 
     def __repr__(self):
         return str(self.ratio)
@@ -41,23 +44,29 @@ class ProfitEstimator(BaseEstimator, RegressorMixin):
     def predict(self, X):
 
         # Exclude time index and maximum odds
-        profit = self.estimator_.predict(X[:, 1:-1]) * (X[:, -1] - 1)
+        y_pred = self.estimator_.predict(X[:, 1:-1])
         
-        return profit
+        # Get odds
+        odds = X[:, -1]
+        
+        return y_pred, odds
 
 
-def _profit_score(y_true, y_pred):
+def _profit_score(y_true, y_pred_odds):
+
+    # Get predictions and odds
+    y_pred, odds = y_pred_odds
 
     # Filter positive class preditions
-    mask = y_pred > 0
-    y_true_sel, y_pred_sel = y_true[mask], y_pred[mask]
+    mask = (y_pred != '-')
+    y_true_sel, y_pred_sel, odds = y_true[mask], y_pred[mask], odds[mask]
     
     # No preidictions case
     if y_pred_sel.size == 0:
         return np.array([0.0])
     
     # Calculate profit
-    profit = y_true_sel * y_pred_sel
+    profit = (y_true_sel == y_pred_sel).astype(int) * (odds - 1)
     profit[profit == 0.0] = -1.0
 
     return profit
