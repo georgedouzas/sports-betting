@@ -21,7 +21,7 @@ from sklearn.preprocessing import label_binarize
 from tqdm import tqdm
 
 from .. import PATH
-from ..utils import ProfitEstimator, total_profit_score, mean_profit_score, set_random_state, _fit_predict
+from ..utils import ProfitEstimator, mean_profit_score, set_random_state, _fit_predict
 from .data import (
     _fetch_historical_spi_data, 
     _fetch_historical_fd_data, 
@@ -324,17 +324,16 @@ class BettingAgent:
         set_random_state(classifier, random_state)
 
         # Run cross-validation
-        gscv = GridSearchCV(estimator=classifier, param_grid={}, scoring=['total_profit', 'mean_profit'], 
+        gscv = GridSearchCV(estimator=classifier, param_grid={}, scoring='mean_profit', 
                             cv=StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state), 
                             n_jobs=-1, refit=False, iid=True, return_train_score=False)
         gscv.fit(X, y, **fit_params)
 
         # Extract results
-        columns = ['mean_test_total_profit', 'std_test_total_profit', 'mean_test_mean_profit', 'std_test_mean_profit']
-        results = pd.DataFrame(gscv.cv_results_)[columns].values.reshape(-1)
-        total_profit, mean_profit = results[0:2].tolist(), results[2:].tolist()
+        columns = ['mean_test_score', 'std_test_score']
+        results = pd.DataFrame(gscv.cv_results_)[columns].values.reshape(-1).tolist()
 
-        return total_profit, mean_profit
+        return results
 
     def backtest(self, classifier, fit_params, predicted_result, test_year, max_day_range):
         """Apply backtesting to betting agent."""

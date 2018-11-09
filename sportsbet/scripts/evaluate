@@ -74,16 +74,15 @@ def cross_validate(clf_name, predicted_result, n_splits, random_state):
     betting_agent = BettingAgent()
 
     # Get results
-    total_profit, mean_profit = betting_agent.cross_validate(classifier, fit_params, predicted_result, n_splits, random_state)
+    mean_profit = betting_agent.cross_validate(classifier, fit_params, predicted_result, n_splits, random_state)
         
-    return total_profit, mean_profit
+    return mean_profit
 
 
-def print_cross_validation_results(total_profit, mean_profit):
+def print_cross_validation_results(mean_profit):
     """"Print the cross-validation results."""
 
-    print(u'Total profit: {:.1f} \xb1 {:.1f}'.format(*total_profit))
-    print(u'Mean profit: {:.3f} \xb1 {:.3f}'.format(*mean_profit))
+    print(u'Average profit per bet: {:.3f} \xb1 {:.3f}'.format(*mean_profit))
 
 
 def print_backtesting_results(betting_agents):
@@ -130,8 +129,8 @@ if __name__ == '__main__':
 
     # Evaluation
     if args['type'] == 'cross-validation':
-        total_profit, mean_profit = cross_validate(args['clf-name'], args['predicted-result'], args['n_splits'], args['random_state'])
-        print_cross_validation_results(total_profit, mean_profit)
+        mean_profit = cross_validate(args['clf-name'], args['predicted-result'], args['n_splits'], args['random_state'])
+        print_cross_validation_results(mean_profit)
         
     elif args['type'] == 'backtesting':
         betting_agents = backtest(args['clf-name'], args['predicted-result'], args['n_runs'], args['test_year'], args['max_day_range'], args['random_state'])

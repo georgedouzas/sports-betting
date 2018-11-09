@@ -82,14 +82,6 @@ def mean_profit_score(y_true, y_pred_odds):
     return profit.mean()
 
 
-def total_profit_score(y_true, y_pred_odds):
-    """Calculate total profit for a profit estimator."""
-    
-    profit = _profit_score(y_true, y_pred_odds)
-
-    return profit.sum()
-
-
 def f1_multi(y_true, y_pred):
     """F1 score for multiclass classification."""
     return f1_score(y_true, y_pred, average='micro')
