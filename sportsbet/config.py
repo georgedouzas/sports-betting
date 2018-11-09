@@ -6,7 +6,6 @@ from imblearn.over_sampling import SMOTE
 from .utils import import_custom_classifiers
 
 DEFAULT_CLASSIFIERS = {
-    'trivial': (DummyClassifier(strategy='constant', constant=1), {}),
     'random': (DummyClassifier(), {}),
     'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs')), {})
 }
