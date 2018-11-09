@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+"""
+Predict using a selected classifier.
+"""
+
+from argparse import ArgumentParser
+
+from sportsbet.soccer import BettingAgent
+from sportsbet.config import CLASSIFIERS
+
+
+def parse_args():
+    """Parse command line arguments."""
+    
+    # Create parser
+    parser = ArgumentParser('Predict using a selected classifier.')
+    
+    # Add arguments
+    parser.add_argument('--clf-name', help='The classifier name to use for predictions.')
+      
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    
+    # Parse arguments
+    args = vars(parse_args())
+    
+    # Create betting agent
+    betting_agent = BettingAgent()
+
+    # Generate predictions
+    predictions = betting_agent.predict(**args)
+
+    print(predictions)
+    

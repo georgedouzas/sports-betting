@@ -8,7 +8,7 @@ betting strategy on historical and current data.
 
 from pathlib import Path
 from os.path import join
-from pickle import dump
+from pickle import dump, load
 
 import numpy as np
 import pandas as pd
@@ -425,3 +425,21 @@ class BettingAgent:
         # Dump classifier
         with open(join(PATH, '%s.pkl' % clf_name) , 'wb') as file:
             dump(classifier, file)
+    
+    def predict(self, clf_name):
+        """Generate predictions using a fitted classifier."""
+
+        # Load predictions data
+        X, odds = self.load_predictions_data()
+
+        # Load classifier
+        with open(join(PATH, '%s.pkl' % clf_name) , 'rb') as file:
+            classifier = load(file)
+
+        # Generate predictions
+        y_pred = pd.DataFrame(classifier.predict(X), columns=['Prediction'])
+
+        # Stack predictions
+        predictions = pd.concat([odds, y_pred], axis=1)
+
+        return predictions

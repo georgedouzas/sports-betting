@@ -15,6 +15,7 @@ setup(
     scripts=[
         'sportsbet/scripts/download',
         'sportsbet/scripts/evaluate',
-        'sportsbet/scripts/train'
+        'sportsbet/scripts/train',
+        'sportsbet/scripts/predict'
     ]
 )

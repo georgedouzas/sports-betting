@@ -40,5 +40,5 @@ if __name__ == '__main__':
     # Parse arguments
     args = vars(parse_args())
     
-    # Backtesting
+    # Fit and dump classifier
     fit_dump_classifier(**args)
