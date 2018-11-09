@@ -17,6 +17,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.model_selection._split import BaseCrossValidator, _num_samples
 from sklearn.metrics import precision_score
 from sklearn.utils import Parallel, delayed
+from sklearn.preprocessing import label_binarize
 from tqdm import tqdm
 
 from .. import PATH
@@ -229,16 +230,24 @@ class BettingAgent:
         except FileNotFoundError:
             raise FileNotFoundError('Training data do not exist. Fetch training data before loading modeling data.')
 
-        # Split and prepare data
+        # Define predicted results
+        predicted_results = list(predicted_result)
+
+        # Input data
         X = training_data.drop(columns=['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd', 'HomeGoals', 'AwayGoals'])
         X = X[['Day'] + X.columns[:-1].tolist()]
+        
+        # Target
         y = (training_data['HomeGoals'] - training_data['AwayGoals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        y = y.apply(lambda result: '-' if result != predicted_result else result)
-        odds = training_data.loc[:, {'H': 'HomeMaximumOdd', 'A': 'AwayMaximumOdd', 'D': 'DrawMaximumOdd'}[predicted_result]] 
+        mask = label_binarize(y, classes=['H', 'A', 'D']).astype(bool)
+        y = y.apply(lambda result: '-' if result not in predicted_results else result)
+        
+        # Odds
+        odds = training_data.loc[:, ['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd']].values[mask] 
 
         # Check arrays
-        X, y = check_X_y(X, y, dtype=None)
-        odds = check_array(odds, dtype=None, ensure_2d=False)
+        X, y = check_X_y(X, y)
+        odds = check_array(odds, ensure_2d=False)
 
         return X, y, odds
 

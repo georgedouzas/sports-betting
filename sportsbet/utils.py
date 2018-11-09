@@ -18,7 +18,9 @@ class SamplingStrategy:
     def __call__(self, y):
         counter = Counter(y)
         majority_label, majority_n_samples = counter.most_common()[0]
-        sampling_strategy = {label: int(self.ratio * majority_n_samples) if label != majority_label else majority_n_samples for label in counter.keys()}
+        sampling_strategy = {label: max(int(self.ratio * majority_n_samples), n_samples) 
+                                    if label != majority_label else majority_n_samples 
+                             for label, n_samples in counter.items()}
         return sampling_strategy
 
     def __repr__(self):
@@ -72,18 +74,18 @@ def _profit_score(y_true, y_pred_odds):
     return profit
 
 
-def mean_profit_score(y_true, y_pred):
+def mean_profit_score(y_true, y_pred_odds):
     """Calculate total profit for a profit estimator."""
     
-    profit = _profit_score(y_true, y_pred)
+    profit = _profit_score(y_true, y_pred_odds)
 
     return profit.mean()
 
 
-def total_profit_score(y_true, y_pred):
+def total_profit_score(y_true, y_pred_odds):
     """Calculate total profit for a profit estimator."""
     
-    profit = _profit_score(y_true, y_pred)
+    profit = _profit_score(y_true, y_pred_odds)
 
     return profit.sum()
 
