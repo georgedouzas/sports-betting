@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--type', default='cross-validation', help='Type of evaluation.')
     parser.add_argument('--clf-name', default='random', help='The classifier name to predict the results.')
     parser.add_argument('--n-runs', default=5, type=int, help='Number of backtesting repetitions.')
-    parser.add_argument('--predicted-result', default='A', help='Predicted result.')
+    parser.add_argument('--predicted-result', help='Predicted result.')
     parser.add_argument('--n-splits', default=5, type=int, help='The number of cross-validation splits.')
     parser.add_argument('--random-state', default=0, type=int, help='The random state for cross-validation splitting and classifiers.')
     parser.add_argument('--test-year', default=2, type=int, help='Test year.')
