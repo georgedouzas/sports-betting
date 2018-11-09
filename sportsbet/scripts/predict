@@ -19,7 +19,7 @@ def parse_args():
     parser = ArgumentParser('Predict using a selected classifier.')
     
     # Add arguments
-    parser.add_argument('--clf-name', help='The classifier name to use for predictions.')
+    parser.add_argument('clf-name', help='The classifier name to use for predictions.')
       
     return parser.parse_args()
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     betting_agent = BettingAgent()
 
     # Generate predictions
-    predictions = betting_agent.predict(**args)
+    predictions = betting_agent.predict(args['clf-name'])
 
     # Save predictios
     predictions.to_csv(join(PATH, 'predictions.csv'), index=False)

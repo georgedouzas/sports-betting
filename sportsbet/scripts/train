@@ -17,13 +17,13 @@ def parse_args():
     parser = ArgumentParser('Train a selected classifier.')
     
     # Add arguments
-    parser.add_argument('--predicted-result', default='A', help='Predicted result (H or A or D).')
-    parser.add_argument('--clf-name', default='random', help='The classifier name to train.')
-      
+    parser.add_argument('clf-name', help='The classifier name to train.')
+    parser.add_argument('predicted-result', help='Predicted result.')
+    
     return parser.parse_args()
 
 
-def fit_dump_classifier(predicted_result, clf_name):
+def fit_dump_classifier(clf_name, predicted_result):
 
     # Define classifier and fitting parameters
     classifier, fit_params = CLASSIFIERS[clf_name]
@@ -41,4 +41,4 @@ if __name__ == '__main__':
     args = vars(parse_args())
     
     # Fit and dump classifier
-    fit_dump_classifier(**args)
+    fit_dump_classifier(args['clf-name'], args['predicted-result'])
