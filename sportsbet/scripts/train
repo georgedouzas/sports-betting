@@ -18,7 +18,7 @@ def parse_args():
     
     # Add arguments
     parser.add_argument('--predicted-result', default='A', help='Predicted result (H or A or D).')
-    parser.add_argument('--clf-name', default='trivial', help='The classifier name to fit and dump.')
+    parser.add_argument('--clf-name', default='random', help='The classifier name to train.')
       
     return parser.parse_args()
 
