@@ -32,7 +32,7 @@ def fit_dump_classifier(predicted_result, clf_name):
     betting_agent = BettingAgent()
 
     # Fit and dump classifier
-    betting_agent.fit_dump_classifier(predicted_result, classifier, fit_params)
+    betting_agent.fit_dump_classifier(predicted_result, classifier, fit_params, clf_name)
 
 
 if __name__ == '__main__':
