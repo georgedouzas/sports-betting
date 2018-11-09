@@ -6,7 +6,7 @@ from collections import Counter
 
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin, clone
-from sklearn.metrics import SCORERS, make_scorer
+from sklearn.metrics import SCORERS, make_scorer, f1_score
 
 
 class SamplingStrategy:
@@ -88,6 +88,11 @@ def total_profit_score(y_true, y_pred_odds):
     profit = _profit_score(y_true, y_pred_odds)
 
     return profit.sum()
+
+
+def f1_multi(y_true, y_pred):
+    """F1 score for multiclass classification."""
+    return f1_score(y_true, y_pred, average='micro')
 
 
 def set_random_state(classifier, random_state):
