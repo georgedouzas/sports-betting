@@ -4,8 +4,10 @@
 Predict using a selected classifier.
 """
 
+from os.path import join
 from argparse import ArgumentParser
 
+from sportsbet import PATH
 from sportsbet.soccer import BettingAgent
 from sportsbet.config import CLASSIFIERS
 
@@ -32,6 +34,9 @@ if __name__ == '__main__':
 
     # Generate predictions
     predictions = betting_agent.predict(**args)
+
+    # Save predictios
+    predictions.to_csv(join(PATH, 'predictions.csv'), index=False)
 
     print(predictions)
     
