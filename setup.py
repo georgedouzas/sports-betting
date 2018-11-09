@@ -10,7 +10,9 @@ setup(
         'pandas==0.23.4',
         'scikit-learn==0.20',
         'imbalanced-learn==0.4.2',
-        'tqdm==4.28.1'
+        'tqdm==4.28.1',
+        'selenium==3.141.0',
+        'beautifulsoup4==4.6.3'
     ],
     scripts=[
         'sportsbet/scripts/download',
