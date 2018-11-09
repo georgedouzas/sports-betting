@@ -36,7 +36,6 @@ from ..config import DEFAULT_CLASSIFIERS
 
 TRAINING_DATA_PATH = join(PATH, 'training_data.csv')
 ODDS_DATA_PATH = join(PATH, 'odds_data.csv')
-CLF_PATH = join(PATH, 'classifier.pkl')
 
 
 class SeasonTimeSeriesSplit(BaseCrossValidator):
@@ -221,7 +220,7 @@ class BettingAgent:
         Path(PATH).mkdir(exist_ok=True)
         odds_data.to_csv(ODDS_DATA_PATH, index=False)
 
-    def load_modeling_data(self, predicted_result='A'):
+    def load_modeling_data(self, predicted_result):
         """Load the data used for modeling."""
 
         # Load data
@@ -253,6 +252,7 @@ class BettingAgent:
 
 
     def load_predictions_data(self):
+        """Load the data used for predictions."""
 
         # Load data
         try:
@@ -311,7 +311,7 @@ class BettingAgent:
 
         return X, y
 
-    def cross_validate(self, classifier=None, fit_params=None, predicted_result='A', n_splits=5, random_state=None):
+    def cross_validate(self, classifier, fit_params, predicted_result, n_splits, random_state):
         """Evaluate classifier performance using cross-validation."""
 
         # Load and prepare data
@@ -336,7 +336,7 @@ class BettingAgent:
 
         return total_profit, mean_profit
 
-    def backtest(self, classifier=None, fit_params=None, predicted_result='A', test_year=2, max_day_range=6):
+    def backtest(self, classifier, fit_params, predicted_result, test_year, max_day_range):
         """Apply backtesting to betting agent."""
 
         # Load and prepare data
@@ -356,6 +356,7 @@ class BettingAgent:
                                           for train_indices, test_indices in tqdm(indices, desc='Backtesting: '))
 
     def calculate_backtest_results(self, bet_factor=2, credit_exponent=3):
+        """Calculate the results of backtesting."""
 
         # Initialize parameters
         statistics, precisions = [], []
@@ -409,7 +410,7 @@ class BettingAgent:
 
         return statistics, mean_precision, profit_per_bet
 
-    def fit_dump_classifier(self, predicted_result, classifier, fit_params):
+    def fit_dump_classifier(self, predicted_result, classifier, fit_params, clf_name):
         """Fit and dump a classifier."""
 
         # Load modelling data
@@ -422,5 +423,5 @@ class BettingAgent:
         classifier.fit(X, y, **fit_params)
 
         # Dump classifier
-        with open(CLF_PATH, 'wb') as file:
+        with open(join(PATH, '%s.pkl' % clf_name) , 'wb') as file:
             dump(classifier, file)
