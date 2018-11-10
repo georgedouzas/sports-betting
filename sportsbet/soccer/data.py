@@ -234,7 +234,7 @@ def _scrape_bb_data(leagues):
     for league_id, suffix_url in league_bar:
 
         # Set description
-        league_bar.set_description('Scrapping %s main league' % league_id)
+        league_bar.set_description('%s league' % league_id)
 
         # Parse league data
         driver.get(urljoin(base_url, suffix_url))
@@ -243,7 +243,7 @@ def _scrape_bb_data(leagues):
                 EC.presence_of_element_located((By.CLASS_NAME, 'MatchTitleLink'))
             )
         except TimeoutException:
-            msgs.append('League %s was not scrapped.' % league_id)
+            msgs.append('Odds for all matches from %s league were not scrapped.' % league_id)
             continue
         finally:
             parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('a', {'class': 'MatchTitleLink'})
@@ -256,7 +256,7 @@ def _scrape_bb_data(leagues):
         for (home_team, away_team), suffix_url in matches_bar:
 
             # Set description
-            matches_bar.set_description('Scrapping %s vs %s' % (home_team, away_team))
+            matches_bar.set_description('%s vs %s' % (home_team, away_team))
 
             # Parse match data
             driver.get(urljoin(base_url, suffix_url))
@@ -316,7 +316,7 @@ def _scrape_op_data(leagues):
     for league_id, suffix_url in league_bar:
 
         # Set description
-        league_bar.set_description('Scrapping %s extra league' % league_id)
+        league_bar.set_description('%s league' % league_id)
 
         # Parse league data
         driver.get(urljoin(base_url, suffix_url))
@@ -325,7 +325,7 @@ def _scrape_op_data(leagues):
                 EC.presence_of_element_located((By.CLASS_NAME, 'table-participant'))
             )
         except TimeoutException:
-            msgs.append('League %s was not scrapped.' % league_id)
+            msgs.append('Odds for all matches from %s league were not scrapped.' % league_id)
             continue
         finally:
             parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('td', {'class': 'table-participant'})
@@ -338,7 +338,7 @@ def _scrape_op_data(leagues):
         for (home_team, away_team), suffix_url in matches_bar:
 
             # Set description
-            matches_bar.set_description('Scrapping %s vs %s' % (home_team, away_team))
+            matches_bar.set_description('%s vs %s' % (home_team, away_team))
 
             # Parse match data
             driver.get(urljoin(base_url, suffix_url))
