@@ -198,8 +198,8 @@ def _fetch_historical_fd_data(leagues):
         # Append data
         data = data.append(partial_data, ignore_index=True)
 
-    # Filter only played matches
-    data = data[(~data.HomeGoals.isna()) & (~data.AwayGoals.isna())]
+    # Filter matches
+    data = data[(~data.HomeGoals.isna()) & (~data.AwayGoals.isna()) & (~data.HomeMaximumOdd.isna()) & (~data.AwayMaximumOdd.isna()) & (~data.DrawMaximumOdd.isna())]
 
     # Cast columns
     data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%y')
