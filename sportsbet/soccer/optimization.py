@@ -207,7 +207,13 @@ class BettingAgent:
         self._validate_leagues(leagues)
 
         # Get data
-        odds_data = pd.concat([_scrape_op_data(leagues), _scrape_bb_data(leagues)]).reset_index(drop=True)
+        bb_odds_data, bb_msgs = _scrape_bb_data(leagues)
+        op_odds_data, op_msgs = _scrape_op_data(leagues)
+        msgs = bb_msgs + op_msgs
+        odds_data = pd.concat([bb_odds_data, op_odds_data]).reset_index(drop=True)
+
+        # Print messages
+        print(*msgs, sep='\n')
 
         # Expand columns
         odds_data[['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']] = pd.DataFrame(odds_data.AverageOdd.tolist())

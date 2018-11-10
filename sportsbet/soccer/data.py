@@ -15,6 +15,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from tqdm import tqdm
 
 LEAGUES_MAPPING = [
     ('Argentina Primera Division', ('ARG', 'extra'), ('argentina', 'superliga')),
@@ -226,10 +227,14 @@ def _scrape_bb_data(leagues):
     options.add_argument('--headless')
     driver = webdriver.Chrome(options=options)
 
-    # Define data placeholder
-    data = []
+    # Define placeholders
+    data, msgs = [], []
 
-    for league_id, suffix_url in leagues:
+    league_bar = tqdm(leagues)
+    for league_id, suffix_url in league_bar:
+
+        # Set description
+        league_bar.set_description('Scrapping %s main league' % league_id)
 
         # Parse league data
         driver.get(urljoin(base_url, suffix_url))
@@ -238,19 +243,20 @@ def _scrape_bb_data(leagues):
                 EC.presence_of_element_located((By.CLASS_NAME, 'MatchTitleLink'))
             )
         except TimeoutException:
-            print('League %s was not scrapped.' % league_id)
+            msgs.append('League %s was not scrapped.' % league_id)
             continue
         finally:
             parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('a', {'class': 'MatchTitleLink'})
-        
         
         # Parse matches data
         matches_urls = [(match.attrs['title'].split(' - '), match.attrs['href']) for match in parsed_data if 'home-draw-away' in match.attrs['href']]
         matches_urls = [((home_team, away_team[:-5]), suffix_url) for (home_team, away_team), suffix_url in matches_urls]
 
-        print('League %s. Scrapping %s odds.' % (league_id, len(matches_urls)))
+        matches_bar = tqdm(matches_urls)
+        for (home_team, away_team), suffix_url in matches_bar:
 
-        for (home_team, away_team), suffix_url in matches_urls:
+            # Set description
+            matches_bar.set_description('Scrapping %s vs %s' % (home_team, away_team))
 
             # Parse match data
             driver.get(urljoin(base_url, suffix_url))
@@ -259,26 +265,30 @@ def _scrape_bb_data(leagues):
                     EC.presence_of_element_located((By.CLASS_NAME, 'IsAverage'))
                 )
             except TimeoutException:
-                print('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
+                msgs.append('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
                 continue
             finally:
                 parsed_data = BeautifulSoup(driver.page_source, 'html.parser')
             
-            # Define odds placeholder
-            odds = []
+            try:
+                # Define odds placeholder
+                odds = []
 
-            # Populate average and maximum odds
-            for class_value in ['IsAverage', 'HighestOdds']:
-                elements = parsed_data.findAll('li', {'class': class_value})[:3]
-                parsed_odds = [float(element.text) for element in elements] 
-                odds.append([parsed_odds[0], parsed_odds[2], parsed_odds[1]])
+                # Populate average and maximum odds
+                for class_value in ['IsAverage', 'HighestOdds']:
+                    elements = parsed_data.findAll('li', {'class': class_value})[:3]
+                    parsed_odds = [float(element.text) for element in elements] 
+                    odds.append([parsed_odds[0], parsed_odds[2], parsed_odds[1]])
 
-            # Append data
-            data.append((league_id, home_team, away_team, odds[0], odds[1]))
+                # Append data
+                data.append((league_id, home_team, away_team, odds[0], odds[1]))
+
+            except ValueError:
+                msgs.append('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))
 
     data = pd.DataFrame(data, columns=['League', 'HomeTeam', 'AwayTeam', 'AverageOdd', 'MaximumOdd'])
     
-    return data
+    return data, msgs
 
 
 def _scrape_op_data(leagues):
@@ -299,10 +309,14 @@ def _scrape_op_data(leagues):
     options.add_argument('--headless')
     driver = webdriver.Chrome(options=options)
 
-    # Define data placeholder
-    data = []
+    # Define placeholders
+    data, msgs = [], []
     
-    for league_id, suffix_url in leagues:
+    league_bar = tqdm(leagues)
+    for league_id, suffix_url in league_bar:
+
+        # Set description
+        league_bar.set_description('Scrapping %s extra league' % league_id)
 
         # Parse league data
         driver.get(urljoin(base_url, suffix_url))
@@ -311,7 +325,7 @@ def _scrape_op_data(leagues):
                 EC.presence_of_element_located((By.CLASS_NAME, 'table-participant'))
             )
         except TimeoutException:
-            print('League %s was not scrapped.' % league_id)
+            msgs.append('League %s was not scrapped.' % league_id)
             continue
         finally:
             parsed_data = BeautifulSoup(driver.page_source, 'html.parser').findAll('td', {'class': 'table-participant'})
@@ -320,9 +334,11 @@ def _scrape_op_data(leagues):
         matches = [list(match.children)[-1] for match in parsed_data]
         matches_urls = [(match.text.split(' - '), match.attrs['href']) for match in matches if match.name == 'a']
 
-        print('League %s. Scrapping %s odds.' % (league_id, len(matches_urls)))
+        matches_bar = tqdm(matches_urls)
+        for (home_team, away_team), suffix_url in matches_bar:
 
-        for (home_team, away_team), suffix_url in matches_urls:
+            # Set description
+            matches_bar.set_description('Scrapping %s vs %s' % (home_team, away_team))
 
             # Parse match data
             driver.get(urljoin(base_url, suffix_url))
@@ -331,7 +347,7 @@ def _scrape_op_data(leagues):
                     EC.presence_of_element_located((By.CLASS_NAME, 'aver'))
                 )
             except TimeoutException:
-                print('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
+                msgs.append('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))  
                 continue
             finally:
                 parsed_data = BeautifulSoup(driver.page_source, 'html.parser')
@@ -339,18 +355,22 @@ def _scrape_op_data(leagues):
             # Define odds placeholder
             odds = []
 
-            # Populate average and maximum odds
-            for class_value in ['aver', 'highest']:
-                elements = parsed_data.findAll('tr', {'class': class_value})[0]
-                parsed_odds = [float(element.text) for element in elements.findAll(attrs={'class': 'right'})]
-                odds.append([parsed_odds[0], parsed_odds[2], parsed_odds[1]])
+            try:
+                # Populate average and maximum odds
+                for class_value in ['aver', 'highest']:
+                    elements = parsed_data.findAll('tr', {'class': class_value})[0]
+                    parsed_odds = [float(element.text) for element in elements.findAll(attrs={'class': 'right'})]
+                    odds.append([parsed_odds[0], parsed_odds[2], parsed_odds[1]])
 
-            # Append data
-            data.append((league_id, home_team, away_team, odds[0], odds[1]))
+                # Append data
+                data.append((league_id, home_team, away_team, odds[0], odds[1]))
+
+            except ValueError:
+                msgs.append('Odds for match %s - %s from %s league were not scrapped.' % (home_team, away_team, league_id))
     
     data = pd.DataFrame(data, columns=['League', 'HomeTeam', 'AwayTeam', 'AverageOdd', 'MaximumOdd'])
 
-    return data
+    return data, msgs
 
 
 def _match_teams_names_historical(spi_data, fd_data):
