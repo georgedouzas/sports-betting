@@ -12,24 +12,34 @@ from sportsbet.soccer import BettingAgent
 
 def fetch_data():
     
-    # Parse the leagues parameter
+    # Create parser description
     description = 'Select the leagues parameter from the following leagues:\n\n'
     for league_name, (league_id, _), _ in LEAGUES_MAPPING:
         description += '{} ({})\n'.format(league_id, league_name)
+
+    # Create parser
     parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
-    help_msg = 'One of all, main or any league ids from above.'
-    parser.add_argument('leagues', nargs='*', default=['all'], help=help_msg)
+
+    # Add arguments
+    parser.add_argument('leagues', nargs='*', default=['all'], help='One of all, main or any league ids from above.')
+    parser.add_argument('--type', default='both', help='Type of data to download.')
+    
+    # Parse arguments
     args = parser.parse_args()
 
-    # Create betting agent
-    betting_agent = BettingAgent()
-
-    # Fetch training and odds data
+    # Adjust parameter
     leagues = args.leagues
     if len(leagues) == 1 and leagues[0] in ('all', 'main'):
         leagues = leagues[0]
-    betting_agent.fetch_training_data(leagues=leagues)
-    betting_agent.fetch_odds_data(leagues=leagues)
+    
+    # Create betting agent
+    betting_agent = BettingAgent()
+
+    # Fetch data
+    if args.type in ('training', 'both'):
+        betting_agent.fetch_training_data(leagues=leagues)
+    if args.type in ('odds', 'both'):
+        betting_agent.fetch_odds_data(leagues=leagues)
 
 
 if __name__ == '__main__':
