@@ -33,11 +33,12 @@ def parse_args():
     parser.add_argument('--max-day-range', default=6, type=int, help='Maximum day range between bets.')
     parser.add_argument('--bet-factor', default=2, type=float, help='Factor to multiple betting amount in the case of loss.')  
     parser.add_argument('--credit-exponent', default=3, type=int, help='Exponent to raise bet factor in order to get the available credit.')
+    parser.add_argument('--odds-type', default='maximum', help='Type of odds to use for evaluation.')
       
     return parser.parse_args()
 
 
-def backtest(clf_name, predicted_result, n_runs, test_year, max_day_range, random_state):
+def backtest(clf_name, predicted_result, n_runs, test_year, max_day_range, odds_type, random_state):
 
     # Define classifier and fitting parameters
     classifier, fit_params = CLASSIFIERS[clf_name]
@@ -57,7 +58,7 @@ def backtest(clf_name, predicted_result, n_runs, test_year, max_day_range, rando
         betting_agent = BettingAgent()
 
         # Backtest agent
-        betting_agent.backtest(classifier, fit_params, predicted_result, test_year, max_day_range)
+        betting_agent.backtest(classifier, fit_params, predicted_result, test_year, max_day_range, odds_type)
 
         # Append agent
         betting_agents.append(betting_agent)
@@ -65,7 +66,7 @@ def backtest(clf_name, predicted_result, n_runs, test_year, max_day_range, rando
     return betting_agents
 
 
-def cross_validate(clf_name, predicted_result, n_splits, random_state):
+def cross_validate(clf_name, predicted_result, n_splits, odds_type, random_state):
 
     # Define classifier and fitting parameters
     classifier, fit_params = CLASSIFIERS[clf_name]
@@ -74,7 +75,7 @@ def cross_validate(clf_name, predicted_result, n_splits, random_state):
     betting_agent = BettingAgent()
 
     # Get results
-    mean_profit = betting_agent.cross_validate(classifier, fit_params, predicted_result, n_splits, random_state)
+    mean_profit = betting_agent.cross_validate(classifier, fit_params, predicted_result, n_splits, odds_type, random_state)
         
     return mean_profit
 
@@ -129,9 +130,9 @@ if __name__ == '__main__':
 
     # Evaluation
     if args['type'] == 'cross-validation':
-        mean_profit = cross_validate(args['clf-name'], args['predicted-result'], args['n_splits'], args['random_state'])
+        mean_profit = cross_validate(args['clf-name'], args['predicted-result'], args['n_splits'], args['odds_type'], args['random_state'])
         print_cross_validation_results(mean_profit)
         
     elif args['type'] == 'backtesting':
-        betting_agents = backtest(args['clf-name'], args['predicted-result'], args['n_runs'], args['test_year'], args['max_day_range'], args['random_state'])
+        betting_agents = backtest(args['clf-name'], args['predicted-result'], args['n_runs'], args['test_year'], args['max_day_range'], args['odds_type'], args['random_state'])
         print_backtesting_results(betting_agents)
