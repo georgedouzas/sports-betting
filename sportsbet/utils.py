@@ -54,7 +54,8 @@ class ProfitEstimator(BaseEstimator, RegressorMixin):
         return y_pred, odds
 
 
-def _profit_score(y_true, y_pred_odds):
+def mean_profit_score(y_true, y_pred_odds):
+    """Calculate mean profit for a profit estimator."""
 
     # Get predictions and odds
     y_pred, odds = y_pred_odds
@@ -70,14 +71,6 @@ def _profit_score(y_true, y_pred_odds):
     # Calculate profit
     profit = (y_true_sel == y_pred_sel).astype(int) * (odds - 1)
     profit[profit == 0.0] = -1.0
-
-    return profit
-
-
-def mean_profit_score(y_true, y_pred_odds):
-    """Calculate total profit for a profit estimator."""
-    
-    profit = _profit_score(y_true, y_pred_odds)
 
     return profit.mean()
 
