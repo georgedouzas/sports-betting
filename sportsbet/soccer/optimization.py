@@ -27,7 +27,8 @@ from .data import (
     _fetch_predictions_spi_data,
     _fetch_predictions_fd_data,
     _match_teams_names,
-    LEAGUES_MAPPING
+    LEAGUES_MAPPING,
+    FD_COLUMNS_MAPPING
 )
 from ..config import DEFAULT_CLASSIFIERS
 
@@ -157,7 +158,7 @@ class BettingAgent:
         self._validate_leagues(leagues)
 
         # Define parameters 
-        avg_odds_features = ['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd']
+        avg_odds_features = ['Home Average Odds', 'Away Average Odds', 'Draw Average Odds']
         functions_mapping = {
             'historical': [_fetch_historical_spi_data, _fetch_historical_fd_data],
             'predictions': [_fetch_predictions_spi_data, _fetch_predictions_fd_data]
@@ -168,13 +169,20 @@ class BettingAgent:
         spi_data, fd_data = functions[0](leagues), functions[1](leagues)
 
         # Teams names matching
-        mapping = _match_teams_names(spi_data, fd_data)
-        spi_data['HomeTeam'] = spi_data['HomeTeam'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
-        spi_data['AwayTeam'] = spi_data['AwayTeam'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
+        teams_names_columns = ['Home Team_x', 'Home Team_y', 'Away Team_x', 'Away Team_y']
+        teams_names = pd.merge(spi_data, fd_data, on=['Date', 'League'], how='outer').loc[:, teams_names_columns].dropna().reset_index(drop=True)
+        try:
+            mapping = _match_teams_names(teams_names)
+        except ValueError:
+            raise ValueError('No common upcoming matches between SPI and FD data sources were found.')
+
+        # Convert names
+        spi_data['Home Team'] = spi_data['Home Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
+        spi_data['Away Team'] = spi_data['Away Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
 
         # Probabilities data
         probs = 1 / fd_data.loc[:, avg_odds_features].values
-        probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['HomeFDProb', 'AwayFDProb', 'DrawFDProb'])
+        probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['Home Odds Probabilities', 'Away Odds Probabilities', 'Draw Odds Probabilities'])
         probs_data = pd.concat([probs, fd_data], axis=1)
 
         return spi_data, probs_data
@@ -186,16 +194,16 @@ class BettingAgent:
         spi_data, probs_data = self._fetch_data(leagues, 'historical')
 
         # Define merge keys
-        keys = ['Date', 'League', 'HomeTeam', 'AwayTeam', 'HomeGoals', 'AwayGoals']
+        keys = ['Date', 'League', 'Home Team', 'Away Team', 'Home Goals', 'Away Goals']
 
         # Combine data
         training_data = pd.merge(spi_data, probs_data, on=keys)
 
         # Create features
-        training_data['DiffSPIGoals'] = training_data['HomeSPIGoals'] - training_data['AwaySPIGoals']
-        training_data['DiffSPI'] = training_data['HomeSPI'] - training_data['AwaySPI']
-        training_data['DiffSPIProb'] = training_data['HomeSPIProb'] - training_data['AwaySPIProb']
-        training_data['DiffFDProb'] = training_data['HomeFDProb'] - training_data['AwayFDProb']
+        training_data['Difference SPI Goals'] = training_data['Home SPI Goals'] - training_data['Away SPI Goals']
+        training_data['Difference SPI'] = training_data['Home SPI'] - training_data['Away SPI']
+        training_data['Difference SPI Probabilities'] = training_data['Home SPI Probabilities'] - training_data['Away SPI Probabilities']
+        training_data['Difference Odds Probabilities'] = training_data['Home Odds Probabilities'] - training_data['Away Odds Probabilities']
 
         # Create day index
         training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
@@ -204,7 +212,7 @@ class BettingAgent:
         training_data = training_data.sort_values(keys[:-2]).reset_index(drop=True)
 
         # Drop features
-        training_data.drop(columns=['Date', 'League', 'HomeTeam', 'AwayTeam'], inplace=True)
+        training_data.drop(columns=['Date', 'League', 'Home Team', 'Away Team'], inplace=True)
 
         # Save data
         Path(PATH).mkdir(exist_ok=True)
@@ -217,16 +225,16 @@ class BettingAgent:
         spi_data, probs_data = self._fetch_data(leagues, 'predictions')
 
         # Define merge keys
-        keys = ['League', 'HomeTeam', 'AwayTeam']
+        keys = ['League', 'Home Team', 'Away Team']
 
         # Combine data
-        predictions_data = pd.merge(spi_data.drop(columns=['HomeGoals', 'AwayGoals']), probs_data.drop(columns=['Date', 'HomeGoals', 'AwayGoals']), on=keys)
+        predictions_data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), probs_data.drop(columns=['Date', 'Home Goals', 'Away Goals']), on=keys)
 
         # Create features
-        predictions_data['DiffSPIGoals'] = predictions_data['HomeSPIGoals'] - predictions_data['AwaySPIGoals']
-        predictions_data['DiffSPI'] = predictions_data['HomeSPI'] - predictions_data['AwaySPI']
-        predictions_data['DiffSPIProb'] = predictions_data['HomeSPIProb'] - predictions_data['AwaySPIProb']
-        predictions_data['DiffFDProb'] = predictions_data['HomeFDProb'] - predictions_data['AwayFDProb']
+        predictions_data['Difference SPI Goals'] = predictions_data['Home SPI Goals'] - predictions_data['Away SPI Goals']
+        predictions_data['Difference SPI'] = predictions_data['Home SPI'] - predictions_data['Away SPI']
+        predictions_data['Difference SPI Probabilities'] = predictions_data['Home SPI Probabilities'] - predictions_data['Away SPI Probabilities']
+        predictions_data['Difference FD Probabilities'] = predictions_data['Home FD Probabilities'] - predictions_data['Away FD Probabilities']
 
         # Sort data
         predictions_data = predictions_data.sort_values(['Date'] + keys).reset_index(drop=True)
@@ -245,32 +253,32 @@ class BettingAgent:
             raise FileNotFoundError('Training data do not exist. Fetch training data before loading modeling data.')
 
         # Define odds columns
-        odds_columns = {
-            'average': ['HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd'], 
-            'maximum': ['HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd']
-        }
+        odds_columns = [value for value in FD_COLUMNS_MAPPING.values() if 'Odds' in value]
 
         # Define predicted results
         predicted_results = list(predicted_result)
 
         # Input data
-        X = training_data.drop(columns=odds_columns['average'] +  odds_columns['maximum'] + ['HomeGoals', 'AwayGoals'])
+        X = training_data.drop(columns=odds_columns + ['Home Goals', 'Away Goals'])
         X = X[['Day'] + X.columns[:-1].tolist()]
         
         # Target
-        y = (training_data['HomeGoals'] - training_data['AwayGoals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
+        y = (training_data['Home Goals'] - training_data['Away Goals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
         y = y.apply(lambda result: '-' if result not in predicted_results else result)
         
+        # Odds
+        selected_odds = [odds for odds in odds_columns if odds_type.lower() in odds.lower()]
+        odds = training_data.loc[:, selected_odds]
+        
+        # Filter data
+        mask = np.prod(~odds.isna(), axis=1).astype(bool)
+        X, y, odds = X[mask], y[mask], odds[mask]
+
         # Check arrays
         X, y = check_X_y(X, y)
-
-        # Odds
-        if odds_type is not None:
-            odds = training_data.loc[:, odds_columns[odds_type]]
-            odds = check_array(odds)
-            return X, y, odds
-        else:
-            return X, y
+        odds = check_array(odds)
+            
+        return X, y, odds
 
     def load_predictions_data(self):
         """Load the data used for model predictions."""
@@ -282,7 +290,7 @@ class BettingAgent:
             raise FileNotFoundError('Predictions data do not exist. Fetch predictions data before loading modeling data.')
 
         # Define odds columns
-        odds_columns = ['Date', 'League', 'HomeTeam', 'AwayTeam', 'HomeAverageOdd', 'AwayAverageOdd', 'DrawAverageOdd', 'HomeMaximumOdd', 'AwayMaximumOdd', 'DrawMaximumOdd']
+        odds_columns = ['Date', 'League', 'Home Team', 'Away Team', 'Home Average Odds', 'Away Average Odds', 'Draw Average Odds', 'Home Maximum Odds', 'Away Maximum Odds', 'Draw Maximum Odds']
 
         # Input data
         X = predictions_data.drop(columns=odds_columns)
@@ -380,7 +388,10 @@ class BettingAgent:
             capital += profit
 
             # Adjust bet amount
-            bet_amount = bet_amount * bet_factor if profit < 0.0 else 1.0
+            if profit < 0.0 or (bet_amount > 1.0 and profit == 0.0):
+                bet_amount *= bet_factor
+            else:
+                bet_amount = 1.0
 
             # Calculate credit
             max_credit = capital + bet_factor ** credit_exponent
@@ -433,8 +444,10 @@ class BettingAgent:
 
         # Generate predictions
         y_pred = pd.DataFrame(classifier.predict(X), columns=['Prediction'])
+        y_pred_proba = 1 / classifier.predict_proba(X).max(axis=1)
+        minimum_odds = pd.DataFrame(y_pred_proba, columns=['Minimum Odds'])
 
         # Stack predictions
-        predictions = pd.concat([odds, y_pred], axis=1)
+        predictions = pd.concat([odds, y_pred, minimum_odds], axis=1)
 
         return predictions

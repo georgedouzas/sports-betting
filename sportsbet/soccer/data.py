@@ -31,6 +31,44 @@ LEAGUES_MAPPING = {
     'SP2': 'Spanish Segunda Division',
     'T1': 'Turkish Turkcell Super Lig'
 }
+SPI_COLUMNS_MAPPING = {
+    'league': 'League',
+    'date': 'Date',
+    'team1': 'Home Team',
+    'team2': 'Away Team',
+    'score1': 'Home Goals',
+    'score2': 'Away Goals',
+    'spi1': 'Home SPI',
+    'spi2': 'Away SPI',
+    'prob1': 'Home SPI Probabilities',
+    'prob2': 'Away SPI Probabilities',
+    'probtie': 'Draw SPI Probabilities',
+    'proj_score1': 'Home SPI Goals',
+    'proj_score2': 'Away SPI Goals'
+}
+FD_COLUMNS_MAPPING = {
+    'Div': 'League',
+    'Date': 'Date',
+    'HomeTeam': 'Home Team',
+    'AwayTeam': 'Away Team',
+    'FTHG': 'Home Goals',
+    'FTAG': 'Away Goals',
+    'BbAvH': 'Home Average Odds',
+    'BbAvA': 'Away Average Odds',
+    'BbAvD': 'Draw Average Odds',
+    'BbMxH': 'Home Maximum Odds',
+    'BbMxA': 'Away Maximum Odds',
+    'BbMxD': 'Draw Maximum Odds',
+    'PSH': 'Home Pinnacle Odds',
+    'PSA': 'Away Pinnacle Odds',
+    'PSD': 'Draw Pinnacle Odds',
+    'B365H': 'Home Bet365 Odds',
+    'B365A': 'Away Bet365 Odds',
+    'B365D': 'Draw Bet365 Odds',
+    'BWH': 'Home bwin Odds',
+    'BWA': 'Away bwin Odds',
+    'BWD': 'Draw bwin Odds',
+}
 
 
 def _fetch_spi_data(leagues):
@@ -38,30 +76,13 @@ def _fetch_spi_data(leagues):
 
     # Define url
     url = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
-    
-    # Define columns mapping
-    columns_mapping = {
-        'league': 'League',
-        'date': 'Date',
-        'team1': 'HomeTeam',
-        'team2': 'AwayTeam',
-        'score1': 'HomeGoals',
-        'score2': 'AwayGoals',
-        'spi1': 'HomeSPI',
-        'spi2': 'AwaySPI',
-        'prob1': 'HomeSPIProb',
-        'prob2': 'AwaySPIProb',
-        'probtie': 'DrawSPIProb',
-        'proj_score1': 'HomeSPIGoals',
-        'proj_score2': 'AwaySPIGoals'
-    }
 
     # Download data
     data = pd.read_csv(url)
     
     # Select and rename columns
-    data = data.loc[:, columns_mapping.keys()]
-    data.rename(columns=columns_mapping, inplace=True)
+    data = data.loc[:, SPI_COLUMNS_MAPPING.keys()]
+    data.rename(columns=SPI_COLUMNS_MAPPING, inplace=True)
 
     # Filter leagues
     leagues = [LEAGUES_MAPPING[league_id] for league_id in (leagues if leagues != 'all' else LEAGUES_MAPPING.keys())]
@@ -81,15 +102,15 @@ def _fetch_historical_spi_data(leagues):
     data = _fetch_spi_data(leagues)
 
     # Filter historical data
-    data = data[(~data.HomeGoals.isna()) & (~data.AwayGoals.isna())]
+    data = data[(~data['Home Goals'].isna()) & (~data['Away Goals'].isna())]
 
     # Cast columns
     data.loc[:, 'Date'] = pd.to_datetime(data['Date'], format='%Y-%m-%d')
-    data['HomeGoals'] = data['HomeGoals'].astype(int)
-    data['AwayGoals'] = data['AwayGoals'].astype(int)
+    data['Home Goals'] = data['Home Goals'].astype(int)
+    data['Away Goals'] = data['Away Goals'].astype(int)
 
     # Sort data
-    data = data.sort_values(['Date', 'League', 'HomeTeam', 'AwayTeam']).reset_index(drop=True)
+    data = data.sort_values(['Date', 'League', 'Home Team', 'Away Team']).reset_index(drop=True)
     
     return data
 
@@ -101,35 +122,19 @@ def _fetch_predictions_spi_data(leagues):
     data = _fetch_spi_data(leagues)
 
     # Filter future data
-    data = data[(data.HomeGoals.isna()) & (data.AwayGoals.isna())]
+    data = data[(data['Home Goals'].isna()) & (data['Away Goals'].isna())]
 
     # Cast to date
     data.loc[:, 'Date'] = pd.to_datetime(data['Date'], format='%Y-%m-%d')
 
     # Sort data
-    data = data.sort_values(['Date', 'League', 'HomeTeam', 'AwayTeam']).reset_index(drop=True)
+    data = data.sort_values(['Date', 'League', 'Home Team', 'Away Team']).reset_index(drop=True)
 
     return data
 
 
 def _fetch_fd_data(urls):
     """Fetch the data from football-data.co.uk."""
-
-    # Define columns mapping
-    columns_mapping = {
-        'Div': 'League',
-        'Date': 'Date',
-        'HomeTeam': 'HomeTeam',
-        'AwayTeam': 'AwayTeam',
-        'FTHG': 'HomeGoals',
-        'FTAG': 'AwayGoals',
-        'BbAvH': 'HomeAverageOdd',
-        'BbAvA': 'AwayAverageOdd',
-        'BbAvD': 'DrawAverageOdd',
-        'BbMxH': 'HomeMaximumOdd',
-        'BbMxA': 'AwayMaximumOdd',
-        'BbMxD': 'DrawMaximumOdd'
-    }
 
     # Download data
     data = pd.DataFrame()
@@ -139,8 +144,8 @@ def _fetch_fd_data(urls):
         partial_data = pd.read_csv(url)
         
         # Select and rename columns
-        partial_data = partial_data.loc[:, columns_mapping.keys()]
-        partial_data.rename(columns=columns_mapping, inplace=True)
+        partial_data = partial_data.loc[:, FD_COLUMNS_MAPPING.keys()]
+        partial_data.rename(columns=FD_COLUMNS_MAPPING, inplace=True)
         
         # Append data
         data = data.append(partial_data, ignore_index=True)
@@ -164,15 +169,15 @@ def _fetch_historical_fd_data(leagues):
     data = _fetch_fd_data(urls)
 
     # Filter matches
-    data = data[(~data.HomeGoals.isna()) & (~data.AwayGoals.isna()) & (~data.HomeMaximumOdd.isna()) & (~data.AwayMaximumOdd.isna()) & (~data.DrawMaximumOdd.isna())]
+    data = data[(~data['Home Goals'].isna()) & (~data['Away Goals'].isna())]
 
     # Cast columns
     data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%y')
-    data['HomeGoals'] = data['HomeGoals'].astype(int)
-    data['AwayGoals'] = data['AwayGoals'].astype(int)
+    data['Home Goals'] = data['Home Goals'].astype(int)
+    data['Away Goals'] = data['Away Goals'].astype(int)
 
     # Sort data
-    data = data.sort_values(['Date', 'League', 'HomeTeam', 'AwayTeam']).reset_index(drop=True)
+    data = data.sort_values(['Date', 'League', 'Home Team', 'Away Team']).reset_index(drop=True)
     
     return data
 
@@ -194,22 +199,13 @@ def _fetch_predictions_fd_data(leagues):
     data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%y')
 
     # Sort data
-    data = data.sort_values(['Date', 'League', 'HomeTeam', 'AwayTeam']).reset_index(drop=True)
+    data = data.sort_values(['Date', 'League', 'Home Team', 'Away Team']).reset_index(drop=True)
 
     return data
 
 
-def _match_teams_names(spi_data, fd_data):
+def _match_teams_names(teams_names):
     """Match teams names between spi and fd data."""
-
-    # Define merge keys
-    keys = ['Date', 'League']
-
-    # Define columns to select
-    columns = ['HomeTeam_x', 'HomeTeam_y', 'AwayTeam_x', 'AwayTeam_y']
-
-    # Merge data
-    teams_names = pd.merge(spi_data, fd_data, on=keys, how='outer').loc[:, columns].dropna().reset_index(drop=True)
 
     # Calculate similarity index
     similarity = teams_names.apply(lambda row: SequenceMatcher(None, row[0], row[1]).ratio() * SequenceMatcher(None, row[2], row[3]).ratio(), axis=1)
@@ -218,7 +214,7 @@ def _match_teams_names(spi_data, fd_data):
     teams_names_similarity = pd.concat([teams_names, similarity], axis=1)
 
     # Filter correct matches
-    indices = teams_names_similarity.groupby(['HomeTeam_x', 'AwayTeam_x'])[0].idxmax().values
+    indices = teams_names_similarity.groupby(['Home Team_x', 'Away Team_x'])[0].idxmax().values
     teams_names_matching = teams_names.take(indices)
 
     # Generate mapping

@@ -25,12 +25,12 @@ def parse_args():
     # Add arguments
     parser.add_argument('clf-name', help='The classifier name to predict the results.')
     parser.add_argument('predicted-result', help='Predicted result.')
-    parser.add_argument('--type', default='cross-validation', help='Type of evaluation.')
+    parser.add_argument('--eval-type', default='cross-validation', help='Type of evaluation.')
     parser.add_argument('--n-runs', default=5, type=int, help='Number of backtesting repetitions.')
     parser.add_argument('--n-splits', default=5, type=int, help='The number of cross-validation splits.')
     parser.add_argument('--random-state', default=0, type=int, help='The random state for cross-validation splitting and classifiers.')
     parser.add_argument('--test-year', default=2, type=int, help='Test year.')
-    parser.add_argument('--max-day-range', default=6, type=int, help='Maximum day range between bets.')
+    parser.add_argument('--max-day-range', default=1, type=int, help='Maximum day range between bets.')
     parser.add_argument('--bet-factor', default=2, type=float, help='Factor to multiple betting amount in the case of loss.')  
     parser.add_argument('--credit-exponent', default=3, type=int, help='Exponent to raise bet factor in order to get the available credit.')
     parser.add_argument('--odds-type', default='maximum', help='Type of odds to use for evaluation.')
@@ -129,10 +129,10 @@ if __name__ == '__main__':
     args = vars(parse_args())
 
     # Evaluation
-    if args['type'] == 'cross-validation':
+    if args['eval_type'] == 'cross-validation':
         mean_profit = cross_validate(args['clf-name'], args['predicted-result'], args['n_splits'], args['odds_type'], args['random_state'])
         print_cross_validation_results(mean_profit)
         
-    elif args['type'] == 'backtesting':
+    elif args['eval_type'] == 'backtesting':
         betting_agents = backtest(args['clf-name'], args['predicted-result'], args['n_runs'], args['test_year'], args['max_day_range'], args['odds_type'], args['random_state'])
         print_backtesting_results(betting_agents)
