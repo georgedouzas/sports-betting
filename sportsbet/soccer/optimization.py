@@ -17,7 +17,6 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.model_selection._split import BaseCrossValidator, _num_samples
 from sklearn.metrics import precision_score
 from sklearn.utils import Parallel, delayed
-from sklearn.preprocessing import label_binarize
 from tqdm import tqdm
 
 from .. import PATH
@@ -260,7 +259,6 @@ class BettingAgent:
         
         # Target
         y = (training_data['HomeGoals'] - training_data['AwayGoals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        mask = label_binarize(y, classes=['H', 'A', 'D']).astype(bool)
         y = y.apply(lambda result: '-' if result not in predicted_results else result)
         
         # Check arrays
@@ -268,8 +266,8 @@ class BettingAgent:
 
         # Odds
         if odds_type is not None:
-            odds = training_data.loc[:, odds_columns[odds_type]].values[mask] 
-            odds = check_array(odds, ensure_2d=False)
+            odds = training_data.loc[:, odds_columns[odds_type]]
+            odds = check_array(odds)
             return X, y, odds
         else:
             return X, y
@@ -303,7 +301,7 @@ class BettingAgent:
         X, y, odds = self.load_training_data(predicted_result, odds_type)
 
         # Prepare data
-        X = np.hstack((X, odds.reshape(-1, 1)))
+        X = np.hstack((X, odds))
 
         return X, y
 
@@ -356,13 +354,15 @@ class BettingAgent:
         # Initialize parameters
         statistics, precisions = [], []
         capital, bet_amount = 1.0, 1.0
-        y_test_all, y_pred_all, odds_all = np.array([]), np.array([]), np.array([])
+        y_test_all, y_pred_all, y_pred_proba_all, odds_all = np.array([]), np.array([]), np.array([]), np.array([])
         
 
-        for y_test, (y_pred, odds) in self.backtest_results_:
+        for y_test, ((y_pred, y_pred_proba), odds) in self.backtest_results_:
 
-            # Append results and predictions
-            y_test_all, y_pred_all, odds_all = np.hstack((y_test, y_test_all)), np.hstack((y_pred, y_pred_all)), np.hstack((odds, odds_all))
+            # Append results, predictions and odds
+            y_test_all, y_pred_all = np.hstack((y_test, y_test_all)), np.hstack((y_pred, y_pred_all))
+            y_pred_proba_all = np.vstack((y_pred_proba, y_pred_proba_all.reshape(-1, y_pred_proba.shape[1])))
+            odds_all = np.vstack((odds, odds_all.reshape(-1, odds.shape[1])))
 
             # Calculate number of bets and matches
             mask = (y_pred != '-')
@@ -374,7 +374,7 @@ class BettingAgent:
             precisions.append(precision)
 
             # Calculate profit
-            profit = bet_amount * mean_profit_score(y_test, (y_pred, odds))
+            profit = bet_amount * mean_profit_score(y_test, ((y_pred, y_pred_proba), odds))
             
             # Calculate capital
             capital += profit
@@ -401,7 +401,7 @@ class BettingAgent:
 
         # Define attributes
         mean_precision = np.nanmean(precisions)
-        profit_per_bet = mean_profit_score(y_test_all, (y_pred_all, odds_all))
+        profit_per_bet = mean_profit_score(y_test_all, ((y_pred_all, y_pred_proba_all), odds_all))
 
         return statistics, mean_precision, profit_per_bet
 

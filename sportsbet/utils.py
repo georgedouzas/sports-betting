@@ -39,45 +39,64 @@ class ProfitEstimator(BaseEstimator, RegressorMixin):
         self.estimator_ = clone(self.estimator)
 
         # Exclude time index and maximum odds
-        self.estimator_.fit(X[:, 1:-1], y, **fit_params)
+        self.estimator_.fit(X[:, 1:-3], y, **fit_params)
         
         return self
         
     def predict(self, X):
 
-        # Exclude time index and maximum odds
-        y_pred = self.estimator_.predict(X[:, 1:-1])
+        # Generate class labels predictions
+        y_pred = self.estimator_.predict(X[:, 1:-3])
+
+        # Generate class propabilities predictions
+        y_pred_proba = self.estimator_.predict_proba(X[:, 1:-3])
         
         # Get odds
-        odds = X[:, -1]
+        odds = X[:, -3:]
         
-        return y_pred, odds
+        return (y_pred, y_pred_proba), odds
 
 
 def mean_profit_score(y_true, y_pred_odds):
     """Calculate mean profit for a profit estimator."""
 
-    # Get predictions and odds
-    y_pred, odds = y_pred_odds
+    # Define results
+    results = ('H', 'A', 'D')
 
-    # Filter positive class preditions
+    # Get predictions and odds
+    (y_pred, y_pred_proba), odds = y_pred_odds
+
+    # Filter predictions
     mask = (y_pred != '-')
-    y_true_sel, y_pred_sel, odds = y_true[mask], y_pred[mask], odds[mask]
+    y_true_sel, y_pred_sel, y_pred_proba_sel, odds_sel = y_true[mask], y_pred[mask], y_pred_proba[mask], odds[mask]
+
+    # Get predicted classes probabilities
+    pred_proba_sel = y_pred_proba_sel.max(axis=1)
+
+    # Convert odds to probabilities
+    odds_proba_sel = 1 / odds_sel
+    odds_proba_sel = odds_proba_sel / odds_proba_sel.sum(axis=1)[:, None]
+
+    # Generate column indices for predicted classes
+    indices = [results.index(result) for result in y_pred_sel]
     
-    # No preidictions case
+    # Select odds and probabilities
+    odds_sel = odds_sel[np.arange(len(odds_sel)), indices]
+    odds_proba_sel = odds_proba_sel[np.arange(len(odds_proba_sel)), indices]
+    
+    # Filter predictions
+    mask = pred_proba_sel > odds_proba_sel
+    y_true_sel, y_pred_sel, odds_sel = y_true_sel[mask], y_pred_sel[mask], odds_sel[mask]
+    
+    # No predictions case
     if y_pred_sel.size == 0:
-        return np.array([0.0])
+        return 0.0
     
     # Calculate profit
-    profit = (y_true_sel == y_pred_sel).astype(int) * (odds - 1)
+    profit = (y_true_sel == y_pred_sel).astype(int) * (odds_sel - 1)
     profit[profit == 0.0] = -1.0
 
     return profit.mean()
-
-
-def f1_multi(y_true, y_pred):
-    """F1 score for multiclass classification."""
-    return f1_score(y_true, y_pred, average='micro')
 
 
 def set_random_state(classifier, random_state):
