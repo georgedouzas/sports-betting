@@ -35,8 +35,15 @@ def fetch_data():
     betting_agent = BettingAgent()
 
     # Fetch data
-    betting_agent.fetch_training_data(leagues=leagues)
-    betting_agent.fetch_predictions_data(leagues=leagues)
+    try:
+        betting_agent.fetch_training_data(leagues=leagues)
+    except Exception:
+        print('Failed to fetch training data.')
+    try:
+        betting_agent.fetch_predictions_data(leagues=leagues)
+    except Exception:
+        print('Failed to fetch predictions data.')
+
 
 
 if __name__ == '__main__':
