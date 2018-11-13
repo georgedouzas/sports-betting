@@ -144,12 +144,37 @@ class BettingAgent:
 
     @staticmethod
     def _check_classifier(classifier, fit_params):
+        """Use profit estimator and set default values."""
 
         # Check classifier and its fitting parameters
         classifier = ProfitEstimator(classifier) if classifier is not None else ProfitEstimator(DEFAULT_CLASSIFIERS['trivial'][0])
         fit_params = fit_params.copy() if fit_params is not None else DEFAULT_CLASSIFIERS['trivial'][1]
 
         return classifier, fit_params
+
+    @staticmethod
+    def _extract_features(data):
+        """Extract features for training and predictions data."""
+
+        # SPI goals difference and winner
+        data['Difference SPI Goals'] = data['Home SPI Goals'] - data['Away SPI Goals']
+        data['Winner SPI Goals'] = (data['Difference SPI Goals'] > 0).astype(int)
+
+        # SPI difference and winner
+        data['Difference SPI'] = data['Home SPI'] - data['Away SPI']
+        data['Winner SPI'] = (data['Difference SPI'] > 0).astype(int)
+        
+        # Probabilities difference
+        data['Difference Home Probabilities'] = (data['Home SPI Probabilities'] - data['Home Odds Probabilities'])
+        data['Difference Away Probabilities'] = (data['Away SPI Probabilities'] - data['Away Odds Probabilities'])
+        data['Difference Draw Probabilities'] = (data['Draw SPI Probabilities'] - data['Draw Odds Probabilities'])
+        data['Difference SPI Probabilities'] = (data['Home SPI Probabilities'] - data['Away SPI Probabilities'])
+        
+        # Bookmakers predictions
+        data['Average Predictions'] = np.argmin(data[['Home Average Odds', 'Away Average Odds', 'Draw Average Odds']].values, axis=1)
+        data['Pinnacle Predictions'] = np.argmin(data[['Home Pinnacle Odds', 'Away Pinnacle Odds', 'Draw Pinnacle Odds']].values, axis=1)
+        data['Bet365 Predictions'] = np.argmin(data[['Home Bet365 Odds', 'Away Bet365 Odds', 'Draw Bet365 Odds']].values, axis=1)
+        data['bwin Predictions'] = np.argmin(data[['Home bwin Odds', 'Away bwin Odds', 'Draw bwin Odds']].values, axis=1)
 
     def _fetch_data(self, leagues, data_type):
         """Fetch the data."""
@@ -199,11 +224,8 @@ class BettingAgent:
         # Combine data
         training_data = pd.merge(spi_data, probs_data, on=keys)
 
-        # Create features
-        training_data['Difference SPI Goals'] = training_data['Home SPI Goals'] - training_data['Away SPI Goals']
-        training_data['Difference SPI'] = training_data['Home SPI'] - training_data['Away SPI']
-        training_data['Difference SPI Probabilities'] = training_data['Home SPI Probabilities'] - training_data['Away SPI Probabilities']
-        training_data['Difference Odds Probabilities'] = training_data['Home Odds Probabilities'] - training_data['Away Odds Probabilities']
+        # Extract features
+        self._extract_features(training_data)
 
         # Create day index
         training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
@@ -230,11 +252,8 @@ class BettingAgent:
         # Combine data
         predictions_data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), probs_data.drop(columns=['Date', 'Home Goals', 'Away Goals']), on=keys)
 
-        # Create features
-        predictions_data['Difference SPI Goals'] = predictions_data['Home SPI Goals'] - predictions_data['Away SPI Goals']
-        predictions_data['Difference SPI'] = predictions_data['Home SPI'] - predictions_data['Away SPI']
-        predictions_data['Difference SPI Probabilities'] = predictions_data['Home SPI Probabilities'] - predictions_data['Away SPI Probabilities']
-        predictions_data['Difference FD Probabilities'] = predictions_data['Home FD Probabilities'] - predictions_data['Away FD Probabilities']
+        # Extract features
+        self._extract_features(predictions_data)
 
         # Sort data
         predictions_data = predictions_data.sort_values(['Date'] + keys).reset_index(drop=True)
