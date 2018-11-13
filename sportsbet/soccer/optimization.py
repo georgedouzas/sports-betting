@@ -388,9 +388,9 @@ class BettingAgent:
             capital += profit
 
             # Adjust bet amount
-            if profit < 0.0 or (bet_amount > 1.0 and profit == 0.0):
+            if profit < 0.0:
                 bet_amount *= bet_factor
-            else:
+            elif profit > 0.0:
                 bet_amount = 1.0
 
             # Calculate credit
@@ -420,7 +420,7 @@ class BettingAgent:
         """Fit and dump a classifier."""
 
         # Load modelling data
-        X, y = self.load_training_data(predicted_result, None)
+        X, y, _ = self.load_training_data(predicted_result, 'maximum')
 
         # Remove time index
         X = X[:, 1:]

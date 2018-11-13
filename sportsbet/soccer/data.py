@@ -67,7 +67,7 @@ FD_COLUMNS_MAPPING = {
     'B365D': 'Draw Bet365 Odds',
     'BWH': 'Home bwin Odds',
     'BWA': 'Away bwin Odds',
-    'BWD': 'Draw bwin Odds',
+    'BWD': 'Draw bwin Odds'
 }
 
 
