@@ -158,23 +158,14 @@ class BettingAgent:
 
         # SPI goals difference and winner
         data['Difference SPI Goals'] = data['Home SPI Goals'] - data['Away SPI Goals']
-        data['Winner SPI Goals'] = (data['Difference SPI Goals'] > 0).astype(int)
 
         # SPI difference and winner
         data['Difference SPI'] = data['Home SPI'] - data['Away SPI']
-        data['Winner SPI'] = (data['Difference SPI'] > 0).astype(int)
         
         # Probabilities difference
-        data['Difference Home Probabilities'] = (data['Home SPI Probabilities'] - data['Home Odds Probabilities'])
-        data['Difference Away Probabilities'] = (data['Away SPI Probabilities'] - data['Away Odds Probabilities'])
-        data['Difference Draw Probabilities'] = (data['Draw SPI Probabilities'] - data['Draw Odds Probabilities'])
         data['Difference SPI Probabilities'] = (data['Home SPI Probabilities'] - data['Away SPI Probabilities'])
+        data['Difference Odds Probabilities'] = (data['Home Odds Probabilities'] - data['Away Odds Probabilities'])
         
-        # Bookmakers predictions
-        data['Average Predictions'] = np.argmin(data[['Home Average Odds', 'Away Average Odds', 'Draw Average Odds']].values, axis=1)
-        data['Pinnacle Predictions'] = np.argmin(data[['Home Pinnacle Odds', 'Away Pinnacle Odds', 'Draw Pinnacle Odds']].values, axis=1)
-        data['Bet365 Predictions'] = np.argmin(data[['Home Bet365 Odds', 'Away Bet365 Odds', 'Draw Bet365 Odds']].values, axis=1)
-        data['bwin Predictions'] = np.argmin(data[['Home bwin Odds', 'Away bwin Odds', 'Draw bwin Odds']].values, axis=1)
 
     def _fetch_data(self, leagues, data_type):
         """Fetch the data."""
