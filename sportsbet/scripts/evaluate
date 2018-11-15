@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--max-day-range', default=1, type=int, help='Maximum day range between bets.')
     parser.add_argument('--bet-factor', default=2, type=float, help='Factor to multiple betting amount in the case of loss.')  
     parser.add_argument('--credit-exponent', default=3, type=int, help='Exponent to raise bet factor in order to get the available credit.')
-    parser.add_argument('--odds-type', default='maximum', help='Type of odds to use for evaluation.')
+    parser.add_argument('--odds-type', default='pinnacle', help='Type of odds to use for evaluation.')
       
     return parser.parse_args()
 
