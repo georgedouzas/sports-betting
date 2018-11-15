@@ -20,7 +20,7 @@ from sklearn.utils import Parallel, delayed
 from tqdm import tqdm
 
 from .. import PATH
-from ..utils import ProfitEstimator, mean_profit_score, set_random_state, _fit_predict
+from ..utils import BetEstimator, mean_profit_score, set_random_state, _fit_predict
 from .data import (
     _fetch_historical_spi_data, 
     _fetch_historical_fd_data, 
@@ -147,7 +147,7 @@ class BettingAgent:
         """Use profit estimator and set default values."""
 
         # Check classifier and its fitting parameters
-        classifier = ProfitEstimator(classifier) if classifier is not None else ProfitEstimator(DEFAULT_CLASSIFIERS['trivial'][0])
+        classifier = BetEstimator(classifier) if classifier is not None else BetEstimator(DEFAULT_CLASSIFIERS['trivial'][0])
         fit_params = fit_params.copy() if fit_params is not None else DEFAULT_CLASSIFIERS['trivial'][1]
 
         return classifier, fit_params

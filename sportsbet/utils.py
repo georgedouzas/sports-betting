@@ -27,7 +27,7 @@ class SamplingStrategy:
         return str(self.ratio)
 
 
-class ProfitEstimator(BaseEstimator, RegressorMixin):
+class BetEstimator(BaseEstimator, RegressorMixin):
     """Wrapper class of an estimator."""
 
     def __init__(self, estimator):
