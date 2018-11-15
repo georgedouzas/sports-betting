@@ -6,7 +6,6 @@ betting strategy on historical and current data.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: BSD 3 clause
 
-from pathlib import Path
 from os.path import join
 from pickle import dump, load
 
@@ -22,18 +21,12 @@ from tqdm import tqdm
 from .. import PATH
 from ..utils import BetEstimator, yield_score, set_random_state, _fit_predict
 from .data import (
-    _fetch_historical_spi_data, 
-    _fetch_historical_fd_data, 
-    _fetch_predictions_spi_data,
-    _fetch_predictions_fd_data,
-    _match_teams_names,
     LEAGUES_MAPPING,
-    FD_COLUMNS_MAPPING
+    FD_COLUMNS_MAPPING,
+    TRAINING_DATA_PATH,
+    PREDICTIONS_DATA_PATH
 )
 from ..config import DEFAULT_CLASSIFIERS
-
-TRAINING_DATA_PATH = join(PATH, 'training_data.csv')
-PREDICTIONS_DATA_PATH = join(PATH, 'predictions_data.csv')
 
 
 class SeasonTimeSeriesSplit(BaseCrossValidator):
@@ -135,14 +128,6 @@ class SeasonTimeSeriesSplit(BaseCrossValidator):
 class BettingAgent:
 
     @staticmethod
-    def _validate_leagues(leagues):
-        """Validate leagues input."""
-        valid_leagues = [league_id for league_id in LEAGUES_MAPPING.keys()]
-        if leagues != 'all' and not set(leagues).issubset(valid_leagues):
-            msg = "The `leagues` parameter should be either equal to 'all' or a list of valid league ids. Got {} instead."
-            raise ValueError(msg.format(leagues))
-
-    @staticmethod
     def _check_classifier(classifier, fit_params):
         """Use profit estimator and set default values."""
 
@@ -151,107 +136,6 @@ class BettingAgent:
         fit_params = fit_params.copy() if fit_params is not None else DEFAULT_CLASSIFIERS['trivial'][1]
 
         return classifier, fit_params
-
-    @staticmethod
-    def _extract_features(data):
-        """Extract features for training and predictions data."""
-
-        # SPI goals difference and winner
-        data['Difference SPI Goals'] = data['Home SPI Goals'] - data['Away SPI Goals']
-
-        # SPI difference and winner
-        data['Difference SPI'] = data['Home SPI'] - data['Away SPI']
-        
-        # Probabilities difference
-        data['Difference SPI Probabilities'] = (data['Home SPI Probabilities'] - data['Away SPI Probabilities'])
-        data['Difference Odds Probabilities'] = (data['Home Odds Probabilities'] - data['Away Odds Probabilities'])
-        
-
-    def _fetch_data(self, leagues, data_type):
-        """Fetch the data."""
-
-        # Validate leagues
-        self._validate_leagues(leagues)
-
-        # Define parameters 
-        avg_odds_features = ['Home Average Odds', 'Away Average Odds', 'Draw Average Odds']
-        functions_mapping = {
-            'historical': [_fetch_historical_spi_data, _fetch_historical_fd_data],
-            'predictions': [_fetch_predictions_spi_data, _fetch_predictions_fd_data]
-        }
-
-        # Fetch data
-        functions = functions_mapping[data_type]
-        spi_data, fd_data = functions[0](leagues), functions[1](leagues)
-
-        # Teams names matching
-        teams_names_columns = ['Home Team_x', 'Home Team_y', 'Away Team_x', 'Away Team_y']
-        teams_names = pd.merge(spi_data, fd_data, on=['Date', 'League'], how='outer').loc[:, teams_names_columns].dropna().reset_index(drop=True)
-        try:
-            mapping = _match_teams_names(teams_names)
-        except ValueError:
-            raise ValueError('No common upcoming matches between SPI and FD data sources were found.')
-
-        # Convert names
-        spi_data['Home Team'] = spi_data['Home Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
-        spi_data['Away Team'] = spi_data['Away Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
-
-        # Probabilities data
-        probs = 1 / fd_data.loc[:, avg_odds_features].values
-        probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['Home Odds Probabilities', 'Away Odds Probabilities', 'Draw Odds Probabilities'])
-        probs_data = pd.concat([probs, fd_data], axis=1)
-
-        return spi_data, probs_data
-
-    def fetch_training_data(self, leagues):
-        """Fetch the training data."""
-
-        # Fetch data
-        spi_data, probs_data = self._fetch_data(leagues, 'historical')
-
-        # Define merge keys
-        keys = ['Date', 'League', 'Home Team', 'Away Team', 'Home Goals', 'Away Goals']
-
-        # Combine data
-        training_data = pd.merge(spi_data, probs_data, on=keys)
-
-        # Extract features
-        self._extract_features(training_data)
-
-        # Create day index
-        training_data['Day'] = (training_data.Date - min(training_data.Date)).dt.days
-
-        # Sort data
-        training_data = training_data.sort_values(keys[:-2]).reset_index(drop=True)
-
-        # Drop features
-        training_data.drop(columns=['Date', 'League', 'Home Team', 'Away Team'], inplace=True)
-
-        # Save data
-        Path(PATH).mkdir(exist_ok=True)
-        training_data.to_csv(TRAINING_DATA_PATH, index=False)
-    
-    def fetch_predictions_data(self, leagues):
-        """Fetch the predictions data."""
-
-        # Fetch data
-        spi_data, probs_data = self._fetch_data(leagues, 'predictions')
-
-        # Define merge keys
-        keys = ['League', 'Home Team', 'Away Team']
-
-        # Combine data
-        predictions_data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), probs_data.drop(columns=['Date', 'Home Goals', 'Away Goals']), on=keys)
-
-        # Extract features
-        self._extract_features(predictions_data)
-
-        # Sort data
-        predictions_data = predictions_data.sort_values(['Date'] + keys).reset_index(drop=True)
-
-        # Save data
-        Path(PATH).mkdir(exist_ok=True)
-        predictions_data.to_csv(PREDICTIONS_DATA_PATH, index=False)
 
     def load_training_data(self, predicted_result, odds_type):
         """Load the data used for model training."""
