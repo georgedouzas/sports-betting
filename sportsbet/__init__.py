@@ -8,7 +8,7 @@ from sys import path
 
 from sklearn.metrics import SCORERS, make_scorer
 
-from .utils import mean_profit_score
+from .utils import yield_score
 
 # Define default path
 PATH = join(str(Path.home()), '.sports-betting')
@@ -17,7 +17,7 @@ PATH = join(str(Path.home()), '.sports-betting')
 path.append(PATH)
 
 # Append scorers
-named_scorers = {'mean_profit': mean_profit_score}
+named_scorers = {'mean_profit': yield_score}
 for name, scorer in named_scorers.items():
     SCORERS[name] = make_scorer(scorer)
 

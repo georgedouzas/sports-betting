@@ -57,8 +57,8 @@ class BetEstimator(BaseEstimator, RegressorMixin):
         return (y_pred, y_pred_proba), odds
 
 
-def mean_profit_score(y_true, y_pred_odds):
-    """Calculate mean profit for a profit estimator."""
+def yield_score(y_true, y_pred_odds):
+    """Calculate yield for a set of bets."""
 
     # Define results
     results = ('H', 'A', 'D')
@@ -92,11 +92,11 @@ def mean_profit_score(y_true, y_pred_odds):
     if y_pred_sel.size == 0:
         return 0.0
     
-    # Calculate profit
-    profit = (y_true_sel == y_pred_sel).astype(int) * (odds_sel - 1)
-    profit[profit == 0.0] = -1.0
+    # Calculate yield
+    yield_score = (y_true_sel == y_pred_sel).astype(int) * (odds_sel - 1)
+    yield_score[yield_score == 0.0] = -1.0
 
-    return profit.mean()
+    return yield_score.mean()
 
 
 def set_random_state(classifier, random_state):

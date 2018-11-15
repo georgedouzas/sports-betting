@@ -20,7 +20,7 @@ from sklearn.utils import Parallel, delayed
 from tqdm import tqdm
 
 from .. import PATH
-from ..utils import BetEstimator, mean_profit_score, set_random_state, _fit_predict
+from ..utils import BetEstimator, yield_score, set_random_state, _fit_predict
 from .data import (
     _fetch_historical_spi_data, 
     _fetch_historical_fd_data, 
@@ -392,7 +392,7 @@ class BettingAgent:
             precisions.append(precision)
 
             # Calculate profit
-            profit = bet_amount * mean_profit_score(y_test, ((y_pred, y_pred_proba), odds))
+            profit = bet_amount * yield_score(y_test, ((y_pred, y_pred_proba), odds))
             
             # Calculate capital
             capital += profit
@@ -422,7 +422,7 @@ class BettingAgent:
 
         # Define attributes
         mean_precision = np.nanmean(precisions)
-        profit_per_bet = mean_profit_score(y_test_all, ((y_pred_all, y_pred_proba_all), odds_all))
+        profit_per_bet = yield_score(y_test_all, ((y_pred_all, y_pred_proba_all), odds_all))
 
         return statistics, mean_precision, profit_per_bet
 
