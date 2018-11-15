@@ -57,14 +57,14 @@ class BetEstimator(BaseEstimator, RegressorMixin):
         return (y_pred, y_pred_proba), odds
 
 
-def yield_score(y_true, y_pred_odds):
-    """Calculate yield for a set of bets."""
-
-    # Define results
-    results = ('H', 'A', 'D')
+def filter_bets(y_true, y_pred_odds):
+    """Compare predicted probabilities to odds and filter bets."""
 
     # Get predictions and odds
     (y_pred, y_pred_proba), odds = y_pred_odds
+
+    # Define results
+    results = ('H', 'A', 'D')
 
     # Filter predictions
     mask = (y_pred != '-')
@@ -87,16 +87,67 @@ def yield_score(y_true, y_pred_odds):
     # Filter predictions
     mask = pred_proba_sel > odds_proba_sel
     y_true_sel, y_pred_sel, odds_sel = y_true_sel[mask], y_pred_sel[mask], odds_sel[mask]
+
+    return y_true_sel, y_pred_sel, odds_sel
+
+
+def calculate_stakes(y_true, y_pred, odds):
+    """Calculate won and lost stakes."""
+    correct_predictions = (y_true == y_pred)
+    stakes_won = (odds - 1)[correct_predictions].sum()
+    stakes_lost = sum(~correct_predictions)
+    return stakes_won, stakes_lost
+
+
+def yield_score(y_true, y_pred_odds):
+    """Calculate yield for a set of bets."""
+
+    # Filter bets
+    y_true_sel, y_pred_sel, odds_sel = filter_bets(y_true, y_pred_odds)
     
     # No predictions case
     if y_pred_sel.size == 0:
         return 0.0
     
     # Calculate yield
-    yield_score = (y_true_sel == y_pred_sel).astype(int) * (odds_sel - 1)
-    yield_score[yield_score == 0.0] = -1.0
+    stakes_won, stakes_lost = calculate_stakes(y_true_sel, y_pred_sel, odds_sel)
+    yield_score = (stakes_won - stakes_lost) / len(odds_sel)
 
-    return yield_score.mean()
+    return yield_score
+
+
+def profitability_score(y_true, y_pred_odds):
+    """Calculate profitability for a set of bets."""
+
+    # Filter bets
+    y_true_sel, y_pred_sel, odds_sel = filter_bets(y_true, y_pred_odds)
+    
+    # No predictions case
+    if y_pred_sel.size == 0:
+        return 0.0
+    
+    # Calculate yield
+    stakes_won, stakes_lost = calculate_stakes(y_true_sel, y_pred_sel, odds_sel)
+    profitability_score = (stakes_won - stakes_lost) / stakes_lost
+
+    return profitability_score
+
+
+def profit_score(y_true, y_pred_odds):
+    """Calculate profit for a set of bets."""
+
+    # Filter bets
+    y_true_sel, y_pred_sel, odds_sel = filter_bets(y_true, y_pred_odds)
+    
+    # No predictions case
+    if y_pred_sel.size == 0:
+        return 0.0
+    
+    # Calculate yield
+    stakes_won, stakes_lost = calculate_stakes(y_true_sel, y_pred_sel, odds_sel)
+    profit_score = stakes_won - stakes_lost
+
+    return profit_score
 
 
 def set_random_state(classifier, random_state):
