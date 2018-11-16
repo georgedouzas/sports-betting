@@ -25,20 +25,18 @@ def parse_args():
     # Add arguments
     parser.add_argument('clf-name', help='The classifier name to predict the results.')
     parser.add_argument('predicted-result', help='Predicted result.')
-    parser.add_argument('--eval-type', default='cross-validation', help='Type of evaluation.')
-    parser.add_argument('--n-runs', default=5, type=int, help='Number of backtesting repetitions.')
-    parser.add_argument('--n-splits', default=5, type=int, help='The number of cross-validation splits.')
-    parser.add_argument('--random-state', default=0, type=int, help='The random state for cross-validation splitting and classifiers.')
-    parser.add_argument('--test-year', default=2, type=int, help='Test year.')
-    parser.add_argument('--max-day-range', default=1, type=int, help='Maximum day range between bets.')
+    parser.add_argument('--input-odds', default=['average'], nargs='*', help='Input odds to use as model feature.')
+    parser.add_argument('--max-odds', default=['pinnacle'], nargs='*', help='Maximum odds to use for evaluation.')
+    parser.add_argument('--test-season', default=1718, type=int, help='Test season.')
     parser.add_argument('--bet-factor', default=2, type=float, help='Factor to multiple betting amount in the case of loss.')  
     parser.add_argument('--credit-exponent', default=3, type=int, help='Exponent to raise bet factor in order to get the available credit.')
-    parser.add_argument('--odds-type', default='pinnacle', help='Type of odds to use for evaluation.')
+    parser.add_argument('--n-runs', default=5, type=int, help='Number of backtesting repetitions.')
+    parser.add_argument('--random-state', default=0, type=int, help='The random state of estimators.')
       
     return parser.parse_args()
 
 
-def backtest(clf_name, predicted_result, n_runs, test_year, max_day_range, odds_type, random_state):
+def backtest(clf_name, predicted_result, input_odds, max_odds, test_season, n_runs, random_state):
 
     # Define classifier and fitting parameters
     classifier, fit_params = CLASSIFIERS[clf_name]
@@ -58,32 +56,12 @@ def backtest(clf_name, predicted_result, n_runs, test_year, max_day_range, odds_
         betting_agent = BettingAgent()
 
         # Backtest agent
-        betting_agent.backtest(classifier, fit_params, predicted_result, test_year, max_day_range, odds_type)
+        betting_agent.backtest(classifier, fit_params, predicted_result, input_odds, max_odds, test_season)
 
         # Append agent
         betting_agents.append(betting_agent)
         
     return betting_agents
-
-
-def cross_validate(clf_name, predicted_result, n_splits, odds_type, random_state):
-
-    # Define classifier and fitting parameters
-    classifier, fit_params = CLASSIFIERS[clf_name]
-
-    # Create betting agent
-    betting_agent = BettingAgent()
-
-    # Get results
-    mean_profit = betting_agent.cross_validate(classifier, fit_params, predicted_result, n_splits, odds_type, random_state)
-        
-    return mean_profit
-
-
-def print_cross_validation_results(mean_profit):
-    """"Print the cross-validation results."""
-
-    print(u'Average profit per bet: {:.3f} \xb1 {:.3f}'.format(*mean_profit))
 
 
 def print_backtesting_results(betting_agents):
@@ -126,13 +104,10 @@ def print_backtesting_results(betting_agents):
 if __name__ == '__main__':
     
     # Parse arguments
-    args = vars(parse_args())
-
-    # Evaluation
-    if args['eval_type'] == 'cross-validation':
-        mean_profit = cross_validate(args['clf-name'], args['predicted-result'], args['n_splits'], args['odds_type'], args['random_state'])
-        print_cross_validation_results(mean_profit)
-        
-    elif args['eval_type'] == 'backtesting':
-        betting_agents = backtest(args['clf-name'], args['predicted-result'], args['n_runs'], args['test_year'], args['max_day_range'], args['odds_type'], args['random_state'])
-        print_backtesting_results(betting_agents)
+    args = vars(parse_args())        
+    
+    # Backtesting
+    betting_agents = backtest(args['clf-name'], args['predicted-result'], args['input_odds'], args['max_odds'], args['test_season'], args['n_runs'], args['random_state'])
+    
+    # Print results
+    print_backtesting_results(betting_agents)

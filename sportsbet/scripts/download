@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Download the training and odds data.
+Download the historical and predicitions data.
 """
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-from sportsbet.soccer.data import LEAGUES_MAPPING
-from sportsbet.soccer import BettingAgent
+from sportsbet.soccer.data import LEAGUES_MAPPING, download_data
 
 
 def fetch_data():
@@ -30,20 +29,16 @@ def fetch_data():
     leagues = args.leagues
     if len(leagues) == 1 and leagues[0] == 'all':
         leagues = leagues[0]
-    
-    # Create betting agent
-    betting_agent = BettingAgent()
 
     # Fetch data
     try:
-        betting_agent.fetch_training_data(leagues=leagues)
+        download_data(leagues=leagues, data_type='historical')
     except Exception:
-        print('Failed to fetch training data.')
+        print('Failed to download historical data.')
     try:
-        betting_agent.fetch_predictions_data(leagues=leagues)
+        download_data(leagues=leagues, data_type='predictions')
     except Exception:
-        print('Failed to fetch predictions data.')
-
+        print('Failed to download predictions data.')
 
 
 if __name__ == '__main__':

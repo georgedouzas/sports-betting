@@ -6,7 +6,6 @@ from collections import Counter
 
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin, clone
-from sklearn.metrics import SCORERS, make_scorer, f1_score
 
 
 class SamplingStrategy:
@@ -38,20 +37,20 @@ class BetEstimator(BaseEstimator, RegressorMixin):
         # Clone estimator
         self.estimator_ = clone(self.estimator)
 
-        # Exclude time index and maximum odds
-        self.estimator_.fit(X[:, 1:-3], y, **fit_params)
+        # Exclude maximum odds
+        self.estimator_.fit(X[:, :-3], y, **fit_params)
         
         return self
         
     def predict(self, X):
 
         # Generate class labels predictions
-        y_pred = self.estimator_.predict(X[:, 1:-3])
+        y_pred = self.estimator_.predict(X[:, :-3])
 
         # Generate class propabilities predictions
-        y_pred_proba = self.estimator_.predict_proba(X[:, 1:-3])
+        y_pred_proba = self.estimator_.predict_proba(X[:, :-3])
         
-        # Get odds
+        # Get maximum odds
         odds = X[:, -3:]
         
         return (y_pred, y_pred_proba), odds
@@ -157,7 +156,7 @@ def set_random_state(classifier, random_state):
             classifier.set_params(**{param: random_state})
 
 
-def _fit_predict(classifier, X, y, train_indices, test_indices, **fit_params):
+def fit_predict(classifier, X, y, train_indices, test_indices, **fit_params):
     """Fit estimator and predict for a set of train and test indices."""
 
     # Fit classifier

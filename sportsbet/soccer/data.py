@@ -5,10 +5,10 @@ data from various leagues.
 
 from os.path import join
 from pathlib import Path
-from urllib.request import urljoin
 from itertools import product
 from difflib import SequenceMatcher
 
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -171,7 +171,7 @@ def fetch_fd_data(leagues, data_type):
 
     # Download data
     data = pd.DataFrame()
-    for url in tqdm(urls, desc='Download data'):
+    for url in tqdm(urls, desc='Download %s data' % data_type):
 
         # Create partial dataframe
         partial_data = pd.read_csv(url)
@@ -201,7 +201,7 @@ def fetch_fd_data(leagues, data_type):
     return data
 
 
-def download_data(self, leagues, data_type):
+def download_data(leagues, data_type):
     """Download and save historical or predictions data."""
 
     # Validate leagues
@@ -225,30 +225,72 @@ def download_data(self, leagues, data_type):
     spi_data['Home Team'] = spi_data['Home Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
     spi_data['Away Team'] = spi_data['Away Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
 
-    # Probabilities data
-    probs = 1 / fd_data.loc[:, ['Home Average Odds', 'Away Average Odds', 'Draw Average Odds']].values
-    probs = pd.DataFrame(probs / probs.sum(axis=1)[:, None], columns=['Home Odds Probabilities', 'Away Odds Probabilities', 'Draw Odds Probabilities'])
-    probs_data = pd.concat([probs, fd_data], axis=1)
-
     # Combine data
     if data_type == 'historical':
-        data = pd.merge(spi_data, probs_data, on=keys)
+        data = pd.merge(spi_data, fd_data, on=keys)
     elif data_type == 'predictions':
-        data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), probs_data.drop(columns=['Date', 'Home Goals', 'Away Goals']), on=keys[1:-2])
-
-    # SPI goals difference and winner
-    data['Difference SPI Goals'] = data['Home SPI Goals'] - data['Away SPI Goals']
-
-    # SPI difference and winner
-    data['Difference SPI'] = data['Home SPI'] - data['Away SPI']
-        
-    # Probabilities difference
-    data['Difference SPI Probabilities'] = (data['Home SPI Probabilities'] - data['Away SPI Probabilities'])
-    data['Difference Odds Probabilities'] = (data['Home Odds Probabilities'] - data['Away Odds Probabilities'])
+        data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), fd_data.drop(columns=['Date', 'Home Goals', 'Away Goals']), on=keys[1:-2])
 
     # Sort data
     data = data.sort_values(keys[:-2]).reset_index(drop=True)
 
     # Save data
     Path(PATH).mkdir(exist_ok=True)
-    data.to_csv(HISTORICAL_DATA_PATH if data_type == 'historical_data' else PREDICTIONS_DATA_PATH, index=False)
+    data.to_csv(HISTORICAL_DATA_PATH if data_type == 'historical' else PREDICTIONS_DATA_PATH, index=False)
+
+
+def load_data(data_type, input_odds, max_odds, **kwargs):
+    """Load the data used for model training and predictions."""
+
+    # Load data
+    data_path = HISTORICAL_DATA_PATH if data_type == 'historical' else PREDICTIONS_DATA_PATH
+    try:
+        data = pd.read_csv(data_path)
+    except FileNotFoundError:
+        raise FileNotFoundError('%s data do not exist. Download them before loading.' % data_type.capitalize())
+        
+    # Define parameters
+    input_spi_cols = [col for col in data.columns if 'SPI' in col]
+    input_odds_cols = [col for col in data.columns if 'Odds' in col and col.split(' ')[1].lower() in input_odds]
+    max_odds_cols = [col for col in data.columns if 'Odds' in col and col.split(' ')[1].lower() in max_odds]
+    match_data_cols = ['League', 'Season', 'Date', 'Month', 'Day', 'Home Team', 'Away Team']
+
+    # Filter data
+    input_odds_mask = (~data[input_odds_cols].isnull()).product(axis=1).astype(bool)
+    max_odds_mask = (data[max_odds_cols].isnull().sum(axis=1) != len(max_odds_cols))
+    data = data[input_odds_mask & max_odds_mask].reset_index(drop=True)
+
+    # Input data
+    X = pd.concat([1 / data.loc[:, input_odds_cols], data.loc[:, input_spi_cols]], axis=1) 
+    grouped_cols = [input_odds_cols[(3 * i): (3 * i + 3)] for i in range(len(input_odds))]
+    for cols in grouped_cols:
+        probs_cols = [col.replace('Odds', 'Probabilities') for col in cols]
+        probs = pd.DataFrame(X[cols].values / X[cols].values.sum(axis=1)[:, None], columns=probs_cols)
+        X = pd.concat([probs, X], axis=1)
+        cols = [col.replace('Odds', 'Probabilities') for col in cols]
+        X[cols[2].replace('Draw', 'Difference')] = X[cols[0]] - X[cols[1]]
+    X['Difference SPI Goals'] = X['Home SPI Goals'] - X['Away SPI Goals']
+    X['Difference SPI'] = X['Home SPI'] - X['Away SPI']
+    X['Difference SPI Probabilities'] = X['Home SPI Probabilities'] - X['Away SPI Probabilities']
+    X = X.drop(columns=input_odds_cols).values
+
+    # Maximum odds data
+    max_odds_data = data.loc[:, max_odds_cols]
+    grouped_cols = [np.take(max_odds_cols, range(i, len(max_odds_cols) + i, 3)).tolist() for i in range(3)]
+    for cols in grouped_cols:
+        col = '%s Maximum Odds' % cols[0].split(' ')[0]
+        max_odds_data[col] = np.nanmax(max_odds_data[cols], axis=1)
+    max_odds_data = max_odds_data.drop(columns=max_odds_cols).values
+
+    # Match data
+    match_data = data[match_data_cols]
+
+    # Target
+    if data_type == 'historical':
+        predicted_results = list(kwargs['predicted_result'])
+        y = (data['Home Goals'] - data['Away Goals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
+        y = y.apply(lambda result: '-' if result not in predicted_results else result).values
+    elif data_type == 'predictions':
+        y = None
+            
+    return X, y, max_odds_data, match_data
