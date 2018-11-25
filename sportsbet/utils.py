@@ -66,10 +66,10 @@ def check_classifier(classifier, param_grid, random_state):
         if 'random_state' in param:
             classifier.set_params(**{param: random_state})
 
-    return classifier, param_grid
+    return classifier
 
 
-def fit_predict(classifier, param_grid, X, y, odds, matches, train_indices, test_indices):
+def fit_predict(classifier, X, y, odds, matches, train_indices, test_indices):
     """Fit estimator and predict for a set of train and test indices."""
 
     # Modify input data
@@ -132,24 +132,6 @@ def yield_score(y_true, y_pred_proba_odds):
 ###########################
 #Classifiers configuration#
 ###########################
-
-class SamplingStrategy:
-    """Helper class for the sampling strategy parameter of oversamplers."""
-
-    def __init__(self, ratio):
-        self.ratio = ratio
-    
-    def __call__(self, y):
-        counter = Counter(y)
-        majority_label, majority_n_samples = counter.most_common()[0]
-        sampling_strategy = {label: max(int(self.ratio * majority_n_samples), n_samples) 
-                                    if label != majority_label else majority_n_samples 
-                             for label, n_samples in counter.items()}
-        return sampling_strategy
-
-    def __repr__(self):
-        return str(self.ratio)
-
 
 def import_custom_classifiers(default_classifiers):
     """Try to import custom classifiers."""

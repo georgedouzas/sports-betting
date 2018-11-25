@@ -36,13 +36,13 @@ class BettingAgent:
         X, y, odds, matches = load_data('historical', max_odds, predicted_result=predicted_result)
 
         # Check classifier and its fitting parameters
-        classifier, param_grid = check_classifier(classifier, param_grid, random_state)
+        classifier = check_classifier(classifier, param_grid, random_state)
 
         # Define train and test indices of each month
         indices = generate_month_indices(matches, test_season)
 
         # Run cross-validation
-        results = Parallel(n_jobs=-1)(delayed(fit_predict)(classifier, param_grid,
+        results = Parallel(n_jobs=-1)(delayed(fit_predict)(classifier,
                                                            X, y, odds, matches,
                                                            train_indices, test_indices)
                            for train_indices, test_indices in tqdm(indices, desc='Backtesting: '))
@@ -72,7 +72,7 @@ class BettingAgent:
 
         return results
 
-    def fit_dump_classifier(self, classifier, fit_params, predicted_result, input_odds, max_odds, clf_name):
+    def fit_dump_classifier(self, classifier, fit_params, predicted_result, max_odds, clf_name):
         """Fit and dump a classifier."""
 
         # Load modelling data
@@ -85,7 +85,7 @@ class BettingAgent:
         with open(join(PATH, '%s.pkl' % clf_name) , 'wb') as file:
             dump(classifier, file)
     
-    def predict(self, input_odds, max_odds, clf_name):
+    def predict(self, max_odds, clf_name):
         """Generate predictions using a fitted classifier."""
 
         # Load predictions data
