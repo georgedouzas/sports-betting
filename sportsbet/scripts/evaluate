@@ -9,10 +9,8 @@ from argparse import ArgumentParser
 
 import pandas as pd
 from sklearn.utils import check_random_state
-from sportsbet.utils import set_random_state
 from sportsbet.soccer import BettingAgent
-from sportsbet.soccer.optimization import DEFAULT_CLASSIFIERS
-from sportsbet.config import CLASSIFIERS
+from sportsbet.utils import CLASSIFIERS
 from tqdm import trange
 
 
@@ -25,89 +23,28 @@ def parse_args():
     # Add arguments
     parser.add_argument('clf-name', help='The classifier name to predict the results.')
     parser.add_argument('predicted-result', help='Predicted result.')
-    parser.add_argument('--input-odds', default=['average'], nargs='*', help='Input odds to use as model feature.')
-    parser.add_argument('--max-odds', default=['pinnacle'], nargs='*', help='Maximum odds to use for evaluation.')
+    parser.add_argument('--max-odds', default=['pinnacle', 'bet365', 'bwin'], nargs='*', help='Maximum odds to use for evaluation.')
     parser.add_argument('--test-season', default=1718, type=int, help='Test season.')
-    parser.add_argument('--bet-factor', default=2, type=float, help='Factor to multiple betting amount in the case of loss.')  
-    parser.add_argument('--credit-exponent', default=3, type=int, help='Exponent to raise bet factor in order to get the available credit.')
-    parser.add_argument('--n-runs', default=5, type=int, help='Number of backtesting repetitions.')
+    parser.add_argument('--n-bets-threshold', default=20, type=int, help='Minimum number of bets for each bet epoch.')
     parser.add_argument('--random-state', default=0, type=int, help='The random state of estimators.')
       
     return parser.parse_args()
 
 
-def backtest(clf_name, predicted_result, input_odds, max_odds, test_season, n_runs, random_state):
-
-    # Define classifier and fitting parameters
-    classifier, fit_params = CLASSIFIERS[clf_name]
-
-    # Define random states
-    random_state = check_random_state(random_state)
-    random_states = [random_state.randint(0, 2 ** 32 - 1, dtype='uint32') for _ in range(n_runs)]
-
-    # Backtesting
-    betting_agents = []
-    for run in trange(n_runs, desc='Runs: '):
-
-        # Set random state
-        set_random_state(classifier, random_states[run])
-
-        # Create betting agent
-        betting_agent = BettingAgent()
-
-        # Backtest agent
-        betting_agent.backtest(classifier, fit_params, predicted_result, input_odds, max_odds, test_season)
-
-        # Append agent
-        betting_agents.append(betting_agent)
-        
-    return betting_agents
-
-
-def print_backtesting_results(betting_agents):
-    """Print the backtestings results."""
-
-    # Parse results
-    results = []
-    for betting_agent in betting_agents:
-        statistics, mean_precision, profit_per_bet = betting_agent.calculate_backtest_results(args['bet_factor'], args['credit_exponent'])
-        results.append((statistics['Capital'].values[-1], mean_precision, profit_per_bet))
-    results = pd.DataFrame(results, columns=['Capital', 'Precision', 'Profit per bet'])
-    
-    # Define basic print messages
-    msgs = (u'Average capital: {:.1f}', u'Average precision: {:.1f}% ', u'Average profit per bet: {:.1f}% ')
-
-    # Aggregate results
-    aggregated_results = zip(results.mean().values, results.std().values, msgs)
-    
-    # Iterate results
-    two_lines = 2 * linesep
-    for ind, (avg_val, std_val, msg) in enumerate(aggregated_results):
-        if len(results) == 1:
-            if ind == 0:
-                print(linesep, statistics, end=two_lines)
-            else:
-                avg_val *= 100
-            std_val = ''
-        else:
-            if ind == 0:
-                msg = linesep + msg + ' \xb1 {:.1f}'
-            else:
-                avg_val *= 100
-                std_val *= 100
-                msg += ' \xb1 {:.1f}%'
-        
-        # Print result
-        print(msg.format(avg_val, std_val))
-
-
 if __name__ == '__main__':
     
     # Parse arguments
-    args = vars(parse_args())        
-    
+    args = vars(parse_args())
+
+    # Define classifier and fitting parameters
+    classifier, param_grid = CLASSIFIERS[args['clf-name']]
+
+    # Create agent
+    betting_agent = BettingAgent()
+
     # Backtesting
-    betting_agents = backtest(args['clf-name'], args['predicted-result'], args['input_odds'], args['max_odds'], args['test_season'], args['n_runs'], args['random_state'])
+    betting_agent.backtest(classifier, param_grid, args['predicted-result'], args['max_odds'], args['test_season'], args['random_state'])
     
     # Print results
-    print_backtesting_results(betting_agents)
+    print(betting_agent.calculate_backtest_results(args['n_bets_threshold']))
+

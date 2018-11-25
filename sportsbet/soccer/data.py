@@ -59,6 +59,9 @@ FD_COLUMNS_MAPPING = {
     'AwayTeam': 'Away Team',
     'FTHG': 'Home Goals',
     'FTAG': 'Away Goals',
+    'BbMxH': 'Home Maximum Odds',
+    'BbMxA': 'Away Maximum Odds',
+    'BbMxD': 'Draw Maximum Odds',
     'BbAvH': 'Home Average Odds',
     'BbAvA': 'Away Average Odds',
     'BbAvD': 'Draw Average Odds',
@@ -239,7 +242,7 @@ def download_data(leagues, data_type):
     data.to_csv(HISTORICAL_DATA_PATH if data_type == 'historical' else PREDICTIONS_DATA_PATH, index=False)
 
 
-def load_data(data_type, input_odds, max_odds, **kwargs):
+def load_data(data_type, max_odds, **kwargs):
     """Load the data used for model training and predictions."""
 
     # Load data
@@ -251,9 +254,9 @@ def load_data(data_type, input_odds, max_odds, **kwargs):
         
     # Define parameters
     input_spi_cols = [col for col in data.columns if 'SPI' in col]
-    input_odds_cols = [col for col in data.columns if 'Odds' in col and col.split(' ')[1].lower() in input_odds]
+    input_odds_cols = [col for col in data.columns if 'Maximum' in col or 'Average' in col]
     max_odds_cols = [col for col in data.columns if 'Odds' in col and col.split(' ')[1].lower() in max_odds]
-    match_data_cols = ['League', 'Season', 'Date', 'Month', 'Day', 'Home Team', 'Away Team']
+    matches_cols = ['League', 'Season', 'Date', 'Month', 'Day', 'Home Team', 'Away Team']
 
     # Filter data
     input_odds_mask = (~data[input_odds_cols].isnull()).product(axis=1).astype(bool)
@@ -261,29 +264,22 @@ def load_data(data_type, input_odds, max_odds, **kwargs):
     data = data[input_odds_mask & max_odds_mask].reset_index(drop=True)
 
     # Input data
-    X = pd.concat([1 / data.loc[:, input_odds_cols], data.loc[:, input_spi_cols]], axis=1) 
-    grouped_cols = [input_odds_cols[(3 * i): (3 * i + 3)] for i in range(len(input_odds))]
-    for cols in grouped_cols:
-        probs_cols = [col.replace('Odds', 'Probabilities') for col in cols]
-        probs = pd.DataFrame(X[cols].values / X[cols].values.sum(axis=1)[:, None], columns=probs_cols)
-        X = pd.concat([probs, X], axis=1)
-        cols = [col.replace('Odds', 'Probabilities') for col in cols]
-        X[cols[2].replace('Draw', 'Difference')] = X[cols[0]] - X[cols[1]]
+    X = pd.concat([data.loc[:, input_odds_cols], data.loc[:, input_spi_cols]], axis=1)
     X['Difference SPI Goals'] = X['Home SPI Goals'] - X['Away SPI Goals']
     X['Difference SPI'] = X['Home SPI'] - X['Away SPI']
     X['Difference SPI Probabilities'] = X['Home SPI Probabilities'] - X['Away SPI Probabilities']
-    X = X.drop(columns=input_odds_cols).values
+    X = X.values
 
     # Maximum odds data
-    max_odds_data = data.loc[:, max_odds_cols]
+    odds = data.loc[:, max_odds_cols]
     grouped_cols = [np.take(max_odds_cols, range(i, len(max_odds_cols) + i, 3)).tolist() for i in range(3)]
     for cols in grouped_cols:
         col = '%s Maximum Odds' % cols[0].split(' ')[0]
-        max_odds_data[col] = np.nanmax(max_odds_data[cols], axis=1)
-    max_odds_data = max_odds_data.drop(columns=max_odds_cols).values
+        odds[col] = np.nanmax(odds[cols], axis=1)
+    odds = odds.drop(columns=max_odds_cols).values
 
     # Match data
-    match_data = data[match_data_cols]
+    matches = data[matches_cols]
 
     # Target
     if data_type == 'historical':
@@ -293,4 +289,4 @@ def load_data(data_type, input_odds, max_odds, **kwargs):
     elif data_type == 'predictions':
         y = None
             
-    return X, y, max_odds_data, match_data
+    return X, y, odds, matches

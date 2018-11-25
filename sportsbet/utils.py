@@ -5,8 +5,133 @@ Defines helper functions and classes.
 from collections import Counter
 
 import numpy as np
-from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.base import BaseEstimator, clone
+from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer
+from imblearn.pipeline import make_pipeline
+from imblearn.over_sampling import SMOTE
 
+##############
+#Optimization#
+##############
+
+class OddsEstimator(BaseEstimator):
+    """Estimator that appends the odds to the predictions."""
+
+    def __init__(self, classifier):
+        self.classifier = classifier
+
+    def fit(self, X, y):
+
+        # Get the input data
+        X_input = X[:, :-3]
+
+        # Fit the classifier
+        self.classifier_ = clone(self.classifier).fit(X_input, y)
+
+        return self
+
+    def predict(self, X):
+
+        # Get the input data and odds
+        X_input, odds = X[:, :-3], X[:, -3:]
+
+        # Get predictions
+        y_pred = self.classifier_.predict(X_input)
+        y_pred_proba = self.classifier_.predict_proba(X_input)
+
+        # Select odds
+        indices = [['H', 'A', 'D', '-'].index(result) for result in y_pred]
+        odds = np.hstack((odds, np.zeros((y_pred.size, 1))))
+        odds = odds[np.arange(len(odds)), indices]
+
+        return y_pred, y_pred_proba, odds
+
+
+def check_classifier(classifier, param_grid, random_state):
+    """Set default values."""
+
+    # Chack parameters grid
+    param_grid = param_grid.copy() if param_grid is not None else DEFAULT_CLASSIFIERS['random'][1]
+    param_grid = {'classifier__%s' % param: value for param, value in param_grid.items()}
+
+    # Check classifier
+    classifier = clone(classifier) if classifier is not None else clone(DEFAULT_CLASSIFIERS['random'][0])
+    classifier = GridSearchCV(OddsEstimator(classifier), param_grid, scoring=make_scorer(yield_score), cv=5, n_jobs=-1, iid=False)
+    
+    # Set random state
+    for param in classifier.get_params():
+        if 'random_state' in param:
+            classifier.set_params(**{param: random_state})
+
+    return classifier, param_grid
+
+
+def fit_predict(classifier, param_grid, X, y, odds, matches, train_indices, test_indices):
+    """Fit estimator and predict for a set of train and test indices."""
+
+    # Modify input data
+    X = np.hstack((X, odds))
+
+    # Fit classifier
+    classifier.fit(X[train_indices], y[train_indices])
+
+    # Filter test samples
+    X_test, y_test, matches = X[test_indices], y[test_indices], matches.iloc[test_indices]
+    
+    # Get test set predictions
+    y_pred, y_pred_proba, odds = classifier.predict(X_test)
+    
+    # Filter placed bets
+    mask = y_pred != '-'
+    y_test, y_pred, y_pred_proba, odds, matches = y_test[mask], y_pred[mask], y_pred_proba[mask], odds[mask], matches[mask]
+        
+    return y_test, y_pred, y_pred_proba, odds, matches
+
+
+def generate_month_indices(matches, test_season):
+    """Generate train and test monthly indices for a test season."""
+    
+    # Test indices
+    test_indices = matches.loc[matches['Season'] == test_season].groupby('Month', sort=False).apply(lambda row: np.array(row.index)).values
+    
+    # Train indices
+    train_indices = [np.arange(0, test_indices[0][0])]
+    train_indices += [np.arange(0, test_ind[-1] + 1) for test_ind in test_indices]
+    
+    # Combine indices
+    indices = list(zip(train_indices, test_indices))
+    
+    return indices
+
+
+def yield_score(y_true, y_pred_proba_odds):
+    """Calculate yield for a set of bets."""
+
+    # Get predictions and odds
+    y_pred, _, odds = y_pred_proba_odds
+
+    if odds.size == 0:
+        return 0.0
+
+    # Filter placed bets
+    mask = y_pred != '-'
+    y_true, y_pred, odds = y_true[mask], y_pred[mask], odds[mask]
+
+    # Calculate wrong predictions
+    mask = (y_true != y_pred)
+
+    # Calculate yield
+    yld = odds - 1
+    yld[mask] = -1.0
+
+    return yld.mean()
+
+###########################
+#Classifiers configuration#
+###########################
 
 class SamplingStrategy:
     """Helper class for the sampling strategy parameter of oversamplers."""
@@ -26,151 +151,6 @@ class SamplingStrategy:
         return str(self.ratio)
 
 
-class BetEstimator(BaseEstimator, RegressorMixin):
-    """Wrapper class of an estimator."""
-
-    def __init__(self, estimator):
-        self.estimator = estimator
-
-    def fit(self, X, y, **fit_params):
-
-        # Clone estimator
-        self.estimator_ = clone(self.estimator)
-
-        # Exclude maximum odds
-        self.estimator_.fit(X[:, :-3], y, **fit_params)
-        
-        return self
-        
-    def predict(self, X):
-
-        # Generate class labels predictions
-        y_pred = self.estimator_.predict(X[:, :-3])
-
-        # Generate class propabilities predictions
-        y_pred_proba = self.estimator_.predict_proba(X[:, :-3])
-        
-        # Get maximum odds
-        odds = X[:, -3:]
-        
-        return (y_pred, y_pred_proba), odds
-
-
-def filter_bets(y_true, y_pred_odds):
-    """Compare predicted probabilities to odds and filter bets."""
-
-    # Get predictions and odds
-    (y_pred, y_pred_proba), odds = y_pred_odds
-
-    # Define results
-    results = ('H', 'A', 'D')
-
-    # Filter predictions
-    mask = (y_pred != '-')
-    y_true_sel, y_pred_sel, y_pred_proba_sel, odds_sel = y_true[mask], y_pred[mask], y_pred_proba[mask], odds[mask]
-
-    # Get predicted classes probabilities
-    pred_proba_sel = y_pred_proba_sel.max(axis=1)
-
-    # Convert odds to probabilities
-    odds_proba_sel = 1 / odds_sel
-    odds_proba_sel = odds_proba_sel / odds_proba_sel.sum(axis=1)[:, None]
-
-    # Generate column indices for predicted classes
-    indices = [results.index(result) for result in y_pred_sel]
-    
-    # Select odds and probabilities
-    odds_sel = odds_sel[np.arange(len(odds_sel)), indices]
-    odds_proba_sel = odds_proba_sel[np.arange(len(odds_proba_sel)), indices]
-    
-    # Filter predictions
-    mask = pred_proba_sel > odds_proba_sel
-    y_true_sel, y_pred_sel, odds_sel = y_true_sel[mask], y_pred_sel[mask], odds_sel[mask]
-
-    return y_true_sel, y_pred_sel, odds_sel
-
-
-def calculate_stakes(y_true, y_pred, odds):
-    """Calculate won and lost stakes."""
-    correct_predictions = (y_true == y_pred)
-    stakes_won = (odds - 1)[correct_predictions].sum()
-    stakes_lost = sum(~correct_predictions)
-    return stakes_won, stakes_lost
-
-
-def yield_score(y_true, y_pred_odds):
-    """Calculate yield for a set of bets."""
-
-    # Filter bets
-    y_true_sel, y_pred_sel, odds_sel = filter_bets(y_true, y_pred_odds)
-    
-    # No predictions case
-    if y_pred_sel.size == 0:
-        return 0.0
-    
-    # Calculate yield
-    stakes_won, stakes_lost = calculate_stakes(y_true_sel, y_pred_sel, odds_sel)
-    yield_score = (stakes_won - stakes_lost) / len(odds_sel)
-
-    return yield_score
-
-
-def profitability_score(y_true, y_pred_odds):
-    """Calculate profitability for a set of bets."""
-
-    # Filter bets
-    y_true_sel, y_pred_sel, odds_sel = filter_bets(y_true, y_pred_odds)
-    
-    # No predictions case
-    if y_pred_sel.size == 0:
-        return 0.0
-    
-    # Calculate yield
-    stakes_won, stakes_lost = calculate_stakes(y_true_sel, y_pred_sel, odds_sel)
-    profitability_score = (stakes_won - stakes_lost) / stakes_lost
-
-    return profitability_score
-
-
-def profit_score(y_true, y_pred_odds):
-    """Calculate profit for a set of bets."""
-
-    # Filter bets
-    y_true_sel, y_pred_sel, odds_sel = filter_bets(y_true, y_pred_odds)
-    
-    # No predictions case
-    if y_pred_sel.size == 0:
-        return 0.0
-    
-    # Calculate yield
-    stakes_won, stakes_lost = calculate_stakes(y_true_sel, y_pred_sel, odds_sel)
-    profit_score = stakes_won - stakes_lost
-
-    return profit_score
-
-
-def set_random_state(classifier, random_state):
-    """Set the random state of all estimators."""
-    for param in classifier.get_params():
-        if 'random_state' in param:
-            classifier.set_params(**{param: random_state})
-
-
-def fit_predict(classifier, X, y, train_indices, test_indices, **fit_params):
-    """Fit estimator and predict for a set of train and test indices."""
-
-    # Fit classifier
-    classifier.fit(X[train_indices], y[train_indices], **fit_params)
-
-    # Filter test samples
-    y_test = y[test_indices]
-
-    # Predict on test set
-    y_pred = classifier.predict(X[test_indices])
-        
-    return y_test, y_pred
-
-
 def import_custom_classifiers(default_classifiers):
     """Try to import custom classifiers."""
     try:
@@ -179,3 +159,10 @@ def import_custom_classifiers(default_classifiers):
     except ImportError:
         CLASSIFIERS = default_classifiers
     return CLASSIFIERS
+
+
+DEFAULT_CLASSIFIERS = {
+    'random': (DummyClassifier(random_state=0), {}),
+    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs')), {})
+}
+CLASSIFIERS = import_custom_classifiers(DEFAULT_CLASSIFIERS)

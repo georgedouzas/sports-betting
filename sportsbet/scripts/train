@@ -7,7 +7,7 @@ Train a selected classifier.
 from argparse import ArgumentParser
 
 from sportsbet.soccer import BettingAgent
-from sportsbet.config import CLASSIFIERS
+from sportsbet.utils import CLASSIFIERS
 
 
 def parse_args():
