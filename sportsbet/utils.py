@@ -53,12 +53,10 @@ class OddsEstimator(BaseEstimator):
 def check_classifier(classifier, param_grid, random_state):
     """Set default values."""
 
-    # Chack parameters grid
-    param_grid = param_grid.copy() if param_grid is not None else DEFAULT_CLASSIFIERS['random'][1]
+    # Adjust parameters grid
     param_grid = {'classifier__%s' % param: value for param, value in param_grid.items()}
 
     # Check classifier
-    classifier = clone(classifier) if classifier is not None else clone(DEFAULT_CLASSIFIERS['random'][0])
     classifier = GridSearchCV(OddsEstimator(classifier), param_grid, scoring=make_scorer(yield_score), cv=5, n_jobs=-1, iid=False)
     
     # Set random state
@@ -145,6 +143,6 @@ def import_custom_classifiers(default_classifiers):
 
 DEFAULT_CLASSIFIERS = {
     'random': (DummyClassifier(random_state=0), {}),
-    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs')), {})
+    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs', max_iter=2000)), {})
 }
 CLASSIFIERS = import_custom_classifiers(DEFAULT_CLASSIFIERS)

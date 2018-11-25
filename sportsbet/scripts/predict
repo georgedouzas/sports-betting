@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # Generate predictions
     predictions = betting_agent.predict(args['clf-name'])
 
-    # Save predictios
+    # Save predictinos
     predictions.to_csv(join(PATH, 'predictions.csv'), index=False)
 
     print(predictions)

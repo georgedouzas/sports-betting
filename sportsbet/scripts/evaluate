@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument('clf-name', help='The classifier name to predict the results.')
     parser.add_argument('predicted-result', help='Predicted result.')
     parser.add_argument('--max-odds', default=['pinnacle', 'bet365', 'bwin'], nargs='*', help='Maximum odds to use for evaluation.')
-    parser.add_argument('--test-season', default=1718, type=int, help='Test season.')
+    parser.add_argument('--test-season', default=1819, type=int, help='Test season.')
     parser.add_argument('--n-bets-threshold', default=20, type=int, help='Minimum number of bets for each bet epoch.')
     parser.add_argument('--random-state', default=0, type=int, help='The random state of estimators.')
       

@@ -19,20 +19,21 @@ def parse_args():
     # Add arguments
     parser.add_argument('clf-name', help='The classifier name to train.')
     parser.add_argument('predicted-result', help='Predicted result.')
+    parser.add_argument('--random-state', default=0, type=int, help='The random state of estimators.')
     
     return parser.parse_args()
 
 
-def fit_dump_classifier(clf_name, predicted_result):
+def fit_dump_classifier(clf_name, predicted_result, random_state):
 
     # Define classifier and fitting parameters
-    classifier, fit_params = CLASSIFIERS[clf_name]
+    classifier, param_grid = CLASSIFIERS[clf_name]
 
     # Create betting agent
     betting_agent = BettingAgent()
 
     # Fit and dump classifier
-    betting_agent.fit_dump_classifier(predicted_result, classifier, fit_params, clf_name)
+    betting_agent.fit_dump_classifier(classifier, param_grid, clf_name, predicted_result, random_state)
 
 
 if __name__ == '__main__':
@@ -41,4 +42,4 @@ if __name__ == '__main__':
     args = vars(parse_args())
     
     # Fit and dump classifier
-    fit_dump_classifier(args['clf-name'], args['predicted-result'])
+    fit_dump_classifier(args['clf-name'], args['predicted-result'], args['random_state'])

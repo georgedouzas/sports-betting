@@ -22,7 +22,7 @@ from ..utils import (
     check_classifier,
     fit_predict,
     generate_month_indices,
-    yield_score,
+    yield_score
 )
 from .data import load_data
 
@@ -35,7 +35,7 @@ class BettingAgent:
         # Load and prepare data
         X, y, odds, matches = load_data('historical', max_odds, predicted_result=predicted_result)
 
-        # Check classifier and its fitting parameters
+        # Check classifier
         classifier = check_classifier(classifier, param_grid, random_state)
 
         # Define train and test indices of each month
@@ -72,31 +72,45 @@ class BettingAgent:
 
         return results
 
-    def fit_dump_classifier(self, classifier, fit_params, predicted_result, max_odds, clf_name):
+    def fit_dump_classifier(self, classifier, param_grid, clf_name, predicted_result, random_state):
         """Fit and dump a classifier."""
 
         # Load modelling data
-        X, y, *_ = load_data('historical', max_odds, predicted_result=predicted_result)
+        X, y, odds, _ = load_data('historical', ['pinnacle', 'bet365', 'bwin'], predicted_result=predicted_result)
+
+        # Modify input data
+        X = np.hstack((X, odds))
+
+        # Check classifier
+        classifier = check_classifier(classifier, param_grid, random_state)
 
         # Fit classifier
-        classifier.fit(X, y, **fit_params)
+        classifier.fit(X, y)
 
         # Dump classifier
         with open(join(PATH, '%s.pkl' % clf_name) , 'wb') as file:
             dump(classifier, file)
     
-    def predict(self, max_odds, clf_name):
+    def predict(self, clf_name):
         """Generate predictions using a fitted classifier."""
 
         # Load predictions data
-        X, y, odds, matches  = load_data('predictions', max_odds)
+        X, _, odds, matches  = load_data('predictions', ['pinnacle', 'bet365', 'bwin'])
+
+        # Modify input data
+        X = np.hstack((X, odds))
 
         # Load classifier
         with open(join(PATH, '%s.pkl' % clf_name) , 'rb') as file:
             classifier = load(file)
 
         # Generate predictions
-        y_pred = pd.DataFrame(classifier.predict(X), columns=['Prediction'])
-        minimum_odds = pd.DataFrame(1 / classifier.predict_proba(X).max(axis=1), columns=['Minimum Odds'])
+        y_pred, _, odds = classifier.predict(X)
+        y_pred = pd.DataFrame(y_pred, columns=['Prediction'])
+        odds = pd.DataFrame(odds, columns=['Maximum Odds'])
+        
+        # Combine data
+        predictions = pd.concat([matches, y_pred, odds], axis=1)
+        predictions = predictions[predictions['Prediction'] != '-']
 
-        return
+        return predictions
