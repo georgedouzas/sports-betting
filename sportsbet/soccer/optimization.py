@@ -58,17 +58,18 @@ class BettingAgent:
 
         # Get backtesting results
         y_test, y_pred, y_pred_proba, odds, matches = self.backtest_results_
+        if matches.size == 0:
+            backtest_results = [0, np.nan, 0.0, 0.0, np.nan]
+            return pd.DataFrame([backtest_results], columns=['Bets', 'Average Odds', 'Yield', 'Porfit', 'Precision'])
+
+        # Define aggregation keys
+        keys = {'month': ['Season', 'Month'], 'day': ['Season', 'Month', 'Day']}.get(aggregation_level, ['Season'])
 
         # Calculate results
         results = matches.loc[:, ['Season', 'Month', 'Day']]
         for col_name, col in zip(['Result', 'Prediction', 'Maximum Odds'], [y_test, y_pred, odds]):
             results[col_name] = col
-        if aggregation_level == 'month':
-            results = results.groupby(['Season', 'Month'], sort=False)
-        elif aggregation_level == 'day':
-            results = results.groupby(['Season', 'Month', 'Day'], sort=False)
-        else:
-            results = results.groupby(['Season'], sort=False)
+        results = results.groupby(keys, sort=False)
         backtest_results = results.agg({'Prediction': np.size, 'Maximum Odds': np.mean}).rename(columns={'Prediction': 'Bets', 'Maximum Odds': 'Average Odds'})
         backtest_results['Yield'] = results.apply(lambda df: yield_score(df['Result'].values, (df['Prediction'].values, None, df['Maximum Odds'].values)))
         backtest_results['Profit'] = backtest_results['Yield'] * backtest_results['Bets']
