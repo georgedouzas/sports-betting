@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument('--max-odds', default=['pinnacle', 'bet365', 'bwin'], nargs='*', help='Maximum odds to use for evaluation.')
     parser.add_argument('--test-season', default=1819, type=int, help='Test season.')
     parser.add_argument('--random-state', default=0, type=int, help='The random state of estimators.')
+    parser.add_argument('--aggregation-level', default=None, help='The aggregation level of results.')
       
     return parser.parse_args()
 
@@ -45,5 +46,5 @@ if __name__ == '__main__':
     betting_agent.backtest(classifier, param_grid, args['predicted-result'], args['max_odds'], args['test_season'], args['random_state'])
     
     # Print results
-    print(betting_agent.calculate_backtest_results())
+    print(betting_agent.calculate_backtest_results(args['aggregation_level']))
 

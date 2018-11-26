@@ -53,24 +53,29 @@ class BettingAgent:
             self.backtest_results_[ind] = reduce(lambda x, y: np.append(x, y, axis=0) if ind < 4 else x.append(y), result)
         self.backtest_results_[-1] = self.backtest_results_[-1].reset_index(drop=True)
 
-    def calculate_backtest_results(self):
+    def calculate_backtest_results(self, aggregation_level):
         """Calculate the results of backtesting."""
 
         # Get backtesting results
         y_test, y_pred, y_pred_proba, odds, matches = self.backtest_results_
 
         # Calculate results
-        n_bets = y_pred.size
-        mean_odds = odds.mean()
-        yld = yield_score(y_test, (y_pred, y_pred_proba, odds))
-        profit = yld * n_bets 
-        precision = precision_score(y_test, y_pred, labels=list(set(y_test).difference({'-'})), average='micro')
-        results = [(n_bets, mean_odds, yld, profit, precision)]
+        results = matches.loc[:, ['Season', 'Month', 'Day']]
+        for col_name, col in zip(['Result', 'Prediction', 'Maximum Odds'], [y_test, y_pred, odds]):
+            results[col_name] = col
+        if aggregation_level == 'month':
+            results = results.groupby(['Season', 'Month'], sort=False)
+        elif aggregation_level == 'day':
+            results = results.groupby(['Season', 'Month', 'Day'], sort=False)
+        else:
+            results = results.groupby(['Season'], sort=False)
+        backtest_results = results.agg({'Prediction': np.size, 'Maximum Odds': np.mean}).rename(columns={'Prediction': 'Bets', 'Maximum Odds': 'Average Odds'})
+        backtest_results['Yield'] = results.apply(lambda df: yield_score(df['Result'].values, (df['Prediction'].values, None, df['Maximum Odds'].values)))
+        backtest_results['Profit'] = backtest_results['Yield'] * backtest_results['Bets']
+        backtest_results['Precision'] = results.apply(lambda df: precision_score(df['Result'].values, df['Prediction'].values, labels=list(set(y_test).difference({'-'})), average='micro'))
+        backtest_results.reset_index(inplace=True)
 
-        # Format results
-        results = pd.DataFrame(results, columns=['Bets', 'Odds', 'Yield', 'Profit', 'Precision'])
-
-        return results
+        return backtest_results
 
     def fit_dump_classifier(self, classifier, param_grid, clf_name, predicted_result, random_state):
         """Fit and dump a classifier."""
@@ -110,7 +115,7 @@ class BettingAgent:
         odds = pd.DataFrame(odds, columns=['Maximum Odds'])
         
         # Combine data
-        predictions = pd.concat([matches, y_pred, odds], axis=1)
+        predictions = pd.concat([matches.drop(columns=['Month', 'Day']), y_pred, odds], axis=1)
         predictions = predictions[predictions['Prediction'] != '-']
 
         return predictions
