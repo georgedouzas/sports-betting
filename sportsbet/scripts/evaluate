@@ -18,7 +18,7 @@ def parse_args():
     """Parse command line arguments."""
     
     # Create parser
-    parser = ArgumentParser('Evaluate a classifier using either cross-validation or backtesting.')
+    parser = ArgumentParser('Evaluate a classifier using backtesting.')
     
     # Add arguments
     parser.add_argument('clf-name', help='The classifier name to predict the results.')
