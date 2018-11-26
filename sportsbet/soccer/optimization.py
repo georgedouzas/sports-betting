@@ -53,7 +53,7 @@ class BettingAgent:
             self.backtest_results_[ind] = reduce(lambda x, y: np.append(x, y, axis=0) if ind < 4 else x.append(y), result)
         self.backtest_results_[-1] = self.backtest_results_[-1].reset_index(drop=True)
 
-    def calculate_backtest_results(self, n_bets_threshold):
+    def calculate_backtest_results(self):
         """Calculate the results of backtesting."""
 
         # Get backtesting results
