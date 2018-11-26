@@ -5,7 +5,7 @@ Defines helper functions and classes.
 from collections import Counter
 
 import numpy as np
-from sklearn.base import BaseEstimator, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
@@ -16,6 +16,42 @@ from imblearn.over_sampling import SMOTE
 ##############
 #Optimization#
 ##############
+
+class BookmakerEstimator(BaseEstimator, ClassifierMixin):
+    """Estimator that uses the average odds to generate predictions."""
+
+    def fit(self, X, y):
+
+        # Define predicted labels
+        self.labels_ = [label if label in np.unique(y) else '-' for label in ['H', 'A', 'D']]
+        
+        return self
+
+    def predict(self, X):
+        
+        # Generate indices from minimum odds
+        min_odds_indices = np.argmin(X[:, 0:3], axis=1)
+
+        # Get predictions
+        y_pred = np.array(self.labels_)[min_odds_indices]
+
+        return y_pred
+
+    def predict_proba(self, X):
+
+        # Generate predicted probabilities
+        y_pred_proba = 1 / X[:, 0:3]
+        y_pred_proba = y_pred_proba / y_pred_proba.sum(axis=1)[:, None]
+
+        # Sort predicted labels
+        y_pred_proba = y_pred_proba[:, np.argsort(self.labels_)]
+        
+        # Add probabilities
+        if len(np.unique(self.labels_)) < 3:
+            y_pred_proba = np.apply_along_axis(arr=y_pred_proba, func1d=lambda probs: [probs[0:2].sum(), probs[2]], axis=1)
+
+        return y_pred_proba
+
 
 class OddsEstimator(BaseEstimator):
     """Estimator that appends the odds to the predictions."""
@@ -143,6 +179,7 @@ def import_custom_classifiers(default_classifiers):
 
 DEFAULT_CLASSIFIERS = {
     'random': (DummyClassifier(random_state=0), {}),
-    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs', max_iter=2000)), {})
+    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs', max_iter=2000)), {}),
+    'bookmaker': (BookmakerEstimator(), {})
 }
 CLASSIFIERS = import_custom_classifiers(DEFAULT_CLASSIFIERS)
