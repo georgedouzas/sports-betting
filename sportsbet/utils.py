@@ -111,12 +111,12 @@ def yield_score(y_true, y_pred_proba_odds):
     # Get predictions and odds
     y_pred, _, odds = y_pred_proba_odds
 
-    if odds.size == 0:
-        return 0.0
-
     # Filter placed bets
     mask = y_pred != '-'
     y_true, y_pred, odds = y_true[mask], y_pred[mask], odds[mask]
+
+    if odds.size == 0:
+        return 0.0
 
     # Calculate wrong predictions
     mask = (y_true != y_pred)
