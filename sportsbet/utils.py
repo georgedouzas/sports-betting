@@ -33,17 +33,15 @@ class SamplingStrategy:
         # Count class labels
         y_counts = Counter(y)
 
-        # Multiclass
-        if len(y_counts) > 2:
-            n_samples = sum(y_counts.values())
-            labels_mapping = {(label if label in y_counts.keys() else '-'): label for label in ['H', 'A', 'D']}
-            for label in y_counts.keys():
-                sampling_strategy[label] =  max(int((n_samples - y_counts[label]) * getattr(self, labels_mapping[label])), y_counts[label])
+        # Calculate majority class number of samples
+        n_samples = max(y_counts.values())
         
-        # Binary class
-        else:
-            label = [label for label in y_counts.keys() if label != '-'][0]
-            sampling_strategy[label] = max(int(y_counts['-'] * getattr(self, label)), y_counts[label])
+        # Define labels mapping
+        labels_mapping = {(label if label in y_counts.keys() else '-'): label for label in ['H', 'A', 'D']}
+        
+        # Generate sampling strategy
+        for label in y_counts.keys():
+            sampling_strategy[label] =  max(int(n_samples * getattr(self, labels_mapping[label])), y_counts[label])
 
         return sampling_strategy
 
