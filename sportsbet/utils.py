@@ -17,6 +17,38 @@ from imblearn.over_sampling import SMOTE
 #Optimization#
 ##############
 
+class SamplingStrategy:
+    """Define the sampling ratio of the results."""
+
+    def __init__(self, H, A, D):
+        self.H = H
+        self.A = A
+        self.D = D
+
+    def __call__(self, y):
+
+        # Define sampling strategy placeholder
+        sampling_strategy = {}
+
+        # Count class labels
+        y_counts = Counter(y)
+
+        # Multiclass
+        if len(y_counts) > 2:
+            n_samples = sum(y_counts.values())
+            labels_mapping = {(label if label in y_counts.keys() else '-'): label for label in ['H', 'A', 'D']}
+            for label in y_counts.keys():
+                sampling_strategy[label] =  max(int((n_samples - y_counts[label]) * getattr(self, labels_mapping[label])), y_counts[label])
+        
+        # Binary class
+        else:
+            label = [label for label in y_counts.keys() if label != '-'][0]
+            sampling_strategy[label] = max(int(y_counts['-'] * getattr(self, label)), y_counts[label])
+
+        return sampling_strategy
+
+
+
 class BookmakerEstimator(BaseEstimator, ClassifierMixin):
     """Estimator that uses the average odds to generate predictions."""
 
