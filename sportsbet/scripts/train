@@ -7,7 +7,6 @@ Train a selected classifier.
 from argparse import ArgumentParser
 
 from sportsbet.soccer import BettingAgent
-from sportsbet.utils import CLASSIFIERS
 
 
 def parse_args():
@@ -17,29 +16,18 @@ def parse_args():
     parser = ArgumentParser('Train a selected classifier.')
     
     # Add arguments
-    parser.add_argument('clf-name', help='The classifier name to train.')
-    parser.add_argument('predicted-result', help='Predicted result.')
-    parser.add_argument('--random-state', default=0, type=int, help='The random state of estimators.')
+    parser.add_argument('--backtest-index', default=0, type=int, help='The index of the backtesting result.')
     
     return parser.parse_args()
-
-
-def fit_dump_classifier(clf_name, predicted_result, random_state):
-
-    # Define classifier and fitting parameters
-    classifier, param_grid = CLASSIFIERS[clf_name]
-
-    # Create betting agent
-    betting_agent = BettingAgent()
-
-    # Fit and dump classifier
-    betting_agent.fit_dump_classifier(classifier, param_grid, clf_name, predicted_result, random_state)
-
+    
 
 if __name__ == '__main__':
     
     # Parse arguments
     args = vars(parse_args())
     
+    # Create betting agent
+    betting_agent = BettingAgent()
+
     # Fit and dump classifier
-    fit_dump_classifier(args['clf-name'], args['predicted-result'], args['random_state'])
+    betting_agent.fit_dump_classifiers(args['backtest_index'])

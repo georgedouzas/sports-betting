@@ -242,7 +242,7 @@ def download_data(leagues, data_type):
     data.to_csv(HISTORICAL_DATA_PATH if data_type == 'historical' else PREDICTIONS_DATA_PATH, index=False)
 
 
-def load_data(data_type, max_odds, **kwargs):
+def load_data(data_type, max_odds):
     """Load the data used for model training and predictions."""
 
     # Load data
@@ -274,18 +274,15 @@ def load_data(data_type, max_odds, **kwargs):
     odds = data.loc[:, max_odds_cols]
     grouped_cols = [np.take(max_odds_cols, range(i, len(max_odds_cols) + i, 3)).tolist() for i in range(3)]
     for cols in grouped_cols:
-        col = '%s Maximum Odds' % cols[0].split(' ')[0]
-        odds[col] = np.nanmax(odds[cols], axis=1)
-    odds = odds.drop(columns=max_odds_cols).values
+        odds['%s Odd' % cols[0][0]] = np.nanmax(odds[cols], axis=1)
+    odds = odds.drop(columns=max_odds_cols)
 
     # Match data
     matches = data[matches_cols]
 
     # Target
     if data_type == 'historical':
-        predicted_results = list(kwargs['predicted_result'])
-        y = (data['Home Goals'] - data['Away Goals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        y = y.apply(lambda result: '-' if result not in predicted_results else result).values
+        y = (data['Home Goals'] - data['Away Goals']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A').values
     elif data_type == 'predictions':
         y = None
             

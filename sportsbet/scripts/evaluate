@@ -4,29 +4,23 @@
 Evaluate a classifier using either cross-validation or backtesting.
 """
 
-from os import linesep
 from argparse import ArgumentParser
 
-import pandas as pd
-from sklearn.utils import check_random_state
 from sportsbet.soccer import BettingAgent
-from sportsbet.utils import CLASSIFIERS
-from tqdm import trange
 
 
 def parse_args():
     """Parse command line arguments."""
     
     # Create parser
-    parser = ArgumentParser('Evaluate a classifier using backtesting.')
+    parser = ArgumentParser('Models evaluation using backtesting.')
     
     # Add arguments
-    parser.add_argument('clf-name', help='The classifier name to predict the results.')
-    parser.add_argument('predicted-result', help='Predicted result.')
+    parser.add_argument('--clfs-name', default='default', help='The name of classifiers to predict the results.')
     parser.add_argument('--max-odds', default=['pinnacle', 'bet365', 'bwin'], nargs='*', help='Maximum odds to use for evaluation.')
     parser.add_argument('--test-season', default=1819, type=int, help='Test season.')
-    parser.add_argument('--random-state', default=0, type=int, help='The random state of estimators.')
-    parser.add_argument('--aggregation-level', default=None, help='The aggregation level of results.')
+    parser.add_argument('--random-states', default=[0, 1, 2], nargs='*', help='The random states of estimators.')
+    parser.add_argument('--save-results', default=True, type=bool, help='Save backtesting results to csv.')
       
     return parser.parse_args()
 
@@ -36,15 +30,10 @@ if __name__ == '__main__':
     # Parse arguments
     args = vars(parse_args())
 
-    # Define classifier and fitting parameters
-    classifier, param_grid = CLASSIFIERS[args['clf-name']]
-
     # Create agent
     betting_agent = BettingAgent()
 
     # Backtesting
-    betting_agent.backtest(classifier, param_grid, args['predicted-result'], args['max_odds'], args['test_season'], args['random_state'])
-    
-    # Print results
-    print(betting_agent.calculate_backtest_results(args['aggregation_level']))
+    betting_agent.backtest(args['clfs_name'], args['max_odds'], args['test_season'], args['random_states'], args['save_results'])
+
 

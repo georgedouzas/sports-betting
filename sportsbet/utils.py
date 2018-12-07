@@ -5,47 +5,16 @@ Defines helper functions and classes.
 from collections import Counter
 
 import numpy as np
-from sklearn.base import BaseEstimator, ClassifierMixin, clone
+import pandas as pd
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import make_scorer
 from imblearn.pipeline import make_pipeline
 from imblearn.over_sampling import SMOTE
 
 ##############
 #Optimization#
 ##############
-
-class SamplingStrategy:
-    """Define the sampling ratio of the results."""
-
-    def __init__(self, H, A, D):
-        self.H = H
-        self.A = A
-        self.D = D
-
-    def __call__(self, y):
-
-        # Define sampling strategy placeholder
-        sampling_strategy = {}
-
-        # Count class labels
-        y_counts = Counter(y)
-
-        # Calculate majority class number of samples
-        n_samples = max(y_counts.values())
-        
-        # Define labels mapping
-        labels_mapping = {(label if label in y_counts.keys() else '-'): label for label in ['H', 'A', 'D']}
-        
-        # Generate sampling strategy
-        for label in y_counts.keys():
-            sampling_strategy[label] =  max(int(n_samples * getattr(self, labels_mapping[label])), y_counts[label])
-
-        return sampling_strategy
-
-
 
 class BookmakerEstimator(BaseEstimator, ClassifierMixin):
     """Estimator that uses the average odds to generate predictions."""
@@ -83,76 +52,36 @@ class BookmakerEstimator(BaseEstimator, ClassifierMixin):
         return y_pred_proba
 
 
-class OddsEstimator(BaseEstimator):
-    """Estimator that appends the odds to the predictions."""
+def fit_predict(classifier, params, X, y, odds, train_indices, test_indices, random_state):
+    """Fit estimator and predict for a set of train and test indices."""
 
-    def __init__(self, classifier):
-        self.classifier = classifier
-
-    def fit(self, X, y):
-
-        # Get the input data
-        X_input = X[:, :-3]
-
-        # Fit the classifier
-        self.classifier_ = clone(self.classifier).fit(X_input, y)
-
-        return self
-
-    def predict(self, X):
-
-        # Get the input data and odds
-        X_input, odds = X[:, :-3], X[:, -3:]
-
-        # Get predictions
-        y_pred = self.classifier_.predict(X_input)
-        y_pred_proba = self.classifier_.predict_proba(X_input)
-
-        # Select odds
-        indices = [['H', 'A', 'D', '-'].index(result) for result in y_pred]
-        odds = np.hstack((odds, np.zeros((y_pred.size, 1))))
-        odds = odds[np.arange(len(odds)), indices]
-
-        return y_pred, y_pred_proba, odds
-
-
-def check_classifier(classifier, param_grid, random_state):
-    """Set default values."""
-
-    # Adjust parameters grid
-    param_grid = {'classifier__%s' % param: value for param, value in param_grid.items()}
-
-    # Check classifier
-    classifier = GridSearchCV(OddsEstimator(classifier), param_grid, scoring=make_scorer(yield_score), cv=5, n_jobs=-1, iid=False)
+    # Set param_grid
+    label, ind, params = params
+    classifier.set_params(**params)
     
     # Set random state
     for param in classifier.get_params():
         if 'random_state' in param:
             classifier.set_params(**{param: random_state})
 
-    return classifier
+    # Filter test samples
+    X_test, odds = X[test_indices], odds.iloc[test_indices].reset_index(drop=True)
+    results = pd.DataFrame(y[test_indices], columns=['Result'])
 
-
-def fit_predict(classifier, X, y, odds, matches, train_indices, test_indices):
-    """Fit estimator and predict for a set of train and test indices."""
-
-    # Modify input data
-    X = np.hstack((X, odds))
+    # Binarize labels
+    y_bin = y.copy()
+    y_bin[y_bin != label] = '-'
 
     # Fit classifier
-    classifier.fit(X[train_indices], y[train_indices])
-
-    # Filter test samples
-    X_test, y_test, matches = X[test_indices], y[test_indices], matches.iloc[test_indices]
+    classifier.fit(X[train_indices], y_bin[train_indices])
     
     # Get test set predictions
-    y_pred, y_pred_proba, odds = classifier.predict(X_test)
-    
-    # Filter placed bets
-    mask = y_pred != '-'
-    y_test, y_pred, y_pred_proba, odds, matches = y_test[mask], y_pred[mask], y_pred_proba[mask], odds[mask], matches[mask]
-        
-    return y_test, y_pred, y_pred_proba, odds, matches
+    probabilities = pd.DataFrame(classifier.predict_proba(X_test)[:, -1], columns=[label])
+
+    # Combine data
+    data = pd.concat([results, probabilities, odds], axis=1)
+
+    return test_indices[0], random_state, (label, ind), data
 
 
 def generate_month_indices(matches, test_season):
@@ -170,29 +99,6 @@ def generate_month_indices(matches, test_season):
     
     return indices
 
-
-def yield_score(y_true, y_pred_proba_odds):
-    """Calculate yield for a set of bets."""
-
-    # Get predictions and odds
-    y_pred, _, odds = y_pred_proba_odds
-
-    # Filter placed bets
-    mask = y_pred != '-'
-    y_true, y_pred, odds = y_true[mask], y_pred[mask], odds[mask]
-
-    if odds.size == 0:
-        return 0.0
-
-    # Calculate wrong predictions
-    mask = (y_true != y_pred)
-
-    # Calculate yield
-    yld = odds - 1
-    yld[mask] = -1.0
-
-    return yld.mean()
-
 ###########################
 #Classifiers configuration#
 ###########################
@@ -200,7 +106,8 @@ def yield_score(y_true, y_pred_proba_odds):
 def import_custom_classifiers(default_classifiers):
     """Try to import custom classifiers."""
     try:
-        from extra_config import CLASSIFIERS
+        from config import CLASSIFIERS
+        CLASSIFIERS = {'default': CLASSIFIERS}
         CLASSIFIERS.update(default_classifiers)
     except ImportError:
         CLASSIFIERS = default_classifiers
@@ -208,8 +115,15 @@ def import_custom_classifiers(default_classifiers):
 
 
 DEFAULT_CLASSIFIERS = {
-    'random': (DummyClassifier(random_state=0), {}),
-    'baseline': (make_pipeline(SMOTE(), LogisticRegression(solver='lbfgs', max_iter=2000)), {}),
-    'bookmaker': (BookmakerEstimator(), {})
+    'random': {
+        'H': (DummyClassifier(random_state=0), {}),
+        'A': (DummyClassifier(random_state=1), {}),
+        'D': (DummyClassifier(random_state=2), {})
+    },
+    'bookmaker': {
+        'H': (BookmakerEstimator(), {}),
+        'A': (BookmakerEstimator(), {}),
+        'D': (BookmakerEstimator(), {})
+    }
 }
 CLASSIFIERS = import_custom_classifiers(DEFAULT_CLASSIFIERS)

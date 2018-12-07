@@ -19,7 +19,7 @@ def parse_args():
     parser = ArgumentParser('Predict using a selected classifier.')
     
     # Add arguments
-    parser.add_argument('clf-name', help='The classifier name to use for predictions.')
+    parser.add_argument('--backtest-index', default=0, type=int, help='The index of the backtesting result.')
       
     return parser.parse_args()
 
@@ -33,10 +33,9 @@ if __name__ == '__main__':
     betting_agent = BettingAgent()
 
     # Generate predictions
-    predictions = betting_agent.predict(args['clf-name'])
+    predictions = betting_agent.predict(args['backtest_index'])
 
     # Save predictinos
-    predictions.to_csv(join(PATH, 'predictions.csv'), index=False)
+    predictions.to_csv(join(PATH, 'predictions_results.csv'), index=False)
 
-    print(predictions)
     
