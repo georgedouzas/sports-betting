@@ -232,7 +232,8 @@ def download_data(leagues, data_type):
     if data_type == 'historical':
         data = pd.merge(spi_data, fd_data, on=keys)
     elif data_type == 'predictions':
-        data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), fd_data.drop(columns=['Date', 'Home Goals', 'Away Goals']), on=keys[1:-2])
+        data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), fd_data.drop(columns=['Home Goals', 'Away Goals']), on=keys[0:-2])
+        data.drop_duplicates(subset=['Home Team', 'Away Team'], keep=False, inplace=True)
 
     # Sort data
     data = data.sort_values(keys[:-2]).reset_index(drop=True)
