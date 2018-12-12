@@ -59,6 +59,8 @@ FD_COLUMNS_MAPPING = {
     'AwayTeam': 'Away Team',
     'FTHG': 'Home Goals',
     'FTAG': 'Away Goals',
+    'HTHG': 'Half Time Home Goals',
+    'HTAG': 'Half Time Away Goals',
     'BbAvH': 'Home Average Odds',
     'BbAvA': 'Away Average Odds',
     'BbAvD': 'Draw Average Odds',
@@ -76,8 +78,10 @@ FD_COLUMNS_MAPPING = {
     'BWD': 'Draw bwin Odds'
 }
 SEASONS = ['1617', '1718', '1819']
-HISTORICAL_DATA_PATH = join(PATH, 'historical_data.csv')
-PREDICTIONS_DATA_PATH = join(PATH, 'predictions_data.csv')
+DATA_PATH = join(PATH, 'data')
+HISTORICAL_DATA_PATH = join(DATA_PATH, 'historical.csv')
+PREDICTIONS_DATA_PATH = join(DATA_PATH, 'predictions.csv')
+MATCHING_DATA_PATH = join(DATA_PATH, 'matching.csv')
 
 
 def validate_leagues(leagues):
@@ -108,10 +112,9 @@ def match_teams_names(teams_names):
     matching = matching1.append(matching2)
     matching = matching.groupby(['x', 'y']).size().reset_index()
     indices = matching.groupby('x')[0].idxmax().values
-    matching = matching.take(indices)
-    mapping = dict(zip(matching.x, matching.y))
+    matching = matching.take(indices).drop(columns=0).rename(columns={'x': 'spi', 'y': 'fd'}).reset_index(drop=True)
 
-    return mapping
+    return matching
 
 
 def fetch_spi_data(leagues, data_type):
@@ -217,29 +220,31 @@ def download_data(leagues, data_type):
     spi_data, fd_data = fetch_spi_data(leagues, data_type), fetch_fd_data(leagues, data_type)
 
     # Teams names matching
-    teams_names_columns = ['Home Team_x', 'Home Team_y', 'Away Team_x', 'Away Team_y']
-    teams_names = pd.merge(spi_data, fd_data, on=['Date', 'League'], how='outer').loc[:, teams_names_columns].dropna().reset_index(drop=True)
-    try:
-        mapping = match_teams_names(teams_names)
-    except ValueError:
-        raise ValueError('No common upcoming matches between SPI and FD data sources were found.')
-
+    if data_type == 'historical':
+        teams_names_columns = ['Home Team_x', 'Home Team_y', 'Away Team_x', 'Away Team_y']
+        teams_names = pd.merge(spi_data, fd_data, on=['Date', 'League'], how='outer').loc[:, teams_names_columns].dropna().reset_index(drop=True)
+        matching = match_teams_names(teams_names)
+    elif data_type == 'predictions':
+        matching = pd.read_csv(MATCHING_DATA_PATH)
+    
     # Convert names
-    spi_data['Home Team'] = spi_data['Home Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
-    spi_data['Away Team'] = spi_data['Away Team'].apply(lambda team: mapping[team] if team in mapping.keys() else team)
+    for column in ['Home Team', 'Away Team']:
+        spi_data = pd.merge(spi_data, matching, how='left', left_on=column, right_on='spi').drop(columns=[column, 'spi']).rename(columns={'fd': column})
 
     # Combine data
     if data_type == 'historical':
         data = pd.merge(spi_data, fd_data, on=keys)
     elif data_type == 'predictions':
-        data = pd.merge(spi_data.drop(columns=['Home Goals', 'Away Goals']), fd_data.drop(columns=['Home Goals', 'Away Goals']), on=keys[0:-2])
+        dropped_columns = ['Home Goals', 'Away Goals', 'Half Time Home Goals', 'Half Time Away Goals']
+        data = pd.merge(spi_data.drop(columns=dropped_columns[:2]), fd_data.drop(columns=dropped_columns), on=keys[0:-2])
         data.drop_duplicates(subset=['Home Team', 'Away Team'], keep=False, inplace=True)
 
     # Sort data
     data = data.sort_values(keys[:-2]).reset_index(drop=True)
 
     # Save data
-    Path(PATH).mkdir(exist_ok=True)
+    Path(DATA_PATH).mkdir(exist_ok=True)
+    matching.to_csv(MATCHING_DATA_PATH, index=False)
     data.to_csv(HISTORICAL_DATA_PATH if data_type == 'historical' else PREDICTIONS_DATA_PATH, index=False)
 
 

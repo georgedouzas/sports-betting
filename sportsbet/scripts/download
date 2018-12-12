@@ -30,15 +30,9 @@ def fetch_data():
     if len(leagues) == 1 and leagues[0] == 'all':
         leagues = leagues[0]
 
-    # Fetch data
-    try:
-        download_data(leagues=leagues, data_type='historical')
-    except Exception:
-        print('Failed to download historical data.')
-    try:
-        download_data(leagues=leagues, data_type='predictions')
-    except Exception:
-        print('Failed to download predictions data.')
+    # Download data
+    for data_type in ['historical', 'predictions']:
+        download_data(leagues=leagues, data_type=data_type)
 
 
 if __name__ == '__main__':
