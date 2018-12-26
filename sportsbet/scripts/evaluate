@@ -7,6 +7,7 @@ Evaluate a classifier using either cross-validation or backtesting.
 from argparse import ArgumentParser
 
 from sportsbet.soccer import BettingAgent
+from sportsbet.scripts import import_classifiers
 
 
 def parse_args():
@@ -16,10 +17,10 @@ def parse_args():
     parser = ArgumentParser('Models evaluation using backtesting.')
     
     # Add arguments
-    parser.add_argument('--clfs-name', default='default', help='The name of classifiers to predict the results.')
+    parser.add_argument('--clfs-name', default='random', help='The name of classifiers to predict the results.')
     parser.add_argument('--max-odds', default=['pinnacle', 'bet365', 'bwin'], nargs='*', help='Maximum odds to use for evaluation.')
     parser.add_argument('--test-season', default=1819, type=int, help='Test season.')
-    parser.add_argument('--random-states', default=[0, 1, 2], nargs='*', help='The random states of estimators.')
+    parser.add_argument('--random-states', default=[0, 1, 2], type=int, nargs='*', help='The random states of estimators.')
     parser.add_argument('--save-results', default=True, type=bool, help='Save backtesting results to csv.')
       
     return parser.parse_args()
@@ -30,10 +31,11 @@ if __name__ == '__main__':
     # Parse arguments
     args = vars(parse_args())
 
+    # Import classifiers and parameters grids
+    classifiers, param_grids = import_classifiers(args['clfs_name'])
+
     # Create agent
-    betting_agent = BettingAgent()
+    betting_agent = BettingAgent(classifiers, param_grids)
 
     # Backtesting
-    betting_agent.backtest(args['clfs_name'], args['max_odds'], args['test_season'], args['random_states'], args['save_results'])
-
-
+    betting_agent.backtest(args['max_odds'], args['test_season'], args['random_states'], args['save_results'])

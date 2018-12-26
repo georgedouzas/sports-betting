@@ -10,7 +10,8 @@ from os import listdir
 from os.path import join
 from pickle import dump, load
 from pathlib import Path
-from itertools import product, combinations
+from itertools import product, groupby
+from operator import itemgetter
 from collections import OrderedDict
 from functools import reduce
 
@@ -19,122 +20,274 @@ import pandas as pd
 from sklearn.metrics import precision_score
 from sklearn.utils import Parallel, delayed
 from sklearn.model_selection import ParameterGrid
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.utils.metaestimators import _BaseComposition
 from tqdm import tqdm
 
 from .. import PATH
-from ..utils import (
-    fit_predict,
-    generate_month_indices,
-    CLASSIFIERS
-)
-from .data import load_data
 
-RESULTS = ['H', 'A', 'D']
 RESULTS_PATH = join(PATH, 'results')
+BACKTESTING_RESULTS_PATH = join(RESULTS_PATH, 'backtesting.csv')
+RESULTS = {'12X': ['H', 'A', 'D'], 'OU': ['O']}
+
+
+class MatchOddsClassifier:
+
+    RESULTS = ['A', 'D', 'H']
+
+    def __init__(self, classifiers):
+        self.classifiers = classifiers
+
+    @staticmethod
+    def _fit_classifier(X, y, classifier, label):
+        """Fit of a binary classifier."""
+
+        # Binarize labels
+        y_bin = y.copy()
+        y_bin[y_bin != label] = '-%s' % label
+        
+        # Fit classifier
+        classifier.fit(X, y_bin)
+        
+        return classifier
+
+    def fit(self, X, y):
+        """Parallel fit of classifiers."""
+        self.classifiers_ = Parallel(n_jobs=-1)(delayed(self._fit_classifier)(X, y, clone(classifier), label) 
+                                                for classifier, label in zip(self.classifiers, self.RESULTS))
+
+    def _generate_probs(self, X):
+        """Generate probabilities for each classifier."""
+        probs = [pd.DataFrame(clf.predict_proba(X)[:, 1], columns=self.RESULTS) for clf in self.classifiers_]
+        probs = pd.concat(probs, axis=1)
+        return probs
+
+    def predict(self, X):
+        """Predict the results."""
+        probs = self._generate_probs(X)
+        return probs.idxmax(axis=1).values
+    
+    def predict_proba(self, X):
+        """Predict the probabilities of results."""
+        probs = self._generate_probs(X)
+        return probs.div(probs.sum(axis=1), axis=0).values
+    
+    def _bet(self, X, odds):
+        
+        # Columns mapping
+        columns_mapping = {result: '-%s' % result for result in self.RESULTS}
+
+        # Calculate back and lay probabilities
+        back_probs = self._generate_probs(X)
+        lay_probs = (1 - back_probs).rename(columns=columns_mapping)
+        probs = pd.concat([back_probs, lay_probs], axis=1)
+
+        # Calculate back and lay values
+        odds = odds[self.RESULTS]
+        back_values = back_probs * odds.values - 1
+        lay_values = -back_values.rename(columns=columns_mapping)
+        values = pd.concat([back_values, lay_values], axis=1)
+
+        return probs, values
+
+    @staticmethod
+    def _probable_bets(probs, betting_results):
+
+        # Get probabilities
+        probs = probs[betting_results]
+
+        # Extract predictions
+        predictions = probs.idxmax(axis=1).rename('Prediction')
+        predictions.loc[~(probs > 0.5).sum(axis=1).astype(bool)] = '-'
+        
+        return predictions
+
+    @staticmethod
+    def _value_bets(values, betting_results):
+
+        # Get probabilities
+        values = values[betting_results]
+
+        # Extract predictions
+        predictions = values.idxmax(axis=1).rename('Prediction')
+        predictions.loc[~(values > 0.0).sum(axis=1).astype(bool)] = '-'
+        
+        return predictions
+
+
+class BookmakerEstimator(BaseEstimator, ClassifierMixin):
+    """Estimator that uses the average odds to generate predictions."""
+
+    def __init__(self, betting_type):
+        self.betting_type = betting_type
+
+    def fit(self, X, y):
+
+        # Define predicted labels
+        self.labels_ = [label if label in np.unique(y) else '-' for label in RESULTS[self.betting_type]]
+        
+        return self
+
+    def predict(self, X):
+        
+        # Generate indices from minimum odds
+        min_odds_indices = np.argmin(X[:, 0:3], axis=1)
+
+        # Get predictions
+        y_pred = np.array(self.labels_)[min_odds_indices]
+
+        return y_pred
+
+    def predict_proba(self, X):
+
+        # Generate predicted probabilities
+        y_pred_proba = 1 / X[:, 0:3]
+        y_pred_proba = y_pred_proba / y_pred_proba.sum(axis=1)[:, None]
+
+        # Sort predicted labels
+        y_pred_proba = y_pred_proba[:, np.argsort(self.labels_)]
+        
+        # Add probabilities
+        if len(np.unique(self.labels_)) < 3:
+            y_pred_proba = np.apply_along_axis(arr=y_pred_proba, func1d=lambda probs: [probs[0:2].sum(), probs[2]], axis=1)
+
+        return y_pred_proba
+
 
 class BettingAgent:
     """Class that is used for model evaluation, training and predictions 
     on upcoming matches."""
 
-    @staticmethod
-    def calculate_backtest_results(backtest_data):
-        """Calculate the results of backtesting."""
+    def __init__(self, classifiers, param_grids, betting_type):
+        self.classifiers = classifiers
+        self.param_grids = param_grids
+        self.betting_type = betting_type
 
-        backtest_results = pd.DataFrame()
-        for predicted_result in ['H', 'A', 'D', 'HA', 'HD', 'AD', 'HAD']:
+    def fit_predict(self, X, y, index, classifier, train_indices, test_indices, random_state):
+        """Fit estimator and predict for a set of train and test indices."""
+    
+        # Set random state
+        for param in classifier.get_params():
+            if 'random_state' in param:
+                classifier.set_params(**{param: random_state})
 
-            # Extract predicted results
-            predicted_results = list(predicted_result)
+        # Generate target label
+        label = self.target_labels_[index]
+
+        # Binarize labels
+        y_bin = y.copy()
+        y_bin[y_bin != label] = '-%s' % label
+
+        # Filter test samples
+        X_test = X[test_indices]
+
+        # Fit classifier
+        classifier.fit(X[train_indices], y_bin[train_indices])
+    
+        # Get test set predictions
+        probabilities = pd.DataFrame(classifier.predict_proba(X_test), columns=['-%s' % label, label])
+
+        return (random_state, index,  test_indices[0]), probabilities
+
+    def initialize_parameters(self, matches, test_season, random_states):
+
+        # Train and test indices
+        self.test_indices_ = matches.loc[matches['Season'] == test_season].groupby('Month', sort=False).apply(lambda row: np.array(row.index)).values 
+        self.train_indices_ = [np.arange(0, test_ind[0]) for test_ind in self.test_indices_]
+
+        # Generate list of classifiers
+        self.classifiers_ = [clone(classifier).set_params(**params) for classifier, param_grid in zip(self.classifiers, self.param_grids) for params in ParameterGrid(param_grid)]
+
+        # Generate indices for param_grids
+        self.param_grids_indices_ = [(ind, clf.get_params()) for ind, clf in enumerate(self.classifiers_)]
+
+        # Generate target labels
+        self.target_labels_ = [result for result, param_grid in zip(RESULTS[self.betting_type], self.param_grids) for _ in ParameterGrid(param_grid)]
         
-            # Extract predictions and odds
-            backtest_data['Bet'] = backtest_data[predicted_results].idxmax(axis=1)
-            backtest_data.loc[~(backtest_data[predicted_results] > 0.5).sum(axis=1).astype(bool), 'Bet'] = '-'
-            backtest_data['Odd'] = backtest_data[['H Odd', 'A Odd', 'D Odd']].apply(lambda odds: dict(zip(RESULTS, odds.values)), axis=1)
-
-            # Extract intermediate results
-            mask = backtest_data['Bet'] != '-'
-            yields = backtest_data.loc[mask, ['Result', 'Bet', 'Odd']].apply(lambda row: row.Odd[row.Bet] - 1.0 if row.Result == row.Bet else -1.0, axis=1)
-
-            # Extract results
-            results = (
-                predicted_result,
-                len(backtest_data),
-                mask.sum(),
-                precision_score(backtest_data['Result'], backtest_data['Bet'], labels=predicted_results, average='micro'),
-                yields.sum(),
-                yields.mean()
-            )
-
-            # Combine results
-            backtest_results = backtest_results.append(pd.DataFrame([results], columns=['Predicted results', 'Number of matches', 'Number of bets', 'Precision', 'Profit', 'Yield']))
-
-        return backtest_results
-        
-    def backtest(self, clfs_name, max_odds, test_season, random_states, save_results):
+    def backtest(self, max_odds, test_season, random_states):
         """Apply backtesting to betting agent."""
 
         # Load and prepare data
         X, y, odds, matches = load_data('historical', max_odds)
 
-        # Extract classifiers and parameters grids
-        classifiers = {label: clf for label, (clf, _) in CLASSIFIERS[clfs_name].items()}
-        param_grids = {label: param_grid for label, (_ , param_grid) in CLASSIFIERS[clfs_name].items()}
-
-        # Define train and test indices of each month
-        month_indices = generate_month_indices(matches, test_season)
-
-        # Flatten and enumerate parameter grid
-        self.param_grids_ = [(label, ind, params) for label, param_grid in param_grids.items() for ind, params in enumerate(ParameterGrid(param_grid))]
+        # Initialize parameters
+        self.initialize_parameters(matches, test_season, random_states)
 
         # Run cross-validation
-        cv_data = Parallel(n_jobs=-1)(delayed(fit_predict)(classifiers[params[0]], params, X, y, odds,
-                                                           train_indices, test_indices, random_state) 
-        for (train_indices, test_indices), params, random_state in tqdm(list(product(month_indices, self.param_grids_, random_states)), desc='Backtesting: '))
-        
-        # Combine data
-        backtest_data = OrderedDict()
-        for start, random_state, key, data in cv_data:
-            backtest_data.setdefault((start, random_state), []).append((key, data))
-        
-        columns = ['Result', 'H', 'A', 'D', 'H Odd', 'A Odd', 'D Odd']
-        self.backtest_data_ = []
-        for start, random_state in backtest_data.keys():
-            for (key1, data1), (key2, data2), (key3, data3) in combinations(backtest_data[(start, random_state)], 3):
-                if len(set([key1[0], key2[0], key3[0]])) == 3:
-                    data = reduce(lambda df1, df2: pd.merge(df1, df2), (data1, data2, data3))[columns]
-                    indexH, indexA, indexD = [dict((key1, key2, key3))[label] for label in RESULTS]
-                    data = data.assign(IndexH=indexH, IndexA=indexA, IndexD=indexD, Start=start, Experiment=random_state)
-                    self.backtest_data_.append(data)
-        self.backtest_data_ = pd.concat(self.backtest_data_).sort_values(['IndexH', 'IndexA', 'IndexD', 'Experiment', 'Start']).drop(columns='Start').reset_index()
-                    
-        # Extract results
-        self.backtest_results_ = self.backtest_data_.groupby(['IndexH', 'IndexA', 'IndexD', 'Experiment']).apply(self.calculate_backtest_results)
-        
-        # Group results by parameters and predicted result
-        grouped_results = self.backtest_results_.groupby(['IndexH', 'IndexA', 'IndexD', 'Predicted results'])
-        
-        # Calculate mean values
-        self.backtest_results_ = grouped_results.mean()
-        
-        # Calculate COV
-        self.backtest_results_['COV'] = grouped_results['Yield'].std() / np.abs(self.backtest_results_['Yield']) 
-        
-        # Cast columns
-        self.backtest_results_['Number of matches'] = self.backtest_results_['Number of matches'].astype(int)
-        self.backtest_results_['Number of bets'] = self.backtest_results_['Number of bets'].astype(int)
-        
-        # Sort results
-        self.backtest_results_ = self.backtest_results_.sort_values('Yield', ascending=False).reset_index()
+        cv_data = Parallel(n_jobs=-1)(delayed(self.fit_predict)(X, y, index, classifier, train_indices, test_indices, random_state) 
+        for (train_indices, test_indices), (index, classifier), random_state in tqdm(list(product(zip(self.train_indices_, self.test_indices_), enumerate(self.classifiers_), random_states)), desc='Backtesting: '))
+        self.cv_data = dict(cv_data)
 
-        # Combine identical results
-        keys = ['Predicted results', 'Number of matches', 'Number of bets', 'Precision', 'Profit', 'Yield', 'COV']
-        self.backtest_results_ = self.backtest_results_.groupby(keys, sort=False).apply(lambda df: list(zip(df.IndexH.values, df.IndexA.values, df.IndexD.values))).reset_index()
-        self.backtest_results_.rename(columns={0: 'Indices'}, inplace=True)
+        # Generate probabilities data
+        indices_combinations = list(product(*[[index for index, _ in results] for _, results in groupby(enumerate(self.target_labels_), key=itemgetter(1))]))
+        probabilities_data = {}
+        for random_state in random_states:
+            for indexH, indexA, indexD in indices_combinations:
+                data = []
+                for indices in self.test_indices_:
+                    data.append(pd.concat([
+                        self.cv_data[(random_state, indexH, indices[0])], 
+                        self.cv_data[(random_state, indexA, indices[0])],
+                        self.cv_data[(random_state, indexD, indices[0])]], axis=1)
+                    )
+                data = pd.concat(data).reset_index(drop=True)
+                probabilities_data[(random_state, indexH, indexA, indexD)] = data
+        
+        # Generate months, odds and results data 
+        months_data, odds_data, results_data = [], [], []
+        results = pd.DataFrame(y, columns=['Result'])
+        for indices in self.test_indices_:
+            for data, df in zip([months_data, odds_data, results_data], [matches.Month, odds, results]):
+                data.append(df.iloc[indices])
 
-        # Save results
-        if save_results:
-            Path(RESULTS_PATH).mkdir(exist_ok=True)
-            self.backtest_results_.to_csv(join(RESULTS_PATH, 'backtesting.csv'), index=False)
+        # Backtest data
+        self.backtesting_data_ = (
+            pd.concat(months_data).reset_index(drop=True),
+            pd.concat(odds_data).reset_index(drop=True),
+            pd.concat(results_data).reset_index(drop=True),
+            probabilities_data
+        )
+
+    def extract_backtesting_results(self, betting_results):
+        """Extract backtesting results."""        
+
+        # Unpack data
+        months, odds, results, probabilities = self.backtesting_data_
+
+        # Backtesting results placeholder
+        self.backtesting_results_ = {}
+
+        # Extract odds
+        if self.betting_type == '12X':
+            back_bets_profits = odds.applymap(lambda odd: [odd - 1.0, -1.0])
+            lay_bets_profits = odds.applymap(lambda odd: [1.0, 1.0 - odd])
+            profits = pd.concat([back_bets_profits, lay_bets_profits], axis=1)
+            profits['-'] = [[0.0, 0.0]] * len(profits)
+            profits_mapping = profits.apply(lambda profits: dict(zip(['H', 'A', 'D', '-H', '-A', '-D', '-'], profits.values.tolist())), axis=1).rename('Mapping')
+
+        for key, probs in probabilities.items():
+
+            # Extract probabilities
+            probs = probs[betting_results]
+
+            # Define boolean mask
+            mask = (probs > 0.5).sum(axis=1).astype(bool)
+
+            # Extract predictions
+            predictions = probs.idxmax(axis=1).rename('Prediction')
+            predictions.loc[~mask] = '-'
+
+            # Extract profits
+            profits = pd.concat([results, predictions, profits_mapping], axis=1)
+            profits = profits.apply(lambda row: row['Mapping'][row['Prediction']][0 if row['Prediction'] == row['Result'] else 1], axis=1).rename('Profit')
+
+            # Generate results
+            self.backtesting_results_[key] = pd.DataFrame({
+                'Bets percentage': [mask.sum() / len(mask)],
+                'Precision': [precision_score(results, predictions, average='micro')],
+                'Total yield': [profits.sum()],
+                'Mean yield': [profits.mean()]
+            })
 
     def fit_dump_classifiers(self, backtest_index):
         """Fit and dump classifiers."""
@@ -146,23 +299,19 @@ class BettingAgent:
         # Load training data
         X, y, _, _ = load_data('historical', ['pinnacle', 'bet365', 'bwin'])
 
-        # Extract classifiers and parameters grids
-        classifiers = {label: clf for label, (clf, _) in CLASSIFIERS['default'].items()}
-        param_grids = {label: ParameterGrid(param_grid) for label, (_ , param_grid) in CLASSIFIERS['default'].items()}
-
         # Load backtesting results
         predicted_result, params_indices = pd.read_csv(join(RESULTS_PATH, 'backtesting.csv'), usecols=['Predicted results', 'Indices']).values[int(backtest_index)]
         
         # Extract predicted results and parameters indices
         predicted_results = list(predicted_result)
-        params_indices = dict(zip(RESULTS, eval(params_indices)[0]))
+        params_indices = dict(zip(RESULTS_HAD, eval(params_indices)[0]))
 
         # Fit and dump classifiers
         for label in predicted_results:
 
             # Select classifier and parameters
-            classifier = classifiers[label]
-            params = param_grids[label][params_indices[label]]
+            classifier = self.classifiers[label]
+            params = self.param_grids[label][params_indices[label]]
 
             # Binarize labels
             y_bin = y.copy()
@@ -201,7 +350,7 @@ class BettingAgent:
         y_pred.loc[~(y_pred[ y_pred.columns[:-1]] > 0.5).sum(axis=1).astype(bool), 'Bet'] = '-'
 
         # Extract maximum odds
-        y_pred['Maximum Odds'] = odds.apply(lambda odds: dict(zip(RESULTS, odds.values)), axis=1)
+        y_pred['Maximum Odds'] = odds.apply(lambda odds: dict(zip(RESULTS_HAD, odds.values)), axis=1)
         y_pred['Maximum Odds'] = y_pred.apply(lambda row: row['Maximum Odds'][row['Bet']] if row['Bet'] != '-' else np.nan, axis=1)
         
         # Combine data
