@@ -30,7 +30,7 @@ from ..utils import (
 from .data import load_data
 
 RESULTS = ['H', 'A', 'D']
-
+RESULTS_PATH = join(PATH, 'results')
 
 class BettingAgent:
     """Class that is used for model evaluation, training and predictions 
@@ -133,13 +133,14 @@ class BettingAgent:
 
         # Save results
         if save_results:
-            self.backtest_results_.to_csv(join(PATH, 'backtesting_results.csv'), index=False)
+            Path(RESULTS_PATH).mkdir(exist_ok=True)
+            self.backtest_results_.to_csv(join(RESULTS_PATH, 'backtesting.csv'), index=False)
 
     def fit_dump_classifiers(self, backtest_index):
         """Fit and dump classifiers."""
 
         # Create directory
-        path = join(PATH, str(backtest_index))
+        path = join(RESULTS_PATH, backtest_index)
         Path(path).mkdir(exist_ok=True)
 
         # Load training data
@@ -150,7 +151,7 @@ class BettingAgent:
         param_grids = {label: ParameterGrid(param_grid) for label, (_ , param_grid) in CLASSIFIERS['default'].items()}
 
         # Load backtesting results
-        predicted_result, params_indices = pd.read_csv(join(PATH, 'backtesting_results.csv'), usecols=['Predicted results', 'Indices']).values[backtest_index]
+        predicted_result, params_indices = pd.read_csv(join(RESULTS_PATH, 'backtesting.csv'), usecols=['Predicted results', 'Indices']).values[int(backtest_index)]
         
         # Extract predicted results and parameters indices
         predicted_results = list(predicted_result)
@@ -181,7 +182,7 @@ class BettingAgent:
         X, _, odds, matches  = load_data('predictions', ['pinnacle', 'bet365', 'bwin'])
 
         # Define file path and pickled classifiers
-        path = join(PATH, str(backtest_index))
+        path = join(RESULTS_PATH, backtest_index)
         pickled_classifiers = [file for file in listdir(path) if 'pkl' in file]
 
         # Iterate through results

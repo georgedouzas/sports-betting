@@ -7,7 +7,7 @@ Predict using a selected classifier.
 from os.path import join
 from argparse import ArgumentParser
 
-from sportsbet import PATH
+from sportsbet.soccer.optimization import RESULTS_PATH
 from sportsbet.soccer import BettingAgent
 from sportsbet.utils import CLASSIFIERS
 
@@ -19,7 +19,7 @@ def parse_args():
     parser = ArgumentParser('Predict using a selected classifier.')
     
     # Add arguments
-    parser.add_argument('--backtest-index', default=0, type=int, help='The index of the backtesting result.')
+    parser.add_argument('--backtest-index', default=0, help='The index of the backtesting result.')
       
     return parser.parse_args()
 
@@ -36,6 +36,6 @@ if __name__ == '__main__':
     predictions = betting_agent.predict(args['backtest_index'])
 
     # Save predictinos
-    predictions.to_csv(join(PATH, 'predictions_results.csv'), index=False)
+    predictions.to_csv(join(RESULTS_PATH, args['backtest_index'], 'predictions.csv'), index=False)
 
     
