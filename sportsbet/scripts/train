@@ -16,7 +16,7 @@ def parse_args():
     parser = ArgumentParser('Train a selected classifier.')
     
     # Add arguments
-    parser.add_argument('--backtest-index', default=0, type=int, help='The index of the backtesting result.')
+    parser.add_argument('--backtest-index', default=0, help='The index of the backtesting result.')
     
     return parser.parse_args()
     
