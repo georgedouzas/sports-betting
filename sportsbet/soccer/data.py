@@ -180,7 +180,7 @@ def fetch_fd_data(leagues, data_type):
         partial_data = pd.read_csv(url)
 
         # Cast columns
-        partial_data['Date'] = pd.to_datetime(partial_data['Date'], format='%d/%m/%y')
+        partial_data['Date'] = pd.to_datetime(partial_data['Date'], dayfirst=True)
 
         # Create columns
         partial_data['Season'] = url.split('/')[-2] if data_type == 'historical' else SEASONS[-1]
