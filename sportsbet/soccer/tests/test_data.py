@@ -4,6 +4,7 @@ Test the data module.
 
 import requests
 import numpy as np
+import pytest
 
 from sportsbet.soccer.data import (
     SPIDataSource, 
@@ -90,7 +91,38 @@ def test_fd_fixtures_download():
 
 
 def test_fd_fixtures_transform():
-    """Test Fd training transform."""
+    """Test FD training transform."""
     content = FD_FIXTURES_DATA_SOURCE.transform()
     assert np.issubclass_(content.Date.dtype.type, np.datetime64)
     assert set(content.Div.unique()).issubset(FD_FIXTURES_DATA_SOURCE.leagues_ids)
+
+
+def test_soccer_data_loader_class_initialization():
+    """Test initialization of soccer data loader class."""
+    assert SoccerDataLoader.seasons == ['1617', '1718', '1819']
+    assert SoccerDataLoader.match_cols == ['Season'] + FDDataSource.match_cols
+    assert SoccerDataLoader.input_data_cols == FDDataSource.avg_max_odds_cols + SPIDataSource.spi_cols
+    assert SoccerDataLoader.goals_cols == FDDataSource.full_goals_cols + FDDataSource.half_goals_cols
+    assert SoccerDataLoader.odds_cols == FDDataSource.odds_cols
+
+
+@pytest.mark.parametrize("leagues_ids,betting_type", [
+    (None, 'MO'),
+    ('all', None)
+])
+def test_soccer_data_loader_type_error(leagues_ids, betting_type):
+    """Test initialization of soccer data loader class."""
+    with pytest.raises(TypeError):
+        SoccerDataLoader(leagues_ids, betting_type)
+
+
+@pytest.mark.parametrize("leagues_ids,betting_type", [
+    ('All', 'MO'),
+    ('all', 'Mo'),
+    ('all', 'Ou'),
+    (['G2', 'F1'], 'OU')
+])
+def test_soccer_data_loader_value_error(leagues_ids, betting_type):
+    """Test initialization of soccer data loader class."""
+    with pytest.raises(ValueError):
+        SoccerDataLoader(leagues_ids, betting_type)

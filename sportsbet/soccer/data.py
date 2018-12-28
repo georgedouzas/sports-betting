@@ -155,8 +155,22 @@ class SoccerDataLoader(BaseDataLoader):
     odds_cols = FDDataSource.odds_cols
 
     def __init__(self, leagues_ids, betting_type):
-        self.leagues_ids = leagues_ids
-        self.betting_type = betting_type
+        
+        # Check leagues ids
+        leauges_ids_error_msg = 'Parameter `leagues_ids` should be equal to `all` or a list that contains any of %s elements. Got %s instead.' % (', '.join(LEAGUES_MAPPING.keys()), leagues_ids)
+        if not isinstance(leagues_ids, (str, list)):
+            raise TypeError(leauges_ids_error_msg)
+        if leagues_ids != 'all' and not set(LEAGUES_MAPPING.keys()).issuperset(leagues_ids):
+            raise ValueError(leauges_ids_error_msg)
+        self.leagues_ids_ = list(LEAGUES_MAPPING.keys()) if leagues_ids == 'all' else leagues_ids[:]
+        
+        # Check betting type
+        betting_type_error_msg = 'Betting type should be equal to `MO` or `OU0.5`, `OU1.5`, ...'
+        if not isinstance(betting_type, str):
+            raise TypeError(betting_type_error_msg)
+        if betting_type != 'MO' and 'OU' not in betting_type:
+            raise ValueError(betting_type_error_msg)
+        self.betting_type_ = betting_type
 
     def _merge_data(self, spi_data):
         """Merge data to convert names."""
@@ -208,19 +222,8 @@ class SoccerDataLoader(BaseDataLoader):
         
         return spi_data
 
-    def _check_leagues_ids(self):
-        """Check the leagues ids."""
-        if self.leagues_ids != 'all' and not set(LEAGUES_MAPPING.keys()).issuperset(self.leagues_ids):
-            error_msg = 'League id should be equal to `all` or a list that contains any of %s elements. Got %s instead.'
-            raise ValueError(error_msg % (', '.join(LEAGUES_MAPPING.keys()), self.leagues_ids))
-        self.leagues_ids_ = list(LEAGUES_MAPPING.keys()) if self.leagues_ids == 'all' else self.leagues_ids[:]
-
     def _fetch_data(self, data_type):
         """Download and transform data sources."""
-        
-        # Check leagues ids
-        if not hasattr(self, 'leagues_ids_'):
-            self._check_leagues_ids()
 
         # FD training data
         if not hasattr(self, 'fd_training_data_'):
@@ -235,7 +238,6 @@ class SoccerDataLoader(BaseDataLoader):
 
         # FD fixtures data
         if not hasattr(self, 'fd_fixtures_data_') and data_type=='fixtures':
-            self._check_leagues_ids()
             self.fd_fixtures_data_ = FDFixturesDataSource(self.leagues_ids_).download_transform()
     
     def _filter_missing_values(self, data):
@@ -258,10 +260,10 @@ class SoccerDataLoader(BaseDataLoader):
         """Extract target."""
         if data_type == 'fixtures':
             return None
-        if self.betting_type == 'MO':
+        if self.betting_type_ == 'MO':
             y = (data['FTHG'] - data['FTAG']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        elif 'OU' in self.betting_type:
-            y = (data['FTHG'] + data['FTAG'] > float(self.betting_type[2:])).apply(lambda sign: 'O' if sign > 0 else 'U')
+        elif 'OU' in self.betting_type_:
+            y = (data['FTHG'] + data['FTAG'] > float(self.betting_type_[2:])).apply(lambda sign: 'O' if sign > 0 else 'U')
         return y
 
     def _extract_odds(self, data):
