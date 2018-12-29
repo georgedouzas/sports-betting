@@ -128,15 +128,6 @@ def test_fd_fixtures_transform():
     assert set(content.Div.unique()).issubset(FD_FIXTURES_DATA_SOURCE.leagues_ids)
 
 
-def test_soccer_data_loader_class_initialization():
-    """Test initialization of soccer data loader class."""
-    assert SoccerDataLoader.seasons == ['1617', '1718', '1819']
-    assert SoccerDataLoader.match_cols == ['Season'] + FDDataSource.match_cols
-    assert SoccerDataLoader.input_data_cols == FDDataSource.avg_max_odds_cols + SPIDataSource.spi_cols
-    assert SoccerDataLoader.goals_cols == FDDataSource.full_goals_cols + FDDataSource.half_goals_cols
-    assert SoccerDataLoader.odds_cols == FDDataSource.odds_cols
-
-
 @pytest.mark.parametrize("leagues_ids,betting_type", [
     (None, 'MO'),
     ('all', None)
@@ -160,7 +151,8 @@ def test_soccer_data_loader_value_error(leagues_ids, betting_type):
 
 
 @pytest.mark.parametrize('leagues_ids,betting_type', [
-    (['E1', 'G1'], 'MO')
+    (['E1', 'G1'], 'MO'),
+    ('all', 'OU2.5')
 ])
 def test_soccer_data_loader_intialization(leagues_ids, betting_type):
     """Test initialization of soccer data loader class."""
@@ -172,14 +164,12 @@ def test_soccer_data_loader_intialization(leagues_ids, betting_type):
     assert soccer_data_loader.betting_type_ == betting_type
 
 
-@pytest.mark.parametrize('data_type', [
-    ('training', ),
-    ('fixtures', )
-])
-def test_soccer_data_loader_fetch(data_type):
+@pytest.mark.parametrize('betting_type', ['MO', 'OU2.5', 'OU1.5'])
+def test_soccer_data_loader_target(betting_type):
     """Test fetch data method."""
-    soccer_data_loader = SoccerDataLoader(['G1', 'I1'], 'MO')
-    soccer_data_loader._fetch_data(data_type)
-    assert hasattr(soccer_data_loader, 'fd_training_data_')
-    assert hasattr(soccer_data_loader, 'spi_training_data_')
-    assert hasattr(soccer_data_loader, 'spi_fixtures_data_')
+    soccer_data_loader = SoccerDataLoader(['G1', 'I1'], betting_type)
+    assert soccer_data_loader.fixtures_data[1] is None
+    if betting_type == 'MO':
+        assert set(soccer_data_loader.training_data[1].unique()) == set(['A', 'D', 'H'])
+    else:
+        assert set(soccer_data_loader.training_data[1].unique()) == set(['O', 'U'])

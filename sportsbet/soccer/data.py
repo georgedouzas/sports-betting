@@ -225,14 +225,6 @@ class SoccerDataLoader(BaseDataLoader):
         # FD fixtures data
         if not hasattr(self, 'fd_fixtures_data_') and data_type=='fixtures':
             self.fd_fixtures_data_ = FDFixturesDataSource(self.leagues_ids_).download_transform()
-    
-    def _filter_missing_values(self, data):
-        """Filter missing values from input data and odds."""
-        data = data.dropna(subset=self.input_data_cols, how='any')
-        for ind in range(3):
-            data = data.dropna(subset=self.odds_cols[ind::3], how='all')
-        data.reset_index(drop=True, inplace=True)
-        return data
 
     def _extract_input_data(self, data):
         """Extract input data."""
@@ -267,10 +259,11 @@ class SoccerDataLoader(BaseDataLoader):
         self._fetch_data(data_type)
 
         # Rename teams
-        mapping = generate_names_mapping(self.spi_training_data_.loc[:, SPIDataSource.match_cols], self.fd_training_data_.loc[:, FDDataSource.match_cols])
+        if not hasattr(self, 'mapping_'):
+            self.mapping_ = generate_names_mapping(self.spi_training_data_.loc[:, SPIDataSource.match_cols], self.fd_training_data_.loc[:, FDDataSource.match_cols])
         spi_data = self.spi_training_data_ if data_type == 'training' else self.spi_fixtures_data_
         for col in ['team1', 'team2']:
-            spi_data = pd.merge(spi_data, mapping, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
+            spi_data = pd.merge(spi_data, self.mapping_, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
 
         # Combine data
         if data_type == 'training':
@@ -281,7 +274,10 @@ class SoccerDataLoader(BaseDataLoader):
             data = data.loc[:, self.match_cols[1:] + self.input_data_cols + self.odds_cols]
         
         # Filter missing values
-        data = self._filter_missing_values(data)
+        data = data.dropna(subset=self.input_data_cols, how='any')
+        for ind in range(3):
+            data = data.dropna(subset=self.odds_cols[ind::3], how='all')
+        data.reset_index(drop=True, inplace=True)
 
         # Extract input data
         X = self._extract_input_data(data)
