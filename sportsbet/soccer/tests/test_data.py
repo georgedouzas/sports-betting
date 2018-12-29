@@ -4,9 +4,11 @@ Test the data module.
 
 import requests
 import numpy as np
+import pandas as pd
 import pytest
 
 from sportsbet.soccer.data import (
+    generate_names_mapping,
     SPIDataSource, 
     FDDataSource, 
     FDTrainingDataSource, 
@@ -18,6 +20,34 @@ from sportsbet.soccer.data import (
 SPI_DATA_SOURCE = SPIDataSource(['E0', 'G1']).download()
 FD_TRAINING_DATA_SOURCE = FDTrainingDataSource('SP1', '1819').download()
 FD_FIXTURES_DATA_SOURCE = FDFixturesDataSource(['SP1', 'I1']).download()
+
+
+def test_generate_names_mapping():
+    """Test the generation of names mapping."""
+    left_data = pd.DataFrame(
+        {
+            'key': [0, 1, 2], 
+            'team1': ['AEK Athens', 'PAOK Salonika', 'PAO Athens'],
+            'team2': ['PAOK Salonika', 'AEK Athens', 'OSFP Pireas']
+        }
+    )
+    right_data = pd.DataFrame(
+        {
+            'Key': [0, 1, 2], 
+            'Team1': ['AEK', 'PAOK', 'PAO'],
+            'Team2': ['PAOK', 'AEK', 'OSFP']
+        }
+    )
+    mapping = generate_names_mapping(left_data, right_data)
+    pd.testing.assert_frame_equal(
+        mapping, 
+        pd.DataFrame(
+            {
+                'left_team': ['AEK Athens', 'OSFP Pireas', 'PAO Athens', 'PAOK Salonika'],
+                'right_team': ['AEK', 'OSFP', 'PAO', 'PAOK']
+            }
+        )
+    )
 
 
 def test_spi_connection():
