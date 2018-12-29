@@ -11,7 +11,8 @@ from sportsbet.soccer.data import (
     FDDataSource, 
     FDTrainingDataSource, 
     FDFixturesDataSource,
-    SoccerDataLoader
+    SoccerDataLoader,
+    LEAGUES_MAPPING
 )
 
 SPI_DATA_SOURCE = SPIDataSource(['E0', 'G1']).download()
@@ -116,7 +117,7 @@ def test_soccer_data_loader_type_error(leagues_ids, betting_type):
         SoccerDataLoader(leagues_ids, betting_type)
 
 
-@pytest.mark.parametrize("leagues_ids,betting_type", [
+@pytest.mark.parametrize('leagues_ids,betting_type', [
     ('All', 'MO'),
     ('all', 'Mo'),
     ('all', 'Ou'),
@@ -126,3 +127,29 @@ def test_soccer_data_loader_value_error(leagues_ids, betting_type):
     """Test initialization of soccer data loader class."""
     with pytest.raises(ValueError):
         SoccerDataLoader(leagues_ids, betting_type)
+
+
+@pytest.mark.parametrize('leagues_ids,betting_type', [
+    (['E1', 'G1'], 'MO')
+])
+def test_soccer_data_loader_intialization(leagues_ids, betting_type):
+    """Test initialization of soccer data loader class."""
+    soccer_data_loader = SoccerDataLoader(leagues_ids, betting_type)
+    if leagues_ids != 'all':
+        assert soccer_data_loader.leagues_ids_ == leagues_ids
+    else:
+        assert set(soccer_data_loader.leagues_ids_) == set(LEAGUES_MAPPING.keys())
+    assert soccer_data_loader.betting_type_ == betting_type
+
+
+@pytest.mark.parametrize('data_type', [
+    ('training', ),
+    ('fixtures', )
+])
+def test_soccer_data_loader_fetch(data_type):
+    """Test fetch data method."""
+    soccer_data_loader = SoccerDataLoader(['G1', 'I1'], 'MO')
+    soccer_data_loader._fetch_data(data_type)
+    assert hasattr(soccer_data_loader, 'fd_training_data_')
+    assert hasattr(soccer_data_loader, 'spi_training_data_')
+    assert hasattr(soccer_data_loader, 'spi_fixtures_data_')

@@ -35,6 +35,42 @@ LEAGUES_MAPPING = {
 }
 
 
+def generate_names_mapping(left_data, right_data):
+    """Generate names mapping."""
+
+    # Rename columns
+    key_columns = ['key%s' % ind for ind in range(left_data.shape[1] - 2)]
+    left_data.columns = key_columns + ['left_team1', 'left_team2']
+    right_data.columns = key_columns + ['right_team1', 'right_team2']
+
+    # Generate teams names combinations
+    names_combinations = pd.merge(left_data, right_data, how='outer').dropna().drop(columns=key_columns).reset_index(drop=True)
+
+    # Calculate similarity index
+    similarity = names_combinations.apply(lambda row: SequenceMatcher(None, row.left_team1, row.right_team1).ratio() * SequenceMatcher(None, row.left_team2, row.right_team2).ratio(), axis=1)
+
+    # Append similarity index
+    names_combinations_similarity = pd.concat([names_combinations, similarity], axis=1)
+
+    # Filter correct matches
+    indices = names_combinations_similarity.groupby(['left_team1', 'left_team2'])[0].idxmax().values
+    names_matching = names_combinations.take(indices)
+
+    # Teams matching
+    matching1 = names_matching.loc[:, ['left_team1', 'right_team1']].rename(columns={'left_team1': 'left_team', 'right_team1': 'right_team'})
+    matching2 = names_matching.loc[:, ['left_team2', 'right_team2']].rename(columns={'left_team2': 'left_team', 'right_team2': 'right_team'})
+        
+    # Combine matching
+    matching = matching1.append(matching2)
+    matching = matching.groupby(matching.columns.tolist()).size().reset_index()
+    indices = matching.groupby('left_team')[0].idxmax().values
+        
+    # Generate mapping
+    mapping = matching.take(indices).drop(columns=0).reset_index(drop=True)
+        
+    return mapping
+
+
 class SPIDataSource(BaseDataSource):
 
     url = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
@@ -71,7 +107,7 @@ class SPIDataSource(BaseDataSource):
 
         # Filter matches
         mask = (~content['score1'].isna()) & (~content['score2'].isna())
-        content = [content[mask], content[~mask]]
+        content = [content[mask].reset_index(drop=True), content[~mask].reset_index(drop=True)]
 
         return content
 
@@ -107,7 +143,7 @@ class FDTrainingDataSource(FDDataSource):
         """Transform the data source."""
 
         # Copy content
-        content = self.content_.copy()
+        content = self.content_.reset_index(drop=True).copy()
 
         # Cast to date
         content['Date'] = pd.to_datetime(content['Date'], dayfirst=True)
@@ -141,7 +177,7 @@ class FDFixturesDataSource(FDDataSource):
         content['Date'] = pd.to_datetime(content['Date'], dayfirst=True)
 
         # Filter leagues
-        content = content.loc[content['Div'].isin(self.leagues_ids)]
+        content = content.loc[content['Div'].isin(self.leagues_ids)].reset_index(drop=True)
 
         return content
 
@@ -172,56 +208,6 @@ class SoccerDataLoader(BaseDataLoader):
             raise ValueError(betting_type_error_msg)
         self.betting_type_ = betting_type
 
-    def _merge_data(self, spi_data):
-        """Merge data to convert names."""
-        for column in ['team1', 'team2']:
-            spi_data = pd.merge(spi_data, self.matching_, how='left', left_on=column, right_on='spi').drop(columns=[column, 'spi']).rename(columns={'fd': column})
-        return spi_data
-
-    def _rename_teams(self, spi_data):
-        """Rename teams to match fd names."""
-        
-        if hasattr(self, 'matching_'):
-
-            # Merge data
-            spi_data = self._merge_data(spi_data)
-            
-            return spi_data
-
-        # Generate teams names combinations
-        teams_names_combinations = pd.merge(self.spi_training_data_, self.fd_training_data_, left_on=['date', 'league'], right_on=['Date', 'Div'], how='outer').loc[:, ['team1', 'HomeTeam', 'team2', 'AwayTeam']].dropna().reset_index(drop=True)
-
-        # Calculate similarity index
-        similarity = teams_names_combinations.apply(lambda row: SequenceMatcher(None, row[0], row[1]).ratio() * SequenceMatcher(None, row[2], row[3]).ratio(), axis=1)
-
-        # Append similarity index
-        teams_names_similarity = pd.concat([teams_names_combinations, similarity], axis=1)
-
-        # Filter correct matches
-        indices = teams_names_similarity.groupby(['team1', 'team2'])[0].idxmax().values
-        teams_names_matching = teams_names_combinations.take(indices)
-
-        # Home teams matching
-        matching1 = teams_names_matching.iloc[:, 0:2]
-        
-        # Away teams matching
-        matching2 = teams_names_matching.iloc[:, 2:]
-        
-        # Combine matching
-        columns = ['spi', 'fd']
-        matching1.columns, matching2.columns = columns, columns
-        matching = matching1.append(matching2)
-        matching = matching.groupby(columns).size().reset_index()
-        indices = matching.groupby(columns[0])[0].idxmax().values
-        
-        # Set matching attribute
-        self.matching_ = matching.take(indices).drop(columns=0).reset_index(drop=True)
-
-        # Merge data
-        spi_data = self._merge_data(spi_data)
-        
-        return spi_data
-
     def _fetch_data(self, data_type):
         """Download and transform data sources."""
 
@@ -230,7 +216,7 @@ class SoccerDataLoader(BaseDataLoader):
             self.fd_training_data_ = pd.concat([
                 FDTrainingDataSource(league_id, season).download_transform() 
                 for league_id, season in tqdm(list(product(self.leagues_ids_, self.seasons)), desc='Downloading')
-            ])
+            ], ignore_index=True)
 
         # SPI data
         if not hasattr(self, 'spi_training_data_') and not hasattr(self, 'spi_fixtures_data_'):
@@ -281,15 +267,18 @@ class SoccerDataLoader(BaseDataLoader):
         self._fetch_data(data_type)
 
         # Rename teams
-        spi_data = self._rename_teams(self.spi_training_data_ if data_type == 'training' else self.spi_fixtures_data_)
+        mapping = generate_names_mapping(self.spi_training_data_.loc[:, SPIDataSource.match_cols], self.fd_training_data_.loc[:, FDDataSource.match_cols])
+        spi_data = self.spi_training_data_ if data_type == 'training' else self.spi_fixtures_data_
+        for col in ['team1', 'team2']:
+            spi_data = pd.merge(spi_data, mapping, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
 
         # Combine data
-        if data_type == data_type == 'training':
+        if data_type == 'training':
             data = pd.merge(spi_data, self.fd_training_data_, left_on=SPIDataSource.match_cols + SPIDataSource.full_goals_cols, right_on=FDDataSource.match_cols + FDDataSource.full_goals_cols)
-            data = data[self.match_cols + self.input_data_cols + self.goals_cols + self.odds_cols]
-        elif data_type == data_type == 'fixtures':
+            data = data.loc[:, self.match_cols + self.input_data_cols + self.goals_cols + self.odds_cols]
+        elif data_type == 'fixtures':
             data = pd.merge(spi_data, self.fd_fixtures_data_, left_on=SPIDataSource.match_cols, right_on=FDDataSource.match_cols)
-            data = data[self.match_cols[1:] + self.input_data_cols + self.odds_cols]
+            data = data.loc[:, self.match_cols[1:] + self.input_data_cols + self.odds_cols]
         
         # Filter missing values
         data = self._filter_missing_values(data)
