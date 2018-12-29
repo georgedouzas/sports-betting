@@ -6,14 +6,13 @@ betting strategy on historical and current data.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: BSD 3 clause
 
+from argparse import ArgumentParser
 from os import listdir
 from os.path import join
 from pickle import dump, load
 from pathlib import Path
 from itertools import product, groupby
 from operator import itemgetter
-from collections import OrderedDict
-from functools import reduce
 
 import numpy as np
 import pandas as pd
@@ -27,50 +26,56 @@ from tqdm import tqdm
 from .. import PATH
 
 RESULTS_PATH = join(PATH, 'results')
-BACKTESTING_RESULTS_PATH = join(RESULTS_PATH, 'backtesting.csv')
-RESULTS = {'12X': ['H', 'A', 'D'], 'OU': ['O']}
 
 
-class MatchOddsClassifier:
+@staticmethod
+def fit_binary_classifier(X, y, classifier, label):
+    """Binarize label and fit a classifier."""
+
+    # Binarize labels
+    y_bin = y.copy()
+    y_bin[y_bin != label] = '-%s' % label
+        
+    # Fit classifier
+    classifier.fit(X, y_bin)
+        
+    return classifier
+
+
+class BaseBetClassifier(_BaseComposition, ClassifierMixin):
+
+    def __init__(self, classifiers):
+        self.classifiers = classifiers
+
+    def fit(self, X, y):
+        """Parallel fit of classifiers."""
+        self.classes_ = np.unique(y)
+        self.classifiers_ = Parallel(n_jobs=-1)(delayed(fit_binary_classifier)(X, y, clone(classifier), label) 
+                                                for classifier, label in zip(self.classifiers, self.classes_))
+
+    def _generate_probs(self, X):
+        """Generate probabilities for each classifier."""
+        probs = np.concatenate([clf.predict_proba(X)[:, 1] for clf in self.classifiers_])
+        return probs
+
+    def predict(self, X):
+        """Predict the results."""
+        classes = np.array([self.classes_[ind] for ind in self._generate_probs(X).argmax(axis=1)])
+        return classes
+    
+    def predict_proba(self, X):
+        """Predict the probabilities of results."""
+        probs = self._generate_probs(X)
+        normalized_probs = probs / probs.sum(axis=1)[:, None]
+        return normalized_probs
+
+
+class MatchOddsClassifier(BaseBetClassifier):
 
     RESULTS = ['A', 'D', 'H']
 
     def __init__(self, classifiers):
         self.classifiers = classifiers
-
-    @staticmethod
-    def _fit_classifier(X, y, classifier, label):
-        """Fit of a binary classifier."""
-
-        # Binarize labels
-        y_bin = y.copy()
-        y_bin[y_bin != label] = '-%s' % label
-        
-        # Fit classifier
-        classifier.fit(X, y_bin)
-        
-        return classifier
-
-    def fit(self, X, y):
-        """Parallel fit of classifiers."""
-        self.classifiers_ = Parallel(n_jobs=-1)(delayed(self._fit_classifier)(X, y, clone(classifier), label) 
-                                                for classifier, label in zip(self.classifiers, self.RESULTS))
-
-    def _generate_probs(self, X):
-        """Generate probabilities for each classifier."""
-        probs = [pd.DataFrame(clf.predict_proba(X)[:, 1], columns=self.RESULTS) for clf in self.classifiers_]
-        probs = pd.concat(probs, axis=1)
-        return probs
-
-    def predict(self, X):
-        """Predict the results."""
-        probs = self._generate_probs(X)
-        return probs.idxmax(axis=1).values
-    
-    def predict_proba(self, X):
-        """Predict the probabilities of results."""
-        probs = self._generate_probs(X)
-        return probs.div(probs.sum(axis=1), axis=0).values
     
     def _bet(self, X, odds):
         
@@ -89,18 +94,6 @@ class MatchOddsClassifier:
         values = pd.concat([back_values, lay_values], axis=1)
 
         return probs, values
-
-    @staticmethod
-    def _probable_bets(probs, betting_results):
-
-        # Get probabilities
-        probs = probs[betting_results]
-
-        # Extract predictions
-        predictions = probs.idxmax(axis=1).rename('Prediction')
-        predictions.loc[~(probs > 0.5).sum(axis=1).astype(bool)] = '-'
-        
-        return predictions
 
     @staticmethod
     def _value_bets(values, betting_results):
@@ -358,3 +351,52 @@ class BettingAgent:
         predictions = predictions[predictions['Bet'] != '-'].reset_index(drop=True)
 
         return predictions
+
+
+if __name__ == '__main__':
+
+
+
+    from importlib import import_module
+
+    from sklearn.dummy import DummyClassifier
+
+    from ..soccer.optimization import BookmakerEstimator
+
+    DEFAULT_ESTIMATORS = {
+        '12X': {
+            'random': [(DummyClassifier(), {}), (DummyClassifier(), {}), (DummyClassifier(), {})],
+            'bookmaker': [(BookmakerEstimator('12X'), {}), (BookmakerEstimator('12X'), {}),(BookmakerEstimator('12X'), {})]
+        },
+        'OU2.5': {
+            'random': [(DummyClassifier(), {})],
+            'bookmaker': [(BookmakerEstimator('OU2.5'), {})]
+        }
+    }
+
+
+    def import_estimators(clfs_name):
+
+        # Import classifiers
+        try:
+            import config
+            clfs_param_grids = getattr(config, clfs_name)
+        except AttributeError:
+            clfs_param_grids = DEFAULT_ESTIMATORS[clfs_name]
+    
+        # Extract classifiers and parameters grids
+        classifiers, param_grids = zip(*clfs_param_grids)
+
+        return classifiers, param_grids
+    
+    # Create parser
+    parser = ArgumentParser('Models evaluation using backtesting.')
+    
+    # Add arguments
+    parser.add_argument('--clfs-name', default='random', help='The name of classifiers to predict the results.')
+    parser.add_argument('--max-odds', default=['pinnacle', 'bet365', 'bwin'], nargs='*', help='Maximum odds to use for evaluation.')
+    parser.add_argument('--test-season', default=1819, type=int, help='Test season.')
+    parser.add_argument('--random-states', default=[0, 1, 2], type=int, nargs='*', help='The random states of estimators.')
+    parser.add_argument('--save-results', default=True, type=bool, help='Save backtesting results to csv.')
+      
+    return parser.parse_args()
