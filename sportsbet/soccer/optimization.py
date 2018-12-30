@@ -28,12 +28,11 @@ from .. import PATH
 RESULTS_PATH = join(PATH, 'results')
 
 
-@staticmethod
 def fit_binary_classifier(X, y, classifier, label):
     """Binarize label and fit a classifier."""
 
     # Binarize labels
-    y_bin = y.copy()
+    y_bin = y.copy().astype(object)
     y_bin[y_bin != label] = '-%s' % label
         
     # Fit classifier
@@ -55,7 +54,7 @@ class BaseBetClassifier(_BaseComposition, ClassifierMixin):
 
     def _generate_probs(self, X):
         """Generate probabilities for each classifier."""
-        probs = np.concatenate([clf.predict_proba(X)[:, 1] for clf in self.classifiers_])
+        probs = np.concatenate([clf.predict_proba(X)[:, 1] for clf in self.classifiers_], axis=1)
         return probs
 
     def predict(self, X):
@@ -398,5 +397,4 @@ if __name__ == '__main__':
     parser.add_argument('--test-season', default=1819, type=int, help='Test season.')
     parser.add_argument('--random-states', default=[0, 1, 2], type=int, nargs='*', help='The random states of estimators.')
     parser.add_argument('--save-results', default=True, type=bool, help='Save backtesting results to csv.')
-      
-    return parser.parse_args()
+
