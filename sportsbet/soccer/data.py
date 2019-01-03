@@ -190,7 +190,7 @@ class SoccerDataLoader(BaseDataLoader):
     goals_cols = FDDataSource.full_goals_cols + FDDataSource.half_goals_cols
     odds_cols = FDDataSource.odds_cols
 
-    def __init__(self, leagues_ids, betting_type):
+    def __init__(self, leagues_ids, target_type):
         
         # Check leagues ids
         leauges_ids_error_msg = 'Parameter `leagues_ids` should be equal to `all` or a list that contains any of %s elements. Got %s instead.' % (', '.join(LEAGUES_MAPPING.keys()), leagues_ids)
@@ -201,12 +201,12 @@ class SoccerDataLoader(BaseDataLoader):
         self.leagues_ids_ = list(LEAGUES_MAPPING.keys()) if leagues_ids == 'all' else leagues_ids[:]
         
         # Check betting type
-        betting_type_error_msg = 'Betting type should be equal to `MO` or `OU0.5`, `OU1.5`, ...'
-        if not isinstance(betting_type, str):
-            raise TypeError(betting_type_error_msg)
-        if betting_type != 'MO' and 'OU' not in betting_type:
-            raise ValueError(betting_type_error_msg)
-        self.betting_type_ = betting_type
+        target_type_error_msg = 'Wrong target type.'
+        if not isinstance(target_type, str):
+            raise TypeError(target_type_error_msg)
+        if target_type not in ('full_time_results', 'half_time_results', 'both_score') and 'over' not in target_type and 'under' not in target_type:
+            raise ValueError(target_type_error_msg)
+        self.target_type_ = target_type
 
     def _fetch_data(self, data_type):
         """Download and transform data sources."""
@@ -238,10 +238,16 @@ class SoccerDataLoader(BaseDataLoader):
         """Extract target."""
         if data_type == 'fixtures':
             return None
-        if self.betting_type_ == 'MO':
+        if self.target_type_ == 'full_time_results':
             y = (data['FTHG'] - data['FTAG']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        elif 'OU' in self.betting_type_:
-            y = (data['FTHG'] + data['FTAG'] > float(self.betting_type_[2:])).apply(lambda sign: 'O' if sign > 0 else 'U')
+        if self.target_type_ == 'half_time_results':
+            y = (data['HTHG'] - data['HTAG']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
+        elif 'over' in self.target_type_:
+            y = (data['FTHG'] + data['FTAG'] > float(self.target_type_[-2:])).astype(int)
+        elif 'under' in self.target_type_:
+            y = (data['FTHG'] + data['FTAG'] < float(self.target_type_[-2:])).astype(int)
+        elif 'both_score' in self.target_type_:
+            y = (data['FTHG'] + data['FTAG'] > 0).astype(int)
         return y
 
     def _extract_odds(self, data):
