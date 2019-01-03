@@ -247,7 +247,7 @@ class SoccerDataLoader(BaseDataLoader):
         elif 'under' in self.target_type_:
             y = (data['FTHG'] + data['FTAG'] < float(self.target_type_[-2:])).astype(int)
         elif 'both_score' in self.target_type_:
-            y = (data['FTHG'] + data['FTAG'] > 0).astype(int)
+            y = (data['FTHG'] * data['FTAG'] > 0).astype(int)
         return y
 
     def _extract_odds(self, data):
