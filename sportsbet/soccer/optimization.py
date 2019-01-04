@@ -28,48 +28,7 @@ from .. import PATH
 RESULTS_PATH = join(PATH, 'results')
 
 
-def fit_binary_classifier(X, y, classifier, label):
-    """Binarize label and fit a classifier."""
-
-    # Binarize labels
-    y_bin = y.copy().astype(object)
-    y_bin[y_bin != label] = '-%s' % label
-        
-    # Fit classifier
-    classifier.fit(X, y_bin)
-        
-    return classifier
-
-
-class BaseBetClassifier(_BaseComposition, ClassifierMixin):
-
-    def __init__(self, classifiers):
-        self.classifiers = classifiers
-
-    def fit(self, X, y):
-        """Parallel fit of classifiers."""
-        self.classes_ = np.unique(y)
-        self.classifiers_ = Parallel(n_jobs=-1)(delayed(fit_binary_classifier)(X, y, clone(classifier), label) 
-                                                for classifier, label in zip(self.classifiers, self.classes_))
-
-    def _generate_probs(self, X):
-        """Generate probabilities for each classifier."""
-        probs = np.concatenate([clf.predict_proba(X)[:, 1] for clf in self.classifiers_], axis=1)
-        return probs
-
-    def predict(self, X):
-        """Predict the results."""
-        classes = np.array([self.classes_[ind] for ind in self._generate_probs(X).argmax(axis=1)])
-        return classes
-    
-    def predict_proba(self, X):
-        """Predict the probabilities of results."""
-        probs = self._generate_probs(X)
-        normalized_probs = probs / probs.sum(axis=1)[:, None]
-        return normalized_probs
-
-
-class MatchOddsClassifier(BaseBetClassifier):
+class MatchOddsClassifier(BaseEstimator, ClassifierMixin):
 
     RESULTS = ['A', 'D', 'H']
 
