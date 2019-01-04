@@ -204,7 +204,7 @@ class SoccerDataLoader(BaseDataLoader):
         target_type_error_msg = 'Wrong target type.'
         if not isinstance(target_type, str):
             raise TypeError(target_type_error_msg)
-        if target_type not in ('full_time_results', 'half_time_results', 'both_score') and 'over' not in target_type and 'under' not in target_type:
+        if target_type not in ('full_time_results', 'half_time_results', 'final_score', 'both_score') and 'over' not in target_type and 'under' not in target_type:
             raise ValueError(target_type_error_msg)
         self.target_type_ = target_type
 
@@ -240,14 +240,16 @@ class SoccerDataLoader(BaseDataLoader):
             return None
         if self.target_type_ == 'full_time_results':
             y = (data['FTHG'] - data['FTAG']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        if self.target_type_ == 'half_time_results':
+        elif self.target_type_ == 'half_time_results':
             y = (data['HTHG'] - data['HTAG']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
         elif 'over' in self.target_type_:
             y = (data['FTHG'] + data['FTAG'] > float(self.target_type_[-2:])).astype(int)
         elif 'under' in self.target_type_:
             y = (data['FTHG'] + data['FTAG'] < float(self.target_type_[-2:])).astype(int)
-        elif 'both_score' in self.target_type_:
+        elif self.target_type_ == 'both_score':
             y = (data['FTHG'] * data['FTAG'] > 0).astype(int)
+        elif self.target_type_ == 'final_score':
+            y = data[['FTHG', 'FTAG']]
         return y
 
     def _extract_odds(self, data):

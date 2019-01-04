@@ -164,12 +164,12 @@ def test_soccer_data_loader_intialization(leagues_ids, target_type):
     assert soccer_data_loader.target_type_ == target_type
 
 
-@pytest.mark.parametrize('target_type', ['full_time_results', 'half_time_results', 'over2.5', 'under1.5'])
+@pytest.mark.parametrize('target_type', ['full_time_results', 'half_time_results', 'final_score', 'over2.5', 'under1.5'])
 def test_soccer_data_loader_target(target_type):
     """Test fetch data method."""
     soccer_data_loader = SoccerDataLoader(['G1', 'I1'], target_type)
     assert soccer_data_loader.fixtures_data[1] is None
     if target_type in ('full_time_results', 'half_time_results'):
         assert set(soccer_data_loader.training_data[1].unique()) == set(['A', 'D', 'H'])
-    else:
+    elif 'over' in target_type or 'under' in target_type:
         assert set(soccer_data_loader.training_data[1].unique()) == set([0, 1])
