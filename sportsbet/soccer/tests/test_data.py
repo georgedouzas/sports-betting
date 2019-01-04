@@ -171,5 +171,8 @@ def test_soccer_data_loader_target(target_type):
     assert soccer_data_loader.fixtures_data[1] is None
     if target_type in ('full_time_results', 'half_time_results'):
         assert set(soccer_data_loader.training_data[1].unique()) == set(['A', 'D', 'H'])
+    if target_type == 'final_score':
+        columns_types = soccer_data_loader.training_data[1].dtypes
+        assert len(set(columns_types)) == 1 and columns_types[0] is np.dtype(int)
     elif 'over' in target_type or 'under' in target_type:
         assert set(soccer_data_loader.training_data[1].unique()) == set([0, 1])
