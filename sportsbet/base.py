@@ -63,7 +63,7 @@ class MultiClassifier(_BaseComposition, ClassifierMixin):
         return self
 
     def predict_proba(self, X):
-        """Predict the raw probabilities."""
+        """Predict the class probabilities."""
         probs = np.concatenate([clf.predict_proba(X)[:, 1].reshape(-1, 1) for clf in self.classifiers_], axis=1)
         return probs
 
@@ -71,9 +71,3 @@ class MultiClassifier(_BaseComposition, ClassifierMixin):
         """Predict the results."""
         classes = np.array([self.classes_[ind] for ind in self.predict_proba(X).argmax(axis=1)])
         return classes
-    
-    def predict_norm_proba(self, X):
-        """Predict the normalized probabilities."""
-        probs = self.predict_proba(X)
-        normalized_probs = probs / probs.sum(axis=1)[:, None]
-        return normalized_probs

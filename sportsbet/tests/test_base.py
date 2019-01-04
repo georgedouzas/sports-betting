@@ -27,8 +27,4 @@ def test_multi_classifier_fit():
 def test_multi_classifier_predict():
     """Test the predict method of multi classifier."""
     np.testing.assert_array_equal(np.unique(MULTI_CLASSIFIER.predict(X)), np.array(['A', 'D', 'H']))
-    
 
-def test_multi_classifier_predict_norm_proba():
-    """Test the predict normalized probabilities method of multi classifier."""
-    np.testing.assert_array_equal(np.unique(MULTI_CLASSIFIER.predict_norm_proba(X).sum(axis=1)), np.repeat(1.0, len(X)))
