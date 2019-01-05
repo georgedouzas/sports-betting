@@ -20,7 +20,6 @@ from sklearn.metrics import precision_score
 from sklearn.utils import Parallel, delayed
 from sklearn.model_selection import ParameterGrid
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
-from sklearn.utils.metaestimators import _BaseComposition
 from tqdm import tqdm
 
 from .. import PATH
@@ -28,14 +27,12 @@ from .. import PATH
 RESULTS_PATH = join(PATH, 'results')
 
 
-class MatchOddsClassifier(BaseEstimator, ClassifierMixin):
+class BetClassifier(BaseEstimator, ClassifierMixin):
 
-    RESULTS = ['A', 'D', 'H']
-
-    def __init__(self, classifiers):
-        self.classifiers = classifiers
+    def __init__(self, classifier):
+        self.classifier = classifier
     
-    def _bet(self, X, odds):
+    def bet(self, X, odds):
         
         # Columns mapping
         columns_mapping = {result: '-%s' % result for result in self.RESULTS}
