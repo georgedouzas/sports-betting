@@ -97,8 +97,8 @@ def test_fd_initialization():
     assert fd_data_source.match_cols == ['Date', 'Div', 'HomeTeam', 'AwayTeam']
     assert fd_data_source.full_goals_cols == ['FTHG', 'FTAG']
     assert fd_data_source.half_goals_cols == ['HTHG', 'HTAG']
-    assert fd_data_source.avg_max_odds_cols == ['BbAvH', 'BbAvD', 'BbAvA', 'BbMxH', 'BbMxD', 'BbMxA']
-    assert fd_data_source.odds_cols == ['PSH', 'PSD', 'PSA', 'B365H', 'B365D', 'B365A', 'BWH', 'BWD', 'BWA']
+    assert fd_data_source.avg_max_odds_cols == ['BbAvA', 'BbAvD', 'BbAvH', 'BbMxA', 'BbMxD', 'BbMxH']
+    assert fd_data_source.odds_cols == ['PSA', 'PSD', 'PSH', 'B365A', 'B365D', 'B365H', 'BWA', 'BWD', 'BWH']
 
 
 def test_fd_training_download():
@@ -129,7 +129,7 @@ def test_fd_fixtures_transform():
 
 
 @pytest.mark.parametrize("leagues_ids,target_type", [
-    (None, 'MO'),
+    (None, 'H'),
     ('all', None)
 ])
 def test_soccer_data_loader_type_error(leagues_ids, target_type):
@@ -139,10 +139,10 @@ def test_soccer_data_loader_type_error(leagues_ids, target_type):
 
 
 @pytest.mark.parametrize('leagues_ids,target_type', [
-    ('All', 'MO'),
-    ('all', 'Mo'),
-    ('all', 'Ou'),
-    (['G2', 'F1'], 'over')
+    ('All', 'H'),
+    ('all', 'Final_score'),
+    ('all', 'Under0.5'),
+    (['G2', 'F1'], 'over2.5')
 ])
 def test_soccer_data_loader_value_error(leagues_ids, target_type):
     """Test initialization of soccer data loader class."""
@@ -151,7 +151,7 @@ def test_soccer_data_loader_value_error(leagues_ids, target_type):
 
 
 @pytest.mark.parametrize('leagues_ids,target_type', [
-    (['E1', 'G1'], 'full_time_results'),
+    (['E1', 'G1'], 'H'),
     ('all', 'over2.5')
 ])
 def test_soccer_data_loader_intialization(leagues_ids, target_type):
@@ -164,15 +164,13 @@ def test_soccer_data_loader_intialization(leagues_ids, target_type):
     assert soccer_data_loader.target_type_ == target_type
 
 
-@pytest.mark.parametrize('target_type', ['full_time_results', 'half_time_results', 'final_score', 'over2.5', 'under1.5'])
+@pytest.mark.parametrize('target_type', ['H', 'D', 'over2.5', 'under1.5', 'final_score'])
 def test_soccer_data_loader_target(target_type):
     """Test fetch data method."""
     soccer_data_loader = SoccerDataLoader(['G1', 'I1'], target_type)
     assert soccer_data_loader.fixtures_data[1] is None
-    if target_type in ('full_time_results', 'half_time_results'):
-        assert set(soccer_data_loader.training_data[1].unique()) == set(['A', 'D', 'H'])
     if target_type == 'final_score':
         columns_types = soccer_data_loader.training_data[1].dtypes
         assert len(set(columns_types)) == 1 and columns_types[0] is np.dtype(int)
-    elif 'over' in target_type or 'under' in target_type:
+    else:
         assert set(soccer_data_loader.training_data[1].unique()) == set([0, 1])

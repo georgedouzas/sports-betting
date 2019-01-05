@@ -27,79 +27,9 @@ from .. import PATH
 RESULTS_PATH = join(PATH, 'results')
 
 
-class BetClassifier(BaseEstimator, ClassifierMixin):
+class BettingSpace:
 
-    def __init__(self, classifier):
-        self.classifier = classifier
-    
-    def bet(self, X, odds):
-        
-        # Columns mapping
-        columns_mapping = {result: '-%s' % result for result in self.RESULTS}
-
-        # Calculate back and lay probabilities
-        back_probs = self._generate_probs(X)
-        lay_probs = (1 - back_probs).rename(columns=columns_mapping)
-        probs = pd.concat([back_probs, lay_probs], axis=1)
-
-        # Calculate back and lay values
-        odds = odds[self.RESULTS]
-        back_values = back_probs * odds.values - 1
-        lay_values = -back_values.rename(columns=columns_mapping)
-        values = pd.concat([back_values, lay_values], axis=1)
-
-        return probs, values
-
-    @staticmethod
-    def _value_bets(values, betting_results):
-
-        # Get probabilities
-        values = values[betting_results]
-
-        # Extract predictions
-        predictions = values.idxmax(axis=1).rename('Prediction')
-        predictions.loc[~(values > 0.0).sum(axis=1).astype(bool)] = '-'
-        
-        return predictions
-
-
-class BookmakerEstimator(BaseEstimator, ClassifierMixin):
-    """Estimator that uses the average odds to generate predictions."""
-
-    def __init__(self, betting_type):
-        self.betting_type = betting_type
-
-    def fit(self, X, y):
-
-        # Define predicted labels
-        self.labels_ = [label if label in np.unique(y) else '-' for label in RESULTS[self.betting_type]]
-        
-        return self
-
-    def predict(self, X):
-        
-        # Generate indices from minimum odds
-        min_odds_indices = np.argmin(X[:, 0:3], axis=1)
-
-        # Get predictions
-        y_pred = np.array(self.labels_)[min_odds_indices]
-
-        return y_pred
-
-    def predict_proba(self, X):
-
-        # Generate predicted probabilities
-        y_pred_proba = 1 / X[:, 0:3]
-        y_pred_proba = y_pred_proba / y_pred_proba.sum(axis=1)[:, None]
-
-        # Sort predicted labels
-        y_pred_proba = y_pred_proba[:, np.argsort(self.labels_)]
-        
-        # Add probabilities
-        if len(np.unique(self.labels_)) < 3:
-            y_pred_proba = np.apply_along_axis(arr=y_pred_proba, func1d=lambda probs: [probs[0:2].sum(), probs[2]], axis=1)
-
-        return y_pred_proba
+    pass
 
 
 class BettingAgent:
@@ -108,7 +38,6 @@ class BettingAgent:
 
     def __init__(self, classifiers, param_grids, betting_type):
         self.classifiers = classifiers
-        self.param_grids = param_grids
         self.betting_type = betting_type
 
     def fit_predict(self, X, y, index, classifier, train_indices, test_indices, random_state):

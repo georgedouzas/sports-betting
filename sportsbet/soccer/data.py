@@ -118,8 +118,8 @@ class FDDataSource(BaseDataSource):
     match_cols = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
     full_goals_cols = ['FTHG', 'FTAG']
     half_goals_cols = ['HTHG', 'HTAG']
-    avg_max_odds_cols = ['BbAvH', 'BbAvD', 'BbAvA', 'BbMxH', 'BbMxD', 'BbMxA']
-    odds_cols = ['PSH', 'PSD', 'PSA', 'B365H', 'B365D', 'B365A', 'BWH', 'BWD', 'BWA']
+    avg_max_odds_cols = ['BbAvA', 'BbAvD', 'BbAvH', 'BbMxA', 'BbMxD', 'BbMxH']
+    odds_cols = ['PSA', 'PSD', 'PSH', 'B365A', 'B365D', 'B365H', 'BWA', 'BWD', 'BWH']
     
 
 class FDTrainingDataSource(FDDataSource):
@@ -204,7 +204,7 @@ class SoccerDataLoader(BaseDataLoader):
         target_type_error_msg = 'Wrong target type.'
         if not isinstance(target_type, str):
             raise TypeError(target_type_error_msg)
-        if target_type not in ('full_time_results', 'half_time_results', 'final_score', 'both_score') and 'over' not in target_type and 'under' not in target_type:
+        if target_type not in ('H', 'D', 'A', 'hH', 'hD', 'hA', 'both_score', 'final_score') and 'over' not in target_type and 'under' not in target_type:
             raise ValueError(target_type_error_msg)
         self.target_type_ = target_type
 
@@ -238,10 +238,18 @@ class SoccerDataLoader(BaseDataLoader):
         """Extract target."""
         if data_type == 'fixtures':
             return None
-        if self.target_type_ == 'full_time_results':
-            y = (data['FTHG'] - data['FTAG']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
-        elif self.target_type_ == 'half_time_results':
-            y = (data['HTHG'] - data['HTAG']).apply(lambda sign: 'H' if sign > 0 else 'D' if sign == 0 else 'A')
+        if self.target_type_ == 'H':
+            y = (data['FTHG'] > data['FTAG']).astype(int)
+        elif self.target_type_ == 'D':
+            y = (data['FTHG'] == data['FTAG']).astype(int)
+        elif self.target_type_ == 'A':
+            y = (data['FTHG'] < data['FTAG']).astype(int)
+        elif self.target_type_ == 'hH':
+            y = (data['HTHG'] > data['HTAG']).astype(int)
+        elif self.target_type_ == 'hD':
+            y = (data['HTHG'] == data['HTAG']).astype(int)
+        elif self.target_type_ == 'hA':
+            y = (data['HTHG'] < data['HTAG']).astype(int)
         elif 'over' in self.target_type_:
             y = (data['FTHG'] + data['FTAG'] > float(self.target_type_[-2:])).astype(int)
         elif 'under' in self.target_type_:
