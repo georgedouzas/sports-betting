@@ -190,23 +190,15 @@ class SoccerDataLoader(BaseDataLoader):
     goals_cols = FDDataSource.full_goals_cols + FDDataSource.half_goals_cols
     odds_cols = FDDataSource.odds_cols
 
-    def __init__(self, leagues_ids, target_type):
+    def __init__(self, leagues_ids):
         
         # Check leagues ids
-        leauges_ids_error_msg = 'Parameter `leagues_ids` should be equal to `all` or a list that contains any of %s elements. Got %s instead.' % (', '.join(LEAGUES_MAPPING.keys()), leagues_ids)
+        leagues_ids_error_msg = 'Parameter `leagues_ids` should be equal to `all` or a list that contains any of %s elements. Got %s instead.' % (', '.join(LEAGUES_MAPPING.keys()), leagues_ids)
         if not isinstance(leagues_ids, (str, list)):
-            raise TypeError(leauges_ids_error_msg)
+            raise TypeError(leagues_ids_error_msg)
         if leagues_ids != 'all' and not set(LEAGUES_MAPPING.keys()).issuperset(leagues_ids):
-            raise ValueError(leauges_ids_error_msg)
+            raise ValueError(leagues_ids_error_msg)
         self.leagues_ids_ = list(LEAGUES_MAPPING.keys()) if leagues_ids == 'all' else leagues_ids[:]
-        
-        # Check betting type
-        target_type_error_msg = 'Wrong target type.'
-        if not isinstance(target_type, str):
-            raise TypeError(target_type_error_msg)
-        if target_type not in ('H', 'D', 'A', 'hH', 'hD', 'hA', 'both_score', 'final_score') and 'over' not in target_type and 'under' not in target_type:
-            raise ValueError(target_type_error_msg)
-        self.target_type_ = target_type
 
     def _fetch_data(self, data_type):
         """Download and transform data sources."""
@@ -234,29 +226,12 @@ class SoccerDataLoader(BaseDataLoader):
         X['diff_prob'] = X['prob1'] - X['prob2']
         return X
 
-    def _extract_target(self, data, data_type):
+    @staticmethod
+    def _extract_target(data, data_type):
         """Extract target."""
         if data_type == 'fixtures':
             return None
-        if self.target_type_ == 'H':
-            y = (data['FTHG'] > data['FTAG']).astype(int)
-        elif self.target_type_ == 'D':
-            y = (data['FTHG'] == data['FTAG']).astype(int)
-        elif self.target_type_ == 'A':
-            y = (data['FTHG'] < data['FTAG']).astype(int)
-        elif self.target_type_ == 'hH':
-            y = (data['HTHG'] > data['HTAG']).astype(int)
-        elif self.target_type_ == 'hD':
-            y = (data['HTHG'] == data['HTAG']).astype(int)
-        elif self.target_type_ == 'hA':
-            y = (data['HTHG'] < data['HTAG']).astype(int)
-        elif 'over' in self.target_type_:
-            y = (data['FTHG'] + data['FTAG'] > float(self.target_type_[-2:])).astype(int)
-        elif 'under' in self.target_type_:
-            y = (data['FTHG'] + data['FTAG'] < float(self.target_type_[-2:])).astype(int)
-        elif self.target_type_ == 'both_score':
-            y = (data['FTHG'] * data['FTAG'] > 0).astype(int)
-        elif self.target_type_ == 'final_score':
+        else:
             y = data[['FTHG', 'FTAG']]
         return y
 

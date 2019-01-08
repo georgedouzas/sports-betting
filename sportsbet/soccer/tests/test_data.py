@@ -128,49 +128,25 @@ def test_fd_fixtures_transform():
     assert set(content.Div.unique()).issubset(FD_FIXTURES_DATA_SOURCE.leagues_ids)
 
 
-@pytest.mark.parametrize("leagues_ids,target_type", [
-    (None, 'H'),
-    ('all', None)
-])
-def test_soccer_data_loader_type_error(leagues_ids, target_type):
+def test_soccer_data_loader_type_error():
     """Test initialization of soccer data loader class."""
     with pytest.raises(TypeError):
-        SoccerDataLoader(leagues_ids, target_type)
+        SoccerDataLoader(None)
 
 
-@pytest.mark.parametrize('leagues_ids,target_type', [
-    ('All', 'H'),
-    ('all', 'Final_score'),
-    ('all', 'Under0.5'),
-    (['G2', 'F1'], 'over2.5')
-])
-def test_soccer_data_loader_value_error(leagues_ids, target_type):
+@pytest.mark.parametrize('leagues_ids', ['All', ['G2', 'F1']])
+def test_soccer_data_loader_value_error(leagues_ids):
     """Test initialization of soccer data loader class."""
     with pytest.raises(ValueError):
-        SoccerDataLoader(leagues_ids, target_type)
+        SoccerDataLoader(leagues_ids)
 
 
-@pytest.mark.parametrize('leagues_ids,target_type', [
-    (['E1', 'G1'], 'H'),
-    ('all', 'over2.5')
-])
-def test_soccer_data_loader_intialization(leagues_ids, target_type):
+@pytest.mark.parametrize('leagues_ids', [['E1', 'G1'], 'all'])
+def test_soccer_data_loader_intialization(leagues_ids):
     """Test initialization of soccer data loader class."""
-    soccer_data_loader = SoccerDataLoader(leagues_ids, target_type)
+    soccer_data_loader = SoccerDataLoader(leagues_ids)
     if leagues_ids != 'all':
         assert soccer_data_loader.leagues_ids_ == leagues_ids
     else:
         assert set(soccer_data_loader.leagues_ids_) == set(LEAGUES_MAPPING.keys())
-    assert soccer_data_loader.target_type_ == target_type
 
-
-@pytest.mark.parametrize('target_type', ['H', 'D', 'over2.5', 'under1.5', 'final_score'])
-def test_soccer_data_loader_target(target_type):
-    """Test fetch data method."""
-    soccer_data_loader = SoccerDataLoader(['G1', 'I1'], target_type)
-    assert soccer_data_loader.fixtures_data[1] is None
-    if target_type == 'final_score':
-        columns_types = soccer_data_loader.training_data[1].dtypes
-        assert len(set(columns_types)) == 1 and columns_types[0] is np.dtype(int)
-    else:
-        assert set(soccer_data_loader.training_data[1].unique()) == set([0, 1])

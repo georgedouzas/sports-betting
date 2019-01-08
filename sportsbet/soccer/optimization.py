@@ -22,73 +22,78 @@ from sklearn.model_selection import ParameterGrid
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from tqdm import tqdm
 
+from sportsbet.soccer.data import SoccerDataLoader
+
 from .. import PATH
 
 RESULTS_PATH = join(PATH, 'results')
-
-
-class BettingSpace:
-
-    pass
 
 
 class BettingAgent:
     """Class that is used for model evaluation, training and predictions 
     on upcoming matches."""
 
-    def __init__(self, classifiers, param_grids, betting_type):
-        self.classifiers = classifiers
-        self.betting_type = betting_type
+    def __init__(self, classifiers, betting_types):
+        self.estimators = classifiers
+        self.betting_types = betting_types
+    
+    def _extract_target(self, data, betting_type):
+        """Extract target."""
 
-    def fit_predict(self, X, y, index, classifier, train_indices, test_indices, random_state):
+        # Check betting type
+        target_type_error_msg = 'Wrong target type.'
+        if not isinstance(target_type, str):
+            raise TypeError(target_type_error_msg)
+        if target_type not in ('H', 'D', 'A', 'both_score', 'final_score') and 'over' not in target_type and 'under' not in target_type:
+            raise ValueError(target_type_error_msg)
+        self.target_type_ = target_type
+
+        if self.target_type_ == 'H':
+            y = (data['FTHG'] > data['FTAG']).astype(int)
+        elif self.target_type_ == 'D':
+            y = (data['FTHG'] == data['FTAG']).astype(int)
+        elif self.target_type_ == 'A':
+            y = (data['FTHG'] < data['FTAG']).astype(int)
+        elif 'over' in self.target_type_:
+            y = (data['FTHG'] + data['FTAG'] > float(self.target_type_[-2:])).astype(int)
+        elif 'under' in self.target_type_:
+            y = (data['FTHG'] + data['FTAG'] < float(self.target_type_[-2:])).astype(int)
+        elif self.target_type_ == 'both_score':
+            y = (data['FTHG'] * data['FTAG'] > 0).astype(int)
+        elif self.target_type_ == 'final_score':
+            y = data[['FTHG', 'FTAG']]
+        return y
+
+    def fit_predict(self, X, y, estimator, train_indices, test_indices, random_state):
         """Fit estimator and predict for a set of train and test indices."""
     
         # Set random state
-        for param in classifier.get_params():
+        for param in estimator.get_params():
             if 'random_state' in param:
-                classifier.set_params(**{param: random_state})
-
-        # Generate target label
-        label = self.target_labels_[index]
-
-        # Binarize labels
-        y_bin = y.copy()
-        y_bin[y_bin != label] = '-%s' % label
+                estimator.set_params(**{param: random_state})
 
         # Filter test samples
         X_test = X[test_indices]
 
         # Fit classifier
-        classifier.fit(X[train_indices], y_bin[train_indices])
+        estimator.fit(X[train_indices], y[train_indices])
     
         # Get test set predictions
-        probabilities = pd.DataFrame(classifier.predict_proba(X_test), columns=['-%s' % label, label])
+        y_pred = estimator.predict_proba(X_test)
 
-        return (random_state, index,  test_indices[0]), probabilities
+        return y_pred
+        
+    def backtest(self, X, y, odds, test_season, random_states):
+        """Apply backtesting to betting agent."""
 
-    def initialize_parameters(self, matches, test_season, random_states):
+        # Extract data
+        X, y, odds, matches = training_data
 
         # Train and test indices
         self.test_indices_ = matches.loc[matches['Season'] == test_season].groupby('Month', sort=False).apply(lambda row: np.array(row.index)).values 
         self.train_indices_ = [np.arange(0, test_ind[0]) for test_ind in self.test_indices_]
 
-        # Generate list of classifiers
-        self.classifiers_ = [clone(classifier).set_params(**params) for classifier, param_grid in zip(self.classifiers, self.param_grids) for params in ParameterGrid(param_grid)]
-
-        # Generate indices for param_grids
-        self.param_grids_indices_ = [(ind, clf.get_params()) for ind, clf in enumerate(self.classifiers_)]
-
-        # Generate target labels
-        self.target_labels_ = [result for result, param_grid in zip(RESULTS[self.betting_type], self.param_grids) for _ in ParameterGrid(param_grid)]
-        
-    def backtest(self, max_odds, test_season, random_states):
-        """Apply backtesting to betting agent."""
-
-        # Load and prepare data
-        X, y, odds, matches = load_data('historical', max_odds)
-
-        # Initialize parameters
-        self.initialize_parameters(matches, test_season, random_states)
+        # Clone 
 
         # Run cross-validation
         cv_data = Parallel(n_jobs=-1)(delayed(self.fit_predict)(X, y, index, classifier, train_indices, test_indices, random_state) 

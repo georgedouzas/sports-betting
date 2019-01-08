@@ -41,4 +41,3 @@ class BaseDataLoader:
     def fixtures_data(self):
         """Generate the fixtures data."""
         self.fixtures_time_stamp_ = dt.now().ctime()
-
