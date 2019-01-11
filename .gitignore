@@ -1,36 +1,6 @@
-# ----------------------------
-# Generated Files & Folders
-# ----------------------------
-
-# [1] : Windows thumbnail cache files.
-# [2] : Folder config file.
-# [3] : Recycle Bin used on file shares.
-
 *.egg-info
 __pycache__
 .vscode
 .idea
 .DS_Store
-.sass-cache
 *.code-workspace
-Thumbs.db     # [1]
-ehthumbs.db   # [1]
-Desktop.ini   # [2]
-$RECYCLE.BIN  # [3]
-
-# ----------------------------
-# Packaging
-# ----------------------------
-
-logs
-*.log
-npm-debug.log*
-node_modules
-yarn.lock
-package-lock.json
-
-# ----------------------------
-# Project Folders
-# ----------------------------
-
-build/
