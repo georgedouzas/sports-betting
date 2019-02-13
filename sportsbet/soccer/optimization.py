@@ -11,272 +11,186 @@ from os import listdir
 from os.path import join
 from pickle import dump, load
 from pathlib import Path
-from itertools import product, groupby
-from operator import itemgetter
+from itertools import product
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import precision_score
-from sklearn.utils import Parallel, delayed
-from sklearn.model_selection import ParameterGrid
-from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.utils import Parallel, delayed, check_X_y
+from sklearn.model_selection import BaseCrossValidator
+from sklearn.base import clone, BaseEstimator, ClassifierMixin
+from sklearn.utils.metaestimators import _BaseComposition
+from sklearn.metrics import log_loss
 from tqdm import tqdm
 
-from sportsbet.soccer.data import SoccerDataLoader
+TARGET_TYPES_MAPPING = {
+    'H': lambda y: (y[:, 0] > y[:, 1]).astype(int),
+    'D': lambda y: (y[:, 0] == y[:, 1]).astype(int),
+    'A': lambda y: (y[:, 0] < y[:, 1]).astype(int),
+    'both_score': lambda y: (y[:, 0] * y[:, 1] > 0).astype(int),
+    'no_nil_score': lambda y: (y[:, 0] + y[:, 1] > 0).astype(int)
+}
 
-from .. import PATH
 
-RESULTS_PATH = join(PATH, 'results')
+def combine_odds(odds, betting_types):
+    """Combine odds of different betting types."""
+    return 1 / np.concatenate([1 / odds[betting_type].values.reshape(-1, 1) for betting_type in betting_types], axis=1).sum(axis=1)
 
 
-class BettingAgent:
-    """Class that is used for model evaluation, training and predictions 
-    on upcoming matches."""
+class SeasonSplit(BaseCrossValidator):
+    """Split time-series data based on a test season."""
 
-    def __init__(self, classifiers, betting_types):
-        self.estimators = classifiers
-        self.betting_types = betting_types
-    
-    def _extract_target(self, data, betting_type):
-        """Extract target."""
+    def __init__(self, n_splits, seasons, test_season):
+        self.n_splits = n_splits
+        self.seasons = seasons
+        self.test_season = test_season
 
-        # Check betting type
-        target_type_error_msg = 'Wrong target type.'
-        if not isinstance(target_type, str):
-            raise TypeError(target_type_error_msg)
-        if target_type not in ('H', 'D', 'A', 'both_score', 'final_score') and 'over' not in target_type and 'under' not in target_type:
-            raise ValueError(target_type_error_msg)
-        self.target_type_ = target_type
+    def split(self, X=None, y=None, groups=None):
+        """Generate indices to split data into training and test set."""
+        start_index, end_index = (self.seasons != self.test_season).sum(), len(self.seasons)
+        step = (end_index - start_index) // self.n_splits
+        breakpoints = list(range(start_index, end_index, step)) + [end_index]
+        for start, end in zip(breakpoints[:-1], breakpoints[1:]):
+            yield np.arange(0, start), np.arange(start, end)
 
-        if self.target_type_ == 'H':
-            y = (data['FTHG'] > data['FTAG']).astype(int)
-        elif self.target_type_ == 'D':
-            y = (data['FTHG'] == data['FTAG']).astype(int)
-        elif self.target_type_ == 'A':
-            y = (data['FTHG'] < data['FTAG']).astype(int)
-        elif 'over' in self.target_type_:
-            y = (data['FTHG'] + data['FTAG'] > float(self.target_type_[-2:])).astype(int)
-        elif 'under' in self.target_type_:
-            y = (data['FTHG'] + data['FTAG'] < float(self.target_type_[-2:])).astype(int)
-        elif self.target_type_ == 'both_score':
-            y = (data['FTHG'] * data['FTAG'] > 0).astype(int)
-        elif self.target_type_ == 'final_score':
-            y = data[['FTHG', 'FTAG']]
-        return y
+    def get_n_splits(self, X=None, y=None, groups=None):
+        """Returns the number of splitting iterations in the cross-validator"""
+        return self.n_splits
 
-    def fit_predict(self, X, y, estimator, train_indices, test_indices, random_state):
-        """Fit estimator and predict for a set of train and test indices."""
-    
-        # Set random state
-        for param in estimator.get_params():
-            if 'random_state' in param:
-                estimator.set_params(**{param: random_state})
 
-        # Filter test samples
-        X_test = X[test_indices]
+def mean_yields(y_true, y_pred, target_types, strategy):
+
+    # Extract targets
+    y_true = np.concatenate([TARGET_TYPES_MAPPING[target_type](y_true).reshape(-1, 1) for target_type in target_types], axis=1)
+
+    # Extract predictions
+    y_pred, odds = y_pred
+
+    # Calculate yields and values
+    yields = y_true * odds - 1.0
+    values = y_pred * odds
+
+    # Apply strategy
+    yields[(y_pred if strategy[0] == 'probs' else values) <= strategy[1]] = 0.0
+    yields = yields[range(len(yields)), (y_pred if 'probs' in strategy[0] else values).argmax(axis=1)]
+
+    # Exclude no bets
+    yields = yields[yields != 0.0]
+
+    return yields.mean()
+
+
+class BettingClassifier(BaseEstimator, ClassifierMixin):
+
+    def __init__(self, classifier):
+        self.classifier = classifier
+
+    def fit(self, X, y, target_type):
+        """Fit betting classifier."""
+
+        # Check target type
+        if target_type not in TARGET_TYPES_MAPPING.keys():
+            raise ValueError('Wrong target type.')
+
+        # Extract target
+        y = TARGET_TYPES_MAPPING[target_type](y)
 
         # Fit classifier
-        estimator.fit(X[train_indices], y[train_indices])
-    
-        # Get test set predictions
-        y_pred = estimator.predict_proba(X_test)
+        self.classifier_ = clone(self.classifier).fit(X[:, :-1], y)
 
-        return y_pred
-        
-    def backtest(self, X, y, odds, test_season, random_states):
-        """Apply backtesting to betting agent."""
+        return self
 
-        # Extract data
-        X, y, odds, matches = training_data
+    def predict_proba(self, X):
+        """"Predict probability of betting classifier."""
 
-        # Train and test indices
-        self.test_indices_ = matches.loc[matches['Season'] == test_season].groupby('Month', sort=False).apply(lambda row: np.array(row.index)).values 
-        self.train_indices_ = [np.arange(0, test_ind[0]) for test_ind in self.test_indices_]
-
-        # Clone 
-
-        # Run cross-validation
-        cv_data = Parallel(n_jobs=-1)(delayed(self.fit_predict)(X, y, index, classifier, train_indices, test_indices, random_state) 
-        for (train_indices, test_indices), (index, classifier), random_state in tqdm(list(product(zip(self.train_indices_, self.test_indices_), enumerate(self.classifiers_), random_states)), desc='Backtesting: '))
-        self.cv_data = dict(cv_data)
-
-        # Generate probabilities data
-        indices_combinations = list(product(*[[index for index, _ in results] for _, results in groupby(enumerate(self.target_labels_), key=itemgetter(1))]))
-        probabilities_data = {}
-        for random_state in random_states:
-            for indexH, indexA, indexD in indices_combinations:
-                data = []
-                for indices in self.test_indices_:
-                    data.append(pd.concat([
-                        self.cv_data[(random_state, indexH, indices[0])], 
-                        self.cv_data[(random_state, indexA, indices[0])],
-                        self.cv_data[(random_state, indexD, indices[0])]], axis=1)
-                    )
-                data = pd.concat(data).reset_index(drop=True)
-                probabilities_data[(random_state, indexH, indexA, indexD)] = data
-        
-        # Generate months, odds and results data 
-        months_data, odds_data, results_data = [], [], []
-        results = pd.DataFrame(y, columns=['Result'])
-        for indices in self.test_indices_:
-            for data, df in zip([months_data, odds_data, results_data], [matches.Month, odds, results]):
-                data.append(df.iloc[indices])
-
-        # Backtest data
-        self.backtesting_data_ = (
-            pd.concat(months_data).reset_index(drop=True),
-            pd.concat(odds_data).reset_index(drop=True),
-            pd.concat(results_data).reset_index(drop=True),
-            probabilities_data
-        )
-
-    def extract_backtesting_results(self, betting_results):
-        """Extract backtesting results."""        
-
-        # Unpack data
-        months, odds, results, probabilities = self.backtesting_data_
-
-        # Backtesting results placeholder
-        self.backtesting_results_ = {}
+        # Predict probability
+        y_pred = self.classifier_.predict_proba(X[:, :-1])[:, 1:]
 
         # Extract odds
-        if self.betting_type == '12X':
-            back_bets_profits = odds.applymap(lambda odd: [odd - 1.0, -1.0])
-            lay_bets_profits = odds.applymap(lambda odd: [1.0, 1.0 - odd])
-            profits = pd.concat([back_bets_profits, lay_bets_profits], axis=1)
-            profits['-'] = [[0.0, 0.0]] * len(profits)
-            profits_mapping = profits.apply(lambda profits: dict(zip(['H', 'A', 'D', '-H', '-A', '-D', '-'], profits.values.tolist())), axis=1).rename('Mapping')
+        odds = X[:, -1:]
 
-        for key, probs in probabilities.items():
+        return y_pred, odds
 
-            # Extract probabilities
-            probs = probs[betting_results]
 
-            # Define boolean mask
-            mask = (probs > 0.5).sum(axis=1).astype(bool)
+class MetaBettingClassifier(_BaseComposition):
 
-            # Extract predictions
-            predictions = probs.idxmax(axis=1).rename('Prediction')
-            predictions.loc[~mask] = '-'
+    def __init__(self, betting_classifiers):
+        self.betting_classifiers = betting_classifiers
 
-            # Extract profits
-            profits = pd.concat([results, predictions, profits_mapping], axis=1)
-            profits = profits.apply(lambda row: row['Mapping'][row['Prediction']][0 if row['Prediction'] == row['Result'] else 1], axis=1).rename('Profit')
-
-            # Generate results
-            self.backtesting_results_[key] = pd.DataFrame({
-                'Bets percentage': [mask.sum() / len(mask)],
-                'Precision': [precision_score(results, predictions, average='micro')],
-                'Total yield': [profits.sum()],
-                'Mean yield': [profits.mean()]
-            })
-
-    def fit_dump_classifiers(self, backtest_index):
-        """Fit and dump classifiers."""
-
-        # Create directory
-        path = join(RESULTS_PATH, backtest_index)
-        Path(path).mkdir(exist_ok=True)
-
-        # Load training data
-        X, y, _, _ = load_data('historical', ['pinnacle', 'bet365', 'bwin'])
-
-        # Load backtesting results
-        predicted_result, params_indices = pd.read_csv(join(RESULTS_PATH, 'backtesting.csv'), usecols=['Predicted results', 'Indices']).values[int(backtest_index)]
+    def fit(self, X, y):
+        """Fit betting classifiers."""
         
-        # Extract predicted results and parameters indices
-        predicted_results = list(predicted_result)
-        params_indices = dict(zip(RESULTS_HAD, eval(params_indices)[0]))
+        # Placeholder
+        self.betting_classifiers_ = []
 
-        # Fit and dump classifiers
-        for label in predicted_results:
+        # Number of classifiers
+        self.n_clfs_ = len(self.betting_classifiers)
 
-            # Select classifier and parameters
-            classifier = self.classifiers[label]
-            params = self.param_grids[label][params_indices[label]]
+        # Fit betting classifiers
+        for ind, (target_type, clf) in enumerate(self.betting_classifiers):
+            X_clf = np.concatenate([X[:, :-self.n_clfs_], X[:, ind - self.n_clfs_].reshape(-1, 1)], axis=1)
+            self.betting_classifiers_.append(clone(clf).fit(X_clf, y, target_type))
 
-            # Binarize labels
-            y_bin = y.copy()
-            y_bin[y_bin != label] = '-'
+        return self
+    
+    def predict_proba(self, X):
+        """Predict probabilities of betting classifiers."""
 
-            # Fit classifier
-            classifier.set_params(**params).fit(X, y_bin)
-            
-            # Dump classifier
-            with open(join(path, '%s.pkl' % label) , 'wb') as file:
-                dump(classifier, file)
+        # Placeholders
+        y_pred, odds = [], []
+
+        # Predict probabilities
+        for ind, clf in enumerate(self.betting_classifiers_):
+            X_clf = np.concatenate([X[:, :-self.n_clfs_], X[:, ind - self.n_clfs_].reshape(-1, 1)], axis=1)
+            proba, odd = clf.predict_proba(X_clf)
+            y_pred.append(proba)
+            odds.append(odd)
         
-    def predict(self, backtest_index):
-        """Generate predictions using fitted classifiers."""
-
-        # Load predictions data
-        X, _, odds, matches  = load_data('predictions', ['pinnacle', 'bet365', 'bwin'])
-
-        # Define file path and pickled classifiers
-        path = join(RESULTS_PATH, backtest_index)
-        pickled_classifiers = [file for file in listdir(path) if 'pkl' in file]
-
-        # Iterate through results
-        y_pred = pd.DataFrame()
-        for pickled_classifier in pickled_classifiers:
-
-            # Load classifier
-            with open(join(path, pickled_classifier) , 'rb') as file:
-                classifier = load(file)
-
-            # Populate predictions
-            y_pred = pd.concat([y_pred, pd.DataFrame(classifier.predict_proba(X)[:, -1], columns=[pickled_classifier[0]])], axis=1)
-        
-        # Extract predictions
-        y_pred['Bet'] = y_pred.idxmax(axis=1)
-        y_pred.loc[~(y_pred[ y_pred.columns[:-1]] > 0.5).sum(axis=1).astype(bool), 'Bet'] = '-'
-
-        # Extract maximum odds
-        y_pred['Maximum Odds'] = odds.apply(lambda odds: dict(zip(RESULTS_HAD, odds.values)), axis=1)
-        y_pred['Maximum Odds'] = y_pred.apply(lambda row: row['Maximum Odds'][row['Bet']] if row['Bet'] != '-' else np.nan, axis=1)
-        
-        # Combine data
-        predictions = pd.concat([matches.drop(columns=['Month', 'Day']), y_pred[['Bet', 'Maximum Odds']]], axis=1)
-        predictions = predictions[predictions['Bet'] != '-'].reset_index(drop=True)
-
-        return predictions
+        return np.concatenate(y_pred, axis=1), np.concatenate(odds, axis=1)
 
 
 if __name__ == '__main__':
 
+    from sklearn.linear_model import LogisticRegression
+    from imblearn.over_sampling import SMOTE
+    from imblearn.pipeline import make_pipeline
+    from sportsbet.soccer.optimization import SeasonSplit, BettingClassifier, MetaBettingClassifier, mean_yields
+    from sportsbet.soccer.data import SoccerDataLoader
+    import numpy as np
+    from sklearn.metrics import make_scorer
+    from sklearn.model_selection import cross_val_score
+    from sklearn.neural_network import MLPClassifier
 
+    # Load data
+    sdl = SoccerDataLoader('all')
+    X, y, odds, matches = sdl.training_data
 
-    from importlib import import_module
+    # Betting classifiers
+    bclf_H = BettingClassifier(LogisticRegression(solver='lbfgs', max_iter=10000))
+    X_H = np.concatenate([X, odds[['H']]], axis=1)
 
-    from sklearn.dummy import DummyClassifier
+    bclf_A = BettingClassifier(make_pipeline(SMOTE(sampling_strategy=0.60), LogisticRegression(solver='lbfgs', max_iter=5000, C=1e3)))
+    X_A = np.concatenate([X, odds[['A']]], axis=1)
 
-    from ..soccer.optimization import BookmakerEstimator
+    bclf_D = BettingClassifier(make_pipeline(SMOTE(sampling_strategy=0.95, random_state=0), MLPClassifier(activation='logistic', hidden_layer_sizes=(50, 50), validation_fraction=0.3, early_stopping=True)))
+    X_D = np.concatenate([X, odds[['D']]], axis=1)
 
-    DEFAULT_ESTIMATORS = {
-        '12X': {
-            'random': [(DummyClassifier(), {}), (DummyClassifier(), {}), (DummyClassifier(), {})],
-            'bookmaker': [(BookmakerEstimator('12X'), {}), (BookmakerEstimator('12X'), {}),(BookmakerEstimator('12X'), {})]
-        },
-        'OU2.5': {
-            'random': [(DummyClassifier(), {})],
-            'bookmaker': [(BookmakerEstimator('OU2.5'), {})]
-        }
-    }
+    mbclf = MetaBettingClassifier([('A', bclf_H), ('D', bclf_D)])
+    X_AD = np.concatenate([X, odds[['A', 'D']]], axis=1)
 
+    # Cross validation scores
+    cv = SeasonSplit(5, matches.Season.values, '1819')
 
-    def import_estimators(clfs_name):
+    scorer_H = make_scorer(mean_yields, needs_proba=True, target_types=['H'], strategy=('probs', 0.5))
+    cross_val_score(bclf_H, X_H, y, scoring=scorer_H, cv=cv, fit_params={'target_type': 'H'})
 
-        # Import classifiers
-        try:
-            import config
-            clfs_param_grids = getattr(config, clfs_name)
-        except AttributeError:
-            clfs_param_grids = DEFAULT_ESTIMATORS[clfs_name]
-    
-        # Extract classifiers and parameters grids
-        classifiers, param_grids = zip(*clfs_param_grids)
+    scorer_A = make_scorer(mean_yields, needs_proba=True, target_types=['A'], strategy=('probs', 0.5))
+    cross_val_score(bclf_A, X_A, y, scoring=scorer_A, cv=cv, fit_params={'target_type': 'A'})
 
-        return classifiers, param_grids
+    scorer_D = make_scorer(mean_yields, needs_proba=True, target_types=['D'], strategy=('probs', 0.5))
+    cross_val_score(bclf_D, X_D, y, scoring=scorer_D, cv=cv, fit_params={'target_type': 'D'})
+
+    scorer_AD = make_scorer(mean_yields, needs_proba=True, target_types=['A', 'D'], strategy=('probs', 0.5))
+    cross_val_score(mbclf, X_AD, y, scoring=scorer_AD, cv=cv)
     
     # Create parser
     parser = ArgumentParser('Models evaluation using backtesting.')

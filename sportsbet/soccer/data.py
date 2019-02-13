@@ -224,7 +224,7 @@ class SoccerDataLoader(BaseDataLoader):
         X['diff_proj_score'] = X['proj_score1'] - X['proj_score2']
         X['diff_spi'] = X['spi1'] - X['spi2']
         X['diff_prob'] = X['prob1'] - X['prob2']
-        return X
+        return X.values
 
     @staticmethod
     def _extract_target(data, data_type):
@@ -232,7 +232,7 @@ class SoccerDataLoader(BaseDataLoader):
         if data_type == 'fixtures':
             return None
         else:
-            y = data[['FTHG', 'FTAG']]
+            y = data[['FTHG', 'FTAG']].values
         return y
 
     def _extract_odds(self, data):

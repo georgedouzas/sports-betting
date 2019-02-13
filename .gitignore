@@ -1,6 +1,6 @@
 *.egg-info
 __pycache__
 .vscode
-.idea
-.DS_Store
 *.code-workspace
+*.pyc
+data
