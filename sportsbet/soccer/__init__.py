@@ -1,10 +1,11 @@
-from collections import Counter
+"""
+Defines the soccer data path.
+"""
 
-from sklearn.dummy import DummyClassifier
+from os.path import join
 
-from .optimization import BettingAgent
+from .. import PATH
 
-
-__all__ = ['BettingAgent']
+SOCCER_PATH = join(PATH, 'soccer')
 
 

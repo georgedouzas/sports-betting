@@ -2,12 +2,10 @@
 Defines the data path.
 """
 
-from pathlib import Path
-from os.path import join
-from sys import path
+from os.path import join, dirname
 
-PATH = join(str(Path.home()), '.sports-betting')
-path.append(PATH)
+PATH = join(dirname(__file__), '..', 'data')
+
 
 
 

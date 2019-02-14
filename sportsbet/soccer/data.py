@@ -6,13 +6,13 @@ from various leagues.
 from os.path import join
 from itertools import product
 from difflib import SequenceMatcher
+from sqlite3 import connect
 
-import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
-from ..base import BaseDataSource, BaseDataLoader
+from . import SOCCER_PATH
 
+DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 LEAGUES_MAPPING = {
     'E0': 'Barclays Premier League',
     'B1': 'Belgian Jupiler League',
@@ -35,11 +35,91 @@ LEAGUES_MAPPING = {
 }
 
 
-def generate_names_mapping(left_data, right_data):
-    """Generate names mapping."""
+def check_leagues_ids(leagues_ids):
+    
+    # Set error message
+    leagues_ids_error_msg = 'Parameter `leagues_ids` should be equal to `all` or a list that contains any of %s elements. Got %s instead.' % (', '.join(LEAGUES_MAPPING.keys()), leagues_ids)
+
+    # Check types
+    if not isinstance(leagues_ids, (str, list)):
+        raise TypeError(leagues_ids_error_msg)
+    
+    # Check values
+    if leagues_ids != 'all' and not set(LEAGUES_MAPPING.keys()).issuperset(leagues_ids):
+        raise ValueError(leagues_ids_error_msg)
+    
+    leagues_ids = list(LEAGUES_MAPPING.keys()) if leagues_ids == 'all' else leagues_ids[:]
+
+    return leagues_ids
+
+
+def create_spi_tables(leagues_ids):
+
+    # Check leagues ids
+    leagues_ids = check_leagues_ids(leagues_ids)
+
+    # Download data
+    spi = pd.read_csv('https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv').drop(columns=['league_id'])
+
+    # Cast to date
+    spi['date'] = pd.to_datetime(spi['date'], format='%Y-%m-%d')
+
+    # Filter leagues
+    leagues = [LEAGUES_MAPPING[league_id] for league_id in leagues_ids]
+    spi = spi[spi['league'].isin(leagues)]
+
+    # Convert league names to ids
+    inverse_leagues_mapping = {league: league_id for league_id, league in LEAGUES_MAPPING.items()}
+    spi['league'] = spi['league'].apply(lambda league: inverse_leagues_mapping[league])
+
+    # Filter matches
+    mask = (~spi['score1'].isna()) & (~spi['score2'].isna())
+    spi_historical, spi_fixtures = spi[mask], spi[~mask]
+
+    # Save tables
+    for name, df in zip(['spi_historical', 'spi_fixtures'], [spi_historical, spi_fixtures]):
+        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+
+
+def create_fd_tables(leagues_ids, seasons):
+
+    # Define parameters
+    base_url = 'http://www.football-data.co.uk'
+    cols = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
+    features_cols = ['BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh' , 'BbAvAHH', 'BbAvAHA']
+    odds_cols = ['PSH', 'PSA', 'PSD', 'BbMx>2.5', 'BbMx<2.5', 'BbAHh', 'BbMxAHH', 'BbMxAHA']
+
+    # Check leagues ids
+    leagues_ids = check_leagues_ids(leagues_ids)
+
+    # Download historical data
+    fd_historical = []
+    for league_id, season in product(leagues_ids, seasons):
+        data = pd.read_csv(join(base_url, 'mmz4281', season, league_id), usecols=cols + features_cols + odds_cols)
+        data['Date'] = pd.to_datetime(data['Date'], dayfirst=True)
+        data['season'] = season
+        fd_historical.append(data)
+    fd_historical = pd.concat(fd_historical, ignore_index=True)
+
+    # Download fixtures data
+    fd_fixtures = pd.read_csv(join(base_url, 'fixtures.csv'), usecols=cols + features_cols + odds_cols)
+    fd_fixtures['Date'] = pd.to_datetime(fd_fixtures['Date'], dayfirst=True)
+    fd_fixtures = fd_fixtures[fd_fixtures['Div'].isin(leagues_ids)]
+
+    # Save tables
+    for name, df in zip(['fd_historical', 'fd_fixtures'], [fd_historical, fd_fixtures]):
+        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+
+
+def create_names_mapping_table():
+    """Create names mapping table."""
+
+    # Load data
+    left_data = pd.read_sql('select date, league, team1, team2 from spi_historical', DB_CONNECTION)
+    right_data = pd.read_sql('select Date, Div, HomeTeam, AwayTeam from fd_historical', DB_CONNECTION)
 
     # Rename columns
-    key_columns = ['key%s' % ind for ind in range(left_data.shape[1] - 2)]
+    key_columns = ['key0', 'key1']
     left_data.columns = key_columns + ['left_team1', 'left_team2']
     right_data.columns = key_columns + ['right_team1', 'right_team2']
 
@@ -66,236 +146,47 @@ def generate_names_mapping(left_data, right_data):
     indices = matching.groupby('left_team')[0].idxmax().values
         
     # Generate mapping
-    mapping = matching.take(indices).drop(columns=0).reset_index(drop=True)
-        
-    return mapping
+    names_mapping = matching.take(indices).drop(columns=0).reset_index(drop=True)
+
+    # Save table
+    names_mapping.to_sql('names_mapping', DB_CONNECTION, index=False, if_exists='replace')
 
 
-class SPIDataSource(BaseDataSource):
+def create_modeling_tables():
 
-    url = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
-    match_cols = ['date', 'league', 'team1', 'team2']
-    full_goals_cols = ['score1', 'score2']
-    spi_cols = ['spi1', 'spi2', 'prob1', 'probtie', 'prob2', 'proj_score1', 'proj_score2']
-
-    def __init__(self, leagues_ids):
-        self.leagues_ids = leagues_ids
+    # Define parameters
+    spi_keys = ['date', 'league', 'team1', 'team2']
+    fd_keys = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
+    odds_cols = ['PSH', 'PSD', 'BbMx>2.5', 'BbMx<2.5', 'BbAHh', 'BbMxAHH', 'BbMxAHA']
+    input_cols = ['spi1', 'spi2', 'prob1', 'prob2', 'probtie', 'proj_score1', 'proj_score2', 'importance1', 'importance2', 'BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh', 'BbAvAHH', 'BbAvAHA']
+    output_cols = ['score1', 'score2', 'xg1', 'xg2', 'nsxg1', 'nsxg2', 'adj_score1', 'adj_score2']
     
-    def download(self):
-        """Download the data source."""
-        columns = self.match_cols + self.full_goals_cols + self.spi_cols
-        self.content_ = pd.read_csv(self.url, usecols=columns)
+    # Load data
+    data = {}
+    for name in ('spi_historical', 'spi_fixtures', 'fd_historical', 'fd_fixtures', 'names_mapping'):
+        parse_dates = ['date'] if name in ('spi_historical', 'spi_fixtures') else ['Date'] if name in ('fd_historical', 'fd_fixtures') else None
+        data[name] = pd.read_sql('select * from %s' % name, DB_CONNECTION, parse_dates=parse_dates)
 
-        return self
+    # Rename teams
+    for col in ['team1', 'team2']:
+        for name in ('spi_historical', 'spi_fixtures'):
+            data[name] = pd.merge(data[name], data['names_mapping'], left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
 
-    def transform(self):
-        """Transform the data source."""
+    # Combine data
+    historical = pd.merge(data['spi_historical'], data['fd_historical'], left_on=spi_keys, right_on=fd_keys).dropna(subset=odds_cols, how='any').reset_index(drop=True)
+    fixtures = pd.merge(data['spi_fixtures'], data['fd_fixtures'], left_on=spi_keys, right_on=fd_keys)
 
-        # Copy content
-        content = self.content_.copy()
+    # Extract training, odds and fixtures
+    training = historical.loc[:, ['season'] + spi_keys + input_cols + output_cols]
+    odds = historical.loc[:, spi_keys + odds_cols]
+    fixtures = fixtures.loc[:, spi_keys + input_cols]
 
-        # Cast to date
-        content['date'] = pd.to_datetime(content['date'], format='%Y-%m-%d')
+    # Feature extraction
+    for df in (training, fixtures):
+        df['diff_proj_score'] = df['proj_score1'] - df['proj_score2']
+        df['diff_spi'] = df['spi1'] - df['spi2']
+        df['diff_prob'] = df['probtie'] + (df['prob1'] - df['prob2']).abs()
 
-        # Filter leagues
-        leagues = [LEAGUES_MAPPING[league_id] for league_id in self.leagues_ids if self.leagues_ids]
-        content = content.loc[content['league'].isin(leagues)]
-
-        # Convert league names to ids
-        inverse_leagues_mapping = {league: league_id for league_id, league in LEAGUES_MAPPING.items()}
-        content.loc[:, 'league'] = content.loc[:, 'league'].apply(lambda league: inverse_leagues_mapping[league])
-
-        # Filter matches
-        mask = (~content['score1'].isna()) & (~content['score2'].isna())
-        content = [content[mask].reset_index(drop=True), content[~mask].reset_index(drop=True)]
-
-        return content
-
-
-class FDDataSource(BaseDataSource):
-
-    base_url = 'http://www.football-data.co.uk'
-    match_cols = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
-    full_goals_cols = ['FTHG', 'FTAG']
-    half_goals_cols = ['HTHG', 'HTAG']
-    avg_max_odds_cols = ['BbAvA', 'BbAvD', 'BbAvH', 'BbMxA', 'BbMxD', 'BbMxH']
-    odds_cols = ['PSA', 'PSD', 'PSH', 'B365A', 'B365D', 'B365H', 'BWA', 'BWD', 'BWH']
-    
-
-class FDTrainingDataSource(FDDataSource):
-
-    suffix_url = 'mmz4281'
-
-    def __init__(self, league_id, season):
-        self.league_id = league_id
-        self.season = season
-
-    def download(self):
-        """Download the data source."""
-
-        # Download content
-        columns = self.match_cols + self.full_goals_cols + self.half_goals_cols + self.avg_max_odds_cols + self.odds_cols
-        self.content_ = pd.read_csv(join(self.base_url, self.suffix_url, self.season, self.league_id), usecols=columns)
-
-        return self
-
-    def transform(self):
-        """Transform the data source."""
-
-        # Copy content
-        content = self.content_.reset_index(drop=True).copy()
-
-        # Cast to date
-        content['Date'] = pd.to_datetime(content['Date'], dayfirst=True)
-
-        # Create season column
-        content['Season'] = self.season
-        
-        return content
-
-
-class FDFixturesDataSource(FDDataSource):
-
-    suffix_url = 'fixtures.csv'
-
-    def __init__(self, leagues_ids):
-        self.leagues_ids = leagues_ids
-
-    def download(self):
-        """Download the data source."""
-        columns = self.match_cols + self.avg_max_odds_cols + self.odds_cols
-        self.content_ = pd.read_csv(join(self.base_url, self.suffix_url), usecols=columns)
-        return self
-
-    def transform(self):
-        """Transform the data source."""
-
-        # Copy content
-        content = self.content_.copy()
-
-        # Cast to date
-        content['Date'] = pd.to_datetime(content['Date'], dayfirst=True)
-
-        # Filter leagues
-        content = content.loc[content['Div'].isin(self.leagues_ids)].reset_index(drop=True)
-
-        return content
-
-
-class SoccerDataLoader(BaseDataLoader):
-
-    seasons = ['1617', '1718', '1819']
-    match_cols = ['Season'] + FDDataSource.match_cols
-    input_data_cols = FDDataSource.avg_max_odds_cols + SPIDataSource.spi_cols
-    goals_cols = FDDataSource.full_goals_cols + FDDataSource.half_goals_cols
-    odds_cols = FDDataSource.odds_cols
-
-    def __init__(self, leagues_ids):
-        
-        # Check leagues ids
-        leagues_ids_error_msg = 'Parameter `leagues_ids` should be equal to `all` or a list that contains any of %s elements. Got %s instead.' % (', '.join(LEAGUES_MAPPING.keys()), leagues_ids)
-        if not isinstance(leagues_ids, (str, list)):
-            raise TypeError(leagues_ids_error_msg)
-        if leagues_ids != 'all' and not set(LEAGUES_MAPPING.keys()).issuperset(leagues_ids):
-            raise ValueError(leagues_ids_error_msg)
-        self.leagues_ids_ = list(LEAGUES_MAPPING.keys()) if leagues_ids == 'all' else leagues_ids[:]
-
-    def _fetch_data(self, data_type):
-        """Download and transform data sources."""
-
-        # FD training data
-        if not hasattr(self, 'fd_training_data_'):
-            self.fd_training_data_ = pd.concat([
-                FDTrainingDataSource(league_id, season).download_transform() 
-                for league_id, season in tqdm(list(product(self.leagues_ids_, self.seasons)), desc='Downloading')
-            ], ignore_index=True)
-
-        # SPI data
-        if not hasattr(self, 'spi_training_data_') and not hasattr(self, 'spi_fixtures_data_'):
-            self.spi_training_data_, self.spi_fixtures_data_ = SPIDataSource(self.leagues_ids_).download_transform()
-
-        # FD fixtures data
-        if not hasattr(self, 'fd_fixtures_data_') and data_type=='fixtures':
-            self.fd_fixtures_data_ = FDFixturesDataSource(self.leagues_ids_).download_transform()
-
-    def _extract_input_data(self, data):
-        """Extract input data."""
-        X = data.loc[:, self.input_data_cols]
-        X['diff_proj_score'] = X['proj_score1'] - X['proj_score2']
-        X['diff_spi'] = X['spi1'] - X['spi2']
-        X['diff_prob'] = X['prob1'] - X['prob2']
-        return X.values
-
-    @staticmethod
-    def _extract_target(data, data_type):
-        """Extract target."""
-        if data_type == 'fixtures':
-            return None
-        else:
-            y = data[['FTHG', 'FTAG']].values
-        return y
-
-    def _extract_odds(self, data):
-        """Extract maximum odds."""
-        odds = data.loc[:, self.odds_cols]
-        for ind in range(3):
-            odds.loc[:, odds.columns[ind][-1]] = np.nanmax(odds[odds.columns[ind::3]], axis=1)
-        odds.drop(columns=self.odds_cols, inplace=True)
-        return odds
-
-    def _data(self, data_type):
-        """Generate training or fixtures data."""
-
-        # Fetch data
-        self._fetch_data(data_type)
-
-        # Rename teams
-        if not hasattr(self, 'mapping_'):
-            self.mapping_ = generate_names_mapping(self.spi_training_data_.loc[:, SPIDataSource.match_cols], self.fd_training_data_.loc[:, FDDataSource.match_cols])
-        spi_data = self.spi_training_data_ if data_type == 'training' else self.spi_fixtures_data_
-        for col in ['team1', 'team2']:
-            spi_data = pd.merge(spi_data, self.mapping_, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
-
-        # Combine data
-        if data_type == 'training':
-            data = pd.merge(spi_data, self.fd_training_data_, left_on=SPIDataSource.match_cols + SPIDataSource.full_goals_cols, right_on=FDDataSource.match_cols + FDDataSource.full_goals_cols)
-            data = data.loc[:, self.match_cols + self.input_data_cols + self.goals_cols + self.odds_cols]
-        elif data_type == 'fixtures':
-            data = pd.merge(spi_data, self.fd_fixtures_data_, left_on=SPIDataSource.match_cols, right_on=FDDataSource.match_cols)
-            data = data.loc[:, self.match_cols[1:] + self.input_data_cols + self.odds_cols]
-        
-        # Filter missing values
-        data = data.dropna(subset=self.input_data_cols, how='any')
-        for ind in range(3):
-            data = data.dropna(subset=self.odds_cols[ind::3], how='all')
-        data.reset_index(drop=True, inplace=True)
-
-        # Extract input data
-        X = self._extract_input_data(data)
-
-        # Extract target
-        y = self._extract_target(data, data_type)
-        
-        # Extract odds
-        odds = self._extract_odds(data)
-
-        # Extract matches
-        matches = data.loc[:, self.match_cols[int(data_type == 'fixtures'):]]
-
-        return X, y, odds, matches
-
-    @property
-    def training_data(self):
-        """Generate the training_data."""
-
-        super(SoccerDataLoader, self).training_data
-        
-        return self._data('training')
-
-    @property
-    def fixtures_data(self):
-        """Generate the fixtures data."""
-
-        super(SoccerDataLoader, self).fixtures_data
-        
-        return self._data('fixtures')
+    # Save tables
+    for name, df in zip(['training', 'odds', 'fixtures'], [training, odds, fixtures]):
+        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
