@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Download and prepare training and fixtures data 
 from various leagues.
@@ -7,10 +9,11 @@ from os.path import join
 from itertools import product
 from difflib import SequenceMatcher
 from sqlite3 import connect
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import pandas as pd
 
-from . import SOCCER_PATH
+from sportsbet.soccer import SOCCER_PATH
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 LEAGUES_MAPPING = {
@@ -36,6 +39,7 @@ LEAGUES_MAPPING = {
 
 
 def check_leagues_ids(leagues_ids):
+    """Check correct leagues ids input."""
     
     # Set error message
     leagues_ids_error_msg = 'Parameter `leagues_ids` should be equal to `all` or a list that contains any of %s elements. Got %s instead.' % (', '.join(LEAGUES_MAPPING.keys()), leagues_ids)
@@ -54,6 +58,7 @@ def check_leagues_ids(leagues_ids):
 
 
 def create_spi_tables(leagues_ids):
+    """Download spi data and save them to database."""
 
     # Check leagues ids
     leagues_ids = check_leagues_ids(leagues_ids)
@@ -81,13 +86,15 @@ def create_spi_tables(leagues_ids):
         df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
 
 
-def create_fd_tables(leagues_ids, seasons):
+def create_fd_tables(leagues_ids):
+    """Download fd data and save them to database."""
 
     # Define parameters
     base_url = 'http://www.football-data.co.uk'
     cols = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
     features_cols = ['BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh' , 'BbAvAHH', 'BbAvAHA']
     odds_cols = ['PSH', 'PSA', 'PSD', 'BbMx>2.5', 'BbMx<2.5', 'BbAHh', 'BbMxAHH', 'BbMxAHA']
+    seasons = ['1617', '1718', '1819']
 
     # Check leagues ids
     leagues_ids = check_leagues_ids(leagues_ids)
@@ -153,6 +160,7 @@ def create_names_mapping_table():
 
 
 def create_modeling_tables():
+    """Create tables for machine learning modeling."""
 
     # Define parameters
     spi_keys = ['date', 'league', 'team1', 'team2']
@@ -190,3 +198,34 @@ def create_modeling_tables():
     # Save tables
     for name, df in zip(['training', 'odds', 'fixtures'], [training, odds, fixtures]):
         df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+
+
+def parse_command_line():
+    """Parse command line arguments."""
+    
+    # Create parser description
+    description = 'Select the leagues parameter from the following leagues:\n\n'
+    for league_id, league_name in LEAGUES_MAPPING.items():
+        description += '{} ({})\n'.format(league_id, league_name)
+
+    # Create parser
+    parser = ArgumentParser(description=description, formatter_class=RawDescriptionHelpFormatter)
+
+    # Add arguments
+    parser.add_argument('leagues', nargs='*', default=['all'], help='One of all or any league ids from above.')
+    
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Adjust parameter
+    leagues = args.leagues
+    if len(leagues) == 1 and leagues[0] == 'all':
+        leagues = leagues[0]
+
+    # Create tables
+    for ind, func in enumerate([create_spi_tables, create_fd_tables, create_names_mapping_table, create_modeling_tables]):
+        func(leagues) if ind in (0, 1) else func()
+
+    
+
+

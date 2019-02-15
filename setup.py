@@ -12,10 +12,9 @@ setup(
         'imbalanced-learn==0.4.2',
         'tqdm==4.28.1'
     ],
-    scripts=[
-        'sportsbet/scripts/download',
-        'sportsbet/scripts/evaluate',
-        'sportsbet/scripts/train',
-        'sportsbet/scripts/predict'
-    ]
+    entry_points={
+        'console_scripts':[
+            'download=sportsbet.soccer.data:parse_command_line'
+        ]
+    }
 )
