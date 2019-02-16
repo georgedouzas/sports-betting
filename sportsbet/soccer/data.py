@@ -165,9 +165,9 @@ def create_modeling_tables():
     # Define parameters
     spi_keys = ['date', 'league', 'team1', 'team2']
     fd_keys = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
-    odds_cols = ['PSH', 'PSD', 'BbMx>2.5', 'BbMx<2.5', 'BbAHh', 'BbMxAHH', 'BbMxAHA']
     input_cols = ['spi1', 'spi2', 'prob1', 'prob2', 'probtie', 'proj_score1', 'proj_score2', 'importance1', 'importance2', 'BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh', 'BbAvAHH', 'BbAvAHA']
     output_cols = ['score1', 'score2', 'xg1', 'xg2', 'nsxg1', 'nsxg2', 'adj_score1', 'adj_score2']
+    odds_cols_mapping = {'PSH': 'H', 'PSA': 'A', 'PSD': 'D', 'BbMx>2.5': 'over_2.5', 'BbMx<2.5': 'under_2.5', 'BbAHh': 'handicap', 'BbMxAHH': 'handicap_home', 'BbMxAHA': 'handicap_away'}
     
     # Load data
     data = {}
@@ -181,19 +181,19 @@ def create_modeling_tables():
             data[name] = pd.merge(data[name], data['names_mapping'], left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
 
     # Combine data
-    historical = pd.merge(data['spi_historical'], data['fd_historical'], left_on=spi_keys, right_on=fd_keys).dropna(subset=odds_cols, how='any').reset_index(drop=True)
+    historical = pd.merge(data['spi_historical'], data['fd_historical'], left_on=spi_keys, right_on=fd_keys).dropna(subset=odds_cols_mapping.keys(), how='any').reset_index(drop=True)
     fixtures = pd.merge(data['spi_fixtures'], data['fd_fixtures'], left_on=spi_keys, right_on=fd_keys)
 
     # Extract training, odds and fixtures
     training = historical.loc[:, ['season'] + spi_keys + input_cols + output_cols]
-    odds = historical.loc[:, spi_keys + odds_cols]
+    odds = historical.loc[:, spi_keys + list(odds_cols_mapping.keys())].rename(columns=odds_cols_mapping)
     fixtures = fixtures.loc[:, spi_keys + input_cols]
 
     # Feature extraction
     for df in (training, fixtures):
         df['diff_proj_score'] = df['proj_score1'] - df['proj_score2']
         df['diff_spi'] = df['spi1'] - df['spi2']
-        df['diff_prob'] = df['probtie'] + (df['prob1'] - df['prob2']).abs()
+        df['diff_prob'] = df['probtie'] - (df['prob1'] - df['prob2']).abs()
 
     # Save tables
     for name, df in zip(['training', 'odds', 'fixtures'], [training, odds, fixtures]):
