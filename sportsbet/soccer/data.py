@@ -13,7 +13,8 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import pandas as pd
 
-from sportsbet.soccer import SOCCER_PATH
+from sportsbet import SOCCER_PATH
+from sportsbet.soccer import TARGET_TYPES_MAPPING
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 LEAGUES_MAPPING = {
@@ -36,6 +37,13 @@ LEAGUES_MAPPING = {
     'SP2': 'Spanish Segunda Division',
     'T1': 'Turkish Turkcell Super Lig'
 }
+
+
+def combine_odds(odds, target_types):
+    """Combine odds of different betting types."""
+    combined_odds = 1 / pd.concat([1 / odds[target_type] for target_type in target_types], axis=1).sum(axis=1)
+    combined_odds.name = '+'.join(target_types)
+    return pd.concat([odds, combined_odds], axis=1)
 
 
 def check_leagues_ids(leagues_ids):
@@ -185,23 +193,32 @@ def create_modeling_tables():
     fixtures = pd.merge(data['spi_fixtures'], data['fd_fixtures'], left_on=spi_keys, right_on=fd_keys)
 
     # Extract training, odds and fixtures
-    training = historical.loc[:, ['season'] + spi_keys + input_cols + output_cols]
+    X = historical.loc[:, ['season'] + spi_keys + input_cols]
+    y = historical.loc[:, output_cols]
     odds = historical.loc[:, spi_keys + list(odds_cols_mapping.keys())].rename(columns=odds_cols_mapping)
-    fixtures = fixtures.loc[:, spi_keys + input_cols]
+    X_test = fixtures.loc[:, spi_keys + input_cols]
+    odds_test = fixtures.loc[:, spi_keys + list(odds_cols_mapping.keys())].rename(columns=odds_cols_mapping)
+
+    # Add combined odds
+    for target_type in TARGET_TYPES_MAPPING.keys():
+        if '+' in target_type:
+            target_types = target_type.split('+')
+            odds = combine_odds(odds, target_types)
+            odds_test = combine_odds(odds_test, target_types)
 
     # Feature extraction
-    for df in (training, fixtures):
+    for df in (X, X_test):
         df['diff_proj_score'] = df['proj_score1'] - df['proj_score2']
         df['diff_spi'] = df['spi1'] - df['spi2']
         df['diff_prob'] = df['probtie'] - (df['prob1'] - df['prob2']).abs()
 
     # Save tables
-    for name, df in zip(['training', 'odds', 'fixtures'], [training, odds, fixtures]):
+    for name, df in zip(['X', 'y', 'odds', 'X_test', 'odds_test'], [X, y, odds, X_test, odds_test]):
         df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
 
 
-def parse_command_line():
-    """Parse command line arguments."""
+def download():
+    """Command line function to download data and update database."""
     
     # Create parser description
     description = 'Select the leagues parameter from the following leagues:\n\n'
