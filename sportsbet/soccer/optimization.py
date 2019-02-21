@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 from sportsbet import SOCCER_PATH
 from sportsbet.soccer import TARGET_TYPES_MAPPING
-from config import PORTOFOLIO, CALIBRATIONS, FEATURES
+from config import PORTOFOLIOS
 
 
 def calculate_yields(y, y_pred, odds, target_types, calibration):
@@ -32,13 +32,22 @@ def calculate_yields(y, y_pred, odds, target_types, calibration):
     # Extract targets
     y = np.column_stack([TARGET_TYPES_MAPPING[target_type](y) for target_type in target_types])
 
-    # Calculate yields and edges
+    # Calculate yields
     yields = y * odds - 1.0
-    values = y_pred * odds
+    
+    # Extract calibration types and values
+    calibration_types, calibration_vals = zip(*calibration)
+
+    # Calculate edges
+    mask = np.array(calibration_types) == 'probs'
+    edges = np.empty_like(y_pred, dtype=y_pred.dtype)
+    edges[:, mask] = y_pred[:, mask]
+    edges[:, ~mask] = y_pred[:, ~mask] * odds[:, ~mask]
+    edges -= np.array(calibration_vals)
 
     # Apply calibration
-    yields[(y_pred - np.array(calibration[1]) if calibration[0] == 'probs' else values  - np.array(calibration[1])) <= 0.0] = 0.0
-    yields = yields[range(len(yields)), (y_pred - np.array(calibration[1]) if 'probs' in calibration[0] else values  - np.array(calibration[1])).argmax(axis=1)]
+    yields[edges <= 0.0] = 0.0
+    yields = yields[range(len(yields)), edges.argmax(axis=1)]
 
     # Exclude no bets
     mask = yields != 0.0
@@ -49,7 +58,7 @@ def calculate_yields(y, y_pred, odds, target_types, calibration):
 
 def fit_predict(clf, X, y, train_indices, test_indices):
     """Fit classifier to training data and predict test data."""
-    y_pred = clf.fit(X[train_indices], y.iloc[train_indices]).predict_proba(X[test_indices])
+    y_pred = clf.fit(X.iloc[train_indices], y.iloc[train_indices]).predict_proba(X.iloc[test_indices])
     return y_pred
 
 
@@ -59,36 +68,38 @@ def check_random_states(random_state, repetitions):
     return [random_state.randint(0, 2 ** 32 - 1, dtype='uint32') for _ in range(repetitions)]
 
 
-def apply_backtesting(classifiers, X, y, odds, cv, calibrations, random_state, n_runs):
+def apply_backtesting(classifiers, X, y, odds, cv, random_state, n_runs):
     """Apply backtesting to betting classifiers."""
 
     # Check random states
     random_states = check_random_states(random_state, n_runs)
 
-    # Extract target types and parameter grids combinations
-    target_types = [target_type for target_type, _, _ in classifiers]
-    param_grids_combinations = product(*[list(ParameterGrid(param_grid)) for _, _, param_grid in classifiers])
-    clfs = [clone(clf) for _, clf, _ in classifiers]
+    # Unpack classifiers
+    target_types = [target_type for target_type, *_, in classifiers]
+    clfs = [clone(clf) for _, clf, *_ in classifiers]
+    param_grids_combinations = product(*[list(ParameterGrid(param_grid)) for _, _, param_grid, *_ in classifiers])
+    calibrations = product(*[calibration for *_, calibration, _ in classifiers])
+    features_container = [features for *_, features in classifiers]
     
     # Stack input and odds data
-    X = np.column_stack([X, odds[target_types]])
+    X = pd.concat([X, odds[target_types]], axis=1)
 
     # Extract test targets
     y_test = pd.concat([y.iloc[test_indices] for _, test_indices in cv.split()])
 
     backtesting_results = []
-    for random_state, param_grids in product(random_states, param_grids_combinations):
+    for random_state, param_grids in tqdm(list(product(random_states, param_grids_combinations)), desc='Fitting tasks'):
         
         # Define betting classifiers
         betting_classifiers = []
-        for target_type, clf, param_grid in zip(target_types, clfs, param_grids):
+        for target_type, features, clf, param_grid in zip(target_types, features_container, clfs, param_grids):
             for param in clf.get_params():
                 if 'random_state' in param:
                     clf.set_params(**{param: random_state})
-            betting_classifiers.append((target_type, BettingClassifier(clf.set_params(**param_grid))))
+            betting_classifiers.append((target_type, features, BettingClassifier(clf.set_params(**param_grid))))
     
         # Define metabetting classifier
-        mbclf = _MetaBettingClassifier(betting_classifiers)   
+        mbclf = _MetaBettingClassifier(betting_classifiers)
 
         # Extract test target values, predictions and odds
         y_pred, odds = zip(*Parallel(n_jobs=-1)(delayed(fit_predict)(mbclf, X, y, train_indices, test_indices) for train_indices, test_indices in cv.split()))
@@ -140,7 +151,7 @@ class BettingClassifier(BaseEstimator, ClassifierMixin):
         y = TARGET_TYPES_MAPPING[target_type](y)
 
         # Fit classifier
-        self.classifier_ = clone(self.classifier).fit(X[:, :-1], y)
+        self.classifier_ = clone(self.classifier).fit(X.iloc[:, :-1], y)
 
         return self
 
@@ -148,10 +159,10 @@ class BettingClassifier(BaseEstimator, ClassifierMixin):
         """"Predict probability of betting classifier."""
 
         # Predict probability
-        y_pred = self.classifier_.predict_proba(X[:, :-1])[:, 1:]
+        y_pred = self.classifier_.predict_proba(X.iloc[:, :-1].values)[:, 1:]
 
         # Extract odds
-        odds = X[:, -1:]
+        odds = X.iloc[:, -1:].values
 
         return y_pred, odds
 
@@ -165,9 +176,15 @@ class _MetaBettingClassifier(_BaseComposition):
         """Fit betting classifiers."""
 
         # Check target types
-        target_types, _ = zip(*self.betting_classifiers)
+        target_types = [target_type for target_type, *_, in self.betting_classifiers]
         if not set(target_types).issubset(TARGET_TYPES_MAPPING):
             raise ValueError('Selected target types are not supported.')
+
+        # Check features
+        features_container = [features for _, features, _ in self.betting_classifiers]
+        for features in features_container:
+            if not set(features).issubset(X.columns):
+                raise ValueError('Selected features are not included in the dataset.')
         
         # Placeholder
         self.betting_classifiers_ = []
@@ -176,9 +193,10 @@ class _MetaBettingClassifier(_BaseComposition):
         self.n_clfs_ = len(self.betting_classifiers)
 
         # Fit betting classifiers
-        for ind, (target_type, clf) in enumerate(self.betting_classifiers):
-            X_clf = np.column_stack([X[:, :-self.n_clfs_], X[:, ind - self.n_clfs_]])
-            self.betting_classifiers_.append(clone(clf).fit(X_clf, y, target_type))
+        for ind, (target_type, features, clf) in enumerate(self.betting_classifiers):
+            X_clf = pd.concat([X[features], X.iloc[:, -self.n_clfs_:]], axis=1)
+            X_clf = pd.concat([X_clf.iloc[:, :-self.n_clfs_], X_clf.iloc[:, ind - self.n_clfs_]], axis=1)
+            self.betting_classifiers_.append((features, clone(clf).fit(X_clf, y, target_type)))
 
         return self
     
@@ -189,8 +207,9 @@ class _MetaBettingClassifier(_BaseComposition):
         y_pred, odds = [], []
 
         # Predict probabilities
-        for ind, clf in enumerate(self.betting_classifiers_):
-            X_clf = np.column_stack([X[:, :-self.n_clfs_], X[:, ind - self.n_clfs_]])
+        for ind, (features, clf) in enumerate(self.betting_classifiers_):
+            X_clf = pd.concat([X[features], X.iloc[:, -self.n_clfs_:]], axis=1)
+            X_clf = pd.concat([X_clf.iloc[:, :-self.n_clfs_], X_clf.iloc[:, ind - self.n_clfs_]], axis=1)
             proba, odd = clf.predict_proba(X_clf)
             y_pred.append(proba)
             odds.append(odd)
@@ -209,7 +228,7 @@ def evaluate():
     parser.add_argument('--test-season', default='1819', type=str, help='The test season.')
     parser.add_argument('--n-splits', default=5, type=int, help='Number of cross-validation splits.')
     parser.add_argument('--random-state', default=0, type=int, help='The random seed.')
-    parser.add_argument('--n-runs', default=2, type=int, help='Number of evaluation runs.')
+    parser.add_argument('--n-runs', default=5, type=int, help='Number of evaluation runs.')
 
     # Parse arguments
     args = parser.parse_args()
@@ -223,11 +242,8 @@ def evaluate():
     # Create cross-validator
     cv = SeasonSplit(args.n_splits, X['season'].values, args.test_season)
 
-    # Feature selection
-    X = X.drop(columns=FEATURES)
-
     # Backtesting
-    backtesting_results = apply_backtesting(PORTOFOLIO[args.clfs], X, y, odds, cv, CALIBRATIONS[args.clfs], args.random_state, args.n_runs)
+    backtesting_results = apply_backtesting(PORTOFOLIOS[args.clfs], X, y, odds, cv, args.random_state, args.n_runs)
 
     # Save backtesting results
     backtesting_results.to_sql('%s_results' % args.clfs, db_connection, index=False, if_exists='replace')

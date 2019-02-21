@@ -8,6 +8,7 @@ TARGET_TYPES_MAPPING = {
     'A': lambda y: (y['score1'] < y['score2']).values.astype(int),
     'A+D': lambda y: (y['score1'] <= y['score2']).values.astype(int),
     'H+D': lambda y: (y['score1'] >= y['score2']).values.astype(int),
+    'H+A': lambda y: (y['score1'] != y['score2']).values.astype(int),
     'over_2.5': lambda y: (y['score1'] + y['score2'] > 2.5).values.astype(int),
     'under_2.5': lambda y: (y['score1'] + y['score2'] < 2.5).values.astype(int),
     'both_score': lambda y: (y['score1'] * y['score2'] > 0).values.astype(int),
