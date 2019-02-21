@@ -78,7 +78,7 @@ def apply_backtesting(classifiers, X, y, odds, cv, random_state, n_runs):
     target_types = [target_type for target_type, *_, in classifiers]
     clfs = [clone(clf) for _, clf, *_ in classifiers]
     param_grids_combinations = product(*[list(ParameterGrid(param_grid)) for _, _, param_grid, *_ in classifiers])
-    calibrations = product(*[calibration for *_, calibration, _ in classifiers])
+    calibrations = list(product(*[calibration for *_, calibration, _ in classifiers]))
     features_container = [features for *_, features in classifiers]
     
     # Stack input and odds data
@@ -112,7 +112,7 @@ def apply_backtesting(classifiers, X, y, odds, cv, random_state, n_runs):
     # Aggregate and format backtesting results
     backtesting_results = pd.DataFrame(backtesting_results, columns=['experiment', 'parameters', 'calibration', 'mean_yield', 'std_yield', 'coverage'])
     backtesting_results = backtesting_results.groupby(['parameters', 'calibration'], as_index=False).agg({'mean_yield': [np.mean, np.std], 'std_yield': np.mean, 'coverage': np.mean})
-    backtesting_results.columns = ['parameters', 'calibration', 'mean_yield', 'std_mean_yield', 'std_yield', 'Coverage']
+    backtesting_results.columns = ['parameters', 'calibration', 'mean_yield', 'std_mean_yield', 'std_yield', 'coverage']
     backtesting_results = backtesting_results.sort_values('mean_yield', ascending=False).reset_index(drop=True)
     
     return backtesting_results
@@ -224,7 +224,7 @@ def evaluate():
     parser = ArgumentParser('Models evaluation using backtesting.')
         
     # Add arguments
-    parser.add_argument('clfs', help='The name of classifiers to evaluate.')
+    parser.add_argument('portofolio', help='The name of portofolio to evaluate.')
     parser.add_argument('--test-season', default='1819', type=str, help='The test season.')
     parser.add_argument('--n-splits', default=5, type=int, help='Number of cross-validation splits.')
     parser.add_argument('--random-state', default=0, type=int, help='The random seed.')
@@ -243,7 +243,13 @@ def evaluate():
     cv = SeasonSplit(args.n_splits, X['season'].values, args.test_season)
 
     # Backtesting
-    backtesting_results = apply_backtesting(PORTOFOLIOS[args.clfs], X, y, odds, cv, args.random_state, args.n_runs)
+    results = apply_backtesting(PORTOFOLIOS[args.portofolio], X, y, odds, cv, args.random_state, args.n_runs)
+    results['Portofolio'] = args.portofolio
 
     # Save backtesting results
-    backtesting_results.to_sql('%s_results' % args.clfs, db_connection, index=False, if_exists='replace')
+    try:
+        backtesting_results = pd.read_sql('select * from backtesting_results', db_connection)
+    except pd.io.sql.DatabaseError:
+        backtesting_results = pd.DataFrame([])
+    backtesting_results = backtesting_results[backtesting_results['Portofolio'] != args.portofolio].append(results, ignore_index=True).sort_values('mean_yield', ascending=False)
+    backtesting_results.to_sql('backtesting_results', db_connection, index=False, if_exists='replace')
