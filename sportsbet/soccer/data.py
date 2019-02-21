@@ -208,6 +208,7 @@ def create_modeling_tables():
 
     # Feature extraction
     for df in (X, X_test):
+        df['sum_proj_score'] = df['proj_score1'] + df['proj_score2']
         df['diff_proj_score'] = df['proj_score1'] - df['proj_score2']
         df['diff_spi'] = df['spi1'] - df['spi2']
         df['diff_prob'] = df['probtie'] - (df['prob1'] - df['prob2']).abs()
