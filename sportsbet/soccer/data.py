@@ -12,6 +12,7 @@ from sqlite3 import connect
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from scipy.stats import hmean
+import numpy as np
 import pandas as pd
 
 from sportsbet import SOCCER_PATH
@@ -212,11 +213,12 @@ def create_modeling_tables():
             odds_test = combine_odds(odds_test, target_types)
 
     # Feature extraction
-    for df in (X, X_test):
-        df['quality'] = hmean(X[['spi1', 'spi2']], axis=1)
-        df['importance'] = X[['importance1', 'importance2']].mean(axis=1)
-        df['rating'] = df[['quality', 'importance']].mean(axis=1)
-        df['sum_proj_score'] = df['proj_score1'] + df['proj_score2']
+    with np.errstate(divide='ignore',invalid='ignore'):
+        for df in (X, X_test):
+            df['quality'] = hmean(df[['spi1', 'spi2']], axis=1)
+            df['importance'] = df[['importance1', 'importance2']].mean(axis=1)
+            df['rating'] = df[['quality', 'importance']].mean(axis=1)
+            df['sum_proj_score'] = df['proj_score1'] + df['proj_score2']
 
     # Save tables
     for name, df in zip(['X', 'y', 'odds', 'X_test', 'odds_test'], [X, y, odds, X_test, odds_test]):
