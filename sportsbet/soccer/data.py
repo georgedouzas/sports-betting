@@ -11,6 +11,7 @@ from difflib import SequenceMatcher
 from sqlite3 import connect
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from scipy.stats import hmean
 import pandas as pd
 
 from sportsbet import SOCCER_PATH
@@ -199,7 +200,11 @@ def create_modeling_tables():
     X_test = fixtures.loc[:, spi_keys + input_cols]
     odds_test = fixtures.loc[:, spi_keys + list(odds_cols_mapping.keys())].rename(columns=odds_cols_mapping)
 
-    # Add combined odds
+    # Add average scores columns
+    for ind in (1, 2):
+        y['avg_score%s' % ind] =  y[['score%s' % ind, 'xg%s' % ind, 'nsxg%s' % ind]].mean(axis=1)
+
+    # Add combined odds columns
     for target_type in TARGET_TYPES_MAPPING.keys():
         if '+' in target_type:
             target_types = target_type.split('+')
@@ -208,10 +213,10 @@ def create_modeling_tables():
 
     # Feature extraction
     for df in (X, X_test):
+        df['quality'] = hmean(X[['spi1', 'spi2']], axis=1)
+        df['importance'] = X[['importance1', 'importance2']].mean(axis=1)
+        df['rating'] = df[['quality', 'importance']].mean(axis=1)
         df['sum_proj_score'] = df['proj_score1'] + df['proj_score2']
-        df['diff_proj_score'] = df['proj_score1'] - df['proj_score2']
-        df['diff_spi'] = df['spi1'] - df['spi2']
-        df['diff_prob'] = df['probtie'] - (df['prob1'] - df['prob2']).abs()
 
     # Save tables
     for name, df in zip(['X', 'y', 'odds', 'X_test', 'odds_test'], [X, y, odds, X_test, odds_test]):

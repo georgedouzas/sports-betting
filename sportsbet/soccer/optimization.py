@@ -30,20 +30,13 @@ from config import PORTOFOLIOS
 def calculate_yields(y, y_pred, odds, target_types, calibration):
 
     # Extract targets
-    y = np.column_stack([TARGET_TYPES_MAPPING[target_type](y) for target_type in target_types])
+    y = np.column_stack([TARGET_TYPES_MAPPING[target_type][0](y) for target_type in target_types])
 
     # Calculate yields
     yields = y * odds - 1.0
-    
-    # Extract calibration types and values
-    calibration_types, calibration_vals = zip(*calibration)
 
     # Calculate edges
-    mask = np.array(calibration_types) == 'probs'
-    edges = np.empty_like(y_pred, dtype=y_pred.dtype)
-    edges[:, mask] = y_pred[:, mask]
-    edges[:, ~mask] = y_pred[:, ~mask] * odds[:, ~mask]
-    edges -= np.array(calibration_vals)
+    edges = y_pred - np.array(calibration)
 
     # Apply calibration
     yields[edges <= 0.0] = 0.0
@@ -148,7 +141,7 @@ class BettingClassifier(BaseEstimator, ClassifierMixin):
         """Fit betting classifier."""
 
         # Extract target
-        y = TARGET_TYPES_MAPPING[target_type](y)
+        y = TARGET_TYPES_MAPPING[target_type][1](y)
 
         # Fit classifier
         self.classifier_ = clone(self.classifier).fit(X.iloc[:, :-1], y)
@@ -244,13 +237,33 @@ def evaluate():
 
     # Backtesting
     results = apply_backtesting(PORTOFOLIOS[args.portofolio], X, y, odds, cv, args.random_state, args.n_runs)
-    results['Portofolio'] = args.portofolio
+    results['portofolio'] = args.portofolio
 
     # Save backtesting results
     try:
         backtesting_results = pd.read_sql('select * from backtesting_results', db_connection)
-        backtesting_results = backtesting_results[backtesting_results['Portofolio'] != args.portofolio]
+        backtesting_results = backtesting_results[backtesting_results['portofolio'] != args.portofolio]
     except pd.io.sql.DatabaseError:
         backtesting_results = pd.DataFrame([])
     backtesting_results = backtesting_results.append(results, ignore_index=True).sort_values('mean_yield', ascending=False)
     backtesting_results.to_sql('backtesting_results', db_connection, index=False, if_exists='replace')
+
+
+def predict():
+    """Command line function to predict new fixtures.""" 
+
+    # Create parser
+    parser = ArgumentParser('Predict new fixtures.')
+        
+    # Add arguments
+    parser.add_argument('portofolio', help='The name of portofolio to evaluate.')
+    parser.add_argument('--rank', default=0, type=int, help='The rank of the model to use for predictions.')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Load data
+    db_connection = connect(join(SOCCER_PATH, 'soccer.db'))
+    query = 'select parameters, calibration from backtesting_results where portofolio == "%s"' % args.portofolio
+    parameters, calibration = pd.read_sql(query, db_connection).values[args.rank]
+    
