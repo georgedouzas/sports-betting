@@ -28,6 +28,7 @@ from config import PORTOFOLIOS
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 
+
 def calculate_yields(y, y_pred, odds, target_types, calibration):
 
     # Extract targets
