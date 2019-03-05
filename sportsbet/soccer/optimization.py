@@ -26,6 +26,7 @@ from sportsbet import SOCCER_PATH
 from sportsbet.soccer import TARGET_TYPES_MAPPING
 from config import PORTOFOLIOS
 
+DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 
 def calculate_yields(y, y_pred, odds, target_types, calibration):
 
@@ -227,10 +228,9 @@ def backtest():
     args = parser.parse_args()
     
     # Load data
-    db_connection = connect(join(SOCCER_PATH, 'soccer.db'))
-    X = pd.read_sql('select * from X', db_connection)
-    y = pd.read_sql('select * from y', db_connection)
-    odds = pd.read_sql('select * from odds', db_connection)
+    X = pd.read_sql('select * from X', DB_CONNECTION)
+    y = pd.read_sql('select * from y', DB_CONNECTION)
+    odds = pd.read_sql('select * from odds', DB_CONNECTION)
 
     # Create cross-validator
     cv = SeasonSplit(args.n_splits, X['season'].values, args.test_season)
@@ -263,7 +263,6 @@ def predict():
     args = parser.parse_args()
 
     # Load data
-    db_connection = connect(join(SOCCER_PATH, 'soccer.db'))
-    query = 'select parameters, calibration from backtesting_results where portofolio == "%s"' % args.portofolio
-    parameters, calibration = pd.read_sql(query, db_connection).values[args.rank]
+    sql_query = 'select parameters, calibration from backtesting_results where portofolio == "{}"'.format(args.portofolio)
+    parameters, calibration = pd.read_sql(sql_query, DB_CONNECTION).values[args.rank]
     
