@@ -210,8 +210,8 @@ class _MetaBettingClassifier(_BaseComposition):
         return np.column_stack(y_pred), np.column_stack(odds)
 
 
-def evaluate():
-    """Command line function to evaluate models.""" 
+def backtest():
+    """Command line function to backtest models.""" 
 
     # Create parser
     parser = ArgumentParser('Models evaluation using backtesting.')
