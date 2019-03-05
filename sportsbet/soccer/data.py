@@ -183,7 +183,8 @@ def create_modeling_tables():
     data = {}
     for name in ('spi_historical', 'spi_fixtures', 'fd_historical', 'fd_fixtures', 'names_mapping'):
         parse_dates = ['date'] if name in ('spi_historical', 'spi_fixtures') else ['Date'] if name in ('fd_historical', 'fd_fixtures') else None
-        data[name] = pd.read_sql('select * from %s' % name, DB_CONNECTION, parse_dates=parse_dates)
+        sql_query = 'select * from {}'.format(name)
+        data[name] = pd.read_sql(sql_query, DB_CONNECTION, parse_dates=parse_dates)
 
     # Rename teams
     for col in ['team1', 'team2']:
