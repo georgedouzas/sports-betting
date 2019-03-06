@@ -15,7 +15,8 @@ setup(
     entry_points={
         'console_scripts':[
             'download=sportsbet.soccer.data:download',
-            'backtest=sportsbet.soccer.optimization:backtest'
+            'backtest=sportsbet.soccer.optimization:backtest',
+            'predict=sportsbet.soccer.optimization:predict'
         ]
     }
 )

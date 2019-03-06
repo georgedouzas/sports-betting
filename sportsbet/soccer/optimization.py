@@ -7,24 +7,23 @@ betting strategy on historical and current data.
 # License: BSD 3 clause
 
 from argparse import ArgumentParser
+from ast import literal_eval
+from itertools import product
 from os.path import join
 from pickle import dump, load
-from itertools import product
 from sqlite3 import connect
 
 import numpy as np
 import pandas as pd
-from sklearn.utils import Parallel, delayed
-from sklearn.model_selection import BaseCrossValidator
-from sklearn.base import clone, BaseEstimator, ClassifierMixin
-from sklearn.utils import check_random_state
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.model_selection import BaseCrossValidator, ParameterGrid
+from sklearn.utils import Parallel, check_random_state, delayed
 from sklearn.utils.metaestimators import _BaseComposition
-from sklearn.model_selection import ParameterGrid
 from tqdm import tqdm
 
+from config import PORTOFOLIOS
 from sportsbet import SOCCER_PATH
 from sportsbet.soccer import TARGET_TYPES_MAPPING
-from config import PORTOFOLIOS
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 
@@ -264,6 +263,32 @@ def predict():
     args = parser.parse_args()
 
     # Load data
-    sql_query = 'select parameters, calibration from backtesting_results where portofolio == "{}"'.format(args.portofolio)
-    parameters, calibration = pd.read_sql(sql_query, DB_CONNECTION).values[args.rank]
+    X = pd.read_sql('select * from X', DB_CONNECTION)
+    y = pd.read_sql('select * from y', DB_CONNECTION)
+    odds = pd.read_sql('select * from odds', DB_CONNECTION)
+    X_test = pd.read_sql('select * from X_test', DB_CONNECTION)
+    odds_test = pd.read_sql('select * from odds_test', DB_CONNECTION)
+    parameters, calibration = pd.read_sql('select parameters, calibration from backtesting_results where portofolio == "{}"'.format(args.portofolio), DB_CONNECTION).values[args.rank]
+
+    # Stack input and odds data
+    target_types = [target_type for target_type, *_, in PORTOFOLIOS[args.portofolio]]
+    X = pd.concat([X, odds[target_types]], axis=1)
+    X_test = pd.concat([X_test, odds_test[target_types]], axis=1)
+
+    # Fit betting classifiers
+    betting_classifiers = [(target_type, features, BettingClassifier(clf.set_params(**params))) for params, (target_type, clf, *_, features) in zip(literal_eval(parameters), PORTOFOLIOS[args.portofolio])]
+    mbclf = _MetaBettingClassifier(betting_classifiers).fit(X, y)
     
+    # Get predictions
+    y_pred = mbclf.predict_proba(X_test)[0]
+    bets_indices = y_pred.argmax(axis=1)
+    mask = (y_pred > literal_eval(calibration))[range(len(y_pred)), bets_indices]
+
+    # Format predictions
+    predictions = X_test.loc[:, ['date', 'league', 'team1', 'team2']]
+    predictions['odd'] = odds_test[target_types].values[range(len(y_pred)), bets_indices]
+    predictions['bet'] = np.array(target_types)[bets_indices]
+    predictions = predictions[mask]
+
+    # Save predictions
+    predictions.to_csv(join(SOCCER_PATH, 'predictions.csv'), index=False)
