@@ -14,8 +14,6 @@ SOCCER_PATH = join(PATH, 'soccer')
 Path(PATH).mkdir(exist_ok=True)
 Path(SOCCER_PATH).mkdir(exist_ok=True)
 
-# Append paths
-path.append(SOCCER_PATH)
 
 
 

@@ -21,9 +21,9 @@ from sklearn.utils import Parallel, check_random_state, delayed
 from sklearn.utils.metaestimators import _BaseComposition
 from tqdm import tqdm
 
-from config import PORTOFOLIOS
 from sportsbet import SOCCER_PATH
 from sportsbet.soccer import TARGET_TYPES_MAPPING
+from sportsbet.soccer.config import PORTOFOLIOS
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 
