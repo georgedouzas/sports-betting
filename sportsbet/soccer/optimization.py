@@ -242,12 +242,12 @@ def backtest():
 
     # Save backtesting results
     try:
-        backtesting_results = pd.read_sql('select * from backtesting_results', db_connection)
+        backtesting_results = pd.read_sql('select * from backtesting_results', DB_CONNECTION)
         backtesting_results = backtesting_results[backtesting_results['portofolio'] != args.portofolio]
     except pd.io.sql.DatabaseError:
         backtesting_results = pd.DataFrame([])
     backtesting_results = backtesting_results.append(results, ignore_index=True).sort_values('mean_yield', ascending=False)
-    backtesting_results.to_sql('backtesting_results', db_connection, index=False, if_exists='replace')
+    backtesting_results.to_sql('backtesting_results', DB_CONNECTION, index=False, if_exists='replace')
 
 
 def predict():
