@@ -372,9 +372,8 @@ def backtest():
     cv = SeasonSplit(args.n_splits, X['season'].values, args.test_season)
 
     # Backtesting
-    (better, param_grid, risk_factors, X, y, odds, cv, random_state, n_runs)
     results = apply_backtesting(better, param_grid, risk_factors, X, y[scores_cols], odds, cv, args.random_state, args.n_runs)
-    results['portofolio'] = args.portofolio
+    results['id'] = args.portofolio, better_type, scores_type 
 
     # Save backtesting results
     try:
