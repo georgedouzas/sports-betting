@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from sportsbet import SOCCER_PATH
-from sportsbet.soccer import TARGET_TYPES_MAPPING
+from sportsbet.soccer import TARGETS
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 LEAGUES_MAPPING = {
@@ -41,10 +41,10 @@ LEAGUES_MAPPING = {
 }
 
 
-def combine_odds(odds, target_types):
+def combine_odds(odds, target):
     """Combine odds of different betting types."""
-    combined_odds = 1 / pd.concat([1 / odds[target_type] for target_type in target_types], axis=1).sum(axis=1)
-    combined_odds.name = '+'.join(target_types)
+    combined_odds = 1 / pd.concat([1 / odds[target] for target in target], axis=1).sum(axis=1)
+    combined_odds.name = '+'.join(target)
     return pd.concat([odds, combined_odds], axis=1)
 
 
@@ -207,11 +207,11 @@ def create_modeling_tables():
         y['avg_score%s' % ind] =  y[['score%s' % ind, 'xg%s' % ind, 'nsxg%s' % ind]].mean(axis=1)
 
     # Add combined odds columns
-    for target_type in TARGET_TYPES_MAPPING.keys():
-        if '+' in target_type:
-            target_types = target_type.split('+')
-            odds = combine_odds(odds, target_types)
-            odds_test = combine_odds(odds_test, target_types)
+    for target in TARGETS:
+        if '+' in target:
+            target = target.split('+')
+            odds = combine_odds(odds, target)
+            odds_test = combine_odds(odds_test, target)
 
     # Feature extraction
     with np.errstate(divide='ignore',invalid='ignore'):
