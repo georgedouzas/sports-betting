@@ -13,6 +13,7 @@ from os.path import join
 from pickle import dump, load
 from sqlite3 import connect
 from abc import abstractmethod
+from importlib import import_module
 
 import numpy as np
 import pandas as pd
@@ -95,9 +96,6 @@ def apply_backtesting(better, param_grid, risk_factors, X, y, odds, cv, random_s
     
     # Check random states
     random_states = check_random_states(random_state, n_runs)
-    
-    # Extract test indices
-    test_indices = np.concatenate([indices for _, indices in cv.split()])
 
     # Extract parameters
     parameters = ParameterGrid(param_grid)
@@ -114,10 +112,10 @@ def apply_backtesting(better, param_grid, risk_factors, X, y, odds, cv, random_s
     # Calculate results
     results = data.drop(columns=['experiment', 0]).groupby(['parameters', 'risk_factor']).mean().reset_index()
     results['std_mean_yield'] = data.groupby(['parameters', 'risk_factor'])['mean_yield'].std().values
-    results = mean_results.sort_values('mean_yield', ascending=False).reset_index(drop=True)
+    results = results.sort_values('mean_yield', ascending=False).reset_index(drop=True)
 
     return results
-    
+
 
 class SeasonSplit(BaseCrossValidator):
     """Split time-series data based on a test season."""
@@ -363,9 +361,9 @@ def backtest():
     odds = pd.read_sql('select * from odds', DB_CONNECTION)
 
     # Unpack configuration
-    (better_type, scores_type, risk_factors), param_grid =  PORTOFOLIOS[args.portofolio]
-    if better_type == 'better':
-        better = Better(param_grid['classifier'])
+    param_grid =  PORTOFOLIOS[args.portofolio]
+    better_class, scores_type, risk_factors = param_grid.pop('better_class'), param_grid.pop('scores_type'), param_grid.pop('risk_factors')
+    better = getattr(import_module(__name__), better_class)(param_grid['classifier'])
     scores_cols = ['score1', 'score2'] if scores_type == 'real' else ['avg_score1', 'avg_score2']
 
     # Create cross-validator
@@ -373,7 +371,7 @@ def backtest():
 
     # Backtesting
     results = apply_backtesting(better, param_grid, risk_factors, X, y[scores_cols], odds, cv, args.random_state, args.n_runs)
-    results['id'] = args.portofolio, better_type, scores_type 
+    results['id'] = [(args.portofolio, better_class, scores_type)] * len(results)
 
     # Save backtesting results
     try:
