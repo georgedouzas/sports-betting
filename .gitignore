@@ -4,3 +4,4 @@ __pycache__
 *.code-workspace
 *.pyc
 data
+.DS_Store
