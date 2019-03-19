@@ -41,10 +41,10 @@ LEAGUES_MAPPING = {
 }
 
 
-def combine_odds(odds, target):
-    """Combine odds of different betting types."""
-    combined_odds = 1 / pd.concat([1 / odds[target] for target in target], axis=1).sum(axis=1)
-    combined_odds.name = '+'.join(target)
+def combine_odds(odds, targets):
+    """Combine odds of different targets."""
+    combined_odds = 1 / pd.concat([1 / odds[target] for target in targets], axis=1).sum(axis=1)
+    combined_odds.name = '+'.join(targets)
     return pd.concat([odds, combined_odds], axis=1)
 
 

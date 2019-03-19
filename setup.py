@@ -6,9 +6,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         'scipy==1.1.0',
-        'numpy==1.15.3',
-        'pandas==0.23.4',
-        'scikit-learn==0.20',
+        'numpy==1.16.2',
+        'pandas==0.24.2',
+        'scikit-learn==0.20.3',
         'imbalanced-learn==0.4.2',
         'tqdm==4.28.1'
     ],
