@@ -90,13 +90,14 @@ def create_spi_tables(leagues_ids):
     mask = (~spi['score1'].isna()) & (~spi['score2'].isna())
     spi_historical, spi_fixtures = spi[mask], spi[~mask]
 
-    # Save tables
-    for name, df in zip(['spi_historical', 'spi_fixtures'], [spi_historical, spi_fixtures]):
-        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+    return spi_historical, spi_fixtures
 
 
 def create_fd_tables(leagues_ids):
     """Download fd data and save them to database."""
+
+    # Check leagues ids
+    leagues_ids = check_leagues_ids(leagues_ids)
 
     # Define parameters
     base_url = 'http://www.football-data.co.uk'
@@ -104,9 +105,6 @@ def create_fd_tables(leagues_ids):
     features_cols = ['BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh' , 'BbAvAHH', 'BbAvAHA']
     odds_cols = ['PSH', 'PSA', 'PSD', 'BbMx>2.5', 'BbMx<2.5', 'BbAHh', 'BbMxAHH', 'BbMxAHA']
     seasons = ['1617', '1718', '1819']
-
-    # Check leagues ids
-    leagues_ids = check_leagues_ids(leagues_ids)
 
     # Download historical data
     fd_historical = []
@@ -122,17 +120,11 @@ def create_fd_tables(leagues_ids):
     fd_fixtures['Date'] = pd.to_datetime(fd_fixtures['Date'], dayfirst=True)
     fd_fixtures = fd_fixtures[fd_fixtures['Div'].isin(leagues_ids)]
 
-    # Save tables
-    for name, df in zip(['fd_historical', 'fd_fixtures'], [fd_historical, fd_fixtures]):
-        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+    return fd_historical, fd_fixtures
 
 
-def create_names_mapping_table():
+def create_names_mapping_table(left_data, right_data):
     """Create names mapping table."""
-
-    # Load data
-    left_data = pd.read_sql('select date, league, team1, team2 from spi_historical', DB_CONNECTION)
-    right_data = pd.read_sql('select Date, Div, HomeTeam, AwayTeam from fd_historical', DB_CONNECTION)
 
     # Rename columns
     key_columns = ['key0', 'key1']
@@ -164,11 +156,10 @@ def create_names_mapping_table():
     # Generate mapping
     names_mapping = matching.take(indices).drop(columns=0).reset_index(drop=True)
 
-    # Save table
-    names_mapping.to_sql('names_mapping', DB_CONNECTION, index=False, if_exists='replace')
+    return names_mapping
 
 
-def create_modeling_tables():
+def create_modeling_tables(data):
     """Create tables for machine learning modeling."""
 
     # Define parameters
@@ -177,13 +168,6 @@ def create_modeling_tables():
     input_cols = ['spi1', 'spi2', 'prob1', 'prob2', 'probtie', 'proj_score1', 'proj_score2', 'importance1', 'importance2', 'BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh', 'BbAvAHH', 'BbAvAHA']
     output_cols = ['score1', 'score2', 'xg1', 'xg2', 'nsxg1', 'nsxg2', 'adj_score1', 'adj_score2']
     odds_cols_mapping = {'PSH': 'H', 'PSA': 'A', 'PSD': 'D', 'BbMx>2.5': 'over_2.5', 'BbMx<2.5': 'under_2.5', 'BbAHh': 'handicap', 'BbMxAHH': 'handicap_home', 'BbMxAHA': 'handicap_away'}
-    
-    # Load data
-    data = {}
-    for name in ('spi_historical', 'spi_fixtures', 'fd_historical', 'fd_fixtures', 'names_mapping'):
-        parse_dates = ['date'] if name in ('spi_historical', 'spi_fixtures') else ['Date'] if name in ('fd_historical', 'fd_fixtures') else None
-        sql_query = 'select * from {}'.format(name)
-        data[name] = pd.read_sql(sql_query, DB_CONNECTION, parse_dates=parse_dates)
 
     # Rename teams
     for col in ['team1', 'team2']:
@@ -208,9 +192,9 @@ def create_modeling_tables():
     # Add combined odds columns
     for target in TARGETS:
         if '+' in target:
-            target = target.split('+')
-            odds = combine_odds(odds, target)
-            odds_test = combine_odds(odds_test, target)
+            targets = target.split('+')
+            odds[target] = combine_odds(odds[targets])
+            odds_test[target] = combine_odds(odds_test[targets])
 
     # Feature extraction
     with np.errstate(divide='ignore',invalid='ignore'):
@@ -219,10 +203,8 @@ def create_modeling_tables():
             df['importance'] = df[['importance1', 'importance2']].mean(axis=1)
             df['rating'] = df[['quality', 'importance']].mean(axis=1)
             df['sum_proj_score'] = df['proj_score1'] + df['proj_score2']
-
-    # Save tables
-    for name, df in zip(['X', 'y', 'odds', 'X_test', 'odds_test'], [X, y, odds, X_test, odds_test]):
-        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+    
+    return X, y, odds, X_test, odds_test
 
 
 def download():
@@ -246,6 +228,32 @@ def download():
     leagues = args.leagues
     if len(leagues) == 1 and leagues[0] == 'all':
         leagues = leagues[0]
+
+    # Load data
+    data = {}
+    for name in ('spi_historical', 'spi_fixtures', 'fd_historical', 'fd_fixtures', 'names_mapping'):
+        parse_dates = ['date'] if name in ('spi_historical', 'spi_fixtures') else ['Date'] if name in ('fd_historical', 'fd_fixtures') else None
+        sql_query = 'select * from {}'.format(name)
+        data[name] = pd.read_sql(sql_query, DB_CONNECTION, parse_dates=parse_dates)
+
+    # Load data
+    left_data = pd.read_sql('select date, league, team1, team2 from spi_historical', DB_CONNECTION)
+    right_data = pd.read_sql('select Date, Div, HomeTeam, AwayTeam from fd_historical', DB_CONNECTION)
+
+    # Save table
+    names_mapping.to_sql('names_mapping', DB_CONNECTION, index=False, if_exists='replace')
+
+    # Save tables
+    for name, df in zip(['fd_historical', 'fd_fixtures'], [fd_historical, fd_fixtures]):
+        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+
+    # Save tables
+    for name, df in zip(['spi_historical', 'spi_fixtures'], [spi_historical, spi_fixtures]):
+        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
+
+    # Save tables
+    for name, df in zip(['X', 'y', 'odds', 'X_test', 'odds_test'], [X, y, odds, X_test, odds_test]):
+        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
 
     # Create tables
     for ind, func in enumerate([create_spi_tables, create_fd_tables, create_names_mapping_table, create_modeling_tables]):
