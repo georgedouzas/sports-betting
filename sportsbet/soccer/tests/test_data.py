@@ -12,7 +12,8 @@ from sportsbet.soccer.data import (
     check_leagues_ids,
     create_spi_tables,
     create_fd_tables,
-    create_names_mapping_table
+    create_names_mapping_table,
+    create_modeling_tables
 )
 
 
@@ -89,3 +90,8 @@ def test_create_names_mapping():
     right_data = pd.DataFrame({'Date': [1, 1, 2, 2], 'Div': ['A', 'B', 'A', 'B'], 'HomeTeam': ['PAOK Salonika', 'AEK Athens', 'Panathinaikos', 'Olympiakos Piraeus'], 'AwayTeam': ['AEK Athens', 'Panathinaikos', 'Olympiakos Piraeus', 'PAOK Salonika']})
     names_mapping = create_names_mapping_table(left_data, right_data)
     pd.testing.assert_frame_equal(names_mapping, pd.DataFrame({'left_team': ['AEK', 'Olympiakos', 'PAOK', 'Panathinaikos'], 'right_team': ['AEK Athens', 'Olympiakos Piraeus', 'PAOK Salonika', 'Panathinaikos']}))
+
+
+def test_create_modeling_tables():
+    """Test the creation of modelling tables."""
+    
