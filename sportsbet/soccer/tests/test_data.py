@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from sportsbet.soccer import TARGETS
 from sportsbet.soccer.data import (
     LEAGUES_MAPPING,
     combine_odds,
@@ -13,8 +14,15 @@ from sportsbet.soccer.data import (
     create_spi_tables,
     create_fd_tables,
     create_names_mapping_table,
-    create_modeling_tables
+    create_modeling_tables,
+    SPI_KEYS,
+    FD_KEYS,
+    INPUT_COLS,
+    OUTPUT_COLS
 )
+LEAGUES_IDS = ['E0', 'B1', 'E1']
+SPI_HISTORICAL, SPI_FIXTURES = create_spi_tables(LEAGUES_IDS)
+FD_HISTORICAL, FD_FIXTURES = create_fd_tables(LEAGUES_IDS)
 
 
 @pytest.mark.parametrize('odds,combined_odds', [
@@ -59,29 +67,21 @@ def test_check_leagues_ids(leagues_ids):
         assert checked_leagues_ids == set(LEAGUES_MAPPING.keys())
 
 
-@pytest.mark.parametrize('leagues_ids', [
-    ['E0', 'B1', 'E1'],
-    'all'
-])
-def test_create_spi_tables(leagues_ids):
+def test_create_spi_tables():
     """Test the creation of spi tables."""
-    leagues_ids = check_leagues_ids(leagues_ids)
-    spi_historical, spi_fixtures = create_spi_tables(leagues_ids)
-    assert set(spi_historical.columns) == set(spi_fixtures.columns)
-    assert set(spi_historical.league.unique()) == set(leagues_ids)
-    assert set(spi_fixtures.league.unique()) == set(leagues_ids)
-    assert spi_historical[['score1', 'score2']].isna().sum().sum() == 0
-    assert spi_fixtures[['score1', 'score2']].isna().sum().sum() == 2 * len(spi_fixtures)
+    assert set(SPI_HISTORICAL.columns) == set(SPI_FIXTURES.columns)
+    assert set(SPI_HISTORICAL.league.unique()) == set(LEAGUES_IDS)
+    assert set(SPI_FIXTURES.league.unique()) == set(LEAGUES_IDS)
+    assert SPI_HISTORICAL[['score1', 'score2']].isna().sum().sum() == 0
+    assert SPI_FIXTURES[['score1', 'score2']].isna().sum().sum() == 2 * len(SPI_FIXTURES)
 
 
 def test_create_fd_tables():
     """Test the creation of fd tables."""
-    leagues_ids = ['E0', 'B1', 'E1']
-    leagues_ids = check_leagues_ids(leagues_ids)
-    fd_historical, fd_fixtures = create_fd_tables(leagues_ids)
-    assert set(fd_historical.columns).difference(fd_fixtures.columns) == set(['season'])
-    assert set(fd_historical.Div.unique()) == set(leagues_ids)
-    assert set(fd_fixtures.Div.unique()).issubset(leagues_ids)
+    FD_HISTORICAL, FD_FIXTURES = create_fd_tables(LEAGUES_IDS)
+    assert set(FD_HISTORICAL.columns).difference(FD_FIXTURES.columns) == set(['season'])
+    assert set(FD_HISTORICAL.Div.unique()) == set(LEAGUES_IDS)
+    assert set(FD_FIXTURES.Div.unique()).issubset(LEAGUES_IDS)
 
 
 def test_create_names_mapping():
@@ -94,4 +94,12 @@ def test_create_names_mapping():
 
 def test_create_modeling_tables():
     """Test the creation of modelling tables."""
-    
+    names_mapping = create_names_mapping_table(SPI_HISTORICAL[SPI_KEYS], FD_HISTORICAL[FD_KEYS])
+    X, y, odds, X_test, odds_test = create_modeling_tables(SPI_HISTORICAL, SPI_FIXTURES, FD_HISTORICAL, FD_FIXTURES, names_mapping)
+    assert X.columns[1:].tolist() == X_test.columns.tolist()
+    assert set(X.columns) == set(['season'] + SPI_KEYS + INPUT_COLS + ['quality', 'importance', 'rating', 'sum_proj_score'])
+    if X_test.size > 0:
+        assert max(X.date) < min(X.date)
+    assert odds.columns.tolist() == odds_test.columns.tolist()
+    assert set(odds.columns).issuperset(TARGETS)
+    assert set(y.columns) == set(OUTPUT_COLS + ['avg_score1', 'avg_score2'])

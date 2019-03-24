@@ -39,6 +39,14 @@ LEAGUES_MAPPING = {
     'SP2': 'Spanish Segunda Division',
     'T1': 'Turkish Turkcell Super Lig'
 }
+SEASONS = ['1617', '1718', '1819']
+SPI_KEYS = ['date', 'league', 'team1', 'team2']
+FD_KEYS = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
+SPI_INPUT_COLS = ['spi1', 'spi2', 'prob1', 'prob2', 'probtie', 'proj_score1', 'proj_score2', 'importance1', 'importance2']
+FD_INPUT_COLS = ['BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh' , 'BbAvAHH', 'BbAvAHA']
+OUTPUT_COLS = ['score1', 'score2', 'xg1', 'xg2', 'nsxg1', 'nsxg2', 'adj_score1', 'adj_score2']
+ODDS_COLS_MAPPING = {'PSH': 'H', 'PSA': 'A', 'PSD': 'D', 'BbMx>2.5': 'over_2.5', 'BbMx<2.5': 'under_2.5', 'BbAHh': 'handicap', 'BbMxAHH': 'handicap_home', 'BbMxAHA': 'handicap_away'}
+INPUT_COLS = SPI_INPUT_COLS + FD_INPUT_COLS
 
 
 def combine_odds(odds):
@@ -101,22 +109,18 @@ def create_fd_tables(leagues_ids):
 
     # Define parameters
     base_url = 'http://www.football-data.co.uk'
-    cols = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
-    features_cols = ['BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh' , 'BbAvAHH', 'BbAvAHA']
-    odds_cols = ['PSH', 'PSA', 'PSD', 'BbMx>2.5', 'BbMx<2.5', 'BbAHh', 'BbMxAHH', 'BbMxAHA']
-    seasons = ['1617', '1718', '1819']
 
     # Download historical data
     fd_historical = []
-    for league_id, season in product(leagues_ids, seasons):
-        data = pd.read_csv(join(base_url, 'mmz4281', season, league_id), usecols=cols + features_cols + odds_cols)
+    for league_id, season in product(leagues_ids, SEASONS):
+        data = pd.read_csv(join(base_url, 'mmz4281', season, league_id), usecols=FD_KEYS + FD_INPUT_COLS + list(ODDS_COLS_MAPPING.keys()))
         data['Date'] = pd.to_datetime(data['Date'], dayfirst=True)
         data['season'] = season
         fd_historical.append(data)
     fd_historical = pd.concat(fd_historical, ignore_index=True)
 
     # Download fixtures data
-    fd_fixtures = pd.read_csv(join(base_url, 'fixtures.csv'), usecols=cols + features_cols + odds_cols)
+    fd_fixtures = pd.read_csv(join(base_url, 'fixtures.csv'), usecols=FD_KEYS + FD_INPUT_COLS + list(ODDS_COLS_MAPPING.keys()))
     fd_fixtures['Date'] = pd.to_datetime(fd_fixtures['Date'], dayfirst=True)
     fd_fixtures = fd_fixtures[fd_fixtures['Div'].isin(leagues_ids)]
 
@@ -159,35 +163,30 @@ def create_names_mapping_table(left_data, right_data):
     return names_mapping
 
 
-def create_modeling_tables(data):
+def create_modeling_tables(spi_historical, spi_fixtures, fd_historical, fd_fixtures, names_mapping):
     """Create tables for machine learning modeling."""
-
-    # Define parameters
-    spi_keys = ['date', 'league', 'team1', 'team2']
-    fd_keys = ['Date', 'Div', 'HomeTeam', 'AwayTeam']
-    input_cols = ['spi1', 'spi2', 'prob1', 'prob2', 'probtie', 'proj_score1', 'proj_score2', 'importance1', 'importance2', 'BbAvH', 'BbAvA', 'BbAvD', 'BbAv>2.5', 'BbAv<2.5', 'BbAHh', 'BbAvAHH', 'BbAvAHA']
-    output_cols = ['score1', 'score2', 'xg1', 'xg2', 'nsxg1', 'nsxg2', 'adj_score1', 'adj_score2']
-    odds_cols_mapping = {'PSH': 'H', 'PSA': 'A', 'PSD': 'D', 'BbMx>2.5': 'over_2.5', 'BbMx<2.5': 'under_2.5', 'BbAHh': 'handicap', 'BbMxAHH': 'handicap_home', 'BbMxAHA': 'handicap_away'}
 
     # Rename teams
     for col in ['team1', 'team2']:
-        for name in ('spi_historical', 'spi_fixtures'):
-            data[name] = pd.merge(data[name], data['names_mapping'], left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
+        for df in (spi_historical, spi_fixtures):
+            df = pd.merge(df, names_mapping, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
 
     # Combine data
-    historical = pd.merge(data['spi_historical'], data['fd_historical'], left_on=spi_keys, right_on=fd_keys).dropna(subset=odds_cols_mapping.keys(), how='any').reset_index(drop=True)
-    fixtures = pd.merge(data['spi_fixtures'], data['fd_fixtures'], left_on=spi_keys, right_on=fd_keys)
+    historical = pd.merge(spi_historical, fd_historical, left_on=SPI_KEYS, right_on=FD_KEYS).dropna(subset=ODDS_COLS_MAPPING.keys(), how='any').reset_index(drop=True)
+    fixtures = pd.merge(spi_fixtures, fd_fixtures, left_on=SPI_KEYS, right_on=FD_KEYS)
 
     # Extract training, odds and fixtures
-    X = historical.loc[:, ['season'] + spi_keys + input_cols]
-    y = historical.loc[:, output_cols]
-    odds = historical.loc[:, spi_keys + list(odds_cols_mapping.keys())].rename(columns=odds_cols_mapping)
-    X_test = fixtures.loc[:, spi_keys + input_cols]
-    odds_test = fixtures.loc[:, spi_keys + list(odds_cols_mapping.keys())].rename(columns=odds_cols_mapping)
+    X = historical.loc[:, ['season'] + SPI_KEYS + INPUT_COLS]
+    y = historical.loc[:, OUTPUT_COLS]
+    odds = historical.loc[:, SPI_KEYS + list(ODDS_COLS_MAPPING.keys())].rename(columns=ODDS_COLS_MAPPING)
+    X_test = fixtures.loc[:, SPI_KEYS + INPUT_COLS]
+    odds_test = fixtures.loc[:, SPI_KEYS + list(ODDS_COLS_MAPPING.keys())].rename(columns=ODDS_COLS_MAPPING)
 
     # Add average scores columns
     for ind in (1, 2):
-        y['avg_score%s' % ind] =  y[['score%s' % ind, 'xg%s' % ind, 'nsxg%s' % ind]].mean(axis=1)
+        avg_score =  y[['adj_score%s' % ind, 'xg%s' % ind, 'nsxg%s' % ind]].mean(axis=1)
+        avg_score[avg_score.isna()] = y['score%s' % ind]
+        y['avg_score%s' % ind] = avg_score
 
     # Add combined odds columns
     for target in TARGETS:
@@ -197,7 +196,7 @@ def create_modeling_tables(data):
             odds_test[target] = combine_odds(odds_test[targets])
 
     # Feature extraction
-    with np.errstate(divide='ignore',invalid='ignore'):
+    with np.errstate(divide='ignore', invalid='ignore'):
         for df in (X, X_test):
             df['quality'] = hmean(df[['spi1', 'spi2']], axis=1)
             df['importance'] = df[['importance1', 'importance2']].mean(axis=1)
@@ -224,41 +223,19 @@ def download():
     # Parse arguments
     args = parser.parse_args()
 
-    # Adjust parameter
-    leagues = args.leagues
-    if len(leagues) == 1 and leagues[0] == 'all':
-        leagues = leagues[0]
+    # Extract leagues ids
+    leagues_ids = args.leagues
+    if len(leagues_ids) == 1 and leagues_ids[0] == 'all':
+        leagues_ids = leagues_ids[0]
 
-    # Load data
-    data = {}
-    for name in ('spi_historical', 'spi_fixtures', 'fd_historical', 'fd_fixtures', 'names_mapping'):
-        parse_dates = ['date'] if name in ('spi_historical', 'spi_fixtures') else ['Date'] if name in ('fd_historical', 'fd_fixtures') else None
-        sql_query = 'select * from {}'.format(name)
-        data[name] = pd.read_sql(sql_query, DB_CONNECTION, parse_dates=parse_dates)
+    # Create historical, fixtures and names mapping tables
+    spi_historical, spi_fixtures = create_spi_tables(leagues_ids)
+    fd_historical, fd_fixtures = create_fd_tables(leagues_ids)
+    names_mapping = create_names_mapping_table(spi_historical[SPI_KEYS], fd_historical[FD_KEYS])
 
-    # Load data
-    left_data = pd.read_sql('select date, league, team1, team2 from spi_historical', DB_CONNECTION)
-    right_data = pd.read_sql('select Date, Div, HomeTeam, AwayTeam from fd_historical', DB_CONNECTION)
+    # Create modeling tables
+    X, y, odds, X_test, odds_test = create_modeling_tables(spi_historical, spi_fixtures, fd_historical, fd_fixtures, names_mapping)
 
-    # Save table
-    names_mapping.to_sql('names_mapping', DB_CONNECTION, index=False, if_exists='replace')
-
-    # Save tables
-    for name, df in zip(['fd_historical', 'fd_fixtures'], [fd_historical, fd_fixtures]):
-        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
-
-    # Save tables
-    for name, df in zip(['spi_historical', 'spi_fixtures'], [spi_historical, spi_fixtures]):
-        df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
-
-    # Save tables
+    # Save modeling tables
     for name, df in zip(['X', 'y', 'odds', 'X_test', 'odds_test'], [X, y, odds, X_test, odds_test]):
         df.to_sql(name, DB_CONNECTION, index=False, if_exists='replace')
-
-    # Create tables
-    for ind, func in enumerate([create_spi_tables, create_fd_tables, create_names_mapping_table, create_modeling_tables]):
-        func(leagues) if ind in (0, 1) else func()
-
-    
-
-
