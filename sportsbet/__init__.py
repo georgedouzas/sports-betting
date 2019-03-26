@@ -1,5 +1,5 @@
 """
-Includes manipulation of the data paths.
+Includes definitions of the data paths.
 """
 
 from os.path import join, dirname
