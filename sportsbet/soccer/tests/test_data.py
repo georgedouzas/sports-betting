@@ -99,7 +99,7 @@ def test_create_modeling_tables():
     assert X.columns[1:].tolist() == X_test.columns.tolist()
     assert set(X.columns) == set(['season'] + SPI_KEYS + INPUT_COLS + ['quality', 'importance', 'rating', 'sum_proj_score'])
     if X_test.size > 0:
-        assert max(X.date) < min(X.date)
+        assert max(X.date) < min(X_test.date)
     assert odds.columns.tolist() == odds_test.columns.tolist()
     assert set(odds.columns).issuperset(TARGETS)
     assert set(y.columns) == set(OUTPUT_COLS + ['avg_score1', 'avg_score2'])

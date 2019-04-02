@@ -1,8 +1,9 @@
 imbalanced-learn==0.4.2
-numpy==1.15.3
-pandas==0.23.4
-progressbar2==3.38.0
-scikit-learn==0.20.0
+numpy==1.16.2
+pandas==0.24.2
+tqdm==4.28.1
+scikit-learn==0.20.3
 scipy==1.1.0
+joblib==0.13.2
 
 

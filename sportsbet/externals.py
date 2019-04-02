@@ -18,19 +18,19 @@ from sklearn.utils.metaestimators import _BaseComposition
 from sklearn.utils.validation import has_fit_parameter, check_is_fitted
 
 
-class SeasonSplit(BaseCrossValidator):
-    """Split time-series data based on a test season."""
+class TimeSeriesSplit(BaseCrossValidator):
+    """Split time-series data."""
 
-    def __init__(self, n_splits, seasons, test_season):
+    def __init__(self, n_splits, min_train_size):
         self.n_splits = n_splits
-        self.seasons = seasons
-        self.test_season = test_season
+        self.min_train_size = min_train_size
 
-    def split(self, X=None, y=None, groups=None):
+    def split(self, X, y=None, groups=None):
         """Generate indices to split data into training and test set."""
-        start_index, end_index = (self.seasons != self.test_season).sum(), len(self.seasons)
+        start_index, end_index = int(self.min_train_size * len(X)), len(X)
         step = (end_index - start_index) // self.n_splits
-        breakpoints = list(range(start_index, end_index, step)) + [end_index]
+        breakpoints = list(range(start_index, end_index, step))
+        breakpoints[-1] = end_index
         for start, end in zip(breakpoints[:-1], breakpoints[1:]):
             yield np.arange(0, start), np.arange(start, end)
 

@@ -5,6 +5,7 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
+        'joblib==0.13.2',
         'scipy==1.1.0',
         'numpy==1.16.2',
         'pandas==0.24.2',
