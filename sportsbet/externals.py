@@ -67,7 +67,7 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
         if sample_weight is not None and any([not has_fit_parameter(clf, 'sample_weight') for _, clf in self.classifiers]):
             raise ValueError('One of base classifiers does not support sample weights.')
 
-        self.estimators_ = Parallel(n_jobs=self.n_jobs)(delayed(_fit_estimator)(clf, X, y[:, i], sample_weight) 
+        self.classifiers_ = Parallel(n_jobs=self.n_jobs)(delayed(_fit_estimator)(clf, X, y[:, i], sample_weight) 
                                                         for i, (_, clf) in zip(range(y.shape[1]), self.classifiers))
         
         return self
@@ -75,7 +75,7 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
     def predict(self, X):
         """Predict multi-output target."""
         
-        check_is_fitted(self, 'estimators_')
+        check_is_fitted(self, 'classifiers_')
 
         for _, clf in self.classifiers:
             if not hasattr(clf, 'predict'):
@@ -83,14 +83,14 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
 
         X = check_array(X, accept_sparse=True)
 
-        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(e, 'predict', X) for e in self.estimators_)
+        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(clf, 'predict', X) for clf in self.classifiers_)
 
         return np.asarray(y_pred).T
 
     def predict_proba(self, X):
         """Predict multi-output probabilities."""
         
-        check_is_fitted(self, 'estimators_')
+        check_is_fitted(self, 'classifiers_')
 
         for _, clf in self.classifiers:
             if not hasattr(clf, 'predict_proba'):
@@ -98,6 +98,6 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
 
         X = check_array(X, accept_sparse=True)
 
-        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(e, 'predict', X) for e in self.estimators_)
+        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(clf, 'predict_proba', X) for clf in self.classifiers_)
 
         return y_pred
