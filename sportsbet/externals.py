@@ -5,8 +5,9 @@ Includes extensions of external packages.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: BSD 3 clause
 
-from joblib import delayed, Parallel
+from math import ceil
 
+from joblib import delayed, Parallel
 import numpy as np
 from sklearn.base import is_classifier
 from sklearn.model_selection import BaseCrossValidator
@@ -21,16 +22,19 @@ from sklearn.utils.validation import has_fit_parameter, check_is_fitted
 class TimeSeriesSplit(BaseCrossValidator):
     """Split time-series data."""
 
-    def __init__(self, n_splits, min_train_size):
+    def __init__(self, n_splits=5, min_train_size=0.5):
+        if n_splits < 2:
+            raise ValueError('K-fold cross-validation requires at least one train/test split. Got n_splits < 2.')
+        if min_train_size <= 0.0 or min_train_size >= 1.0:
+            raise ValueError(f'Minimum training size should be in the (0.0, 1.0) interval. Got {min_train_size}.')
         self.n_splits = n_splits
         self.min_train_size = min_train_size
 
     def split(self, X, y=None, groups=None):
         """Generate indices to split data into training and test set."""
         start_index, end_index = int(self.min_train_size * len(X)), len(X)
-        step = (end_index - start_index) // self.n_splits
-        breakpoints = list(range(start_index, end_index, step))
-        breakpoints[-1] = end_index
+        step = ceil((end_index - start_index) / self.n_splits)
+        breakpoints = list(range(start_index, end_index, step)) + [end_index]
         for start, end in zip(breakpoints[:-1], breakpoints[1:]):
             yield np.arange(0, start), np.arange(start, end)
 
@@ -41,9 +45,8 @@ class TimeSeriesSplit(BaseCrossValidator):
 
 class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
 
-    def __init__(self, classifiers, features_container, n_jobs=None):
+    def __init__(self, classifiers, n_jobs=None):
         self.classifiers = classifiers
-        self.features_container = features_container
         self.n_jobs = n_jobs
 
     def fit(self, X, y, sample_weight=None):
@@ -53,7 +56,7 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
             if not hasattr(clf, 'fit'):
                 raise ValueError('Every base classifier should implement a fit method.')
 
-        data = [check_X_y(X[features], y, multi_output=True, accept_sparse=True) for features in self.features_container]
+        X, y = check_X_y(X, y, multi_output=True, accept_sparse=True)
 
         if is_classifier(self):
             check_classification_targets(y)
@@ -65,7 +68,7 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
             raise ValueError('One of base classifiers does not support sample weights.')
 
         self.estimators_ = Parallel(n_jobs=self.n_jobs)(delayed(_fit_estimator)(clf, X, y[:, i], sample_weight) 
-                                                        for i, (_, clf), (X, y) in zip(range(y.shape[1]), self.classifiers, data))
+                                                        for i, (_, clf) in zip(range(y.shape[1]), self.classifiers))
         
         return self
 
@@ -78,9 +81,9 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
             if not hasattr(clf, 'predict'):
                 raise ValueError('Every base classifier should implement a predict method')
 
-        data = [check_array(X[features], accept_sparse=True) for features in self.features_container]
+        X = check_array(X, accept_sparse=True)
 
-        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(e, 'predict', X) for e, X in zip(self.estimators_, data))
+        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(e, 'predict', X) for e in self.estimators_)
 
         return np.asarray(y_pred).T
 
@@ -93,8 +96,8 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
             if not hasattr(clf, 'predict_proba'):
                 raise ValueError('Every base should implement predict_proba method')
 
-        data = [check_array(X[features], accept_sparse=True) for features in self.features_container]
+        X = check_array(X, accept_sparse=True)
 
-        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(e, 'predict', X) for e, X in zip(self.estimators_, data))
+        y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(e, 'predict', X) for e in self.estimators_)
 
         return y_pred
