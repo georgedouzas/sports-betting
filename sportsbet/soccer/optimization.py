@@ -24,7 +24,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from tqdm import tqdm
 
 from sportsbet import SOCCER_PATH
-from sportsbet.externals import SeasonSplit
+from sportsbet.externals import TimeSeriesSplit
 from sportsbet.soccer import TARGETS, OFFSETS, SCORES_MAPPING, FEATURES
 from sportsbet.soccer.config import PORTOFOLIOS
 
