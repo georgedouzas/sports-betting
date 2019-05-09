@@ -101,5 +101,5 @@ def test_create_modeling_tables():
     if X_test.size > 0:
         assert max(X.date) < min(X_test.date)
     assert odds.columns.tolist() == odds_test.columns.tolist()
-    assert set(odds.columns).issuperset([target for target, *_ in TARGETS])
+    assert set(odds.columns).issuperset([target for target, _ in TARGETS])
     assert set(y.columns) == set(OUTPUT_COLS + ['avg_score1', 'avg_score2'])
