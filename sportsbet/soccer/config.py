@@ -16,15 +16,14 @@ from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import make_pipeline
 
 PORTOFOLIOS = {
-    'all_markets':
-            {   'better_class': 'Better',
-                'scores_type': 'real',
-                'risk_factors': [0.3, 0.4, 0.5],
-                'classifier': [make_pipeline(SimpleImputer(), SMOTE(), LogisticRegression(max_iter=20000, solver='lbfgs', multi_class='auto'))],
-                'targets': [['H', 'A', 'D', 'over_2.5', 'under_2.5']],
-                'offsets': [[0.0, 0.0, 0.0, 0.0, 0.0]],
-                'features': ['all'],
-                'classifier__smote__k_neighbors': [2, 3],
-                'classifier__logisticregression__C': [5e4]
-            }
+    'all_markets': {
+        'targets': ['H', 'A', 'D', 'over_2.5', 'under_2.5'],
+        'scores_type': 'real',
+        'offsets': [0.0, 0.0, 0.0, 0.0, 0.0],
+        'better_class': 'Better', 
+        'risk_factors': [0.3, 0.4, 0.5],
+        'classifier': [make_pipeline(SimpleImputer(), SMOTE(), LogisticRegression(max_iter=20000, solver='lbfgs', multi_class='auto'))],
+        'classifier__smote__k_neighbors': [2, 3],
+        'classifier__logisticregression__C': [5e4]
+    }
 }

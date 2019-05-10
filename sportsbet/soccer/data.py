@@ -189,7 +189,7 @@ def create_modeling_tables(spi_historical, spi_fixtures, fd_historical, fd_fixtu
         y['avg_score%s' % ind] = avg_score
 
     # Add combined odds columns
-    for target, _ in TARGETS:
+    for target in TARGETS:
         if '+' in target:
             targets = target.split('+')
             odds[target] = combine_odds(odds[targets])

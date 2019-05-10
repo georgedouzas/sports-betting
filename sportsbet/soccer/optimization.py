@@ -25,35 +25,55 @@ from tqdm import tqdm
 
 from sportsbet import SOCCER_PATH
 from sportsbet.externals import TimeSeriesSplit
-from sportsbet.soccer import TARGETS, OFFSETS, SCORES_MAPPING, FEATURES
+from sportsbet.soccer import TARGETS
 from sportsbet.soccer.config import PORTOFOLIOS
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 
 
-def calculate_yields(scores, bets, odds):
+def extract_multi_labels(score1, score2, targets):
+    """Extract multi-labels matrix for multi-output classification."""
+    
+    # Check input data
+    score1 = check_array(score1, dtype=int, ensure_2d=False)
+    score2 = check_array(score2, dtype=int, ensure_2d=False)
+    targets = check_array(targets, dtype=object, ensure_2d=False)
+
+    # Generate multi-labels
+    multi_labels = np.column_stack([TARGETS[target](score1, score2) for target in targets]).astype(int)
+    
+    return multi_labels
+
+
+def extract_class_labels(score1, score2, odds, targets):
+    """Extract class labels for multi-class classification."""
+    
+    # Check input data
+    odds = check_array(odds)
+
+    # Generate class labels
+    multi_labels = extract_multi_labels(score1, score2, targets)
+    indices = (multi_labels * odds).argmax(axis=1)
+    class_labels = np.array([targets[ind] for ind in indices])
+    class_labels[multi_labels.sum(axis=1) == 0] = '-'
+    
+    return class_labels
+
+
+def calculate_yields(score1, score2, bets, odds, targets):
     """Calculate the yields."""
 
-    # Check scores
-    scores = check_array(scores, dtype=int)
-    
-    # Convert bets to indicator matrix
-    mlb = MultiLabelBinarizer()
-    y_bets = mlb.fit_transform([[bet] for bet in bets])
+    # Check odds
+    odds = check_array(odds)
 
-    # Extract starting index and targets
-    start_ind = 1 if '-' in mlb.classes_ else 0
-    targets = mlb.classes_[start_ind:]
-
-    # Calculate yields
-    masks = np.concatenate([SCORES_MAPPING[target](scores[:, 0], scores[:, 1], 0.0).reshape(-1, 1) for target in targets], axis=1)
-    yields = (y_bets[:, start_ind:] * masks * odds[targets].values - 1.0).max(axis=1)
-    yields[bets == '-'] = 0.0
+    # Generate yields
+    bets = MultiLabelBinarizer(classes=['-'] + targets).fit_transform([[bet] for bet in bets])[:, (1 if '-' in bets else 0):]
+    yields = ((extract_multi_labels(score1, score2, targets) * odds - 1.0) * bets).sum(axis=1)
 
     return yields
 
 
-def _extract_yields_stats(yields):
+def extract_yields_stats(yields):
     """Extract coverage, mean and std of yields."""
     coverage_mask = (yields != 0.0)
     return coverage_mask.mean(), yields[coverage_mask].mean(), yields[coverage_mask].std()
@@ -65,30 +85,30 @@ def check_random_states(random_state, repetitions):
     return [random_state.randint(0, 2 ** 32 - 1, dtype='uint32') for _ in range(repetitions)]
 
 
-def _fit_bet(better, params, risk_factors, random_state, X, y, odds, train_indices, test_indices):
+def fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices):
     """Parallel fit and bet"""
 
     # Set random state
-    for param_name in better.get_params():
+    for param_name in bettor.get_params():
         if 'random_state' in param_name:
-            better.set_params(**{param_name: random_state})
+            bettor.set_params(**{param_name: random_state})
 
     # Fit better
-    better.set_params(**params).fit(X.iloc[train_indices], y.iloc[train_indices], odds.iloc[train_indices])
+    bettor.set_params(**params).fit(X[train_indices], score1[train_indices], score2[train_indices], odds[train_indices])
 
     # Generate data
     data = []
     for risk_factor in risk_factors:
-        bets = better.bet(X.iloc[test_indices], risk_factor)
-        yields = calculate_yields(y.iloc[test_indices], bets, odds.iloc[test_indices])
+        bets = bettor.bet(X[test_indices], risk_factor)
+        yields = calculate_yields(score1[test_indices], score2[test_indices], bets, odds[test_indices], bettor.targets_)
         data.append((str(params), random_state, risk_factor, yields))
     data = pd.DataFrame(data, columns=['parameters', 'experiment', 'risk_factor', 'yields'])
     
     return data
 
 
-def apply_backtesting(better, param_grid, risk_factors, X, y, odds, cv, random_state, n_runs):
-    """Apply backtesting to evaluate better."""
+def apply_backtesting(bettor, param_grid, risk_factors, X, score1, score2, odds, cv, random_state, n_runs):
+    """Apply backtesting to evaluate bettor."""
     
     # Check random states
     random_states = check_random_states(random_state, n_runs)
@@ -97,13 +117,13 @@ def apply_backtesting(better, param_grid, risk_factors, X, y, odds, cv, random_s
     parameters = ParameterGrid(param_grid)
 
     # Run backtesting
-    data = Parallel(n_jobs=-1)(delayed(_fit_bet)(better, params, risk_factors, random_state, X, y, odds, train_indices, test_indices) 
+    data = Parallel(n_jobs=-1)(delayed(fit_bet)(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices) 
            for params, random_state, (train_indices, test_indices) in tqdm(list(product(parameters, random_states, cv.split())), desc='Tasks'))
     
     # Combine data
     data = pd.concat(data, ignore_index=True)
     data = data.groupby(['parameters', 'risk_factor', 'experiment']).apply(lambda df: np.concatenate(df.yields.values)).reset_index()
-    data[['coverage', 'mean_yield', 'std_yield']] = pd.DataFrame(data[0].apply(lambda yields: _extract_yields_stats(yields)).values.tolist())
+    data[['coverage', 'mean_yield', 'std_yield']] = pd.DataFrame(data[0].apply(lambda yields: extract_yields_stats(yields)).values.tolist())
     
     # Calculate results
     results = data.drop(columns=['experiment', 0]).groupby(['parameters', 'risk_factor']).mean().reset_index()
@@ -113,13 +133,13 @@ def apply_backtesting(better, param_grid, risk_factors, X, y, odds, cv, random_s
     return results
 
 
-class BaseBetter(BaseEstimator):
-    """Base class for all betters."""
+class BettorMixin:
+    """Mixin class for all bettors."""
 
-    def __init__(self, targets, offsets, features):
+    _estimator_type = 'bettor'
+
+    def __init__(self, targets):
         self.targets = targets
-        self.offsets = offsets
-        self.features = features
 
     @abstractmethod
     def predict(self, X):
@@ -129,55 +149,21 @@ class BaseBetter(BaseEstimator):
     @abstractmethod
     def predict_proba(self, X):
         """Predict probabilities."""
-        pass  
+        pass
 
-    def _check_targets_offsets(self):
-        """Check the targets."""
-    
-        # Check parameter targets is a subset of predifined targets
-        if not set(self.targets).issubset(TARGETS):
-            raise ValueError('Selected targets are not supported.')
-    
-        # Sort targets
-        indices = np.argsort(self.targets)
+    def fit(self):
+        """Fit base bettor."""
         
-        self.targets_ = np.array(self.targets)[indices].astype(object)
-        self.offsets_ = np.array(self.offsets)[indices]
-
-    def _check_features(self, X):
-        """Check the input matrix features."""
-        if self.features != 'all' and not set(self.features).issubset(X.columns):
-            raise ValueError('Selected features are not a subset of all features.')
-        self.features_ = FEATURES if self.features == 'all' else self.features
-    
-    def _extract_multi_labels(self, y):
-        """Extract multi-labels matrix for multi-output classification."""
-    
         # Check targets
-        y = check_array(y, dtype=int)
-    
-        # Generate boolean masks
-        masks = np.concatenate([SCORES_MAPPING[target](y[:, 0], y[:, 1], offset).reshape(-1, 1) for target, offset in zip(self.targets_, self.offsets_)], axis=1)
-    
-        # Binarize targets
-        y = MultiLabelBinarizer().fit_transform([self.targets_[mask] for mask in masks])
-    
-        return y
-
-    def _extract_class_labels(self, y, odds):
-        """Extract class labels for multi-class classification."""
-    
-        # Extract multi-label matrix
-        y = self._extract_multi_labels(y)
-    
-        # Select label with highest yiled 
-        y = np.array(self.targets_)[(y * odds[self.targets_.tolist()].values).argmax(axis=1)].astype(object)
-    
-        # Identify no bets
-        mask = (y.reshape(-1, 1).sum(axis=1) == 0)
-        y[mask] = '-'
-    
-        return y
+        if self.targets is None:
+            self.targets_ = np.array(TARGETS.keys())
+        else:
+            if not set(self.targets).issubset(TARGETS.keys()):
+                raise ValueError(f'Targets should be any of {", ".join(self.targets)}')
+            else:
+                self.targets_ = np.array(self.targets)
+        
+        return self
     
     def bet(self, X, risk_factor):
         """Generate bets."""
@@ -195,52 +181,50 @@ class BaseBetter(BaseEstimator):
         return bets
 
 
-class Better(BaseBetter):
-    """Better class that uses a multi-class classifier."""
+class Bettor(BaseEstimator, BettorMixin):
+    """Bettor class that uses a multi-class classifier."""
 
-    def __init__(self, classifier, targets=TARGETS, offsets=OFFSETS, features='all'):
-        super(Better, self).__init__(targets, offsets, features)
+    def __init__(self, classifier, targets=None):
+        super(Bettor, self).__init__(targets)
         self.classifier = classifier
 
-    def fit(self, X, y, odds):
+    def fit(self, X, score1, score2, odds):
         """Fit the classifier."""
 
-        # Checks
-        self._check_targets_offsets()
-        self._check_features(X)
+        super(Bettor, self).fit()
 
         # Extract targets
-        y = self._extract_class_labels(y, odds)
+        y = extract_class_labels(score1, score2, odds, self.targets_)
 
         # Fit classifier
-        self.classifier_ = clone(self.classifier).fit(X[self.features_], y)
+        self.classifier_ = clone(self.classifier).fit(X, y)
+
         return self
 
     def predict(self, X):
         """Predict class labels."""
-        return self.classifier_.predict(X[self.features_])
+        return self.classifier_.predict(X)
 
     def predict_proba(self, X):
         """Predict class probabilities."""
-        return self.classifier_.predict_proba(X[self.features_])
+        return self.classifier_.predict_proba(X)
 
 
-class MultiBetter(BaseBetter):
-    """Better class that uses a multi-output classifier."""
+class MultiBettor(BaseEstimator, BettorMixin):
+    """Bettor class that uses a multi-output classifier."""
 
-    def __init__(self, multi_classifier, targets=TARGETS, offsets=OFFSETS, features='all'):
-        super(MultiBetter, self).__init__(targets, offsets)
+    def __init__(self, base_classifier, multi_classifier, targets=None):
+        super(MultiBettor, self).__init__(targets)
+        self.base_classifier = base_classifier
         self.multi_classifier = multi_classifier
     
-    def fit(self, X, y):
+    def fit(self, X, score1, score2, odds):
         """Fit the multi-output classifier."""
-        
-        # Checks
-        self._check_targets_offsets()
-        self._check_features(X)
+
+        super(MultiBettor, self).fit()
 
         # Extract targets
-        y = self._extract_multi_labels(y)
+        y = extract_multi_labels(score1, score2, self.targets_)
 
         # Fit multi-classifier
         self.multi_classifier_ = clone(self.multi_classifier).fit(X, y)
