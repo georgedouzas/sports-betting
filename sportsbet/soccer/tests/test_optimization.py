@@ -13,7 +13,10 @@ from sportsbet.soccer.optimization import (
         extract_class_labels,
         calculate_yields,
         extract_yields_stats,
-        BettorMixin
+        fit_bet,
+        BettorMixin,
+        Bettor,
+        MultiBettor
 )
 
 
@@ -48,6 +51,12 @@ def test_extract_yields_stats():
     """Test the calculation of yields."""
     yields = np.array([0.0, -1.0, 2.0, 0.0])
     np.testing.assert_array_equal(extract_yields_stats(yields), (0.5, 0.5, 1.5))
+
+
+def test_fit_bet():
+    """Test fit and bet function."""
+    bettor = Be
+    fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices)
 
 
 def test_none_targets_bettor_mixin():
