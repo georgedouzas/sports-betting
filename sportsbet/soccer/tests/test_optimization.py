@@ -5,6 +5,8 @@ Test the optimization module.
 import numpy as np
 import pandas as pd
 from sklearn.datasets import make_classification
+from sklearn.dummy import DummyClassifier
+from sklearn.datasets import make_classification
 import pytest
 
 from sportsbet.soccer import TARGETS
@@ -55,8 +57,18 @@ def test_extract_yields_stats():
 
 def test_fit_bet():
     """Test fit and bet function."""
-    bettor = Be
-    fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices)
+    bettor = Bettor(classifier=DummyClassifier(), targets=['D', 'H'])
+    params = {'classifier__strategy': 'constant', 'classifier__constant': 'H'}
+    risk_factors = [0.0]
+    random_state = 0
+    X = np.random.random((100, 2))
+    score1, score2 = np.repeat([1, 0], 50), np.repeat([0, 1], 50)
+    train_indices, test_indices = np.arange(0, 25), np.arange(25, 100)
+    odds = np.repeat([2.0, 2.0], 100).reshape(-1, 2)
+    data = fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices)
+    expected_yields = np.concatenate([np.repeat(1.0, 25), np.repeat(-1.0, 50)])
+    expected_data = pd.DataFrame([[str(params), random_state, risk_factors[0], expected_yields]], columns=['parameters', 'experiment', 'risk_factor', 'yields'])
+    pd.testing.assert_frame_equal(expected_data, data)
 
 
 def test_none_targets_bettor_mixin():

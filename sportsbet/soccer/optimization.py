@@ -65,9 +65,10 @@ def calculate_yields(score1, score2, bets, odds, targets):
 
     # Check odds
     odds = check_array(odds)
+    targets = check_array(targets, dtype=object, ensure_2d=False)
 
     # Generate yields
-    bets = MultiLabelBinarizer(classes=['-'] + targets).fit_transform([[bet] for bet in bets])[:, (1 if '-' in bets else 0):]
+    bets = MultiLabelBinarizer(classes=['-'] + targets.tolist()).fit_transform([[bet] for bet in bets])[:, 1:]
     yields = ((extract_multi_labels(score1, score2, targets) * odds - 1.0) * bets).sum(axis=1)
 
     return yields
@@ -169,7 +170,7 @@ class BettorMixin:
         """Generate bets."""
 
         # Check risk factor
-        if not isinstance(risk_factor, float) or risk_factor >= 1.0 or risk_factor <= 0.0:
+        if not isinstance(risk_factor, float) or risk_factor > 1.0 or risk_factor < 0.0:
             raise ValueError('Risk factor should be a float in the (0.0, 1.0) interval.')
         
         # Generate bets
