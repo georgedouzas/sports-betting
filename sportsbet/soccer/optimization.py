@@ -119,7 +119,7 @@ def apply_backtesting(bettor, param_grid, risk_factors, X, score1, score2, odds,
 
     # Run backtesting
     data = Parallel(n_jobs=-1)(delayed(fit_bet)(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices) 
-           for params, random_state, (train_indices, test_indices) in tqdm(list(product(parameters, random_states, cv.split())), desc='Tasks'))
+           for params, random_state, (train_indices, test_indices) in tqdm(list(product(parameters, random_states, cv.split(X))), desc='Tasks'))
     
     # Combine data
     data = pd.concat(data, ignore_index=True)
@@ -130,6 +130,8 @@ def apply_backtesting(bettor, param_grid, risk_factors, X, score1, score2, odds,
     results = data.drop(columns=['experiment', 0]).groupby(['parameters', 'risk_factor']).mean().reset_index()
     results['std_mean_yield'] = data.groupby(['parameters', 'risk_factor'])['mean_yield'].std().values
     results = results.sort_values('mean_yield', ascending=False).reset_index(drop=True)
+
+    print(results)
 
     return results
 
@@ -171,7 +173,7 @@ class BettorMixin:
 
         # Check risk factor
         if not isinstance(risk_factor, float) or risk_factor > 1.0 or risk_factor < 0.0:
-            raise ValueError('Risk factor should be a float in the (0.0, 1.0) interval.')
+            raise ValueError('Risk factor should be a float in the [0.0, 1.0] interval.')
         
         # Generate bets
         bets = self.predict(X)
