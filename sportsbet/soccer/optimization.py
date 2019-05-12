@@ -131,8 +131,6 @@ def apply_backtesting(bettor, param_grid, risk_factors, X, score1, score2, odds,
     results['std_mean_yield'] = data.groupby(['parameters', 'risk_factor'])['mean_yield'].std().values
     results = results.sort_values('mean_yield', ascending=False).reset_index(drop=True)
 
-    print(results)
-
     return results
 
 

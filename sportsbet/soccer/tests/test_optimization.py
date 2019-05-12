@@ -119,3 +119,15 @@ def test_valid_targets_bettor_mixin():
     base_bettor = BettorMixin(['A', 'H']).fit()
     np.testing.assert_array_equal(base_bettor.targets_, np.array(['A', 'H']))
     
+
+def test_fit_bettor():
+    """Test fit method of bettor."""
+    score1, score2 = [0, 2, 3], [1, 1, 3]
+    odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]]
+    X = [[0], [1], [2]]
+    
+    bettor = Bettor(classifier=DummyClassifier(), targets=['D', 'H']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(bettor.classifier_.classes_, np.array(['-', 'D', 'H']))
+
+    bettor = Bettor(classifier=DummyClassifier(), targets=['under_2.5', 'over_2.5']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(bettor.classifier_.classes_, np.array(['over_2.5', 'under_2.5']))
