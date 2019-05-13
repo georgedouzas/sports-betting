@@ -4,10 +4,9 @@ Test the optimization module.
 
 import numpy as np
 import pandas as pd
-from sklearn.datasets import make_classification
 from sklearn.dummy import DummyClassifier
-from sklearn.datasets import make_classification
 from sklearn.model_selection import ParameterGrid
+from sklearn.multioutput import MultiOutputClassifier
 import pytest
 
 from sportsbet.externals import TimeSeriesSplit
@@ -23,6 +22,10 @@ from sportsbet.soccer.optimization import (
         Bettor,
         MultiBettor
 )
+
+X = [[0], [1], [2]] * 10
+score1, score2 = [0, 2, 3] * 10, [1, 1, 3] * 10
+odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]] * 10
 
 
 def test_extract_multi_labels():
@@ -105,7 +108,7 @@ def test_apply_backtesting():
 def test_none_targets_bettor_mixin():
     """Test bettor mixin with none targets."""
     base_bettor = BettorMixin(None).fit()
-    np.testing.assert_array_equal(base_bettor.targets_, np.array(TARGETS.keys()))
+    np.testing.assert_array_equal(base_bettor.targets_, np.array(list(TARGETS.keys())))
 
 
 def test_invalid_targets_bettor_mixin():
@@ -122,22 +125,19 @@ def test_valid_targets_bettor_mixin():
 
 def test_bettor_fit():
     """Test fit method of bettor."""
-    score1, score2 = [0, 2, 3], [1, 1, 3]
-    odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]]
-    X = [[0], [1], [2]]
-    
-    bettor = Bettor(classifier=DummyClassifier(), targets=['D', 'H']).fit(X, score1, score2, odds)
+
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['H', 'D']).fit(X, score1, score2, odds)
     np.testing.assert_array_equal(bettor.classifier_.classes_, np.array(['-', 'D', 'H']))
 
-    bettor = Bettor(classifier=DummyClassifier(), targets=['under_2.5', 'over_2.5']).fit(X, score1, score2, odds)
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['over_2.5', 'under_2.5']).fit(X, score1, score2, odds)
     np.testing.assert_array_equal(bettor.classifier_.classes_, np.array(['over_2.5', 'under_2.5']))
+
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['over_2.5', 'A']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(np.unique(bettor.classifier_.classes_), np.array(['A', 'over_2.5']))
 
 
 def test_bettor_predict():
     """Test predict method of bettor."""
-    score1, score2 = [0, 2, 3] * 10, [1, 1, 3] * 10
-    odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]] * 10
-    X = [[0], [1], [2]] * 10
 
     bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['H', 'D']).fit(X, score1, score2, odds)
     np.testing.assert_array_equal(np.unique(bettor.predict(X)), np.array(['-', 'D', 'H']))
@@ -150,10 +150,7 @@ def test_bettor_predict():
 
 
 def test_bettor_predict_proba():
-    """Test predict method of bettor."""
-    score1, score2 = [0, 2, 3] * 10, [1, 1, 3] * 10
-    odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]] * 10
-    X = [[0], [1], [2]] * 10
+    """Test predict probabilities method of bettor."""
     
     bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['H', 'D']).fit(X, score1, score2, odds)
     assert bettor.predict_proba(X).shape == (30, 3)
@@ -163,5 +160,46 @@ def test_bettor_predict_proba():
 
     bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['over_2.5', 'A']).fit(X, score1, score2, odds)
     assert bettor.predict_proba(X).shape == (30, 2)
+
+
+def test_multi_bettor_fit():
+    """Test fit method of multi-bettor."""
     
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['D', 'H']).fit(X, score1, score2, odds)
+    assert len(multi_bettor.multi_classifier_.estimators_) == len(multi_bettor.targets_)
+    np.testing.assert_array_equal(np.unique(multi_bettor.meta_classifier_.classes_), np.array(['-', 'D', 'H']))
+
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['over_2.5', 'under_2.5']).fit(X, score1, score2, odds)
+    assert len(multi_bettor.multi_classifier_.estimators_) == len(multi_bettor.targets_)
+    np.testing.assert_array_equal(np.unique(multi_bettor.meta_classifier_.classes_), np.array(['over_2.5', 'under_2.5']))
+
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['over_2.5', 'A']).fit(X, score1, score2, odds)
+    assert len(multi_bettor.multi_classifier_.estimators_) == len(multi_bettor.targets_)
+    np.testing.assert_array_equal(np.unique(multi_bettor.meta_classifier_.classes_), np.array(['A', 'over_2.5']))
+
+
+def test_multi_bettor_predict():
+    """Test predict method of multi-bettor."""
+    
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['D', 'H']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(np.unique(multi_bettor.predict(X)), np.array(['-', 'D', 'H']))
+
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['over_2.5', 'under_2.5']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(np.unique(multi_bettor.predict(X)), np.array(['over_2.5', 'under_2.5']))
+
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['over_2.5', 'A']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(np.unique(multi_bettor.predict(X)), np.array(['A', 'over_2.5']))
+
+
+def test_multi_bettor_predict_proba():
+    """Test predict probabilities method of multi-bettor."""
+    
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['D', 'H']).fit(X, score1, score2, odds)
+    assert multi_bettor.predict_proba(X).shape[1] == len(np.array(['-', 'D', 'H']))
+
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['over_2.5', 'under_2.5']).fit(X, score1, score2, odds)
+    assert multi_bettor.predict_proba(X).shape[1] ==  len(np.array(['over_2.5', 'under_2.5']))
+
+    multi_bettor = MultiBettor(multi_classifier=MultiOutputClassifier(DummyClassifier()), meta_classifier=DummyClassifier(), targets=['over_2.5', 'A']).fit(X, score1, score2, odds)
+    assert multi_bettor.predict_proba(X).shape[1] ==  len(np.array(['A', 'over_2.5']))
 

@@ -21,6 +21,7 @@ from sklearn.base import BaseEstimator, clone, is_classifier
 from sklearn.model_selection import ParameterGrid
 from sklearn.utils import check_random_state, check_X_y, check_array
 from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from sportsbet import SOCCER_PATH
@@ -157,7 +158,7 @@ class BettorMixin:
         
         # Check targets
         if self.targets is None:
-            self.targets_ = np.array(TARGETS.keys())
+            self.targets_ = np.array(list(TARGETS.keys()))
         else:
             if not set(self.targets).issubset(TARGETS.keys()):
                 raise ValueError(f'Targets should be any of {", ".join(self.targets)}')
@@ -214,29 +215,48 @@ class Bettor(BaseEstimator, BettorMixin):
 class MultiBettor(BaseEstimator, BettorMixin):
     """Bettor class that uses a multi-output classifier."""
 
-    def __init__(self, base_classifier, multi_classifier, targets=None):
+    def __init__(self, multi_classifier, meta_classifier, split_size=0.5, random_state=None, targets=None):
         super(MultiBettor, self).__init__(targets)
-        self.base_classifier = base_classifier
         self.multi_classifier = multi_classifier
+        self.meta_classifier = meta_classifier
+        self.split_size = split_size
+        self.random_state = random_state
     
     def fit(self, X, score1, score2, odds):
         """Fit the multi-output classifier."""
 
         super(MultiBettor, self).fit()
 
+        # Split data
+        X_multi, X_meta, score1_multi, score1_meta, score2_multi, score2_meta, _, odds_meta = train_test_split(
+            X, score1, score2, odds, 
+            test_size=self.split_size, 
+            random_state=self.random_state
+        )
+        
         # Extract targets
-        y = extract_multi_labels(score1, score2, self.targets_)
+        Y_multi = extract_multi_labels(score1_multi, score2_multi, self.targets_)
+        y_meta = extract_class_labels(score1_meta, score2_meta, odds_meta, self.targets_)
 
         # Fit multi-classifier
-        self.multi_classifier_ = clone(self.multi_classifier).fit(X, y)
+        self.multi_classifier_ = clone(self.multi_classifier).fit(X_multi, Y_multi)
+
+        # Fit meta-classifier
+        X_meta = np.column_stack([probs[:, 0] for probs in self.multi_classifier_.predict_proba(X_meta)])
+        self.meta_classifier_ = clone(self.meta_classifier).fit(X_meta, y_meta)
         
         return self
 
     def predict(self, X):
+        """Predict class labels."""
+        X_meta = np.column_stack([probs[:, 0] for probs in self.multi_classifier_.predict_proba(X)])
+        return self.meta_classifier_.predict(X_meta)
+    
+    def predict_proba(self, X):
         """Predict class probabilities."""
-        y_pred = np.concatenate([probs[:, 1] for probs in self.multi_classifier_.predict_proba(X)], axis=1)
-        return self.targets_[y_pred.argmax(axis=1)]
-
+        X_meta = np.column_stack([probs[:, 0] for probs in self.multi_classifier_.predict_proba(X)])
+        return self.meta_classifier_.predict_proba(X_meta)
+    
 
 def backtest():
     """Command line function to backtest models.""" 
