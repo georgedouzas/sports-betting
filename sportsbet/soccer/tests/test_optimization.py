@@ -120,7 +120,7 @@ def test_valid_targets_bettor_mixin():
     np.testing.assert_array_equal(base_bettor.targets_, np.array(['A', 'H']))
     
 
-def test_fit_bettor():
+def test_bettor_fit():
     """Test fit method of bettor."""
     score1, score2 = [0, 2, 3], [1, 1, 3]
     odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]]
@@ -131,3 +131,37 @@ def test_fit_bettor():
 
     bettor = Bettor(classifier=DummyClassifier(), targets=['under_2.5', 'over_2.5']).fit(X, score1, score2, odds)
     np.testing.assert_array_equal(bettor.classifier_.classes_, np.array(['over_2.5', 'under_2.5']))
+
+
+def test_bettor_predict():
+    """Test predict method of bettor."""
+    score1, score2 = [0, 2, 3] * 10, [1, 1, 3] * 10
+    odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]] * 10
+    X = [[0], [1], [2]] * 10
+
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['H', 'D']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(np.unique(bettor.predict(X)), np.array(['-', 'D', 'H']))
+
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['over_2.5', 'under_2.5']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(np.unique(bettor.predict(X)), np.array(['over_2.5', 'under_2.5']))
+
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['over_2.5', 'A']).fit(X, score1, score2, odds)
+    np.testing.assert_array_equal(np.unique(bettor.predict(X)), np.array(['A', 'over_2.5']))
+
+
+def test_bettor_predict_proba():
+    """Test predict method of bettor."""
+    score1, score2 = [0, 2, 3] * 10, [1, 1, 3] * 10
+    odds = [[3.0, 1.5], [4.0, 2.0], [2.5, 2.5]] * 10
+    X = [[0], [1], [2]] * 10
+    
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['H', 'D']).fit(X, score1, score2, odds)
+    assert bettor.predict_proba(X).shape == (30, 3)
+
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['over_2.5', 'under_2.5']).fit(X, score1, score2, odds)
+    assert bettor.predict_proba(X).shape == (30, 2)
+
+    bettor = Bettor(classifier=DummyClassifier(random_state=0), targets=['over_2.5', 'A']).fit(X, score1, score2, odds)
+    assert bettor.predict_proba(X).shape == (30, 2)
+    
+
