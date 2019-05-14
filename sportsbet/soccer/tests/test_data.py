@@ -71,7 +71,7 @@ def test_create_spi_tables():
     """Test the creation of spi tables."""
     assert set(SPI_HISTORICAL.columns) == set(SPI_FIXTURES.columns)
     assert set(SPI_HISTORICAL.league.unique()) == set(LEAGUES_IDS)
-    assert set(SPI_FIXTURES.league.unique()) == set(LEAGUES_IDS)
+    assert set(SPI_FIXTURES.league.unique()).issubset(LEAGUES_IDS)
     assert SPI_HISTORICAL[['score1', 'score2']].isna().sum().sum() == 0
     assert SPI_FIXTURES[['score1', 'score2']].isna().sum().sum() == 2 * len(SPI_FIXTURES)
 
