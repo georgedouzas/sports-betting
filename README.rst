@@ -6,28 +6,18 @@ Data sources
 
 `FiveThirtyEight <https://github.com/fivethirtyeight/data/tree/master/soccer-spi>`_
 
-`BetBrain <https://www.betbrain.com/>`_
-
 #####
 Usage
 #####
 
-Create betting agent::
+Download data::
 
-    betting_agent = BettingAgent()
+    download
 
-Fetch training data::
+Apply backtesting::
 
-    betting_agent.fetch_training(leagues)
+    backtest
 
-Load modeling data::
+Make new predictions::
 
-    betting_agent._training(predicted_result)
-
-Backtest on historical data::
-
-    backtest(estimator, fit_params, predicted_result, test_year, max_day_range)
-
-Calculate backtest_statistics::
-    
-    calculate_backtest_stats(factor=1.5, credit_limit=5.0)
+    predict
