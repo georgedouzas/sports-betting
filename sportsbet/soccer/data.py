@@ -168,8 +168,8 @@ def create_modeling_tables(spi_historical, spi_fixtures, fd_historical, fd_fixtu
 
     # Rename teams
     for col in ['team1', 'team2']:
-        for df in (spi_historical, spi_fixtures):
-            df = pd.merge(df, names_mapping, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
+        spi_historical = pd.merge(spi_historical, names_mapping, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
+        spi_fixtures = pd.merge(spi_fixtures, names_mapping, left_on=col, right_on='left_team', how='left').drop(columns=[col, 'left_team']).rename(columns={'right_team': col})
 
     # Combine data
     historical = pd.merge(spi_historical, fd_historical, left_on=SPI_KEYS, right_on=FD_KEYS).dropna(subset=ODDS_COLS_MAPPING.keys(), how='any').reset_index(drop=True)

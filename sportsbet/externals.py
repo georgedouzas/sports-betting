@@ -9,7 +9,7 @@ from math import ceil
 
 from joblib import delayed, Parallel
 import numpy as np
-from sklearn.base import is_classifier
+from sklearn.base import is_classifier, ClassifierMixin
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.multiclass import check_classification_targets
 from sklearn.multioutput import MultiOutputClassifier, _fit_estimator
@@ -43,7 +43,7 @@ class TimeSeriesSplit(BaseCrossValidator):
         return self.n_splits
 
 
-class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
+class MultiOutputClassifiers(_BaseComposition, ClassifierMixin):
 
     def __init__(self, classifiers, n_jobs=None):
         self.classifiers = classifiers
@@ -101,3 +101,9 @@ class MultiOutputClassifiers(_BaseComposition, MultiOutputClassifier):
         y_pred = Parallel(n_jobs=self.n_jobs)(delayed(parallel_helper)(clf, 'predict_proba', X) for clf in self.classifiers_)
 
         return y_pred
+    
+    def set_params(self, **params):
+        return self._set_params('classifiers', **params)
+
+    def get_params(self, deep=True):
+        return self._get_params('classifiers', deep=deep)

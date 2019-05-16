@@ -5,25 +5,40 @@ Configuration file for models evaluation.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: BSD 3 clause
 
-from itertools import product
-
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.impute import SimpleImputer
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import make_pipeline
+from sportsbet.externals import MultiOutputClassifiers
 
-PORTOFOLIOS = {
-    'all_markets': {
-        'targets': ['H', 'A', 'D', 'over_2.5', 'under_2.5'],
-        'scores_type': 'real',
-        'offsets': [0.0, 0.0, 0.0, 0.0, 0.0],
-        'better_class': 'Better', 
-        'risk_factors': [0.3, 0.4, 0.5],
-        'classifier': [make_pipeline(SimpleImputer(), SMOTE(), LogisticRegression(max_iter=20000, solver='lbfgs', multi_class='auto'))],
-        'classifier__smote__k_neighbors': [2, 3],
-        'classifier__logisticregression__C': [5e4]
-    }
+CONFIG = {
+    'bettor': {
+        'type': 'MultiBettor',
+        'parameters': {
+            'multi_classifier': make_pipeline(SimpleImputer(), MultiOutputClassifiers(
+                [
+                    ('over_2.5', LogisticRegression(max_iter=20000, solver='lbfgs', multi_class='auto'))
+                ]
+                )
+            ),
+            'meta_classifier': make_pipeline(SMOTE(), GradientBoostingClassifier()),
+            'test_size': 0.5,
+            'targets': ['over_2.5']
+        }
+    },
+    'param_grid': {
+        'multi_classifier__multioutputclassifiers__over_2.5__C': [1e5, 1e4],
+        'meta_classifier__smote__k_neighbors': [2, 3],
+        'meta_classifier__gradientboostingclassifier__max_depth': [3, 4]
+    },
+    'risk_factors': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+    'score_type': 'avg_score',
+    'n_splits': 5,
+    'min_train_size': 0.5,
+    'random_state': 0,
+    'n_runs': 3,
+    'n_jobs': -1,
+    'excluded_features': ['season', 'date', 'league', 'team1', 'team2']
 }

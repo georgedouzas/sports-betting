@@ -27,7 +27,7 @@ from tqdm import tqdm
 from sportsbet import SOCCER_PATH
 from sportsbet.externals import TimeSeriesSplit
 from sportsbet.soccer import TARGETS
-from sportsbet.soccer.config import PORTOFOLIOS
+from sportsbet.soccer.config import CONFIG
 
 DB_CONNECTION = connect(join(SOCCER_PATH, 'soccer.db'))
 
@@ -87,8 +87,11 @@ def check_random_states(random_state, repetitions):
     return [random_state.randint(0, 2 ** 32 - 1, dtype='uint32') for _ in range(repetitions)]
 
 
-def fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices):
+def fit_bet(bettor, params, risk_factors, random_state, X, scores, odds, train_indices, test_indices):
     """Parallel fit and bet"""
+
+    # Unpack scores
+    avg_score1, avg_score2, score1, score2 = scores
 
     # Set random state
     for param_name in bettor.get_params():
@@ -96,7 +99,7 @@ def fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds,
             bettor.set_params(**{param_name: random_state})
 
     # Fit better
-    bettor.set_params(**params).fit(X[train_indices], score1[train_indices], score2[train_indices], odds[train_indices])
+    bettor.set_params(**params).fit(X[train_indices], avg_score1[train_indices], avg_score2[train_indices], odds[train_indices])
 
     # Generate data
     data = []
@@ -109,17 +112,24 @@ def fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds,
     return data
 
 
-def apply_backtesting(bettor, param_grid, risk_factors, X, score1, score2, odds, cv, random_state, n_runs):
+def apply_backtesting(bettor, param_grid, risk_factors, X, scores, odds, cv, random_state, n_runs, n_jobs):
     """Apply backtesting to evaluate bettor."""
     
     # Check random states
     random_states = check_random_states(random_state, n_runs)
 
+    # Check arrays
+    X = check_array(X, dtype=None, force_all_finite=False)
+    normalized_scores = []
+    for score in scores:
+        normalized_scores.append(check_array(score, dtype=None, ensure_2d=False))
+    odds = check_array(odds, dtype=None)
+
     # Extract parameters
     parameters = ParameterGrid(param_grid)
 
     # Run backtesting
-    data = Parallel(n_jobs=-1)(delayed(fit_bet)(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices) 
+    data = Parallel(n_jobs=n_jobs)(delayed(fit_bet)(bettor, params, risk_factors, random_state, X, normalized_scores, odds, train_indices, test_indices) 
            for params, random_state, (train_indices, test_indices) in tqdm(list(product(parameters, random_states, cv.split(X))), desc='Tasks'))
     
     # Combine data
@@ -163,7 +173,7 @@ class BettorMixin:
             if not set(self.targets).issubset(TARGETS.keys()):
                 raise ValueError(f'Targets should be any of {", ".join(self.targets)}')
             else:
-                self.targets_ = np.array(self.targets)
+                self.targets_ = check_array(self.targets, dtype=None, ensure_2d=False)
         
         return self
     
@@ -215,11 +225,11 @@ class Bettor(BaseEstimator, BettorMixin):
 class MultiBettor(BaseEstimator, BettorMixin):
     """Bettor class that uses a multi-output classifier."""
 
-    def __init__(self, multi_classifier, meta_classifier, split_size=0.5, random_state=None, targets=None):
+    def __init__(self, multi_classifier, meta_classifier, test_size=0.5, random_state=None, targets=None):
         super(MultiBettor, self).__init__(targets)
         self.multi_classifier = multi_classifier
         self.meta_classifier = meta_classifier
-        self.split_size = split_size
+        self.test_size = test_size
         self.random_state = random_state
     
     def fit(self, X, score1, score2, odds):
@@ -230,7 +240,7 @@ class MultiBettor(BaseEstimator, BettorMixin):
         # Split data
         X_multi, X_meta, score1_multi, score1_meta, score2_multi, score2_meta, _, odds_meta = train_test_split(
             X, score1, score2, odds, 
-            test_size=self.split_size, 
+            test_size=self.test_size, 
             random_state=self.random_state
         )
         
@@ -256,92 +266,96 @@ class MultiBettor(BaseEstimator, BettorMixin):
         """Predict class probabilities."""
         X_meta = np.column_stack([probs[:, 0] for probs in self.multi_classifier_.predict_proba(X)])
         return self.meta_classifier_.predict_proba(X_meta)
-    
+
+
+def extract_bettor():
+    """Extract bettor from configuration file."""
+    bettor_name = CONFIG['bettor']['type']
+    bettor_params = CONFIG['bettor']['parameters']
+    bettor_class = getattr(import_module(__name__), bettor_name)
+    if bettor_name == 'Bettor':
+        bettor = bettor_class(bettor_params['classifier'], bettor_params['targets'])
+    elif bettor_name == 'MultiBettor':
+        bettor = bettor_class(bettor_params['multi_classifier'], bettor_params['meta_classifier'], bettor_params['test_size'], targets=bettor_params['targets'])
+    return bettor
+
+
+def load_X(training=True):
+    """Load input data."""
+    tbl = "X" if training else "X_test"
+    X_cols = [f'"{col}"' for col in pd.read_sql(f'PRAGMA table_info({tbl})', DB_CONNECTION)['name'] if col not in CONFIG['excluded_features']]
+    X = pd.read_sql(f'select {", ".join(X_cols)} from {tbl}', DB_CONNECTION)
+    return X
+
+
+def load_odds(bettor, training=True):
+    """Load odds data."""
+    tbl = "odds" if training else "odds_test"
+    odds_cols = [f'"{col}"' for col in (TARGETS.keys() if bettor.targets is None else bettor.targets)]
+    odds = pd.read_sql(f'select {", ".join(odds_cols)} from {tbl}', DB_CONNECTION)
+    return odds
+
+
+def load_scores():
+    """Load scores data."""
+    y = pd.read_sql('select * from y', DB_CONNECTION)
+    scores = []
+    for ind in (1, 2):
+        scores.append(np.round(y[f'{CONFIG["score_type"]}{ind}'], 0).astype(int))
+    scores += [y['score1'], y['score2']]
+    return scores
+
 
 def backtest():
     """Command line function to backtest models.""" 
 
-    # Create parser
+    # Command line parser
     parser = ArgumentParser('Models evaluation using backtesting.')
-        
-    # Add arguments
-    parser.add_argument('portofolio', help='The name of portofolio to evaluate.')
-    parser.add_argument('--test-season', default='1819', type=str, help='The test season.')
-    parser.add_argument('--n-splits', default=5, type=int, help='Number of cross-validation splits.')
-    parser.add_argument('--random-state', default=0, type=int, help='The random seed.')
-    parser.add_argument('--n-runs', default=5, type=int, help='Number of evaluation runs.')
-
-    # Parse arguments
-    args = parser.parse_args()
+    parser.parse_args()
+    
+    # Extract backtesting parameters
+    bettor = extract_bettor()
+    cv = TimeSeriesSplit(CONFIG['n_splits'], CONFIG['min_train_size'])
     
     # Load data
-    X = pd.read_sql('select * from X', DB_CONNECTION)
-    y = pd.read_sql('select * from y', DB_CONNECTION)
-    odds = pd.read_sql('select * from odds', DB_CONNECTION)
-
-    # Unpack configuration
-    param_grid =  PORTOFOLIOS[args.portofolio]
-    better_class, scores_type, risk_factors = param_grid.pop('better_class'), param_grid.pop('scores_type'), param_grid.pop('risk_factors')
-    better = getattr(import_module(__name__), better_class)(param_grid['classifier'])
-    scores_cols = ['score1', 'score2'] if scores_type == 'real' else ['avg_score1', 'avg_score2']
-
-    # Create cross-validator
-    cv = SeasonSplit(args.n_splits, X['season'].values, args.test_season)
+    X, scores, odds = load_X(), load_scores(), load_odds(bettor)
 
     # Backtesting
-    results = apply_backtesting(better, param_grid, risk_factors, X, y[scores_cols], odds, cv, args.random_state, args.n_runs)
-    results['id'] = [(args.portofolio, better_class, scores_type)] * len(results)
-
+    results = apply_backtesting(bettor, CONFIG['param_grid'], CONFIG['risk_factors'], X, scores, odds, cv, CONFIG['random_state'], CONFIG['n_runs'], CONFIG['n_jobs'])
+    
     # Save backtesting results
-    try:
-        backtesting_results = pd.read_sql('select * from backtesting_results', DB_CONNECTION)
-        backtesting_results = backtesting_results[backtesting_results['portofolio'] != args.portofolio]
-    except pd.io.sql.DatabaseError:
-        backtesting_results = pd.DataFrame([])
-    backtesting_results = backtesting_results.append(results, ignore_index=True).sort_values('mean_yield', ascending=False)
-    backtesting_results.to_sql('backtesting_results', DB_CONNECTION, index=False, if_exists='replace')
+    results.to_sql('backtesting_results', DB_CONNECTION, index=False, if_exists='replace')
 
 
 def predict():
     """Command line function to predict new fixtures.""" 
 
-    # Create parser
+    # Command line parser
     parser = ArgumentParser('Predict new fixtures.')
-        
-    # Add arguments
-    parser.add_argument('portofolio', help='The name of portofolio to evaluate.')
     parser.add_argument('--rank', default=0, type=int, help='The rank of the model to use for predictions.')
-
-    # Parse arguments
     args = parser.parse_args()
 
+    # Extract backtesting parameters
+    bettor = extract_bettor()
+
     # Load data
-    X = pd.read_sql('select * from X', DB_CONNECTION)
-    y = pd.read_sql('select * from y', DB_CONNECTION)
-    odds = pd.read_sql('select * from odds', DB_CONNECTION)
-    X_test = pd.read_sql('select * from X_test', DB_CONNECTION)
-    odds_test = pd.read_sql('select * from odds_test', DB_CONNECTION)
-    parameters, calibration = pd.read_sql('select parameters, calibration from backtesting_results where portofolio == "{}"'.format(args.portofolio), DB_CONNECTION).values[args.rank]
-
-    # Stack input and odds data
-    target_types = [target_type for target_type, *_, in PORTOFOLIOS[args.portofolio]]
-    X = pd.concat([X, odds[target_types]], axis=1)
-    X_test = pd.concat([X_test, odds_test[target_types]], axis=1)
-
-    # Fit betting classifiers
-    betting_classifiers = [(target_type, features, BettingClassifier(clf.set_params(**params))) for params, (target_type, clf, *_, features) in zip(literal_eval(parameters), PORTOFOLIOS[args.portofolio])]
-    mbclf = _MetaBettingClassifier(betting_classifiers).fit(X, y)
+    X, X_test, scores, odds, odds_test = load_X(), load_X(training=False), load_scores(), load_odds(bettor), load_odds(bettor, training=False)
+    parameters, risk_factor = pd.read_sql('select parameters, risk_factor from backtesting_results', DB_CONNECTION).values[args.rank]
+    matches = pd.read_sql('select date, league, team1, team2 from X_test', DB_CONNECTION, parse_dates='date')
     
+    # Fit bettor
+    bettor = bettor.set_params(**literal_eval(parameters)).fit(X, scores[0], scores[1], odds)
+
     # Get predictions
-    y_pred = mbclf.predict_proba(X_test)[0]
-    bets_indices = y_pred.argmax(axis=1)
-    mask = (y_pred > literal_eval(calibration))[range(len(y_pred)), bets_indices]
+    bets = bettor.bet(X_test, risk_factor)
+    
+    # Filter predictions
+    mask = bets != '-'
+    bets, odds_test, matches = bets[mask], odds_test[mask], matches[mask].reset_index(drop=True)
+    odds_test = odds_test.values[range(len(bets)), [odds_test.columns.tolist().index(bet) for bet in bets]]
 
     # Format predictions
-    predictions = X_test.loc[:, ['date', 'league', 'team1', 'team2']]
-    predictions['odd'] = odds_test[target_types].values[range(len(y_pred)), bets_indices]
-    predictions['bet'] = np.array(target_types)[bets_indices]
-    predictions = predictions[mask]
+    predictions = pd.concat([matches, pd.DataFrame({'bet': bets, 'odds': odds_test})], axis=1)
 
     # Save predictions
     predictions.to_csv(join(SOCCER_PATH, 'predictions.csv'), index=False)

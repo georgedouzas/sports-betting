@@ -70,12 +70,12 @@ def test_fit_bet():
     risk_factors = [0.0]
     random_state = 0
     X = np.random.random((100, 2))
-    score1, score2 = np.repeat([1, 0], 50), np.repeat([0, 1], 50)
+    scores = np.repeat([1, 0], 50), np.repeat([0, 1], 50), np.repeat([1, 0], 50), np.repeat([0, 1], 50)
     train_indices, test_indices = np.arange(0, 25), np.arange(25, 100)
     odds = np.repeat([2.0, 2.0], 100).reshape(-1, 2)
 
     # Output
-    data = fit_bet(bettor, params, risk_factors, random_state, X, score1, score2, odds, train_indices, test_indices)
+    data = fit_bet(bettor, params, risk_factors, random_state, X, scores, odds, train_indices, test_indices)
     
     # Expected output
     expected_yields = np.concatenate([np.repeat(1.0, 25), np.repeat(-1.0, 50)])
@@ -93,13 +93,14 @@ def test_apply_backtesting():
     risk_factors = [0.0, 0.2, 0.4]
     random_state = 0
     X = np.random.random((100, 2))
-    score1, score2 = np.repeat([1, 0], 50), np.repeat([0, 1], 50)
+    scores = np.repeat([1, 0], 50), np.repeat([0, 1], 50), np.repeat([1, 0], 50), np.repeat([0, 1], 50)
     odds = np.repeat([2.0, 2.0], 100).reshape(-1, 2)
     cv = TimeSeriesSplit(2, 0.3)
     n_runs = 3
+    n_jobs = -1
 
     # Output
-    results = apply_backtesting(bettor, param_grid, risk_factors, X, score1, score2, odds, cv, random_state, n_runs)
+    results = apply_backtesting(bettor, param_grid, risk_factors, X, scores, odds, cv, random_state, n_runs, n_jobs)
 
     assert list(results.columns) == ['parameters', 'risk_factor', 'coverage', 'mean_yield', 'std_yield', 'std_mean_yield']
     assert len(results) == len(risk_factors) * len(ParameterGrid(param_grid))
