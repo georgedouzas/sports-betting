@@ -1,8 +1,64 @@
-*.egg-info
-__pycache__
+# Editors
 .vscode
-*.code-workspace
-*.pyc
-data
+
+# Virtual environment
+.*venv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# scikit-learn specific
+doc/_build/
+doc/auto_examples/
+doc/modules/generated/
+doc/datasets/generated/
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+.pytest_cache/
+
+# Sphinx documentation
+doc/_build/
+doc/generated/
+
+# PyBuilder
+target/
+
+# Various
 .DS_Store
-.pytest_cache
+data

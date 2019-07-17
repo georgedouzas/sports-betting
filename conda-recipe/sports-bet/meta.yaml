@@ -1,0 +1,40 @@
+package:
+  name: sports-betting
+  version: "0.1.2"
+
+source:
+  url: "https://files.pythonhosted.org/packages/17/24/40b75ee9d6a55a01a5dd503b9c2be4492987348051184b9069c26c7dae2b/sports-betting-0.1.2.tar.gz"
+  sha256: "cd1c20e85a16cb0663e58d2675c8d51068e11c2b25d526746b3ad159867957aa"
+
+build:
+  number: 0
+  noarch: python
+
+requirements:
+  host:
+    - imbalanced-learn >=0.4.3
+    - numpy >=1.1
+    - pip
+    - python
+    - scikit-learn >=0.21
+    - scipy >=0.17
+
+  run:
+    - imbalanced-learn >=0.4.3
+    - numpy >=1.1
+    - python
+    - scikit-learn >=0.21
+    - scipy >=0.17
+
+test:
+  requires:
+    - coverage
+    - pytest
+    - pytest-cov
+  imports:
+    - gsmote
+
+about:
+  home: "https://github.com/AlgoWit/sports-betting"
+  license: "MIT"
+  license_file: ""
