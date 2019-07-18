@@ -20,7 +20,7 @@ URL = 'https://github.com/AlgoWit/sports-betting'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'https://github.com/AlgoWit/sports-betting'
 VERSION = __version__
-INSTALL_REQUIRES = ['scipy>=0.17', 'numpy>=1.1', 'scikit-learn>=0.21', 'imbalanced-learn>=0.4.3']
+INSTALL_REQUIRES = ['scipy>=0.17', 'numpy>=1.1', 'pandas==0.24.2', 'scikit-learn>=0.21', 'imbalanced-learn>=0.4.3', 'joblib==0.13.2', 'tqdm==4.28.1']
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',
                'License :: OSI Approved',
@@ -46,6 +46,13 @@ EXTRAS_REQUIRE = {
         'pandas'
     ]
 }
+ENTRY_POINTS = {
+    'console_scripts': [
+        'download=sportsbet.soccer.data:download',
+        'backtest=sportsbet.soccer.optimization:backtest',
+        'predict=sportsbet.soccer.optimization:predict'
+    ]
+}
 
 setup(
     name=DISTNAME,
@@ -61,5 +68,6 @@ setup(
     classifiers=CLASSIFIERS,
     packages=find_packages(),
     install_requires=INSTALL_REQUIRES,
-    extras_require=EXTRAS_REQUIRE
+    extras_require=EXTRAS_REQUIRE,
+    entry_points=ENTRY_POINTS
 )
