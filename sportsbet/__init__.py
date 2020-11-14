@@ -1,21 +1,29 @@
+"""Collection of sports betting AI tools.
+
+``sports-betting`` is a set of tools for sports betting. It
+provides python functions to download data and test the 
+performance of machine learning models.
+
+Subpackages
+-----------
+datasets
+    Module which provides functions to down and transform sports betting 
+    datasets.
+backtesting
+    Module which provides functions to test the performance of machine
+    learning models.
+utils
+    Module including various utilities.
 """
-Includes definitions of the data paths.
-"""
 
-from os.path import join, dirname
-from pathlib import Path
-from sys import path
+from . import datasets
+from . import backtesting
+from . import utils
+from ._version import __version__
 
-# Define paths
-PATH = join(dirname(__file__), '..', 'data')
-SOCCER_PATH = join(PATH, 'soccer')
-
-# Create paths
-Path(PATH).mkdir(exist_ok=True)
-Path(SOCCER_PATH).mkdir(exist_ok=True)
-
-
-
-
-
-
+__all__ = [
+    'datasets',
+    'backtesting',
+    'utils',
+    '__version__'
+]

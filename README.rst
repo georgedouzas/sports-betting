@@ -52,7 +52,6 @@ following:
 
 - numpy(>=1.1)
 - scikit-learn(>=0.21)
-- imbalanced-learn(>=0.4.3)
 
 Additionally, to run the examples, you need matplotlib(>=2.0.0) and
 pandas(>=0.22).
@@ -87,24 +86,3 @@ After installation, you can use `pytest` to run the test suite::
 
   make test
 
-Data sources
-------------
-
-`Football-Data.co.uk <http://www.football-data.co.uk/data.php>`_
-
-`FiveThirtyEight <https://github.com/fivethirtyeight/data/tree/master/soccer-spi>`_
-
-Usage
------
-
-Download data::
-
-    download
-
-Apply backtesting::
-
-    backtest
-
-Make new predictions::
-
-    predict

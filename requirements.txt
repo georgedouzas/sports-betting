@@ -1,6 +1,4 @@
 scipy>=0.17
 numpy>=1.1
-numpy>=1.16.2
-pandas>=0.24.2
 scikit-learn>=0.21
-joblib>=0.13.2
+joblib>=0.13

@@ -3,6 +3,7 @@
 
 # Virtual environment
 .*venv
+.python-version
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -61,4 +62,3 @@ target/
 
 # Various
 .DS_Store
-data

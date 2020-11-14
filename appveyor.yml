@@ -8,15 +8,12 @@ environment:
       NUMPY_VERSION: "*"
       SCIPY_VERSION: "*"
       SKLEARN_VERSION: "0.21.1"
-      IMBLEARN_VERSION: "0.4.3"
 
     - PYTHON: "C:\\Miniconda3-x64"
       PYTHON_VERSION: "3.7"
       PYTHON_ARCH: "64"
       NUMPY_VERSION: "*"
       SCIPY_VERSION: "*"
-      SKLEARN_VERSION: "*"
-      IMBLEARN_VERSION: "*"
 
 install:
   # Prepend miniconda installed Python to the PATH of this build
@@ -25,7 +22,6 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\Library\\bin;%PATH%"
   # install the dependencies
   - "conda install --yes pip numpy==%NUMPY_VERSION% scipy==%SCIPY_VERSION% scikit-learn==%SKLEARN_VERSION% nose pytest pytest-cov"
-  - "conda install --yes -c conda-forge imbalanced-learn==%IMBLEARN_VERSION%"
   - pip install codecov
   - pip install .
 

@@ -11,20 +11,31 @@ clean:
 	rm -rf examples/.ipynb_checkpoints
 
 test-code:
-	pytest gsmote
+	pytest sportsbet
 
 test-doc:
 	pytest doc/*.rst
 
 test-coverage:
 	rm -rf coverage .coverage
-	pytest --cov=gsmote gsmote
+	pytest --cov=sportsbet sportsbet
 
 test: test-coverage test-doc
 
 html:
 	export SPHINXOPTS=-W; make -C doc html
 
+code-format:
+	black -S sportsbet examples/*.py
+
 code-analysis:
-	flake8 gsmote | grep -v __init__
-	pylint -E gsmote/ -d E1103,E0611,E1101
+	flake8 sportsbet --max-line-length=88
+	pylint -E sportsbet/ -d E1103,E0611,E1101
+
+upload-pypi:
+	rm -rf ./build ./dist
+	python setup.py sdist bdist_wheel
+	twine upload dist/*
+
+upload-conda:
+	cd ./conda-recipe && . conda_deployment.sh
