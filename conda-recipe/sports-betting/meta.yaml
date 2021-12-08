@@ -37,6 +37,6 @@ test:
     - sportsbet
 
 about:
-  home: "https://github.com/AlgoWit/sports-betting"
+  home: "https://github.com/georgedouzas/sports-betting"
   license: "MIT"
   license_file: ""
