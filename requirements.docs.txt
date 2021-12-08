@@ -1,0 +1,6 @@
+sphinx==1.8.5
+sphinx-gallery
+sphinx_rtd_theme
+numpydoc
+matplotlib
+pandas

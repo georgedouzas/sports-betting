@@ -1,6 +1,6 @@
 """
-Download and transform historical and fixtures data 
-for various leagues from FiveThirtyEight. 
+Download and transform historical and fixtures data
+for various leagues from FiveThirtyEight.
 
 FiveThirtyEight: https://github.com/fivethirtyeight/data/tree/master/soccer-spi
 """
@@ -8,56 +8,20 @@ FiveThirtyEight: https://github.com/fivethirtyeight/data/tree/master/soccer-spi
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from datetime import datetime, timedelta
-
+from functools import lru_cache
 import numpy as np
 import pandas as pd
-from sklearn.utils import Bunch
 from sklearn.model_selection import ParameterGrid
 
-from . import TARGETS
-from .._utils import (
-    _DataLoader
-)
+from . import OUTCOMES
+from .._base import _BaseDataLoader, _read_csv
 
 URL = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
-REMOVED = [
-    ('season', None, None)
-]
-CREATED = [
-    (None, 'division', int),
-    (None, 'match_quality', float)
-]
-RENAMED = [
-    ('league', 'league', object),
-    ('team1', 'home_team', object),
-    ('team2', 'away_team', object),
-    ('date', 'date', np.datetime64),
-    ('spi1', 'home_team_soccer_power_index', float),
-    ('spi2', 'away_team_soccer_power_index', float),
-    ('prob1', 'home_team_probability_win', float),
-    ('prob2', 'away_team_probability_win', float),
-    ('probtie', 'probability_draw', float),
-    ('proj_score1', 'home_team_projected_score', float),
-    ('proj_score2', 'away_team_projected_score', float),
-    ('importance1', 'home_team_match_importance', float),
-    ('importance2', 'away_team_match_importance', float),
-]
-INPUT = REMOVED + CREATED + RENAMED
-OUTPUT = [
-    ('score1', 'home_team__full_time_goals', int), 
-    ('score2', 'away_team__full_time_goals', int),
-    ('xg1', 'home_team__full_time_shot_expected_goals', float),
-    ('xg2', 'away_team__full_time_shot_expected_goals', float),
-    ('nsxg1', 'home_team__full_time_non_shot_expected_goals', float),
-    ('nsxg2', 'away_team__full_time_non_shot_expected_goals', float),
-    ('adj_score1', 'home_team__full_time_adjusted_goals', float),
-    ('adj_score2', 'away_team__full_time_adjusted_goals', float)
-]
-CONFIG = INPUT + OUTPUT
 LEAGUES_MAPPING = {
-    4582: ('USA-Women', 1),
-    9541: ('USA-Women', 1),
+    7921: ('FAWSL', 1),
+    10281: ('Europa', 1),
+    4582: ('NWSL', 1),
+    9541: ('NWSL', 1),
     2160: ('United-Soccer-League', 1),
     1818: ('Champions-League', 1),
     1820: ('Europa-League', 1),
@@ -93,37 +57,23 @@ LEAGUES_MAPPING = {
     1983: ('South-Africa', 1),
     2414: ('England', 4),
     1884: ('Greece', 1),
-    1948: ('Australia', 1)
+    1948: ('Australia', 1),
 }
 
 
-class _FTEDataLoader(_DataLoader):
-    """Data loader for FiveThirtyEight data."""
-
-    def _fetch_full_param_grid(self):
-        full_param_grid = pd.DataFrame([{'league': league, 'division': division} for league, division in LEAGUES_MAPPING.values()]).drop_duplicates().to_dict('records')
-        self.full_param_grid_ = ParameterGrid([{'league': [param_grid['league']], 'division': [param_grid['division']] } for param_grid in full_param_grid])
-        return self
-    
-    def _fetch_data(self):
-        data = pd.read_csv(URL, parse_dates=['date'])
-        data[['league', 'division']] = pd.DataFrame(
-            data['league_id'].apply(lambda lid: LEAGUES_MAPPING[lid]).values.tolist()
-        )
-        data['match_quality'] = 2 / (1 / data['spi1'] + 1 / data['spi2'])
-        data['test'] = data['score1'].isna() & data['score2'].isna()
-        self.data_ = data
-        return self
+def _extract_data():
+    data = _read_csv(URL, parse_dates='date').copy()
+    data[['league', 'division']] = pd.DataFrame(
+        data['league_id'].apply(lambda lid: LEAGUES_MAPPING[lid]).values.tolist()
+    )
+    data['year'] = data['season'] + 1
+    return data
 
 
-def load_from_five_thirty_eight_soccer_data(
-    param_grid=None,
-    drop_na_cols=None,
-    drop_na_rows=None,
-    testing_duration=None,
-    return_only_params=False
-):
-    """Load and return FiveThirtyEight soccer data for model training and testing.
+class FTEDataLoader(_BaseDataLoader):
+    """Dataloader for FiveThirtyEight data.
+
+    Read more in the :ref:`user guide <user_guide>`.
 
     parameters
     ----------
@@ -133,41 +83,83 @@ def load_from_five_thirty_eight_soccer_data(
         parameters. A sequence of dicts signifies a sequence of grids to search,
         and is useful to avoid exploring parameter combinations that do not
         exist. The default value corresponds to all parameters.
-    
-    drop_na_cols : float, default=None
-        The threshold of input columns to drop. It is a float in the [0.0,
-        1.0] range. The default value ``None ``corresponds to ``0.0`` i.e.
-        all columns are kept while the value ``1.0`` keeps only columns with
-        non missing values.
-    
-    drop_na_rows : bool, default=None
-        The threshold of rows with missing values to drop. It is a
-        float in the [0.0, 1.0] range. The default value ``None``
-        corresponds to ``0.0`` i.e. all rows are kept while the value
-        ``1.0`` keeps only rows with non missing values.
-    
-    testing_duration : int, default=None
-        The number of future weeks to include in the testing data. The
-        default value corresponds to one week.
-    
-    return_only_params : bool, default=False
-        When set to ``True`` only the available parameter grid is returned.
-
-    Returns
-    -------
-    data : :class:`sklearn.utils.Bunch`
-        Dictionary-like object, with the following attributes.
-
-        training : (X, Y, O) tuple
-            A tuple of 'X' and 'Y', both as pandas
-            DataFrames, that represent the training input data and 
-            multi-output targets, respectively.
-        testing : (X, None, O) tuple
-            A pandas DataFrame that represents the testing input data.
-        removed : :class:`sklearn.utils.Bunch`
-            The dropped columns and rows as attributes.
-        params : :class:`sklearn.utils.Bunch`
-            The selected and available parameter grids as pandas DataFrames.
     """
-    data_loader = _FTEDataLoader(config=CONFIG, targets=TARGETS, param_grid=param_grid, drop_na_cols=drop_na_cols, drop_na_rows=drop_na_rows, testing_duration=testing_duration)
-    return data_loader.load(return_only_params)
+
+    _removed_cols = ['season', 'league_id']
+    _cols_mapping = {
+        'team1': 'home_team',
+        'team2': 'away_team',
+        'date': 'date',
+        'spi1': 'home_team_soccer_power_index',
+        'spi2': 'away_team_soccer_power_index',
+        'prob1': 'home_team_probability_win',
+        'prob2': 'away_team_probability_win',
+        'probtie': 'probability_draw',
+        'proj_score1': 'home_team_projected_score',
+        'proj_score2': 'away_team_projected_score',
+        'importance1': 'home_team_match_importance',
+        'importance2': 'away_team_match_importance',
+        'score1': 'home_team__full_time_goals',
+        'score2': 'away_team__full_time_goals',
+        'xg1': 'home_team__full_time_shot_expected_goals',
+        'xg2': 'away_team__full_time_shot_expected_goals',
+        'nsxg1': 'home_team__full_time_non_shot_expected_goals',
+        'nsxg2': 'away_team__full_time_non_shot_expected_goals',
+        'adj_score1': 'home_team__full_time_adjusted_goals',
+        'adj_score2': 'away_team__full_time_adjusted_goals',
+    }
+
+    @classmethod
+    def _get_schema(cls):
+        return [
+            ('year', int),
+            ('division', int),
+            ('match_quality', float),
+            ('league', object),
+            ('home_team', object),
+            ('away_team', object),
+            ('date', np.datetime64),
+            ('home_team_soccer_power_index', float),
+            ('away_team_soccer_power_index', float),
+            ('home_team_probability_win', float),
+            ('away_team_probability_win', float),
+            ('probability_draw', float),
+            ('home_team_projected_score', float),
+            ('away_team_projected_score', float),
+            ('home_team_match_importance', float),
+            ('away_team_match_importance', float),
+            ('home_team__full_time_goals', int),
+            ('away_team__full_time_goals', int),
+            ('home_team__full_time_shot_expected_goals', float),
+            ('away_team__full_time_shot_expected_goals', float),
+            ('home_team__full_time_non_shot_expected_goals', float),
+            ('away_team__full_time_non_shot_expected_goals', float),
+            ('home_team__full_time_adjusted_goals', float),
+            ('away_team__full_time_adjusted_goals', float),
+        ]
+
+    @classmethod
+    def _get_outcomes(cls):
+        return OUTCOMES
+
+    @classmethod
+    @lru_cache
+    def _get_params(cls):
+        data = _extract_data()
+        full_param_grid = (
+            data[['league', 'division', 'year']].drop_duplicates().to_dict('records')
+        )
+        return ParameterGrid(
+            [
+                {name: [val] for name, val in params.items()}
+                for params in full_param_grid
+            ]
+        )
+
+    @lru_cache
+    def _get_data(self):
+        data = _extract_data()
+        data['match_quality'] = 2 / (1 / data['spi1'] + 1 / data['spi2'])
+        data['fixtures'] = data['score1'].isna() & data['score2'].isna()
+        data = data.drop(columns=self._removed_cols).rename(columns=self._cols_mapping)
+        return data

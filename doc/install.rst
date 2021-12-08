@@ -5,33 +5,34 @@ Installation
 Prerequisites
 -------------
 
-The geometric-smote package requires the following dependencies:
+The sports-betting package requires the following dependencies:
 
-* numpy (>=1.11)
-* scipy (>=0.17)
-* scikit-learn (>=0.21)
-* imbalanced-learn (>=0.4.3)
+* pandas (>=1.0.0)
+* scikit-learn (>=1.0.0)
+* cloudpickle (>=2.0.0)
+* beautifulsoup4 (>=4.0.0)
+* rich (>=4.28)
 
 Install
 -------
 
-geometric-smote is currently available on the PyPi's reporitories and you can
+sports-betting is currently available on the PyPi's reporitories and you can
 install it via `pip`::
 
-  pip install -U geometric-smote
+  pip install -U sports-betting
 
 The package is released also in Anaconda Cloud platform::
 
-  conda install -c algowit geometric-smote
+  conda install -c algowit sports-betting
 
 If you prefer, you can clone it and run the setup.py file. Use the following
 commands to get a copy from Github and install all dependencies::
 
-  git clone https://github.com/AlgoWit/geometric-smote.git
-  cd geometric-smote
+  git clone https://github.com/georgedouzas/sports-betting.git
+  cd sports-betting
   pip install .
 
 Or install using pip and GitHub::
 
-  pip install -U git+https://github.com/AlgoWit/geometric-smote.git
+  pip install -U git+https://github.com/georgedouzas/sports-betting.git
 

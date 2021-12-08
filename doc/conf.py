@@ -74,7 +74,7 @@ plot_gallery = 'True'
 master_doc = 'index'
 
 # General information about the project.
-project = u'geometric-smote'
+project = u'sports-betting'
 copyright = u'2019, Georgios Douzas'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -82,7 +82,7 @@ copyright = u'2019, Georgios Douzas'
 # built documents.
 #
 # The short X.Y version.
-from gsmote import __version__
+from sportsbet import __version__
 version = __version__
 # The full version, including alpha/beta/rc tags.
 release = __version__
@@ -120,7 +120,7 @@ exclude_patterns = ['_build', '_templates']
 pygments_style = 'sphinx'
 
 # Custom style
-html_style = 'css/geometric-smote.css'
+html_style = 'css/sports-betting.css'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
@@ -211,7 +211,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'geometric-smotedoc'
+htmlhelp_basename = 'sports-bettingdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -231,7 +231,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'geometric-smote.tex', u'geometric-smote Documentation',
+  ('index', 'sports-betting.tex', u'sports-betting Documentation',
    u'Georgios Douzas', 'manual'),
 ]
 
@@ -261,7 +261,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'geometric-smote.tex', u'geometric-smote Documentation',
+    ('index', 'sports-betting.tex', u'sports-betting Documentation',
      [u'Georgios Douzas'], 1)
 ]
 
@@ -275,8 +275,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'geometric-smote', u'geometric-smote Documentation',
-   u'Georgios Douzas', 'geometric-smote', 'Geometric SMOTE algorithm.',
+  ('index', 'sports-betting', u'sports-betting Documentation',
+   u'Georgios Douzas', 'sports-betting', 'Sports betting toolbox.',
    'Miscellaneous'),
 ]
 
@@ -309,7 +309,7 @@ sphinx_gallery_conf = {
     'doc_module': 'gsmote',
     'backreferences_dir': os.path.join('generated'),
     'reference_url': {
-        'gsmote': None}
+        'sportsbet': None}
 }
 
 def setup(app):

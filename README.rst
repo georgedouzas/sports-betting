@@ -2,13 +2,10 @@
 
 .. _scikit-learn: http://scikit-learn.org/stable/
 
-|Travis|_ |AppVeyor|_ |Codecov|_ |CircleCI|_ |ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
+|Travis|_ |Codecov|_ |CircleCI|_ |ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
 
 .. |Travis| image:: https://travis-ci.org/AlgoWit/sports-betting.svg?branch=master
 .. _Travis: https://travis-ci.org/AlgoWit/sports-betting
-
-.. |AppVeyor| image:: https://ci.appveyor.com/api/projects/status/4u9bgk60o71kmojh/branch/master?svg=true
-.. _AppVeyor: https://ci.appveyor.com/project/georgedouzas/sports-betting/history
 
 .. |Codecov| image:: https://codecov.io/gh/AlgoWit/sports-betting/branch/master/graph/badge.svg
 .. _Codecov: https://codecov.io/gh/AlgoWit/sports-betting
@@ -32,9 +29,9 @@
 sports-betting
 ==============
 
-sports-betting is a tool that makes it easy to create machine learning based
-models for sports betting and evaluate their performance. It is compatible with
-scikit-learn_.
+sports-betting is a collection of tools that makes it easy to create machine 
+learning models for sports betting and evaluate their performance. 
+It is compatible with scikit-learn_.
 
 Documentation
 -------------
@@ -50,11 +47,8 @@ Dependencies
 sports-betting is tested to work under Python 3.6+. The dependencies are the
 following:
 
-- numpy(>=1.1)
-- scikit-learn(>=0.21)
-
-Additionally, to run the examples, you need matplotlib(>=2.0.0) and
-pandas(>=0.22).
+- pandas(>=1.1.0)
+- rich(>=4.28)
 
 Installation
 ------------
@@ -85,4 +79,3 @@ Testing
 After installation, you can use `pytest` to run the test suite::
 
   make test
-

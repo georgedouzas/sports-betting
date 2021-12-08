@@ -2,17 +2,24 @@
 API
 ===
 
-This is the full API documentation of the `geometric-smote` package.
+This is the full API documentation of the `sports-betting` package.
 
 .. _api:
 
-:mod:`gsmote`: Over-sampling algorithm
---------------------------------------
+:mod:`sportsbet.datasets`: Downloading sports betting data
+----------------------------------------------------------
 
-.. currentmodule:: gsmote
+.. automodule:: sportsbet.datasets
+    :no-members:
+    :no-inherited-members:
+
+.. currentmodule:: sportsbet
 
 .. autosummary::
    :toctree: generated/
    :template: class.rst
 
-    GeometricSMOTE
+    datasets.FDDataLoader
+    datasets.FTEDataLoader
+    datasets.SoccerDataLoader
+

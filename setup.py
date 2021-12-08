@@ -16,11 +16,11 @@ with codecs.open('README.rst', encoding='utf-8-sig') as f:
     LONG_DESCRIPTION = f.read()
 MAINTAINER = 'G. Douzas'
 MAINTAINER_EMAIL = 'gdouzas@icloud.com'
-URL = 'https://github.com/AlgoWit/sports-betting'
+URL = 'https://github.com/georgedouzas/sports-betting'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'https://github.com/AlgoWit/sports-betting'
 VERSION = __version__
-INSTALL_REQUIRES = ['scipy>=0.17', 'numpy>=1.1', 'scikit-learn>=0.21', 'joblib>=0.13', 'rich>=4.28']
+INSTALL_REQUIRES = ['pandas>=1.0.0', 'scikit-learn>=1.0.0', 'cloudpickle>=2.0.0', 'beautifulsoup4>=4.0.0', 'rich>=4.28']
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',
                'License :: OSI Approved',
@@ -31,9 +31,8 @@ CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Operating System :: POSIX',
                'Operating System :: Unix',
                'Operating System :: MacOS',
-               'Programming Language :: Python :: 3.6',
-               'Programming Language :: Python :: 3.7',
-               'Programming Language :: Python :: 3.8']
+               'Programming Language :: Python :: 3.8',
+               'Programming Language :: Python :: 3.9']
 EXTRAS_REQUIRE = {
     'tests': [
         'pytest',

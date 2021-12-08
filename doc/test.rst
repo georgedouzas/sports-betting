@@ -11,7 +11,7 @@ Testing the code::
 
 You can also use `pytest`::
 
-    $ pytest gsmote -v
+    $ pytest sportsbet -v
 
 Coverage
 --------
@@ -33,4 +33,3 @@ All
 Run all tests code::
 
     $ make test
-

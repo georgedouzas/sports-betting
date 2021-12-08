@@ -9,4 +9,4 @@ User Guide
 .. toctree::
 
    introduction.rst
-   gsmote.rst
+   sportsbet.rst
