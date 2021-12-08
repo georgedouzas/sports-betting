@@ -23,7 +23,7 @@ install it via `pip`::
 
 The package is released also in Anaconda Cloud platform::
 
-  conda install -c algowit sports-betting
+  conda install -c gdouzas sports-betting
 
 If you prefer, you can clone it and run the setup.py file. Use the following
 commands to get a copy from Github and install all dependencies::

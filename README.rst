@@ -38,11 +38,14 @@ documentation_.
 Dependencies
 ------------
 
-sports-betting is tested to work under Python 3.6+. The dependencies are the
+sports-betting is tested to work under Python 3.8+. The dependencies are the
 following:
 
-- pandas(>=1.1.0)
-- rich(>=4.28)
+- pandas (>=1.0.0)
+- scikit-learn (>=1.0.0)
+- cloudpickle (>=2.0.0)
+- beautifulsoup4 (>=4.0.0)
+- rich> (=4.28)
 
 Installation
 ------------
@@ -59,13 +62,13 @@ The package is released also in Anaconda Cloud platform::
 If you prefer, you can clone it and run the setup.py file. Use the following
 commands to get a copy from GitHub and install all dependencies::
 
-  git clone https://github.com/AlgoWit/sports-betting.git
+  git clone https://github.com/georgedouzas/sports-betting.git
   cd sports-betting
   pip install .
 
 Or install using pip and GitHub::
 
-  pip install -U git+https://github.com/AlgoWit/sports-betting.git
+  pip install -U git+https://github.com/georgedouzas/sports-betting.git
 
 Testing
 -------
