@@ -16,8 +16,8 @@
 .. |Pypi| image:: https://badge.fury.io/py/sports-betting.svg
 .. _Pypi: https://badge.fury.io/py/sports-betting
 
-.. |Conda| image:: https://anaconda.org/algowit/sports-betting/badges/installer/conda.svg
-.. _Conda: https://conda.anaconda.org/algowit
+.. |Conda| image:: https://anaconda.org/gdouzas/sports-betting/badges/installer/conda.svg
+.. _Conda: https://conda.anaconda.org/gdouzas
 
 ==============
 sports-betting
@@ -54,7 +54,7 @@ install it via `pip`::
 
 The package is released also in Anaconda Cloud platform::
 
-  conda install -c algowit sports-betting
+  conda install -c gdouzas sports-betting
 
 If you prefer, you can clone it and run the setup.py file. Use the following
 commands to get a copy from GitHub and install all dependencies::
