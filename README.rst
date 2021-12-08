@@ -2,13 +2,7 @@
 
 .. _scikit-learn: http://scikit-learn.org/stable/
 
-|Travis|_ |Codecov|_ |CircleCI|_ |ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
-
-.. |Travis| image:: https://travis-ci.org/georgedouzas/sports-betting.svg?branch=master
-.. _Travis: https://travis-ci.org/georgedouzas/sports-betting
-
-.. |Codecov| image:: https://codecov.io/gh/georgedouzas/sports-betting/branch/master/graph/badge.svg
-.. _Codecov: https://codecov.io/gh/georgedouzas/sports-betting
+|CircleCI|_ |ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
 
 .. |CircleCI| image:: https://circleci.com/gh/georgedouzas/sports-betting/tree/master.svg?style=svg
 .. _CircleCI: https://circleci.com/gh/georgedouzas/sports-betting/tree/master

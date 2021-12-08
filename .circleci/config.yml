@@ -3,7 +3,7 @@ version: 2
 jobs:
   python3:
     docker:
-      - image: circleci/python:3.6.1
+      - image: circleci/python:3.8.1
     steps:
       - checkout
       - run:
@@ -12,12 +12,13 @@ jobs:
             chmod +x miniconda.sh && ./miniconda.sh -b -p ~/miniconda
             export PATH="~/miniconda/bin:$PATH"
             conda update --yes --quiet conda
-            conda create -n testenv --yes --quiet python=3
+            conda create -n testenv --yes --quiet python=3.8
             source activate testenv
             pip install cython
-            conda install --yes pip numpy scipy scikit-learn matplotlib sphinx sphinx_rtd_theme numpydoc pillow pandas
-            pip install sphinx-gallery
             pip install .
+            pip install -r requirements.docs.txt
+            pip install -r requirements.test.txt
+            make test
             cd doc
             make html
       - store_artifacts:
