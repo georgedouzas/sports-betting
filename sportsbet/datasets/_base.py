@@ -2,6 +2,7 @@
 Includes base class and functions for data preprocessing and loading.
 """
 
+from datetime import datetime
 from difflib import SequenceMatcher
 from abc import abstractmethod, ABCMeta
 
@@ -383,7 +384,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         ----------
         drop_na_thres : float, default=None
             The threshold of input columns and rows to drop. It is a float in
-            the [0.0, 1.0] range. The default value ``None ``corresponds to
+            the [0.0, 1.0] range. The default value ``None`` corresponds to
             ``0.0`` i.e. all columns and rows are kept while the maximum
             value ``1.0`` keeps only columns and rows with non missing values.
 
@@ -438,6 +439,9 @@ class _BaseDataLoader(metaclass=ABCMeta):
 
         # Convert data types
         data = self._convert_data_types(data)
+
+        # Remove past data
+        data = data[data['date'] > datetime.now()]
 
         return (
             data[self.input_cols_],
