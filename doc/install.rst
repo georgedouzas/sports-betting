@@ -1,22 +1,16 @@
+.. _installation:
+
 ============
 Installation
 ============
 
-Prerequisites
--------------
+There are different types of installation of `sports-betting` package and its 
+requirements depending on its usage.
 
-The sports-betting package requires the following dependencies:
+Installation for users
+----------------------
 
-* pandas (>=1.0.0)
-* scikit-learn (>=1.0.0)
-* cloudpickle (>=2.0.0)
-* beautifulsoup4 (>=4.0.0)
-* rich (>=4.28)
-
-Install
--------
-
-sports-betting is currently available on the PyPi's reporitories and you can
+`sports-betting` is currently available on the PyPi's repositories and you can
 install it via `pip`::
 
   pip install -U sports-betting
@@ -25,14 +19,37 @@ The package is released also in Anaconda Cloud platform::
 
   conda install -c gdouzas sports-betting
 
-If you prefer, you can clone it and run the setup.py file. Use the following
-commands to get a copy from Github and install all dependencies::
+Installation for developers
+---------------------------
+
+You can clone it and run the setup.py file. Use the following
+commands to get a copy from Github and install it in editable mode::
 
   git clone https://github.com/georgedouzas/sports-betting.git
   cd sports-betting
-  pip install .
+  pip install -e .
 
-Or install using pip and GitHub::
+Dependencies
+------------
 
-  pip install -U git+https://github.com/georgedouzas/sports-betting.git
+The `sports-betting` package requires the following dependencies:
 
+* pandas (>=1.0.0)
+* scikit-learn (>=1.0.0)
+* cloudpickle (>=2.0.0)
+* beautifulsoup4 (>=4.0.0)
+* rich (>=4.28)
+
+They can be installed via the following command::
+
+  pip install -r requirements.txt
+
+Additionally, you can install the testing dependencies via the 
+following command::
+
+  pip install -r requirements.test.txt
+
+Finally, you can install the dependencies for building 
+the documentation via the following command::
+
+  pip install -r requirements.docs.txt

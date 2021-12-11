@@ -6,8 +6,8 @@ This is the full API documentation of the `sports-betting` package.
 
 .. _api:
 
-:mod:`sportsbet.datasets`: Downloading sports betting data
-----------------------------------------------------------
+Datasets
+--------
 
 .. automodule:: sportsbet.datasets
     :no-members:
@@ -19,7 +19,12 @@ This is the full API documentation of the `sports-betting` package.
    :toctree: generated/
    :template: class.rst
 
-    datasets.FDDataLoader
-    datasets.FTEDataLoader
+    datasets.DummySoccerDataLoader
+    datasets.FDSoccerDataLoader
+    datasets.FTESoccerDataLoader
     datasets.SoccerDataLoader
 
+Backtesting
+-----------
+
+Tp be updated.

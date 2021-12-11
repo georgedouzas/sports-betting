@@ -2,6 +2,9 @@
 Testing
 =======
 
+Various types of tests are included. Please refer to :ref:`installation` section for 
+the installation of test requirements.
+
 Code
 ----
 
@@ -30,6 +33,6 @@ Test the documentation examples::
 All
 ---
 
-Run all tests code::
+Run all tests::
 
     $ make test

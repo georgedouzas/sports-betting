@@ -1,6 +1,10 @@
-=========================================
-Welcome to sports-betting documentation!
-=========================================
+==========================================
+Welcome to `sports-betting` documentation!
+==========================================
+
+The `sports-betting` package provides a set of tools that help to download 
+sports betting data, train machine learning models and backtest their performance 
+as well get predictions for fixtures.
 
 .. toctree::
    :maxdepth: 2
