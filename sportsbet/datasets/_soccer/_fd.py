@@ -119,7 +119,7 @@ def _param_grid_to_csv_urls(param_grid):
     return urls
 
 
-class FDDataLoader(_BaseDataLoader):
+class FDSoccerDataLoader(_BaseDataLoader):
     """Dataloader for Football-Data.co.uk soccer data.
 
     Read more in the :ref:`user guide <user_guide>`.

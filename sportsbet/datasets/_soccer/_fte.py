@@ -70,7 +70,7 @@ def _extract_data():
     return data
 
 
-class FTEDataLoader(_BaseDataLoader):
+class FTESoccerDataLoader(_BaseDataLoader):
     """Dataloader for FiveThirtyEight data.
 
     Read more in the :ref:`user guide <user_guide>`.

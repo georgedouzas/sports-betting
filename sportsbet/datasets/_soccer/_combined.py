@@ -15,8 +15,8 @@ from sklearn.model_selection import ParameterGrid
 
 from .._base import _BaseDataLoader
 from . import OUTCOMES
-from ._fd import FDDataLoader
-from ._fte import FTEDataLoader
+from ._fd import FDSoccerDataLoader
+from ._fte import FTESoccerDataLoader
 
 
 class SoccerDataLoader(_BaseDataLoader):
@@ -368,7 +368,9 @@ class SoccerDataLoader(_BaseDataLoader):
 
     @classmethod
     def _get_schema(cls):
-        return list(set(FDDataLoader._get_schema() + FTEDataLoader._get_schema()))
+        return list(
+            set(FDSoccerDataLoader._get_schema() + FTESoccerDataLoader._get_schema())
+        )
 
     @classmethod
     def _get_outcomes(cls):
@@ -378,8 +380,8 @@ class SoccerDataLoader(_BaseDataLoader):
     @lru_cache
     def _get_params(cls):
         full_param_grid = ParameterGrid(
-            FDDataLoader.get_all_params().param_grid
-            + FTEDataLoader.get_all_params().param_grid
+            FDSoccerDataLoader.get_all_params().param_grid
+            + FTESoccerDataLoader.get_all_params().param_grid
         )
         full_param_grid = (
             pd.DataFrame(full_param_grid).drop_duplicates().to_dict('records')
@@ -403,8 +405,8 @@ class SoccerDataLoader(_BaseDataLoader):
 
     @lru_cache
     def _get_data(self):
-        fd_data = self._check(FDDataLoader(self.param_grid)).data_
-        fte_data = self._check(FTEDataLoader(self.param_grid)).data_
+        fd_data = self._check(FDSoccerDataLoader(self.param_grid)).data_
+        fte_data = self._check(FTESoccerDataLoader(self.param_grid)).data_
         for col in ('home_team', 'away_team'):
             fte_data[col] = fte_data[col].apply(
                 lambda name: self._names_mapping.get(name, name)

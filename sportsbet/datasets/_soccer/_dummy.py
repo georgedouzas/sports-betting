@@ -5,6 +5,8 @@ Dataloder for dummy data.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
@@ -12,9 +14,10 @@ from sklearn.model_selection import ParameterGrid
 from sportsbet.datasets._base import _BaseDataLoader
 
 
-class DummyDataLoader(_BaseDataLoader):
+class DummySoccerDataLoader(_BaseDataLoader):
     """Dataloader for dummy data."""
 
+    DATE = pd.Timestamp(datetime.now()) + pd.to_timedelta(1, 'd')
     PARAMS = [
         {'league': ['Greece'], 'division': [1], 'year': [2017, 2019]},
         {'league': ['Spain'], 'division': [1], 'year': [1997]},
@@ -33,9 +36,9 @@ class DummyDataLoader(_BaseDataLoader):
         ('interwetten__home_win__odds', float),
         ('interwetten__draw__odds', float),
         ('interwetten__away_win__odds', float),
-        ('william_hill__home_win__odds', float),
-        ('william_hill__draw__odds', float),
-        ('william_hill__away_win__odds', float),
+        ('williamhill__home_win__odds', float),
+        ('williamhill__draw__odds', float),
+        ('williamhill__away_win__odds', float),
         ('year', int),
     ]
     OUTCOMES = [
@@ -91,10 +94,21 @@ class DummyDataLoader(_BaseDataLoader):
                 pd.Timestamp('5/7/1997'),
                 pd.Timestamp('3/4/1998'),
                 pd.Timestamp('3/4/1998'),
-                pd.Timestamp('5/4/2021'),
-                pd.Timestamp('10/4/2021'),
+                DATE,
+                DATE,
             ],
-            'year': [2017, np.nan, 2019, 1997, 1999, 1997, 1998, 1998, 2021, 2021],
+            'year': [
+                2017,
+                np.nan,
+                2019,
+                1997,
+                1999,
+                1997,
+                1998,
+                1998,
+                DATE.year,
+                DATE.year,
+            ],
             'home_team': [
                 'Olympiakos',
                 np.nan,
@@ -131,7 +145,7 @@ class DummyDataLoader(_BaseDataLoader):
                 np.nan,
                 np.nan,
             ],
-            'away_team__full_time_goals': [1, np.nan, 0, 1, 2, 2, 1, 2, np.nan, np.nan],
+            'away_team__full_time_goals': [1, np.nan, 0, 1, 2, 2, 3, 2, np.nan, np.nan],
             'interwetten__home_win__odds': [
                 2.0,
                 1.5,
@@ -146,7 +160,7 @@ class DummyDataLoader(_BaseDataLoader):
             ],
             'interwetten__draw__odds': [2, 2, 2, 3.5, 4.5, 2.5, 4.5, 2.5, 2.5, 3.5],
             'interwetten__away_win__odds': [2, 2, 3, 2.5, 2, 2, 3.5, 3.5, 2, 2.5],
-            'william_hill__home_win__odds': [
+            'williamhill__home_win__odds': [
                 2,
                 1.5,
                 3.5,
@@ -158,7 +172,7 @@ class DummyDataLoader(_BaseDataLoader):
                 3.5,
                 2.5,
             ],
-            'william_hill__draw__odds': [
+            'williamhill__draw__odds': [
                 2,
                 np.nan,
                 1.5,
@@ -170,7 +184,7 @@ class DummyDataLoader(_BaseDataLoader):
                 2.5,
                 1.5,
             ],
-            'william_hill__away_win__odds': [
+            'williamhill__away_win__odds': [
                 2,
                 np.nan,
                 np.nan,
@@ -197,12 +211,6 @@ class DummyDataLoader(_BaseDataLoader):
         }
     )
 
-    def __init__(self, param_grid=None, data=DATA):
-        super(DummyDataLoader, self).__init__(
-            param_grid,
-        )
-        self.data = data
-
     @classmethod
     def _get_schema(cls):
         return cls.SCHEMA
@@ -216,4 +224,8 @@ class DummyDataLoader(_BaseDataLoader):
         return ParameterGrid(cls.PARAMS)
 
     def _get_data(self):
-        return self.data
+        return self.DATA
+
+    def set_data(self, data):
+        self.DATA = data
+        return self
