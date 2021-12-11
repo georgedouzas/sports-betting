@@ -23,34 +23,17 @@
 sports-betting
 ==============
 
-sports-betting is a collection of tools that makes it easy to create machine 
-learning models for sports betting and evaluate their performance. 
-It is compatible with scikit-learn_.
-
-Documentation
--------------
-
-Installation documentation, API documentation, and examples can be found on the
-documentation_.
-
-.. _documentation: https://sports-betting.readthedocs.io/en/latest/
-
-Dependencies
+Introduction
 ------------
 
-sports-betting is tested to work under Python 3.8+. The dependencies are the
-following:
-
-- pandas (>=1.0.0)
-- scikit-learn (>=1.0.0)
-- cloudpickle (>=2.0.0)
-- beautifulsoup4 (>=4.0.0)
-- rich> (=4.28)
+The sports-betting package is a collection of tools that makes it easy to 
+create machine learning models for sports betting and evaluate their performance. 
+It is compatible with scikit-learn_.
 
 Installation
 ------------
 
-sports-betting is currently available on the PyPi's repository and you can
+`sports-betting` is currently available on the PyPi's repositories and you can
 install it via `pip`::
 
   pip install -U sports-betting
@@ -59,20 +42,10 @@ The package is released also in Anaconda Cloud platform::
 
   conda install -c gdouzas sports-betting
 
-If you prefer, you can clone it and run the setup.py file. Use the following
-commands to get a copy from GitHub and install all dependencies::
+Documentation
+-------------
 
-  git clone https://github.com/georgedouzas/sports-betting.git
-  cd sports-betting
-  pip install .
+Installation documentation, API documentation, and examples can be found on the
+documentation_.
 
-Or install using pip and GitHub::
-
-  pip install -U git+https://github.com/georgedouzas/sports-betting.git
-
-Testing
--------
-
-After installation, you can use `pytest` to run the test suite::
-
-  make test
+.. _documentation: https://sports-betting.readthedocs.io/en/latest/
