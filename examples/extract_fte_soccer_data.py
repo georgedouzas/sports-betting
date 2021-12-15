@@ -1,7 +1,7 @@
 """
-======================================
-Extracting data from FiveThirtyEight
-======================================
+===============
+FiveThirtyEight
+===============
 
 This example illustrates the usage of FiveThirtyEight dataloader.
 

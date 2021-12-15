@@ -1,6 +1,4 @@
-.. _general_examples:
+Data Extraction
+---------------
 
-General
--------
-
-General examples for the `sports-betting` package.
+Extracting data using the provided dataloaders.

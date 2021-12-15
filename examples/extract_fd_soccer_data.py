@@ -1,7 +1,7 @@
 """
-==================================
-Extracting data from Football-Data
-==================================
+=============
+Football-Data
+=============
 
 This example illustrates the usage of Football-Data dataloader.
 
