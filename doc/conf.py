@@ -305,10 +305,11 @@ intersphinx_mapping = {
 
 # sphinx-gallery configuration
 sphinx_gallery_conf = {
-    'doc_module': 'gsmote',
+    'doc_module': 'sportsbet',
     'backreferences_dir': os.path.join('generated'),
     'reference_url': {
-        'sportsbet': None}
+        'sportsbet': None},
+    'filename_pattern': '/*'
 }
 
 def setup(app):
