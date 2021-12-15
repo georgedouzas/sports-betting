@@ -441,7 +441,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = self._convert_data_types(data)
 
         # Remove past data
-        data = data[data['date'] > datetime.now()]
+        data = data[data['date'] > datetime.now()].reset_index(drop=True)
 
         return (
             data[self.input_cols_],
