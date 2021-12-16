@@ -26,7 +26,7 @@ html:
 	export SPHINXOPTS=-W; make -C doc html
 
 code-format:
-	black -S sportsbet examples/*.py
+	black -S sportsbet examples
 
 code-analysis:
 

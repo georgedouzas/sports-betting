@@ -11,7 +11,6 @@ on soccer historical data.
 # Licence: MIT
 
 import numpy as np
-import pandas as pd
 from sportsbet.datasets import SoccerDataLoader
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -20,11 +19,13 @@ from sklearn.neighbors import KNeighborsClassifier
 ###############################################################################
 
 ###############################################################################
-# We extract the training data for the spanish league. We also remove any 
+# We extract the training data for the spanish league. We also remove any
 # missing values and select the market maximum odds.
 
 dataloader = SoccerDataLoader(param_grid={'league': ['Spain']})
-X_train, Y_train, Odds_train = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='market_maximum')
+X_train, Y_train, Odds_train = dataloader.extract_train_data(
+    drop_na_thres=1.0, odds_type='market_maximum'
+)
 
 ###############################################################################
 # The input data:
@@ -39,8 +40,8 @@ Y_train
 ###############################################################################
 
 ###############################################################################
-# We split the training data into training and testing data by keeping the 
-# first 80% of observations as training data, since the data are already 
+# We split the training data into training and testing data by keeping the
+# first 80% of observations as training data, since the data are already
 # sorted by date.
 
 ind = int(len(X_train) * 0.80)
@@ -52,10 +53,14 @@ X_train, Y_train = X_train[:ind], Y_train[:ind]
 ###############################################################################
 
 ###############################################################################
-# We train a :class:`~sklearn.neighbors.KNeighborsClassifier` using only numerical 
+# We train a :class:`~sklearn.neighbors.KNeighborsClassifier` using only numerical
 # features from the input data. We also use the extracted targets.
 
-num_features = [col for col in X_train.columns if X_train[col].dtype in (np.dtype(int), np.dtype(float))]
+num_features = [
+    col
+    for col in X_train.columns
+    if X_train[col].dtype in (np.dtype(int), np.dtype(float))
+]
 clf = KNeighborsClassifier()
 clf.fit(X_train[num_features], Y_train)
 
@@ -66,11 +71,14 @@ clf.fit(X_train[num_features], Y_train)
 ###############################################################################
 # We can estimate the value bets by using the fitted classifier.
 
-Y_pred_prob = np.concatenate([prob[:, 1].reshape(-1, 1) for prob in clf.predict_proba(X_test[num_features])], axis=1)
+Y_pred_prob = np.concatenate(
+    [prob[:, 1].reshape(-1, 1) for prob in clf.predict_proba(X_test[num_features])],
+    axis=1,
+)
 value_bets = Y_pred_prob * Odds_test > 1
 
 ###############################################################################
-# We assume that we bet an amount of +1 in every value bet. Then we have the 
+# We assume that we bet an amount of +1 in every value bet. Then we have the
 # following mean profit per bet:
 
 profit = np.nanmean((Y_test.values * Odds_test.values - 1) * value_bets.values)

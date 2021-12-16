@@ -20,11 +20,13 @@ from sklearn.neighbors import KNeighborsClassifier
 ###############################################################################
 
 ###############################################################################
-# We extract the training data for the spanish league. We also remove any 
+# We extract the training data for the spanish league. We also remove any
 # missing values and select the market average odds.
 
 dataloader = SoccerDataLoader(param_grid={'league': ['Spain']})
-X_train, Y_train, _ = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='market_average')
+X_train, Y_train, _ = dataloader.extract_train_data(
+    drop_na_thres=1.0, odds_type='market_average'
+)
 
 ###############################################################################
 # The input data:
@@ -39,10 +41,14 @@ Y_train
 ###############################################################################
 
 ###############################################################################
-# We train a :class:`~sklearn.neighbors.KNeighborsClassifier` using only numerical 
+# We train a :class:`~sklearn.neighbors.KNeighborsClassifier` using only numerical
 # features from the input data. We also use the extracted targets.
 
-num_features = [col for col in X_train.columns if X_train[col].dtype in (np.dtype(int), np.dtype(float))]
+num_features = [
+    col
+    for col in X_train.columns
+    if X_train[col].dtype in (np.dtype(int), np.dtype(float))
+]
 clf = KNeighborsClassifier()
 clf.fit(X_train[num_features], Y_train)
 
@@ -71,7 +77,14 @@ Odds_fix
 ###############################################################################
 # We can estimate the value bets by using the fitted classifier.
 
-Y_pred_prob = np.concatenate([prob[:, 1].reshape(-1, 1) for prob in clf.predict_proba(X_fix[num_features])], axis=1)
+Y_pred_prob = np.concatenate(
+    [prob[:, 1].reshape(-1, 1) for prob in clf.predict_proba(X_fix[num_features])],
+    axis=1,
+)
 X_fix_info = X_fix[['date', 'home_team', 'away_team']]
-value_bets = pd.concat([X_fix_info,  Y_pred_prob * Odds_fix > 1], axis=1)
-value_bets.rename(columns={col:col.split('__')[1] for col in value_bets.columns if col.endswith('odds')})
+value_bets = pd.concat([X_fix_info, Y_pred_prob * Odds_fix > 1], axis=1)
+value_bets.rename(
+    columns={
+        col: col.split('__')[1] for col in value_bets.columns if col.endswith('odds')
+    }
+)
