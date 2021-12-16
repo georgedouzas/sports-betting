@@ -2,7 +2,6 @@
 Includes base class and functions for data preprocessing and loading.
 """
 
-from datetime import datetime
 from difflib import SequenceMatcher
 from abc import abstractmethod, ABCMeta
 
@@ -441,7 +440,9 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = self._convert_data_types(data)
 
         # Remove past data
-        data = data[data['date'] > datetime.now()].reset_index(drop=True)
+        data = data[data['date'] >= pd.to_datetime('today').floor('D')].reset_index(
+            drop=True
+        )
 
         return (
             data[self.input_cols_],
