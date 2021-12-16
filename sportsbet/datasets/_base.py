@@ -208,6 +208,10 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 'Data should include a boolean column `fixtures` to distinguish '
                 'between train and fixtures data.'
             )
+        if 'date' not in data.columns or data['date'].dtype.name != 'datetime64[ns]':
+            raise KeyError(
+                'Data should include a datetime column `date` to represent ' 'the date.'
+            )
         if self.schema_ and not set([col for col, _ in self.schema_]).issuperset(
             data.columns.difference(['fixtures'])
         ):
@@ -216,7 +220,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
             raise ValueError(
                 'Data columns should contain the parameters from parameters grid.'
             )
-        self.data_ = data
+        self.data_ = data.sort_values('date', ignore_index=True)
         return self
 
     def _convert_data_types(self, data):

@@ -325,48 +325,36 @@ def test_extract_train_data_default():
         X,
         pd.DataFrame(
             {
-                'division': [1, 1, 1, 2, 3],
-                'league': [
-                    'Greece',
-                    'Greece',
-                    'Spain',
-                    'Spain',
-                    'England',
-                ],
+                'division': [1, 3, 2, 1, 1],
+                'league': ['Spain', 'England', 'Spain', 'Greece', 'Greece'],
                 'date': [
+                    pd.Timestamp('5/4/1997'),
+                    pd.Timestamp('3/4/1998'),
+                    pd.Timestamp('3/4/1999'),
                     pd.Timestamp('17/3/2017'),
                     pd.Timestamp('17/3/2019'),
-                    pd.Timestamp('5/4/1997'),
-                    pd.Timestamp('3/4/1999'),
-                    pd.Timestamp('3/4/1998'),
                 ],
-                'year': [2017, 2019, 1997, 1999, 1998],
+                'year': [1997, 1998, 1999, 2017, 2019],
                 'home_team': [
+                    'Real Madrid',
+                    'Liverpool',
+                    'Barcelona',
                     'Olympiakos',
                     'Panathinaikos',
-                    'Real Madrid',
-                    'Barcelona',
-                    'Liverpool',
                 ],
                 'away_team': [
+                    'Barcelona',
+                    'Arsenal',
+                    'Real Madrid',
                     'Panathinaikos',
                     'AEK',
-                    'Barcelona',
-                    'Real Madrid',
-                    'Arsenal',
                 ],
-                'interwetten__home_win__odds': [2.0, 2, 1.5, 2.5, 2],
-                'interwetten__draw__odds': [2, 2, 3.5, 4.5, 4.5],
-                'interwetten__away_win__odds': [2, 3, 2.5, 2, 3.5],
-                'williamhill__home_win__odds': [2, 3.5, 2.5, 2.0, 2.0],
-                'williamhill__draw__odds': [2, 1.5, 2.5, np.nan, np.nan],
-                'williamhill__away_win__odds': [
-                    2,
-                    np.nan,
-                    np.nan,
-                    np.nan,
-                    np.nan,
-                ],
+                'interwetten__home_win__odds': [1.5, 2.0, 2.5, 2.0, 2.0],
+                'interwetten__draw__odds': [3.5, 4.5, 4.5, 2.0, 2.0],
+                'interwetten__away_win__odds': [2.5, 3.5, 2.0, 2.0, 3.0],
+                'williamhill__home_win__odds': [2.5, 2.0, 2.0, 2.0, 3.5],
+                'williamhill__draw__odds': [2.5, np.nan, np.nan, 2.0, 1.5],
+                'williamhill__away_win__odds': [np.nan, np.nan, np.nan, 2.0, np.nan],
             }
         ),
     )
@@ -374,23 +362,11 @@ def test_extract_train_data_default():
         Y,
         pd.DataFrame(
             {
-                'away_win__full_time_goals': [False, False, False, False, True],
-                'draw__full_time_goals': [True, False, False, True, False],
-                'home_win__full_time_goals': [False, True, True, False, False],
-                'over_2.5_goals__full_time_goals': [
-                    False,
-                    False,
-                    True,
-                    True,
-                    True,
-                ],
-                'under_2.5_goals__full_time_goals': [
-                    True,
-                    True,
-                    False,
-                    False,
-                    False,
-                ],
+                'away_win__full_time_goals': [False, True, False, False, False],
+                'draw__full_time_goals': [False, False, True, True, False],
+                'home_win__full_time_goals': [True, False, False, False, True],
+                'over_2.5_goals__full_time_goals': [True, True, True, False, False],
+                'under_2.5_goals__full_time_goals': [False, False, False, True, True],
             }
         ),
     )
@@ -405,48 +381,36 @@ def test_extract_train_data():
         X,
         pd.DataFrame(
             {
-                'division': [1, 1, 1, 2, 3],
-                'league': [
-                    'Greece',
-                    'Greece',
-                    'Spain',
-                    'Spain',
-                    'England',
-                ],
+                'division': [1, 3, 2, 1, 1],
+                'league': ['Spain', 'England', 'Spain', 'Greece', 'Greece'],
                 'date': [
+                    pd.Timestamp('5/4/1997'),
+                    pd.Timestamp('3/4/1998'),
+                    pd.Timestamp('3/4/1999'),
                     pd.Timestamp('17/3/2017'),
                     pd.Timestamp('17/3/2019'),
-                    pd.Timestamp('5/4/1997'),
-                    pd.Timestamp('3/4/1999'),
-                    pd.Timestamp('3/4/1998'),
                 ],
-                'year': [2017, 2019, 1997, 1999, 1998],
+                'year': [1997, 1998, 1999, 2017, 2019],
                 'home_team': [
+                    'Real Madrid',
+                    'Liverpool',
+                    'Barcelona',
                     'Olympiakos',
                     'Panathinaikos',
-                    'Real Madrid',
-                    'Barcelona',
-                    'Liverpool',
                 ],
                 'away_team': [
+                    'Barcelona',
+                    'Arsenal',
+                    'Real Madrid',
                     'Panathinaikos',
                     'AEK',
-                    'Barcelona',
-                    'Real Madrid',
-                    'Arsenal',
                 ],
-                'interwetten__home_win__odds': [2.0, 2, 1.5, 2.5, 2],
-                'interwetten__draw__odds': [2, 2, 3.5, 4.5, 4.5],
-                'interwetten__away_win__odds': [2, 3, 2.5, 2, 3.5],
-                'williamhill__home_win__odds': [2, 3.5, 2.5, 2.0, 2.0],
-                'williamhill__draw__odds': [2, 1.5, 2.5, np.nan, np.nan],
-                'williamhill__away_win__odds': [
-                    2,
-                    np.nan,
-                    np.nan,
-                    np.nan,
-                    np.nan,
-                ],
+                'interwetten__home_win__odds': [1.5, 2.0, 2.5, 2.0, 2.0],
+                'interwetten__draw__odds': [3.5, 4.5, 4.5, 2.0, 2.0],
+                'interwetten__away_win__odds': [2.5, 3.5, 2.0, 2.0, 3.0],
+                'williamhill__home_win__odds': [2.5, 2.0, 2.0, 2.0, 3.5],
+                'williamhill__draw__odds': [2.5, np.nan, np.nan, 2.0, 1.5],
+                'williamhill__away_win__odds': [np.nan, np.nan, np.nan, 2.0, np.nan],
             }
         ),
     )
@@ -454,9 +418,9 @@ def test_extract_train_data():
         Y,
         pd.DataFrame(
             {
-                'away_win__full_time_goals': [False, False, False, False, True],
-                'draw__full_time_goals': [True, False, False, True, False],
-                'home_win__full_time_goals': [False, True, True, False, False],
+                'away_win__full_time_goals': [False, True, False, False, False],
+                'draw__full_time_goals': [False, False, True, True, False],
+                'home_win__full_time_goals': [True, False, False, False, True],
             }
         ),
     )
@@ -464,9 +428,9 @@ def test_extract_train_data():
         Odds,
         pd.DataFrame(
             {
-                'interwetten__away_win__odds': [2, 3, 2.5, 2, 3.5],
-                'interwetten__draw__odds': [2, 2, 3.5, 4.5, 4.5],
-                'interwetten__home_win__odds': [2.0, 2, 1.5, 2.5, 2],
+                'interwetten__away_win__odds': [2.5, 3.5, 2.0, 2.0, 3.0],
+                'interwetten__draw__odds': [3.5, 4.5, 4.5, 2.0, 2.0],
+                'interwetten__home_win__odds': [1.5, 2.0, 2.5, 2.0, 2.0],
             }
         ),
     )

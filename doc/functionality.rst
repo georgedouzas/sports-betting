@@ -62,16 +62,16 @@ No columns  and rows are dropped from the input matrix ``X_train``::
    >>> X_train
       division   league       date ... williamhill__away_win__odds
    0         1    Spain 1997-05-04 ...                         NaN
-   1         2    Spain 1999-03-04 ...                         NaN
-   2         3  England 1998-03-04 ...                         NaN
+   1         3  England 1998-03-04 ...                         NaN
+   2         2    Spain 1999-03-04 ...                         NaN
 
 The multi-output targets matrix ``Y_train`` is the following::
 
    >>> Y_train
       away_win__full_time_goals ... under_2.5_goals__full_time_goals
    0                      False ...                            False
-   1                      False ...                            False
-   2                       True ...                            False
+   1                       True ...                            False
+   2                      False ...                            False
 
 No odds matrix is returned:
 
@@ -91,16 +91,17 @@ Columns that contain missing values are dropped from the input matrix ``X_train`
    >>> X_train
       division   league       date ... williamhill__home_win__odds
    0         1    Spain 1997-05-04 ...                         2.5
-   1         2    Spain 1999-03-04 ...                         2.0
-   2         3  England 1998-03-04 ...                         2.0
+   1         3  England 1998-03-04 ...                         2.0
+   2         2    Spain 1999-03-04 ...                         2.0
 
 The multi-output targets ``Y_train`` is the following::
 
    >>> Y_train
       away_win__full_time_goals  ... home_win__full_time_goals
    0                      False  ...                      True
-   1                      False  ...                     False
-   2                       True  ...                     False
+   1                       True  ...                     False
+   2                      False  ...                     False
+
 
 The corresponding odds matrix is the following:
 
@@ -109,6 +110,7 @@ The corresponding odds matrix is the following:
    0                          NaN ...                         2.5
    1                          NaN ...                         2.0
    2                          NaN ...                         2.0
+   
 
 Extracting the fixtures data
 ----------------------------
@@ -171,4 +173,4 @@ We can use the predictions to get the value bets:
    >>> value_bets.rename(columns={col:col.split('__')[1] for col in value_bets.columns if col.endswith('odds')})
       home_team    away_team  away_win   draw  home_win
    0  Barcelona  Real Madrid     False   True      True
-   1     Monaco          PSG     False  False      True
+   1     Monaco          PSG      True  False      True
