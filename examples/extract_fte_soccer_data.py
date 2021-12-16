@@ -1,9 +1,9 @@
 """
-===============
-FiveThirtyEight
-===============
+===========================
+FiveThirtyEight soccer data
+===========================
 
-This example illustrates the usage of FiveThirtyEight dataloader.
+This example illustrates the usage of FiveThirtyEight soccer dataloader.
 
 """
 

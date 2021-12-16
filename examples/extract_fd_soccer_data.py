@@ -1,9 +1,9 @@
 """
-=============
-Football-Data
-=============
+=========================
+Football-Data soccer data
+=========================
 
-This example illustrates the usage of Football-Data dataloader.
+This example illustrates the usage of Football-Data soccer dataloader.
 
 """
 
