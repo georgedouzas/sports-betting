@@ -412,7 +412,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         Y = self._extract_targets(data)
 
         # Convert data types
-        data = self._convert_data_types(data).loc[Y.index]
+        data = self._convert_data_types(data).loc[Y.index.unique()]
 
         return (
             data[self.input_cols_],
