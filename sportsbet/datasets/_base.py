@@ -210,7 +210,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
             )
         if 'date' not in data.columns or data['date'].dtype.name != 'datetime64[ns]':
             raise KeyError(
-                'Data should include a datetime column `date` to represent ' 'the date.'
+                'Data should include a datetime column `date` to represent the date.'
             )
         if self.schema_ and not set([col for col, _ in self.schema_]).issuperset(
             data.columns.difference(['fixtures'])
@@ -220,7 +220,8 @@ class _BaseDataLoader(metaclass=ABCMeta):
             raise ValueError(
                 'Data columns should contain the parameters from parameters grid.'
             )
-        self.data_ = data.sort_values('date', ignore_index=True)
+        data = data.set_index('date').sort_values('date')
+        self.data_ = data[~data.index.isna()]
         return self
 
     def _convert_data_types(self, data):
@@ -270,7 +271,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data_dropped_na_cols = data.drop(columns=self.dropped_na_cols_)
 
         # Drop rows
-        self.dropped_na_rows_ = pd.Index([], dtype=int)
+        self.dropped_na_rows_ = pd.DatetimeIndex([], name='date')
         if self.drop_na_thres_ > 0.0:
             input_cols = data_dropped_na_cols.columns.intersection(
                 self.schema_input_cols_
@@ -283,14 +284,12 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 subset=input_cols,
                 thresh=int(data_dropped_na_rows.shape[1] * self.drop_na_thres_),
             )
-            self.dropped_na_rows_ = pd.Index(
-                data.index.difference(data_dropped_na_rows.index), dtype=int
-            )
+            self.dropped_na_rows_ = data.index.difference(data_dropped_na_rows.index)
         if data.index.difference(self.dropped_na_rows_).size == 0:
             raise ValueError(
                 'All rows were removed. Set `drop_na_thres` parameter to a lower value.'
             )
-        data = data.iloc[data.index.difference(self.dropped_na_rows_)].sort_index()
+        data = data.loc[data.index.difference(self.dropped_na_rows_)]
 
         return data
 
@@ -350,7 +349,9 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = self.data_[~mask].drop(columns=['fixtures'])
 
         # Filter data
-        data = pd.merge(data, pd.DataFrame(self.param_grid_))
+        data = pd.merge(data.reset_index(), pd.DataFrame(self.param_grid_)).set_index(
+            'date'
+        )
         if data.size == 0:
             raise ValueError('Parameter grid did not select any training data.')
 
@@ -411,12 +412,14 @@ class _BaseDataLoader(metaclass=ABCMeta):
         Y = self._extract_targets(data)
 
         # Convert data types
-        data = self._convert_data_types(data).iloc[Y.index].reset_index(drop=True)
+        data = self._convert_data_types(data).loc[Y.index]
 
         return (
             data[self.input_cols_],
             Y.reset_index(drop=True),
-            data[self.odds_cols_] if self.odds_cols_.size else None,
+            data[self.odds_cols_].reset_index(drop=True)
+            if self.odds_cols_.size
+            else None,
         )
 
     def extract_fixtures_data(self):
@@ -438,20 +441,20 @@ class _BaseDataLoader(metaclass=ABCMeta):
             raise AttributeError(
                 'Extract the training data before extracting the fixtures data.'
             )
-        data = self.data_[mask].drop(columns=['fixtures']).reset_index(drop=True)
+        data = self.data_[mask].drop(columns=['fixtures'])
 
         # Convert data types
         data = self._convert_data_types(data)
 
         # Remove past data
-        data = data[data['date'] >= pd.to_datetime('today').floor('D')].reset_index(
-            drop=True
-        )
+        data = data[data.index >= pd.to_datetime('today').floor('D')]
 
         return (
             data[self.input_cols_],
             None,
-            data[self.odds_cols_] if self.odds_cols_.size else None,
+            data[self.odds_cols_].reset_index(drop=True)
+            if self.odds_cols_.size
+            else None,
         )
 
     def save(self, path):

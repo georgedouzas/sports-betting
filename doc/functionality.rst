@@ -60,10 +60,11 @@ which are ``None`` for both of them::
 No columns  and rows are dropped from the input matrix ``X_train``::
 
    >>> X_train
-      division   league       date ... williamhill__away_win__odds
-   0         1    Spain 1997-05-04 ...                         NaN
-   1         3  England 1998-03-04 ...                         NaN
-   2         2    Spain 1999-03-04 ...                         NaN
+               division   league  year    home_team    away_team ... williamhill__away_win__odds
+   date                                                          ...
+   1997-05-04         1    Spain  1997  Real Madrid    Barcelona ...                         NaN
+   1998-03-04         3  England  1998    Liverpool      Arsenal ...                         NaN
+   1999-03-04         2    Spain  1999    Barcelona  Real Madrid ...                         NaN
 
 The multi-output targets matrix ``Y_train`` is the following::
 
@@ -89,10 +90,11 @@ We extract the training data using specific values of ``drop_na_thres`` and ``od
 Columns that contain missing values are dropped from the input matrix ``X_train``::
 
    >>> X_train
-      division   league       date ... williamhill__home_win__odds
-   0         1    Spain 1997-05-04 ...                         2.5
-   1         3  England 1998-03-04 ...                         2.0
-   2         2    Spain 1999-03-04 ...                         2.0
+               division   league  year ... williamhill__home_win__odds
+   date                                ...                                                                                                                                         
+   1997-05-04         1    Spain  1997 ...                         2.5
+   1998-03-04         3  England  1998 ...                         2.0
+   1999-03-04         2    Spain  1999 ...                         2.0
 
 The multi-output targets ``Y_train`` is the following::
 
@@ -124,9 +126,10 @@ The method accepts no parameters and the extracted fixtures input matrix has
 the same columns as the latest extracted input matrix for the training data::
 
    >>> X_fix
-      division  league ... williamhill__home_win__odds
-   0         4     NaN ...                         3.5
-   1         3  France ...                         2.5
+                               division  league  year ... williamhill__home_win__odds
+   date                                                                                                                                                                                      
+   ...         4     NaN  2021 ... 3.5
+   ...         3  France  2021 ... 2.5
 
 The odds matrix is the following::
 
@@ -169,7 +172,7 @@ Finally, we make probability predictions using the fixtures input data and resha
 We can use the predictions to get the value bets:
 
    >>> import pandas as pd
-   >>> value_bets = pd.concat([X_fix_info,  Y_pred_prob * Odds_fix > 1], axis=1)
+   >>> value_bets = pd.concat([X_fix_info.reset_index(drop=True),  Y_pred_prob * Odds_fix > 1], axis=1)
    >>> value_bets.rename(columns={col:col.split('__')[1] for col in value_bets.columns if col.endswith('odds')})
       home_team    away_team  away_win   draw  home_win
    0  Barcelona  Real Madrid     False   True      True

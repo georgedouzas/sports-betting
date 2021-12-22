@@ -136,7 +136,20 @@ def test_data_fixtures_col():
     dataloader = DummySoccerDataLoader().set_data(pd.DataFrame({'Div': [3, 4]}))
     with pytest.raises(
         KeyError,
-        match='Data should include a boolean column `fixtures`.',
+        match='Data should include a boolean column `fixtures` to distinguish between '
+        'train and fixtures data.',
+    ):
+        dataloader.extract_train_data()
+
+
+def test_data_date_col():
+    """Test the raise of error of check data."""
+    dataloader = DummySoccerDataLoader().set_data(
+        pd.DataFrame({'Div': [3, 4], 'fixtures': [True, True]})
+    )
+    with pytest.raises(
+        KeyError,
+        match='Data should include a datetime column `date` to represent the date.',
     ):
         dataloader.extract_train_data()
 
@@ -220,7 +233,9 @@ def test_drop_na_rows_default():
     """Test the dropped rows of data loader for the default value."""
     dataloader = DummySoccerDataLoader()
     dataloader.extract_train_data()
-    pd.testing.assert_index_equal(dataloader.dropped_na_rows_, pd.Index([], dtype=int))
+    pd.testing.assert_index_equal(
+        dataloader.dropped_na_rows_, pd.DatetimeIndex([], name='date')
+    )
 
 
 def test_drop_na_rows():
@@ -229,7 +244,7 @@ def test_drop_na_rows():
     dataloader.extract_train_data(drop_na_thres=1.0)
     pd.testing.assert_index_equal(
         dataloader.dropped_na_rows_,
-        pd.Index([], dtype=int),
+        pd.DatetimeIndex([], name='date'),
     )
 
 
@@ -248,6 +263,7 @@ def test_input_cols_default():
                     'home_team__full_time_goals',
                     'away_team__full_time_goals',
                     'fixtures',
+                    'date',
                 )
             ],
             dtype=object,
@@ -272,6 +288,7 @@ def test_input_cols():
                     'fixtures',
                     'williamhill__draw__odds',
                     'williamhill__away_win__odds',
+                    'date',
                 )
             ],
             dtype=object,
@@ -327,13 +344,6 @@ def test_extract_train_data_default():
             {
                 'division': [1, 3, 2, 1, 1],
                 'league': ['Spain', 'England', 'Spain', 'Greece', 'Greece'],
-                'date': [
-                    pd.Timestamp('5/4/1997'),
-                    pd.Timestamp('3/4/1998'),
-                    pd.Timestamp('3/4/1999'),
-                    pd.Timestamp('17/3/2017'),
-                    pd.Timestamp('17/3/2019'),
-                ],
                 'year': [1997, 1998, 1999, 2017, 2019],
                 'home_team': [
                     'Real Madrid',
@@ -356,6 +366,17 @@ def test_extract_train_data_default():
                 'williamhill__draw__odds': [2.5, np.nan, np.nan, 2.0, 1.5],
                 'williamhill__away_win__odds': [np.nan, np.nan, np.nan, 2.0, np.nan],
             }
+        ).set_index(
+            pd.Index(
+                [
+                    pd.Timestamp('5/4/1997'),
+                    pd.Timestamp('3/4/1998'),
+                    pd.Timestamp('3/4/1999'),
+                    pd.Timestamp('17/3/2017'),
+                    pd.Timestamp('17/3/2019'),
+                ],
+                name='date',
+            )
         ),
     )
     pd.testing.assert_frame_equal(
@@ -383,13 +404,6 @@ def test_extract_train_data():
             {
                 'division': [1, 3, 2, 1, 1],
                 'league': ['Spain', 'England', 'Spain', 'Greece', 'Greece'],
-                'date': [
-                    pd.Timestamp('5/4/1997'),
-                    pd.Timestamp('3/4/1998'),
-                    pd.Timestamp('3/4/1999'),
-                    pd.Timestamp('17/3/2017'),
-                    pd.Timestamp('17/3/2019'),
-                ],
                 'year': [1997, 1998, 1999, 2017, 2019],
                 'home_team': [
                     'Real Madrid',
@@ -412,6 +426,17 @@ def test_extract_train_data():
                 'williamhill__draw__odds': [2.5, np.nan, np.nan, 2.0, 1.5],
                 'williamhill__away_win__odds': [np.nan, np.nan, np.nan, 2.0, np.nan],
             }
+        ).set_index(
+            pd.Index(
+                [
+                    pd.Timestamp('5/4/1997'),
+                    pd.Timestamp('3/4/1998'),
+                    pd.Timestamp('3/4/1999'),
+                    pd.Timestamp('17/3/2017'),
+                    pd.Timestamp('17/3/2019'),
+                ],
+                name='date',
+            )
         ),
     )
     pd.testing.assert_frame_equal(
@@ -448,10 +473,6 @@ def test_extract_fixtures_data():
             {
                 'division': [4, 3],
                 'league': [np.nan, 'France'],
-                'date': [
-                    DummySoccerDataLoader.DATE,
-                    DummySoccerDataLoader.DATE,
-                ],
                 'year': [
                     DummySoccerDataLoader.DATE.year,
                     DummySoccerDataLoader.DATE.year,
@@ -468,6 +489,14 @@ def test_extract_fixtures_data():
                 'williamhill__draw__odds': [2.5, 1.5],
                 'williamhill__away_win__odds': [2.0, 2.5],
             }
+        ).set_index(
+            pd.DatetimeIndex(
+                [
+                    DummySoccerDataLoader.DATE,
+                    DummySoccerDataLoader.DATE,
+                ],
+                name='date',
+            )
         ),
     )
     assert Y is None
