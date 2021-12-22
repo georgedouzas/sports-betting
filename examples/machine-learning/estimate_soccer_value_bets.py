@@ -81,8 +81,10 @@ Y_pred_prob = np.concatenate(
     [prob[:, 1].reshape(-1, 1) for prob in clf.predict_proba(X_fix[num_features])],
     axis=1,
 )
-X_fix_info = X_fix[['date', 'home_team', 'away_team']]
-value_bets = pd.concat([X_fix_info, Y_pred_prob * Odds_fix > 1], axis=1)
+X_fix_info = X_fix[['home_team', 'away_team']].reset_index()
+value_bets = pd.concat([X_fix_info, Y_pred_prob * Odds_fix > 1], axis=1).set_index(
+    'date'
+)
 value_bets.rename(
     columns={
         col: col.split('__')[1] for col in value_bets.columns if col.endswith('odds')
