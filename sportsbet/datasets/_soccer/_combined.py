@@ -411,5 +411,5 @@ class SoccerDataLoader(_BaseDataLoader):
             fte_data[col] = fte_data[col].apply(
                 lambda name: self._names_mapping.get(name, name)
             )
-        data = pd.merge(fd_data, fte_data.drop(columns=['date']))
+        data = pd.merge(fd_data.reset_index(), fte_data.reset_index())
         return data
