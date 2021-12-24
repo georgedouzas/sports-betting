@@ -24,7 +24,6 @@ INSTALL_REQUIRES = ['pandas>=1.0.0', 'scikit-learn>=1.0.0', 'cloudpickle>=2.0.0'
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',
                'License :: OSI Approved',
-               'Programming Language :: Python',
                'Topic :: Software Development',
                'Topic :: Scientific/Engineering',
                'Operating System :: Microsoft :: Windows',
