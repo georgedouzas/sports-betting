@@ -24,6 +24,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
         {'league': ['Spain'], 'division': [2], 'year': [1999]},
         {'league': ['England'], 'division': [2], 'year': [1997]},
         {'league': ['England'], 'division': [3], 'year': [1998]},
+        {'league': ['France'], 'division': [1], 'year': [2000]},
+        {'league': ['France'], 'division': [1], 'year': [2001]},
     ]
     SCHEMA = [
         ('division', int),
@@ -72,7 +74,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
     ]
     DATA = pd.DataFrame(
         {
-            'division': [1.0, 2.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0, 4.0, 3.0],
+            'division': [1.0, 2.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0, 4.0, 3.0, 1.0, 1.0],
             'league': [
                 'Greece',
                 'Greece',
@@ -83,6 +85,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 'England',
                 np.nan,
                 np.nan,
+                'France',
+                'France',
                 'France',
             ],
             'date': [
@@ -96,6 +100,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 pd.Timestamp('3/4/1998'),
                 DATE,
                 DATE,
+                pd.Timestamp('3/4/2000'),
+                pd.Timestamp('6/4/2001'),
             ],
             'year': [
                 2017,
@@ -108,6 +114,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 1998,
                 DATE.year,
                 DATE.year,
+                2000,
+                2001,
             ],
             'home_team': [
                 'Olympiakos',
@@ -120,6 +128,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 'Liverpool',
                 'Barcelona',
                 'Monaco',
+                'Lens',
+                'PSG',
             ],
             'away_team': [
                 'Panathinaikos',
@@ -132,6 +142,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 'Arsenal',
                 'Real Madrid',
                 'PSG',
+                'Monaco',
+                'Lens',
             ],
             'home_team__full_time_goals': [
                 1,
@@ -144,8 +156,23 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 1,
                 np.nan,
                 np.nan,
+                2,
+                1,
             ],
-            'away_team__full_time_goals': [1, np.nan, 0, 1, 2, 2, 3, 2, np.nan, np.nan],
+            'away_team__full_time_goals': [
+                1,
+                np.nan,
+                0,
+                1,
+                2,
+                2,
+                3,
+                2,
+                np.nan,
+                np.nan,
+                1,
+                2,
+            ],
             'interwetten__home_win__odds': [
                 2.0,
                 1.5,
@@ -157,9 +184,37 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 np.nan,
                 3,
                 1.5,
+                2.0,
+                3.0,
             ],
-            'interwetten__draw__odds': [2, 2, 2, 3.5, 4.5, 2.5, 4.5, 2.5, 2.5, 3.5],
-            'interwetten__away_win__odds': [2, 2, 3, 2.5, 2, 2, 3.5, 3.5, 2, 2.5],
+            'interwetten__draw__odds': [
+                2,
+                2,
+                2,
+                3.5,
+                4.5,
+                2.5,
+                4.5,
+                2.5,
+                2.5,
+                3.5,
+                2.5,
+                2.5,
+            ],
+            'interwetten__away_win__odds': [
+                2,
+                2,
+                3,
+                2.5,
+                2,
+                2,
+                3.5,
+                3.5,
+                2,
+                2.5,
+                3.0,
+                2.0,
+            ],
             'williamhill__home_win__odds': [
                 2,
                 1.5,
@@ -170,6 +225,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 2.0,
                 4.0,
                 3.5,
+                2.5,
+                2.5,
                 2.5,
             ],
             'williamhill__draw__odds': [
@@ -183,6 +240,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 np.nan,
                 2.5,
                 1.5,
+                2.5,
+                3.0,
             ],
             'williamhill__away_win__odds': [
                 2,
@@ -194,6 +253,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 np.nan,
                 np.nan,
                 2.0,
+                2.5,
+                3.0,
                 2.5,
             ],
             'fixtures': [
@@ -207,6 +268,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 False,
                 True,
                 True,
+                False,
+                False,
             ],
         }
     )
