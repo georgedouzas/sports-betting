@@ -79,7 +79,6 @@ No odds matrix is returned:
    >>> Odds_train is None
    True
 
-
 Non default values for parameters
 *********************************
 
