@@ -564,6 +564,7 @@ class FDSoccerDataLoader(_BaseDataLoader):
 
         # Fixtures data
         data = _read_csv(join(URL, 'fixtures.csv'), parse_dates='Date')
+        data = data.dropna(axis=0, how='any', subset=['Div', 'HomeTeam', 'AwayTeam'])
         data['fixtures'] = True
         inv_leagues_mapping = {v[0]: k for k, v in LEAGUES_MAPPING.items()}
         data['league'] = data['Div'].apply(lambda div: inv_leagues_mapping[div[:-1]])
