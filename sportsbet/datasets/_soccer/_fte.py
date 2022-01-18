@@ -75,7 +75,7 @@ class FTESoccerDataLoader(_BaseDataLoader):
 
     Read more in the :ref:`user guide <user_guide>`.
 
-    parameters
+    Parameters
     ----------
     param_grid : dict of str to sequence, or sequence of such parameter, default=None
         The parameter grid to explore, as a dictionary mapping data parameters
@@ -83,6 +83,13 @@ class FTESoccerDataLoader(_BaseDataLoader):
         parameters. A sequence of dicts signifies a sequence of grids to search,
         and is useful to avoid exploring parameter combinations that do not
         exist. The default value corresponds to all parameters.
+
+    Examples
+    --------
+    >>> from sportsbet.datasets import FTESoccerDataLoader
+    >>> dataloader = FTESoccerDataLoader()
+    >>> X_train, Y_train, O_train = dataloader.extract_train_data()
+    >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     """
 
     _removed_cols = ['season', 'league_id']
