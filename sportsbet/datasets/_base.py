@@ -246,7 +246,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 )
         return data
 
-    def _extract_dropped_na_data(self, data):
+    def _drop_na_cols(self, data):
 
         # Drop columns
         self.dropped_na_cols_ = pd.Index([], dtype=object)
@@ -268,30 +268,8 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 'All columns were removed. Set `drop_na_thres` parameter to a '
                 'lower value.'
             )
-        data_dropped_na_cols = data.drop(columns=self.dropped_na_cols_)
 
-        # Drop rows
-        self.dropped_na_rows_ = pd.DatetimeIndex([], name='date')
-        if self.drop_na_thres_ > 0.0:
-            input_cols = data_dropped_na_cols.columns.intersection(
-                self.schema_input_cols_
-            )
-            data_dropped_na_rows = data_dropped_na_cols[input_cols].dropna(
-                how='all', axis=0
-            )
-            data_dropped_na_rows = data_dropped_na_rows.dropna(
-                axis=0,
-                subset=input_cols,
-                thresh=int(data_dropped_na_rows.shape[1] * self.drop_na_thres_),
-            )
-            self.dropped_na_rows_ = data.index.difference(data_dropped_na_rows.index)
-        if data.index.difference(self.dropped_na_rows_).size == 0:
-            raise ValueError(
-                'All rows were removed. Set `drop_na_thres` parameter to a lower value.'
-            )
-        data = data.loc[data.index.difference(self.dropped_na_rows_)]
-
-        return data
+        return self
 
     def _extract_training_cols(self, data):
         self.input_cols_ = pd.Index(
@@ -310,7 +288,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
             sorted(
                 [
                     col
-                    for col in data.columns
+                    for col in data.columns.append(self.dropped_na_cols_)
                     if col in self.schema_odds_cols_
                     and (col.split('__')[0] == self.odds_type_)
                     and any(
@@ -356,10 +334,11 @@ class _BaseDataLoader(metaclass=ABCMeta):
             raise ValueError('Parameter grid did not select any training data.')
 
         # Drop missing values
-        data = self._extract_dropped_na_data(data)
+        self._drop_na_cols(data)
 
         # Extract training data columns
-        self._extract_training_cols(data)
+        data_dropped_na_cols = data.drop(columns=self.dropped_na_cols_)
+        self._extract_training_cols(data_dropped_na_cols)
 
         return data
 
@@ -377,8 +356,8 @@ class _BaseDataLoader(metaclass=ABCMeta):
                     [col for col in data.columns if col.split('__')[-1] == output_key]
                 )
                 Y.append(pd.Series(func(data), name=col))
-        dropna = data[set(output_cols)].isna().sum(axis=1).astype(bool)
-        Y = pd.concat(Y, axis=1)[~dropna] if Y else None
+        dropna = data[set(output_cols)].isna().sum(axis=1).astype(bool).values
+        Y = pd.concat(Y, axis=1).reset_index(drop=True)[~dropna] if Y else None
         return Y
 
     def extract_train_data(self, drop_na_thres=None, odds_type=None):
@@ -387,10 +366,10 @@ class _BaseDataLoader(metaclass=ABCMeta):
         Parameters
         ----------
         drop_na_thres : float, default=None
-            The threshold of input columns and rows to drop. It is a float in
+            The threshold of input columns to drop. It is a float in
             the [0.0, 1.0] range. The default value ``None`` corresponds to
-            ``0.0`` i.e. all columns and rows are kept while the maximum
-            value ``1.0`` keeps only columns and rows with non missing values.
+            ``0.0`` i.e. all columns are kept while the maximum
+            value ``1.0`` keeps only columns with non missing values.
 
         odds_type : str, default=None
             The selected odds type. It should be one of the available odds columns
@@ -412,7 +391,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         Y = self._extract_targets(data)
 
         # Convert data types
-        data = self._convert_data_types(data).loc[Y.index.unique()]
+        data = self._convert_data_types(data).iloc[Y.index]
 
         return (
             data[self.input_cols_],

@@ -57,7 +57,7 @@ which are ``None`` for both of them::
    
    >>> X_train, Y_train, Odds_train = dataloader.extract_train_data()
 
-No columns  and rows are dropped from the input matrix ``X_train``::
+No columns are dropped from the input matrix ``X_train``::
 
    >>> X_train
                division   league  year    home_team    away_team ... williamhill__away_win__odds
@@ -125,10 +125,10 @@ The method accepts no parameters and the extracted fixtures input matrix has
 the same columns as the latest extracted input matrix for the training data::
 
    >>> X_fix
-                               division  league  year ... williamhill__home_win__odds
+                               division  league ... williamhill__home_win__odds
    date                                                                                                                                                                                      
-   ...         4     NaN  2021 ... 3.5
-   ...         3  France  2021 ... 2.5
+   ...         4     NaN ... 3.5
+   ...         3  France ... 2.5
 
 The odds matrix is the following::
 

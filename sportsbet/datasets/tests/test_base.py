@@ -229,25 +229,6 @@ def test_drop_na_cols():
     )
 
 
-def test_drop_na_rows_default():
-    """Test the dropped rows of data loader for the default value."""
-    dataloader = DummySoccerDataLoader()
-    dataloader.extract_train_data()
-    pd.testing.assert_index_equal(
-        dataloader.dropped_na_rows_, pd.DatetimeIndex([], name='date')
-    )
-
-
-def test_drop_na_rows():
-    """Test the dropped rows of data loader."""
-    dataloader = DummySoccerDataLoader()
-    dataloader.extract_train_data(drop_na_thres=1.0)
-    pd.testing.assert_index_equal(
-        dataloader.dropped_na_rows_,
-        pd.DatetimeIndex([], name='date'),
-    )
-
-
 def test_input_cols_default():
     """Test the input columns for default values."""
     dataloader = DummySoccerDataLoader()
