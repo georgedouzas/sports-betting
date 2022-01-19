@@ -327,8 +327,10 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = self.data_[~mask].drop(columns=['fixtures'])
 
         # Filter data
-        data = pd.merge(data.reset_index(), pd.DataFrame(self.param_grid_)).set_index(
-            'date'
+        data = (
+            pd.merge(data.reset_index(), pd.DataFrame(self.param_grid_))
+            .set_index('date')
+            .sort_values('date')
         )
         if data.size == 0:
             raise ValueError('Parameter grid did not select any training data.')
