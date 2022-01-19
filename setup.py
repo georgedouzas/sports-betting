@@ -20,7 +20,15 @@ URL = 'https://github.com/georgedouzas/sports-betting'
 LICENSE = 'MIT'
 DOWNLOAD_URL = 'https://github.com/AlgoWit/sports-betting'
 VERSION = __version__
-INSTALL_REQUIRES = ['pandas>=1.0.0', 'scikit-learn>=1.0.0', 'cloudpickle>=2.0.0', 'beautifulsoup4>=4.0.0', 'rich>=4.28', 'vectorbt>=0.22.0' ]
+INSTALL_REQUIRES = [
+    'pandas>=1.0.0',
+    'scikit-learn>=1.0.0',
+    'cloudpickle>=2.0.0',
+    'beautifulsoup4>=4.0.0',
+    'rich>=4.28',
+    'vectorbt>=0.22.0',
+    'QuantStats>=0.0.47'
+]
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',
                'License :: OSI Approved',
