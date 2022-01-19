@@ -1,6 +1,7 @@
 .. -*- mode: rst -*-
 
 .. _scikit-learn: http://scikit-learn.org/stable/
+.. _Pypi's:  https://pypi.org/
 
 |CircleCI|_ |ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
 
@@ -33,8 +34,9 @@ It is compatible with scikit-learn_.
 Installation
 ------------
 
-`sports-betting` is currently available on the PyPi's repositories and you can
-install it via `pip`::
+`sports-betting` is currently available on the 	
+The Python Package Index (PyPi's_), repositories and you can
+install it via `pip`.::
 
   pip install -U sports-betting
 
@@ -49,3 +51,4 @@ Installation documentation, API documentation, and examples can be found on the
 documentation_.
 
 .. _documentation: https://sports-betting.readthedocs.io/en/latest/
+
