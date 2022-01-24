@@ -8,6 +8,7 @@ from abc import abstractmethod, ABCMeta
 import cloudpickle
 import numpy as np
 import pandas as pd
+from pandas.errors import MergeError
 from sklearn.model_selection import ParameterGrid
 from sklearn.utils import check_scalar
 
@@ -79,7 +80,7 @@ def _combine_odds(odds):
 
 
 class _BaseDataLoader(metaclass=ABCMeta):
-    """The case class for data loaders.
+    """The base class for dataloaders.
 
     Warning: This class should not be used directly. Use the derive classes
     instead.
@@ -111,16 +112,22 @@ class _BaseDataLoader(metaclass=ABCMeta):
         """Check the parameters grid."""
         if self.param_grid is not None:
             full_param_grid_df = pd.DataFrame(self._get_params())
-            param_grid_df = pd.concat(
-                [
-                    pd.merge(
-                        pd.DataFrame(ParameterGrid(params)),
-                        full_param_grid_df,
-                        how='left',
-                    )
-                    for params in ParameterGrid(self.param_grid).param_grid
-                ]
-            )
+            try:
+                param_grid_df = pd.concat(
+                    [
+                        pd.merge(
+                            pd.DataFrame(ParameterGrid(params)),
+                            full_param_grid_df,
+                            how='left',
+                        )
+                        for params in ParameterGrid(self.param_grid).param_grid
+                    ]
+                )
+            except MergeError:
+                raise ValueError(
+                    'Parameter grid includes parameters names '
+                    'not not allowed by available data'
+                )
             error_msg = 'Parameter grid includes values not allowed by available data.'
             param_grid_df = pd.merge(param_grid_df, full_param_grid_df, how='left')
             if np.any(pd.merge(param_grid_df, full_param_grid_df, how='left').isna()):
@@ -362,28 +369,47 @@ class _BaseDataLoader(metaclass=ABCMeta):
         Y = pd.concat(Y, axis=1).reset_index(drop=True)[~dropna] if Y else None
         return Y
 
-    def extract_train_data(self, drop_na_thres=None, odds_type=None):
-        """Extract train data.
+    def extract_train_data(self, drop_na_thres=0.0, odds_type=None):
+        """Extract the training data.
+
+        Read more in the :ref:`user guide <user_guide>`.
+
+        It returns historical data that can be used to create a betting
+        strategy based on heuristics or machine learning models.
+
+        The data contain information about the matches that belong
+        in two categories. The first category includes any information
+        known before the start of the match, i.e. the training data ``X``
+        and the odds data ``O``. The second category includes the outcomes of
+        matches i.e. the multi-output targets ``Y``.
+
+        The method selects only the the data allowed by the ``param_grid``
+        parameter of the initialization method
+        :func:`~sportsbet.datasets._base._BaseDataLoader.__init__`.
+        Additionally, columns with missing values are dropped through the
+        ``drop_na_thres`` parameter, while the types of odds returned is defined
+        by the ``odds_type`` parameter.
 
         Parameters
         ----------
-        drop_na_thres : float, default=None
-            The threshold of input columns to drop. It is a float in
-            the [0.0, 1.0] range. The default value ``None`` corresponds to
-            ``0.0`` i.e. all columns are kept while the maximum
-            value ``1.0`` keeps only columns with non missing values.
+        drop_na_thres : float, default=0.0
+            The threshold that specifies the input columns to drop. It is a float in
+            the :math:`[0.0, 1.0]` range. Higher values result in dropping more values.
+            The default value ``drop_na_thres=0.0`` keeps all columns while the
+            maximum value ``drop_na_thres=1.0`` keeps only columns with non
+            missing values.
 
         odds_type : str, default=None
             The selected odds type. It should be one of the available odds columns
             prefixes returned by the method
-            :func:`~sportsbet.datasets._base._BaseDataLoader.get_odds_types`. If `None`
-            then no odds are returned.
+            :func:`~sportsbet.datasets._base._BaseDataLoader.get_odds_types`. If
+            ``odds_type=None`` then no odds are returned.
 
         Returns
         -------
-            A tuple of 'X', 'Y' and 'O', as pandas
-            DataFrames, that represent the training input data, the
-            multi-output targets and the corresponding odds, respectively.
+        (X, Y, O) : tuple of :class:`~pandas.DataFrame` objects
+            Each of the components represent the training input data ``X``, the
+            multi-output targets ``Y`` and the corresponding odds ``O``, respectively.
         """
 
         # Extract training data
@@ -404,15 +430,35 @@ class _BaseDataLoader(metaclass=ABCMeta):
         )
 
     def extract_fixtures_data(self):
-        """Extract fixtures data.
+        """Extract the fixtures data.
+
+        Read more in the :ref:`user guide <user_guide>`.
+
+        It returns fixtures data that can be used to make predictions for
+        upcoming matches based on a betting strategy.
+
+        Before calling the
+        :func:`~sportsbet.datasets._BaseDataLoader.extract_fixtures_data` method for
+        the first time, the :func:`~sportsbet.datasets._BaseDataLoader.extract__data`
+        should be called, in order to match the columns of the input, output and
+        odds data.
+
+        The data contain information about the matches known before the
+        start of the match, i.e. the training data ``X`` and the odds
+        data ``O``. The multi-output targets ``Y`` is always equal to ``None``
+        and are only included for consistency with the method
+        :func:`~sportsbet.datasets._base._BaseDataLoader.extract_train_data`.
+
+        The ``param_grid`` parameter of the initialization method
+        :func:`~sportsbet.datasets._base._BaseDataLoader.__init__` has no effect
+        on the fixtures data.
 
         Returns
         -------
-        fixtures data : (X, None, O) tuple
-            A tuple of 'X', None and 'O', as pandas
-            DataFrames, that represent the training input data, the
-            multi-output targets (None for fixtures) and the selected odds,
-            respectively.
+        (X, None, O) : tuple of :class:`~pandas.DataFrame` objects
+            Each of the components represent the fixtures input data ``X``, the
+            multi-output targets ``Y`` equal to ``None`` and the
+            corresponding odds ``O``, respectively.
         """
 
         # Extract fixtures data
@@ -459,16 +505,22 @@ class _BaseDataLoader(metaclass=ABCMeta):
     def get_all_params(cls):
         """Get the available parameters.
 
+        It can be used to get the allowed names and values for the
+        ``param_grid`` parameter of the dataloader object.
+
         Returns
         -------
         param_grid: object
-            An object of the ParameterGrid class.
+            An object of the :class:`~sklearn.model_selection.ParameterGrid` class.
         """
         return cls._get_params()
 
     @classmethod
     def get_odds_types(cls):
         """Get the available odds types.
+
+        It can be used to get the allowed odds types of the dataloader's  class method
+        :func:`~sportsbet.datasets._base._BaseDataLoader.extract_train_data`.
 
         Returns
         -------
