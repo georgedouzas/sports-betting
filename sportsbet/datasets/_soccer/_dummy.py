@@ -1,5 +1,5 @@
 """
-Dataloder for dummy data.
+Dataloader for dummy data.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -11,11 +11,75 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from sportsbet.datasets._base import _BaseDataLoader
+from .._base import _BaseDataLoader
 
 
 class DummySoccerDataLoader(_BaseDataLoader):
-    """Dataloader for dummy data."""
+    """Dataloader for dummy data.
+
+    The data are provided only for convenience, since they require
+    no downloading, and to familiarize the user with the methods
+    of the dataloader objects.
+
+    Read more in the :ref:`user guide <user_guide>`.
+
+    Parameters
+    ----------
+    param_grid : dict of str to sequence, or sequence of such parameter, default=None
+        It selects the type of information that the data include. The keys of
+        dictionaries might be parameters like ``'league'`` or ``'division'`` while
+        the values are sequences of allowed values. It works in a similar way as the
+        ``param_grid`` parameter of the :class:`~sklearn.model_selection.ParameterGrid`
+        class. The default value ``None`` corresponds to all parameters.
+
+    Examples
+    --------
+    >>> from sportsbet.datasets import DummySoccerDataLoader
+    >>> import pandas as pd
+    >>> # Get all available parameters to select the training data
+    >>> pd.DataFrame(DummySoccerDataLoader.get_all_params())
+       division   league  year
+    0         1   Greece  2017
+    1         1   Greece  2019
+    2         1    Spain  1997
+    3         2    Spain  1999
+    4         2  England  1997
+    5         3  England  1998
+    6         1   France  2000
+    7         1   France  2001
+    >>> # Select only the traning data for the Spanish league
+    >>> dataloader = DummySoccerDataLoader(param_grid={'league': ['Spain']})
+    >>> # Get available odds types
+    >>> dataloader.get_odds_types()
+    ['interwetten', 'williamhill']
+    >>> # Select the odds of Interwetten bookmaker
+    >>> X_train, Y_train, O_train = dataloader.extract_train_data(
+    ... odds_type='interwetten')
+    >>> # Training input data
+    >>> X_train
+                division league  year    home_team ... williamhill__away_win__odds
+    date ...
+    1997-05-04         1  Spain  1997  Real Madrid ...                         NaN
+    1999-03-04         2  Spain  1999    Barcelona ...                         NaN
+    >>> # Training output data
+    >>> Y_train
+       away_win__full_time_goals  draw__full_time_goals  home_win__full_time_goals
+    0                      False                  False                       True
+    1                      False                   True                      False
+    >>> # Training odds data
+    >>> O_train
+       interwetten__away_win__odds  interwetten__draw__odds  interwetten__home_win__odds
+    0                          2.5                      3.5                          1.5
+    1                          2.0                      4.5                          2.5
+    >>> # Extract the corresponding fixtures data
+    >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
+    >>> # Training and fixtures input and odds data have the same column names
+    >>> pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
+    >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
+    >>> # Fixtures data have always no output
+    >>> Y_fix is None
+    True
+    """
 
     DATE = pd.Timestamp(datetime.now()) + pd.to_timedelta(1, 'd')
     PARAMS = [

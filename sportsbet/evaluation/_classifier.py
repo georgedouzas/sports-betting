@@ -85,7 +85,7 @@ def _extract_stats(portfolio, training_start, training_end):
             'Worst Bet [%]': 100 * yields.min(),
             'Avg Winning Bet [%]': 100 * yields[yields > 0].mean(),
             'Avg Losing Bet [%]': 100 * yields[yields < 0].mean(),
-            'Avg Bet Yield[%]': 100 * yields.mean(),
+            'Avg Bet Yield [%]': 100 * yields.mean(),
             'Std Bet Yield [%]': 100 * yields.values.std()
             if yields.size > 0
             else np.nan,
@@ -114,13 +114,16 @@ class ClassifierBettor:
     >>> from sklearn.compose import make_column_transformer
     >>> from sportsbet.evaluation import ClassifierBettor
     >>> from sportsbet.datasets import FDSoccerDataLoader
-    >>> param_grid = {'league': ['Italy'], 'year': [2018, 2019]}
+    >>> # Select only backtesting data for the Italian league and years 2020, 2021
+    >>> param_grid = {'league': ['Italy'], 'year': [2020, 2021]}
     >>> dataloader = FDSoccerDataLoader(param_grid)
+    >>> # Select the odds of Pinnacle bookmaker
     >>> X, Y, O = dataloader.extract_train_data(
     ... odds_type='pinnacle',
-    ... drop_na_thres=0.6
-    ... )  # doctest: +ELLIPSIS
+    ... drop_na_thres=1.0
+    ... )
     Football-Data.co.uk...
+    >>> # Create a pipeline to handle categorical features and missing values
     >>> clf_pipeline = make_pipeline(
     ... make_column_transformer(
     ... (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
@@ -129,12 +132,14 @@ class ClassifierBettor:
     ... SimpleImputer(),
     ... DecisionTreeClassifier(random_state=0)
     ... )
+    >>> # Backtest the bettor
     >>> bettor = ClassifierBettor(clf_pipeline)
-    >>> bettor.backtest(X, Y, O) # doctest: +ELLIPSIS
+    >>> bettor.backtest(X, Y, O)
     <sportsbet.evaluation._classifier.ClassifierBettor object at...
-    >>> bettor.backtest_results_ # doctest: +ELLIPSIS
-      Training Start ... Std Bet Yield [%]
-    0     2017-01-10 ...        119.112556
+    >>> # Display backtesting results
+    >>> bettor.backtest_results_
+      Training Start ... Avg Bet Yield [%]  Std Bet Yield [%]
+    0     2019-01-09 ...         -0.621803         118.393155
     ...
     """
 
@@ -169,7 +174,41 @@ class ClassifierBettor:
         self.init_cash_ = init_cash
         return self
 
-    def backtest(self, X, Y, O, tscv=None, init_cash=None):
+    def backtest(self, X, Y, O, tscv=None, init_cash=1000):
+        """Backtest the bettor.
+
+        Parameters
+        ----------
+        X : :class:`~pandas.DataFrame` object
+            The input data. Each row of `X` represents information that is available
+            before the start of a specific match. The rows should be
+            sorted by an index named as ``'date'``.
+
+        Y : :class:`~pandas.DataFrame` object
+            The multi-output targets. Each row of `Y` represents information
+            that is available after the end of a specific match. The column
+            names follow the convention for the output data `Y` of the method
+            :func:`~sportsbet.datasets._BaseDataLoader.extract_train_data`.
+
+        O : :class:`~pandas.DataFrame` object
+            The odds data. Each row of `O` represents information
+            that is available after the end of a specific match. The column
+            names follow the convention for the output data ``Y`` of the method
+            :func:`~sportsbet.datasets._BaseDataLoader.extract_train_data`.
+
+        tscv : :class:`~sklearn.model_selection.TimeSeriesSplit` object, default=None
+            Provides train/test indices to split time series data samples
+            that are observed at fixed time intervals, in train/test sets. The
+            default value param ``None``.
+
+        init_cash : init, default=1000
+            The initial cash to use for backtesting.
+
+        Returns
+        -------
+        self : :class:`~sportsbet.evaluation.ClassifierBettor` object.
+            The classifier bettor.
+        """
         self._check_classifier()._check_backtest_params(tscv, init_cash)
         clf = clone(self.classifier)
         if isinstance(X, pd.DataFrame) and isinstance(X.index, pd.DatetimeIndex):

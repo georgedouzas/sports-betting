@@ -122,20 +122,59 @@ def _param_grid_to_csv_urls(param_grid):
 class FDSoccerDataLoader(_BaseDataLoader):
     """Dataloader for Football-Data.co.uk soccer data.
 
+    It downloads historical and fixtures data from
+    `Football-Data.co.uk <http://www.football-data.co.uk/data.php>`_.
+
     Read more in the :ref:`user guide <user_guide>`.
 
     Parameters
     ----------
     param_grid : dict of str to sequence, or sequence of such parameter, default=None
-        The parameter grid to explore, as a dictionary mapping data parameters
-        to sequences of allowed values. An empty dict signifies default
-        parameters. A sequence of dicts signifies a sequence of grids to search,
-        and is useful to avoid exploring parameter combinations that do not
-        exist. The default value corresponds to all parameters.
+        It selects the type of information that the data include. The keys of
+        dictionaries might be parameters like ``'league'`` or ``'division'`` while
+        the values are sequences of allowed values. It works in a similar way as the
+        ``param_grid`` parameter of the :class:`~sklearn.model_selection.ParameterGrid`
+        class. The default value ``None`` corresponds to all parameters.
 
     Examples
     --------
-    >>>
+    >>> from sportsbet.datasets import FDSoccerDataLoader
+    >>> import pandas as pd
+    >>> # Get all available parameters to select the training data
+    >>> pd.DataFrame(FDSoccerDataLoader.get_all_params()).sort_values(
+    ... ['league', 'year', 'division']).reset_index(drop=True)
+         division     league  year
+    0           1  Argentina  2013
+    1           1  Argentina  2014
+    2           1  Argentina  2015
+    3           1  Argentina  2016
+    4           1  Argentina  2017
+    ..      ...        ...   ...
+    ...
+    >>> # Select only the traning data for the English league and 2020, 2021 years
+    >>> dataloader = FDSoccerDataLoader(
+    ... param_grid={'league': ['England'], 'year': [2020, 2021]})
+    >>> # Get available odds types
+    >>> dataloader.get_odds_types()
+    [..., 'market_average', ...]
+    >>> # Select the market average odds and drop colums with missing values
+    >>> X_train, Y_train, O_train = dataloader.extract_train_data(
+    ... odds_type='market_average', drop_na_thres=1.0)
+    Football-Data.co.uk...
+    >>> # Extract the corresponding fixtures data
+    >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
+    >>> # Training and fixtures input and odds data have the same column names
+    >>> pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
+    >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
+    >>> # Fixtures data have always no output
+    >>> Y_fix is None
+    True
+    >>> # Odds data include the selected market average odds
+    >>> O_train
+          market_average__away_win__odds ... market_average__under_2.5__odds
+    0                               3.65 ...                            1.66
+    1                               2.90 ...                            2.40
+    ...
     """
 
     _removed_cols = [

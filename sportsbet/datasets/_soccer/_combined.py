@@ -20,18 +20,65 @@ from ._fte import FTESoccerDataLoader
 
 
 class SoccerDataLoader(_BaseDataLoader):
-    """Dataloader for all soccer data.
+    """Dataloader for soccer data from combining all data sources.
+
+    It downloads historical and fixtures data from
+    `Football-Data.co.uk <http://www.football-data.co.uk/data.php>`_ and
+    `FiveThirtyEight <https://github.com/fivethirtyeight/data/tree/master/soccer-spi>`_.
+    The data are combined in a consistent way.
 
     Read more in the :ref:`user guide <user_guide>`.
 
-    parameters
+    Parameters
     ----------
     param_grid : dict of str to sequence, or sequence of such parameter, default=None
-        The parameter grid to explore, as a dictionary mapping data parameters
-        to sequences of allowed values. An empty dict signifies default
-        parameters. A sequence of dicts signifies a sequence of grids to search,
-        and is useful to avoid exploring parameter combinations that do not
-        exist. The default value corresponds to all parameters.
+        It selects the type of information that the data include. The keys of
+        dictionaries might be parameters like ``'league'`` or ``'division'`` while
+        the values are sequences of allowed values. It works in a similar way as the
+        ``param_grid`` parameter of the :class:`~sklearn.model_selection.ParameterGrid`
+        class. The default value ``None`` corresponds to all parameters.
+
+    Examples
+    --------
+    >>> from sportsbet.datasets import SoccerDataLoader
+    >>> import pandas as pd
+    >>> # Get all available parameters to select the training data
+    >>> pd.DataFrame(SoccerDataLoader.get_all_params()).sort_values(
+    ... ['league', 'year', 'division']).reset_index(drop=True)
+         division                league  year
+    0           1             Argentina  2013
+    1           1             Argentina  2014
+    2           1             Argentina  2015
+    3           1             Argentina  2016
+    4           1             Argentina  2017
+    ...
+    >>> # Select only the traning data for the French and Spanish leagues of 2020 year
+    >>> dataloader = SoccerDataLoader(
+    ... param_grid={'league': ['England', 'Spain'], 'year':[2020]})
+    >>> # Get available odds types
+    >>> dataloader.get_odds_types()
+    [..., 'market_average', ...]
+    >>> # Select the market average odds and drop colums with missing values
+    >>> X_train, Y_train, O_train = dataloader.extract_train_data(
+    ... odds_type='market_average', drop_na_thres=1.0)
+    Football-Data.co.uk...
+    >>> # Extract the corresponding fixtures data
+    >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
+    >>> # Training and fixtures input and odds data have the same column names
+    >>> pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
+    >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
+    >>> # Fixtures data have always no output
+    >>> Y_fix is None
+    True
+    >>> # Odds data include the selected market average odds
+    >>> O_train
+          market_average__away_win__odds ... market_average__under_2.5__odds
+    0                               2.28 ...                            1.77
+    1                               1.71 ...                            2.05
+    2                               3.80 ...                            1.67
+    3                               3.60 ...                            1.67
+    4                               2.69 ...                            1.80
+    ...
     """
 
     _names_mapping = {
