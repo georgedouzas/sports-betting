@@ -62,17 +62,6 @@ def _create_names_mapping_table(data_source1, data_source2):
     return names_mapping
 
 
-def _read_csv(url, parse_dates=False):
-    """Read csv file from URL as a pandas dataframe."""
-    names = pd.read_csv(url, nrows=0, encoding='ISO-8859-1').columns
-    if parse_dates:
-        parse_dates = [parse_dates]
-    data = pd.read_csv(
-        url, names=names, skiprows=1, encoding='ISO-8859-1', parse_dates=parse_dates
-    )
-    return data
-
-
 def _combine_odds(odds):
     """Combine the odds of different outcomes."""
     combined_odds = 1 / (1 / odds).sum(axis=1)
@@ -365,7 +354,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
                     [col for col in data.columns if col.split('__')[-1] == output_key]
                 )
                 Y.append(pd.Series(func(data), name=col))
-        dropna = data[set(output_cols)].isna().sum(axis=1).astype(bool).values
+        dropna = data[list(set(output_cols))].isna().sum(axis=1).astype(bool).values
         Y = pd.concat(Y, axis=1).reset_index(drop=True)[~dropna] if Y else None
         return Y
 

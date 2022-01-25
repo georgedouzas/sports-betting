@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
 from .._base import _BaseDataLoader
-from . import OUTCOMES
+from ._utils import OUTCOMES
 from ._fd import FDSoccerDataLoader
 from ._fte import FTESoccerDataLoader
 
@@ -73,11 +73,7 @@ class SoccerDataLoader(_BaseDataLoader):
     >>> # Odds data include the selected market average odds
     >>> O_train
           market_average__away_win__odds ... market_average__under_2.5__odds
-    0                               2.28 ...                            1.77
-    1                               1.71 ...                            2.05
-    2                               3.80 ...                            1.67
-    3                               3.60 ...                            1.67
-    4                               2.69 ...                            1.80
+    0                               3.19 ...                            1.76
     ...
     """
 

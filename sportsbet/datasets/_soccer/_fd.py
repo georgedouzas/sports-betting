@@ -19,8 +19,8 @@ from bs4 import BeautifulSoup
 from rich.progress import track
 from sklearn.model_selection import ParameterGrid
 
-from . import OUTCOMES
-from .._base import _BaseDataLoader, _read_csv
+from ._utils import OUTCOMES, _read_csv
+from .._base import _BaseDataLoader
 
 URL = 'http://www.football-data.co.uk'
 BASE_URLS = [
@@ -172,8 +172,7 @@ class FDSoccerDataLoader(_BaseDataLoader):
     >>> # Odds data include the selected market average odds
     >>> O_train
           market_average__away_win__odds ... market_average__under_2.5__odds
-    0                               3.65 ...                            1.66
-    1                               2.90 ...                            2.40
+    0                               3.19 ...                            1.76
     ...
     """
 
@@ -551,7 +550,7 @@ class FDSoccerDataLoader(_BaseDataLoader):
                         'year': [year],
                     }
                 else:
-                    years = _read_csv(urljoin(URL, url), parse_dates='Date')['Season']
+                    years = _read_csv(urljoin(URL, url))['Season']
                     years = list(
                         {
                             season + 1
@@ -572,7 +571,11 @@ class FDSoccerDataLoader(_BaseDataLoader):
         urls = _param_grid_to_csv_urls(self.param_grid_)
         for params, url in track(urls, description='Football-Data.co.uk:'):
 
-            data = _read_csv(url, parse_dates='Date').replace('#REF!', np.nan)
+            data = _read_csv(url).replace('#REF!', np.nan)
+            try:
+                data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
+            except ValueError:
+                data['Date'] = pd.to_datetime(data['Date'], infer_datetime_format=True)
 
             if url.split('/')[-2] != 'new':
                 data = data.assign(
@@ -602,7 +605,8 @@ class FDSoccerDataLoader(_BaseDataLoader):
             data_container.append(data)
 
         # Fixtures data
-        data = _read_csv(join(URL, 'fixtures.csv'), parse_dates='Date')
+        data = _read_csv(join(URL, 'fixtures.csv'))
+        data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
         data = data.dropna(axis=0, how='any', subset=['Div', 'HomeTeam', 'AwayTeam'])
         data['fixtures'] = True
         inv_leagues_mapping = {v[0]: k for k, v in LEAGUES_MAPPING.items()}

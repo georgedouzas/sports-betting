@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from . import OUTCOMES
-from .._base import _BaseDataLoader, _read_csv
+from ._utils import OUTCOMES, _read_csv
+from .._base import _BaseDataLoader
 
 URL = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
 LEAGUES_MAPPING = {
@@ -62,7 +62,8 @@ LEAGUES_MAPPING = {
 
 
 def _extract_data():
-    data = _read_csv(URL, parse_dates='date').copy()
+    data = _read_csv(URL).copy()
+    data['date'] = pd.to_datetime(data['date'])
     data[['league', 'division']] = pd.DataFrame(
         data['league_id'].apply(lambda lid: LEAGUES_MAPPING[lid]).values.tolist()
     )
