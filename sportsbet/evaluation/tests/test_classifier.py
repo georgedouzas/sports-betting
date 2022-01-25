@@ -45,7 +45,7 @@ def test_fit_check_classifier():
     """Test the cloned classifier."""
     clf = DummyClassifier()
     bettor = ClassifierBettor(clf).fit(X, Y)
-    check_is_fitted(bettor.classifier_)
+    check_is_fitted(bettor)
     assert isinstance(bettor.classifier_, DummyClassifier)
 
 
