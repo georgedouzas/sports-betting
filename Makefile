@@ -14,7 +14,7 @@ test-code:
 	pytest sportsbet
 
 test-doc:
-	pytest doc/*.rst
+	pytest doc/**/*.rst
 
 test-coverage:
 	rm -rf coverage .coverage

@@ -1,4 +1,4 @@
 Data Extraction
 ---------------
 
-Extracting data using the provided dataloaders.
+Extract sports betting data using the provided dataloaders.

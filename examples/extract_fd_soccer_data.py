@@ -61,7 +61,7 @@ odds_type = 'market_average'
 # values by setting the `drop_na_thres` parameter equal to `1.0`.
 
 dataloader = FDSoccerDataLoader(param_grid=param_grid)
-X_train, Y_train, Odds_train = dataloader.extract_train_data(
+X_train, Y_train, O_train = dataloader.extract_train_data(
     drop_na_thres=1.0, odds_type=odds_type
 )
 
@@ -75,7 +75,7 @@ Y_train
 
 ###############################################################################
 # The market average odds:
-Odds_train
+O_train
 
 ###############################################################################
 # Extracting the fixtures data
@@ -86,7 +86,7 @@ Odds_train
 # training data. On the other hand, the fixtures data are not affected by
 # the `param_grid` selection.
 
-X_fix, _, Odds_fix = dataloader.extract_fixtures_data()
+X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
 ###############################################################################
 # The input data:
@@ -94,4 +94,4 @@ X_fix
 
 ###############################################################################
 # The market average odds:
-Odds_fix
+O_fix
