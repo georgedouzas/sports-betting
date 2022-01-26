@@ -1,8 +1,8 @@
 .. _introduction:
 
-##############
+#############
  Introduction
-##############
+#############
 
 The goal of the project is to provide simple tools to extract sports
 betting data and create backtesting strategies. It integrates with 
@@ -11,9 +11,9 @@ other well-known Python libraries like `pandas
 <https://scikit-learn.org/stable/>`_ and `vectorbt
 <https://vectorbt.dev/>`_.
 
-*****************
+****************
  Data extraction
-*****************
+****************
 
 The data extraction is based on the dataloader objects.
 Currently, there are various dataloaders available and `sports-betting`

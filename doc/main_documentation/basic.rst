@@ -2,9 +2,9 @@
 
 .. _football-data.co.uk: http://www.football-data.co.uk/data.php
 
-#############
+############
  Basic Usage
-#############
+############
 
 The `sports-betting` package provides a set of classes that help to
 download sports betting data. Additionally, it includes a backtesting
@@ -36,8 +36,10 @@ There is also a dataloader that combines the above two sources::
    X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='pinnacle')
    X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 
-Bettor classes provide an easy way to backtest a model and get the value bets::
+Bettor classes like :class:`~sportsbet.evaluation.ClassifierBettor`
+provide an easy way to backtest a model and get the value bets::
 
+   from sportsbet.evaluation import ClassifierBettor
    num_features = [
       col
       for col in X_train.columns
