@@ -1,10 +1,10 @@
 package:
   name: sports-betting
-  version: "0.1.6"
+  version: "0.2.0"
 
 source:
-  url: "https://files.pythonhosted.org/packages/10/f8/a309de941184353ff1ba159849c7be97455153ce20be49755f47a9ec3f5c/sports-betting-0.1.6.tar.gz"
-  sha256: "4882942a4b6f737665080abfb49aa5057d26fe09987733c3fcb9070bc0300261"
+  url: "https://files.pythonhosted.org/packages/b2/b4/3b1bd1762c2cc63c288b4cdd7be1ed14163383435ebf7829533ffb19d456/sports-betting-0.2.0.tar.gz"
+  sha256: "55d7573369e315c9b86647e42834d1ba11fdf853fa4afa8a53a902ca0534cd23"
 
 build:
   number: 0
