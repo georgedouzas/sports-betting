@@ -2,9 +2,9 @@
 
 .. _football-data.co.uk: http://www.football-data.co.uk/data.php
 
-############
- Basic Usage
-############
+###########
+Basic Usage
+###########
 
 The `sports-betting` package provides a set of classes that help to
 download sports betting data. Additionally, it includes a backtesting
@@ -33,19 +33,23 @@ There is also a dataloader that combines the above two sources::
 
    from sportsbet.datasets import SoccerDataLoader
    dataloader = SoccerDataLoader(param_grid={'league': ['France'], 'year': [2019, 2020]})
-   X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='pinnacle')
+   X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='pinnacle', drop_na_thres=1.0)
    X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 
 Bettor classes like :class:`~sportsbet.evaluation.ClassifierBettor`
-provide an easy way to backtest a model and get the value bets::
+provide an easy way to backtest a model and get the value bets. For 
+this particular example, we use only the numerical features::
 
    from sportsbet.evaluation import ClassifierBettor
+   from sklearn.neighbors import KNeighborsClassifier
+   import numpy as np
    num_features = [
       col
       for col in X_train.columns
       if X_train[col].dtype in (np.dtype(int), np.dtype(float))
    ]
    X_train = X_train[num_features]
+   X_fix = X_fix[num_features]
    bettor = ClassifierBettor(KNeighborsClassifier())
    bettor.backtest(X_train, Y_train, O_train)
-   value_bets = bettor.bet(X_fix[num_features], O_fix)
+   value_bets = bettor.bet(X_fix, O_fix)

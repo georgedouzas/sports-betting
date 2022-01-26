@@ -37,26 +37,32 @@ Usage
 
 You can download sports betting data::
 
-  from sportsbet.datasets import FTESoccerDataLoader
-  dataloader = FTESoccerDataLoader()
-  X_train, Y_train, O_train = dataloader.extract_train_data()
+  from sportsbet.datasets import SoccerDataLoader
+  dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
+  X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', drop_na_thres=1.0)
+  X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 
-Use the historical data to backtest the performance of models::
+We use only the numerical features for convenience::
 
-  from sportsbet.evaluation import ClassifierBettor
+  import numpy as np
   num_features = [
     col
     for col in X_train.columns
     if X_train[col].dtype in (np.dtype(int), np.dtype(float))
   ]
   X_train = X_train[num_features]
+  X_fix = X_fix[num_features]
+
+Use the historical data and a bettor to backtest the performance of models::
+
+  from sportsbet.evaluation import ClassifierBettor
+  from sklearn.neighbors import KNeighborsClassifier
   bettor = ClassifierBettor(KNeighborsClassifier())
   bettor.backtest(X_train, Y_train, O_train)
 
 Get the value bets using fixtures data::
   
-  X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
-  value_bets = bettor.bet(X_fix[num_features], O_fix)
+  bettor.bet(X_fix, O_fix)
 
 ************
 Installation
