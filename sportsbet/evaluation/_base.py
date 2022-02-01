@@ -171,7 +171,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         tscv : :class:`~sklearn.model_selection.TimeSeriesSplit` object, default=None
             Provides train/test indices to split time series data samples
             that are observed at fixed time intervals, in train/test sets. The
-            default value param ``None``.
+            default value of the parameter is ``None``.
 
         init_cash : init, default=1000
             The initial cash to use for backtesting.
