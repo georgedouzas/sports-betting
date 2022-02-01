@@ -1,18 +1,24 @@
+.. _api:
+
 ###
 API
 ###
 
-This is the full API documentation of the `sports-betting` package.
-
-.. _api:
-
-********
-Datasets
-********
+This is the full API documentation of the `sports-betting` project.
 
 .. automodule:: sportsbet
     :no-members:
     :no-inherited-members:
+
+********
+datasets
+********
+
+.. automodule:: sportsbet.datasets
+    :no-members:
+    :no-inherited-members:
+
+.. currentmodule:: sportsbet
 
 .. autosummary::
    :toctree: ../generated/
@@ -30,7 +36,7 @@ Datasets
     datasets.load
 
 **********
-Evaluation
+evaluation
 **********
 
 .. automodule:: sportsbet.evaluation

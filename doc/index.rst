@@ -1,13 +1,14 @@
-############################################
- Welcome to `sports-betting` documentation!
-############################################
+##########################################
+Welcome to `sports-betting` documentation!
+##########################################
 
-The `sports-betting` package provides a set of tools that help to
-download sports betting data, train machine learning models and backtest
-their performance as well get predictions for fixtures.
+The `sports-betting` package provides a set of tools to simplify
+the processes of downloading historical and fixtures sports betting data, fit 
+various types of models, backtest their performance and get the value 
+bets when fixtures are used.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
    :caption: Getting Started
 
@@ -15,7 +16,7 @@ their performance as well get predictions for fixtures.
    getting_started/introduction
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
    :caption: Main Documentation
 
@@ -23,49 +24,49 @@ their performance as well get predictions for fixtures.
    main_documentation/api
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
    :caption: Examples
 
    auto_examples/index
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
    :caption: Additional Information
 
    additional_information/developers
    additional_information/release_history
 
-*****************
- Getting Started
-*****************
+***************
+Getting started
+***************
 
-Information to `install <getting_started/installation.html>`_ the
-package and an `introduction <getting_started/introduction.html>`_ to
-the basic terminology of `sports-betting`.
+Information to :ref:`install <installation>` the
+package and an :ref:`introduction <introduction>` to
+the basic terminology and functionality of `sports-betting`.
 
-********************
- Main documentation
-********************
+******************
+Main documentation
+******************
 
-It contains the `user guide <main_documentation/user_guide.html>`_ with
-an in-depth description of `sports-betting` toolbox and how to use it.
-It also contains the exact `API <main_documentation/api.html>`_ of all
-functions and classes, as given in the docstring.
+It contains the :ref:`user guide <user_guide>` with
+an in-depth description of the `sports-betting` toolbox and how to use it.
+It also contains the exact :ref:`api` of all functions and classes, as given
+in the docstring.
 
-**********
- Examples
-**********
+********
+Examples
+********
 
 A set of `examples <auto_examples/index.html>`_ illustrating the use of
-`sports-betting`. It complements the `user guide
-<main_documentation/user_guide.html>`_.
+`sports-betting`. It complements the :ref:`user guide <user_guide>`.
 
-************************
- Additional Information
-************************
+**********************
+Additional information
+**********************
 
-It contains information for developers on how to install, test and
-contribute to the package. It also describes the `release history
-<release_history.html>`_ of `sports-betting`.
+It contains information for developers on how to install the 
+:ref:`project <dev_installation>` and its :ref:`dependencies <dependencies>` as well as
+:ref:`test <testing>` and :ref:`contribute <contribute>` to `sports-betting`. It also 
+describes the :ref:`release history <release_history>` of the project.

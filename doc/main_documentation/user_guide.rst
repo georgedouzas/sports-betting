@@ -1,11 +1,11 @@
 .. _user_guide:
 
-###########
- User Guide
-###########
+##########
+User guide
+##########
 
 .. toctree::
 
    basic.rst
    datasets.rst
-   evaluation.rst
+   models.rst

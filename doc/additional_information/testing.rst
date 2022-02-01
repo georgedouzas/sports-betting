@@ -1,52 +1,36 @@
-#########
- Testing
-#########
+.. _testing:
 
-Various types of tests are included. Please refer to :ref:`installation`
-section for the installation of test requirements.
+*******
+Testing
+*******
 
-******
- Code
-******
+Various types of tests are included. Please refer to :ref:`dependencies <dependencies>`
+section for the installation of testing dependencies.
 
-Testing the code:
+**Code**
 
-.. code::
+Testing the code::
 
    $ make test-code
 
-You can also use `pytest`:
-
-.. code::
+You can also use `pytest`::
 
    $ pytest sportsbet -v
 
-**********
- Coverage
-**********
+**Coverage**
 
-Test the coverage of the code:
-
-.. code::
+Test the coverage of the code::
 
    $ make test-coverage
 
-***************
- Documentation
-***************
+**Documentation**
 
-Test the documentation examples:
-
-.. code::
+Test the documentation examples::
 
    $ make test-doc
 
-*****
- All
-*****
+**All**
 
-Run all tests:
-
-.. code::
+Run all tests::
 
    $ make test

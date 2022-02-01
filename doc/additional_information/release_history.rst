@@ -1,9 +1,12 @@
-#################
- Release History
-#################
+.. _release_history:
 
-*************
- Version 0.1
-*************
+###############
+Release history
+###############
 
--  First release of the stable API.
+***********
+Version 0.1
+***********
+
+- First release of the stable :ref:`API`.
+- Classes and functions are fully documented.
