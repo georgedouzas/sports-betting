@@ -1,6 +1,6 @@
 """
 The :mod:`sportsbet.datasets` module provides the
-tools to download and transform sports betting data.
+tools to extract sports betting data.
 """
 
 from ._base import load
