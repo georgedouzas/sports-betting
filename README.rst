@@ -2,6 +2,8 @@
 
 .. _scikit-learn: http://scikit-learn.org/stable/
 
+.. _documentation: https://sports-betting.readthedocs.io/en/latest/
+
 |CircleCI|_ |ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
 
 .. |CircleCI| image:: https://circleci.com/gh/georgedouzas/sports-betting/tree/master.svg?style=svg
@@ -27,7 +29,7 @@ sports-betting
 Introduction
 ************
 
-The sports-betting package is a collection of tools that makes it easy to 
+The `sports-betting` package is a collection of tools that makes it easy to 
 create machine learning models for sports betting and evaluate their performance. 
 It is compatible with scikit-learn_.
 
@@ -35,34 +37,24 @@ It is compatible with scikit-learn_.
 Usage
 *****
 
-You can download sports betting data::
+The `sports-betting` package makes it easy to download 
+training and fixtures sports betting data::
 
-  from sportsbet.datasets import SoccerDataLoader
-  dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
-  X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', drop_na_thres=1.0)
-  X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
+  >>> from sportsbet.datasets import SoccerDataLoader
+  >>> dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
+  >>> X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', drop_na_thres=1.0)
+  >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 
-We use only the numerical features for convenience::
+The historical data can be used to backtest the performance of a bettor model::
 
-  import numpy as np
-  num_features = [
-    col
-    for col in X_train.columns
-    if X_train[col].dtype in (np.dtype(int), np.dtype(float))
-  ]
-  X_train = X_train[num_features]
-  X_fix = X_fix[num_features]
+  >>> from sportsbet.evaluation import ClassifierBettor
+  >>> from sklearn.dummy import DummyClassifier
+  >>> bettor = ClassifierBettor(DummyClassifier())
+  >>> bettor.backtest(X_train, Y_train, O_train)
 
-Use the historical data and a bettor to backtest the performance of models::
+We can get the value bets using fixtures data::
 
-  from sportsbet.evaluation import ClassifierBettor
-  from sklearn.neighbors import KNeighborsClassifier
-  bettor = ClassifierBettor(KNeighborsClassifier())
-  bettor.backtest(X_train, Y_train, O_train)
-
-Get the value bets using fixtures data::
-  
-  bettor.bet(X_fix, O_fix)
+  >>> bettor.bet(X_fix, O_fix)
 
 ************
 Installation
@@ -83,5 +75,3 @@ Documentation
 
 Installation documentation, API documentation, and examples can be found in the
 documentation_.
-
-.. _documentation: https://sports-betting.readthedocs.io/en/latest/
