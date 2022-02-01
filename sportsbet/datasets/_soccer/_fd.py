@@ -141,16 +141,8 @@ class FDSoccerDataLoader(_BaseDataLoader):
     >>> from sportsbet.datasets import FDSoccerDataLoader
     >>> import pandas as pd
     >>> # Get all available parameters to select the training data
-    >>> pd.DataFrame(FDSoccerDataLoader.get_all_params()).sort_values(
-    ... ['league', 'year', 'division']).reset_index(drop=True)
-         division     league  year
-    0           1  Argentina  2013
-    1           1  Argentina  2014
-    2           1  Argentina  2015
-    3           1  Argentina  2016
-    4           1  Argentina  2017
-    ..      ...        ...   ...
-    ...
+    >>> FDSoccerDataLoader.get_all_params()
+    [{'division': [1], 'league': ['Argentina'], 'year': [2013]}, ...
     >>> # Select only the traning data for the English league and 2020, 2021 years
     >>> dataloader = FDSoccerDataLoader(
     ... param_grid={'league': ['England'], 'year': [2020, 2021]})
@@ -161,6 +153,9 @@ class FDSoccerDataLoader(_BaseDataLoader):
     >>> X_train, Y_train, O_train = dataloader.extract_train_data(
     ... odds_type='market_average', drop_na_thres=1.0)
     Football-Data.co.uk...
+    >>> # Odds data include the selected market average odds
+    >>> O_train.columns
+    Index(['market_average__away_win__odds', 'market_average__draw__odds', ...
     >>> # Extract the corresponding fixtures data
     >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     >>> # Training and fixtures input and odds data have the same column names
@@ -169,11 +164,6 @@ class FDSoccerDataLoader(_BaseDataLoader):
     >>> # Fixtures data have always no output
     >>> Y_fix is None
     True
-    >>> # Odds data include the selected market average odds
-    >>> O_train
-          market_average__away_win__odds ... market_average__under_2.5__odds
-    0                               3.19 ...                            1.76
-    ...
     """
 
     _removed_cols = [
@@ -626,7 +616,7 @@ class FDSoccerDataLoader(_BaseDataLoader):
             .astype(int)
         )
         years = (
-            pd.DataFrame(self.get_all_params()).groupby(['league', 'division']).max()
+            pd.DataFrame(self._get_params()).groupby(['league', 'division']).max()
         ).reset_index()
         data = pd.merge(data, years, how='left')
         data = data.drop(

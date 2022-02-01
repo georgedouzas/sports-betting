@@ -94,7 +94,7 @@ class FTESoccerDataLoader(_BaseDataLoader):
     >>> import pandas as pd
     >>> # Select all training data
     >>> dataloader = FTESoccerDataLoader()
-    >>> # Get available odds types
+    >>> # No odds data are available
     >>> dataloader.get_odds_types()
     []
     >>> X_train, Y_train, O_train = dataloader.extract_train_data()

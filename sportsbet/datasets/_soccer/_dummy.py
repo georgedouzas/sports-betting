@@ -37,16 +37,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
     >>> from sportsbet.datasets import DummySoccerDataLoader
     >>> import pandas as pd
     >>> # Get all available parameters to select the training data
-    >>> pd.DataFrame(DummySoccerDataLoader.get_all_params())
-       division   league  year
-    0         1   Greece  2017
-    1         1   Greece  2019
-    2         1    Spain  1997
-    3         2    Spain  1999
-    4         2  England  1997
-    5         3  England  1998
-    6         1   France  2000
-    7         1   France  2001
+    >>> DummySoccerDataLoader.get_all_params()
+    [{'division': [1], 'league': ['France'], 'year': [2000]}, ...
     >>> # Select only the traning data for the Spanish league
     >>> dataloader = DummySoccerDataLoader(param_grid={'league': ['Spain']})
     >>> # Get available odds types
@@ -56,18 +48,18 @@ class DummySoccerDataLoader(_BaseDataLoader):
     >>> X_train, Y_train, O_train = dataloader.extract_train_data(
     ... odds_type='interwetten')
     >>> # Training input data
-    >>> X_train
+    >>> print(X_train) # doctest: +NORMALIZE_WHITESPACE
                 division league  year    home_team ... williamhill__away_win__odds
-    date ...
+    date
     1997-05-04         1  Spain  1997  Real Madrid ...                         NaN
     1999-03-04         2  Spain  1999    Barcelona ...                         NaN
     >>> # Training output data
-    >>> Y_train
+    >>> print(Y_train)
        away_win__full_time_goals  draw__full_time_goals  home_win__full_time_goals
     0                      False                  False                       True
     1                      False                   True                      False
     >>> # Training odds data
-    >>> O_train
+    >>> print(O_train)
        interwetten__away_win__odds  interwetten__draw__odds  interwetten__home_win__odds
     0                          2.5                      3.5                          1.5
     1                          2.0                      4.5                          2.5

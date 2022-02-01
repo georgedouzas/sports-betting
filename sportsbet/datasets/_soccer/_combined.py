@@ -43,15 +43,8 @@ class SoccerDataLoader(_BaseDataLoader):
     >>> from sportsbet.datasets import SoccerDataLoader
     >>> import pandas as pd
     >>> # Get all available parameters to select the training data
-    >>> pd.DataFrame(SoccerDataLoader.get_all_params()).sort_values(
-    ... ['league', 'year', 'division']).reset_index(drop=True)
-         division                league  year
-    0           1             Argentina  2013
-    1           1             Argentina  2014
-    2           1             Argentina  2015
-    3           1             Argentina  2016
-    4           1             Argentina  2017
-    ...
+    >>> SoccerDataLoader.get_all_params()
+    [{'division': [1], 'league': ['Argentina'], 'year': [2013]}, ...
     >>> # Select only the traning data for the French and Spanish leagues of 2020 year
     >>> dataloader = SoccerDataLoader(
     ... param_grid={'league': ['England', 'Spain'], 'year':[2020]})
@@ -62,6 +55,9 @@ class SoccerDataLoader(_BaseDataLoader):
     >>> X_train, Y_train, O_train = dataloader.extract_train_data(
     ... odds_type='market_average', drop_na_thres=1.0)
     Football-Data.co.uk...
+    >>> # Odds data include the selected market average odds
+    >>> O_train.columns
+    Index(['market_average__away_win__odds', 'market_average__draw__odds', ...
     >>> # Extract the corresponding fixtures data
     >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     >>> # Training and fixtures input and odds data have the same column names
@@ -70,11 +66,6 @@ class SoccerDataLoader(_BaseDataLoader):
     >>> # Fixtures data have always no output
     >>> Y_fix is None
     True
-    >>> # Odds data include the selected market average odds
-    >>> O_train
-          market_average__away_win__odds ... market_average__under_2.5__odds
-    0                               3.19 ...                            1.76
-    ...
     """
 
     _names_mapping = {
@@ -423,8 +414,7 @@ class SoccerDataLoader(_BaseDataLoader):
     @lru_cache
     def _get_params(cls):
         full_param_grid = ParameterGrid(
-            FDSoccerDataLoader.get_all_params().param_grid
-            + FTESoccerDataLoader.get_all_params().param_grid
+            FDSoccerDataLoader.get_all_params() + FTESoccerDataLoader.get_all_params()
         )
         full_param_grid = (
             pd.DataFrame(full_param_grid).drop_duplicates().to_dict('records')
