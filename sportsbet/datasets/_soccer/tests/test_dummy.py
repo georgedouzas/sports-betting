@@ -1,5 +1,5 @@
 """
-Test the _base module.
+Test the _dummy module.
 """
 
 import numpy as np
@@ -13,9 +13,13 @@ from sportsbet.datasets import DummySoccerDataLoader
 def test_get_all_params():
     """Test all parameters."""
     dataloader = DummySoccerDataLoader()
-    dataloader.extract_train_data()
-    assert list(dataloader.get_all_params()) == list(
-        ParameterGrid(DummySoccerDataLoader.PARAMS)
+    all_params = pd.DataFrame(ParameterGrid(dataloader.get_all_params()))
+    expected_all_params = pd.DataFrame(ParameterGrid(dataloader.PARAMS))
+    pd.testing.assert_frame_equal(
+        all_params,
+        expected_all_params.sort_values(
+            list(expected_all_params.columns), ignore_index=True
+        ),
     )
 
 
@@ -23,21 +27,22 @@ def test_default_param_grid():
     """Test the default parameters grid."""
     dataloader = DummySoccerDataLoader()
     dataloader.extract_train_data()
-    assert list(dataloader.param_grid_) == list(dataloader.get_all_params())
+    params = pd.DataFrame(dataloader.param_grid_)
+    expected_params = pd.DataFrame(ParameterGrid(dataloader.get_all_params()))
+    pd.testing.assert_frame_equal(
+        params.sort_values(list(params.columns), ignore_index=True), expected_params
+    )
 
 
 def test_param_grid():
     """Test the parameters grid."""
     dataloader = DummySoccerDataLoader(param_grid={'division': [1]})
     dataloader.extract_train_data()
-    assert list(dataloader.param_grid_) == list(
-        ParameterGrid(
-            [
-                params
-                for params in DummySoccerDataLoader.PARAMS
-                if params['division'] == [1]
-            ]
-        )
+    params = pd.DataFrame(dataloader.param_grid_)
+    expected_params = pd.DataFrame(ParameterGrid(dataloader.get_all_params()))
+    expected_params = expected_params[expected_params["division"] == 1]
+    pd.testing.assert_frame_equal(
+        params.sort_values(list(params.columns), ignore_index=True), expected_params
     )
 
 

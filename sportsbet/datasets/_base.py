@@ -499,10 +499,15 @@ class _BaseDataLoader(metaclass=ABCMeta):
 
         Returns
         -------
-        param_grid: object
-            An object of the :class:`~sklearn.model_selection.ParameterGrid` class.
+        param_grid: list
+            A list of all allowed params and values.
         """
-        return cls._get_params()
+        all_params = pd.DataFrame(cls._get_params())
+        all_params = [
+            {k: [v] for k, v in params.to_dict().items()}
+            for _, params in all_params.sort_values(list(all_params.columns)).iterrows()
+        ]
+        return all_params
 
     @classmethod
     def get_odds_types(cls):
