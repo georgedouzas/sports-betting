@@ -1,8 +1,5 @@
 @import url("theme.css");
 
-.highlight a {
-    text-decoration: underline;
-}
 
 .deprecated p {
     padding: 10px 7px 10px 10px;
@@ -17,4 +14,9 @@
 
 .wy-nav-content {
     max-width: 1200px !important;
+}
+
+p {
+	text-align: justify;
+	text-justify: inter-word;
 }
