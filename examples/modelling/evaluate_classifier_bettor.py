@@ -1,7 +1,7 @@
 """
-=================
+#################
 Classifier bettor
-=================
+#################
 
 This example illustrates how to use a classifier-based bettor
 and evaluate its performance on soccer historical data.
@@ -10,10 +10,9 @@ and evaluate its performance on soccer historical data.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
-import numpy as np
 from sportsbet.datasets import SoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.dummy import DummyClassifier
 from sklearn.model_selection import cross_val_score, TimeSeriesSplit
 
 ###############################################################################
@@ -32,26 +31,15 @@ X_train, Y_train, O_train = dataloader.extract_train_data(
 
 ###############################################################################
 # The input data:
-X_train
+print(X_train)
 
 ###############################################################################
 # The multi-output targets:
-Y_train
+print(Y_train)
 
 ###############################################################################
-# The odds:
-O_train
-
-###############################################################################
-# The simplify the training process we keep only the numerical features of the
-# input data:
-
-num_features = [
-    col
-    for col in X_train.columns
-    if X_train[col].dtype in (np.dtype(int), np.dtype(float))
-]
-X_train = X_train[num_features]
+# The odds data:
+print(O_train)
 
 ###############################################################################
 # Classifier bettor
@@ -59,10 +47,10 @@ X_train = X_train[num_features]
 
 ###############################################################################
 # We can use :class:`~sportsbet.evaluation.ClassifierBettor` class to create
-# a classifier-based bettor. A :class:`~sklearn.neighbors.KNeighborsClassifier`
-# is selected.
+# a classifier-based bettor. A :class:`~sklearn.dummy.DummyClassifier`
+# is selected for convenience.
 
-bettor = ClassifierBettor(KNeighborsClassifier())
+bettor = ClassifierBettor(DummyClassifier())
 
 ###############################################################################
 # Any bettor is a classifier, therefore we can fit it on the training data.
@@ -75,7 +63,7 @@ bettor.fit(X_train, Y_train)
 bettor.predict_proba(X_train)
 
 ###############################################################################
-# We can predict the class label.
+# We can also predict the class label.
 
 bettor.predict(X_train)
 
@@ -113,7 +101,6 @@ bettor.backtest_plot_value_(testing_period)
 # We extract the fixtures data to estimate the value bets.
 
 X_fix, _, Odds_fix = dataloader.extract_fixtures_data()
-X_fix = X_fix[num_features]
 
 ###############################################################################
 # We can estimate the value bets by using the fitted classifier.

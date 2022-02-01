@@ -1,7 +1,7 @@
 """
-===========================
+###########################
 FiveThirtyEight soccer data
-===========================
+###########################
 
 This example illustrates the usage of FiveThirtyEight soccer dataloader.
 
@@ -10,7 +10,6 @@ This example illustrates the usage of FiveThirtyEight soccer dataloader.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
-import pandas as pd
 from sportsbet.datasets import FTESoccerDataLoader
 
 ###############################################################################
@@ -19,17 +18,9 @@ from sportsbet.datasets import FTESoccerDataLoader
 
 ###############################################################################
 # We can get the available parameters in order to select the training data
-# to be extracted, using the :meth:`get_all_params` class method.
+# to be extracted, using the :func:`get_all_params` class method.
 
-params = FTESoccerDataLoader.get_all_params()
-
-###############################################################################
-# The available parameters can be presented as a DataFrame.
-
-params_df = pd.DataFrame(params).sort_values(
-    ['league', 'year', 'division'], ignore_index=True
-)
-params_df
+FTESoccerDataLoader.get_all_params()
 
 ###############################################################################
 # We select to extract training data only for the year 2021 of all the
@@ -56,18 +47,18 @@ FTESoccerDataLoader.get_odds_types()
 
 ###############################################################################
 # We extract the training data using the default values for the parameters
-# `odds_type` and `drop_na_thres`.
+# ``odds_type``` and ``drop_na_thres```.
 
 dataloader = FTESoccerDataLoader(param_grid=param_grid)
 X_train, Y_train, _ = dataloader.extract_train_data()
 
 ###############################################################################
 # The input data:
-X_train
+print(X_train)
 
 ###############################################################################
 # The targets:
-Y_train
+print(Y_train)
 
 ###############################################################################
 # Extracting the fixtures data
@@ -76,10 +67,10 @@ Y_train
 ###############################################################################
 # We extract the fixtures data with columns that match the columns of the
 # training data. On the other hand, the fixtures data are not affected by
-# the `param_grid` selection.
+# the ``param_grid`` selection.
 
 X_fix, *_ = dataloader.extract_fixtures_data()
 
 ###############################################################################
 # The input data:
-X_fix
+print(X_fix)

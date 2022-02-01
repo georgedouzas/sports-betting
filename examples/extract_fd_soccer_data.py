@@ -1,7 +1,7 @@
 """
-=========================
+#########################
 Football-Data soccer data
-=========================
+#########################
 
 This example illustrates the usage of Football-Data soccer dataloader.
 
@@ -10,7 +10,6 @@ This example illustrates the usage of Football-Data soccer dataloader.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
-import pandas as pd
 from sportsbet.datasets import FDSoccerDataLoader
 
 ###############################################################################
@@ -21,15 +20,7 @@ from sportsbet.datasets import FDSoccerDataLoader
 # We can get the available parameters in order to select the training data
 # to be extracted, using the :meth:`get_all_params` class method.
 
-params = FDSoccerDataLoader.get_all_params()
-
-###############################################################################
-# The available parameters can be presented as a DataFrame.
-
-params_df = pd.DataFrame(params).sort_values(
-    ['league', 'year', 'division'], ignore_index=True
-)
-params_df
+FDSoccerDataLoader.get_all_params()
 
 ###############################################################################
 # We select to extract training data only for the year 2021 of the first
@@ -43,7 +34,7 @@ param_grid = {'league': ['Spain', 'Italy'], 'division': [1], 'year': [2021]}
 
 ###############################################################################
 # We can get the available odds types in order to match the output of the
-# training data, using the :meth:`get_odds_types` class method.
+# training data, using the :func:`~sportsbet.datasets.FDSoccerDataLoader.get_odds_types` class method.
 
 FDSoccerDataLoader.get_odds_types()
 
@@ -58,7 +49,7 @@ odds_type = 'market_average'
 
 ###############################################################################
 # We extract the training data, keeping columns and rows with non missing
-# values by setting the `drop_na_thres` parameter equal to `1.0`.
+# values by setting the ``drop_na_thres``` parameter equal to ``1.0```.
 
 dataloader = FDSoccerDataLoader(param_grid=param_grid)
 X_train, Y_train, O_train = dataloader.extract_train_data(
@@ -67,15 +58,15 @@ X_train, Y_train, O_train = dataloader.extract_train_data(
 
 ###############################################################################
 # The input data:
-X_train
+print(X_train)
 
 ###############################################################################
 # The targets:
-Y_train
+print(Y_train)
 
 ###############################################################################
 # The market average odds:
-O_train
+print(O_train)
 
 ###############################################################################
 # Extracting the fixtures data
@@ -84,14 +75,14 @@ O_train
 ###############################################################################
 # We extract the fixtures data with columns that match the columns of the
 # training data. On the other hand, the fixtures data are not affected by
-# the `param_grid` selection.
+# the ``param_grid`` selection.
 
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
 ###############################################################################
 # The input data:
-X_fix
+print(X_fix)
 
 ###############################################################################
 # The market average odds:
-O_fix
+print(O_fix)
