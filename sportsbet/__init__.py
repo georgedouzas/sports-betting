@@ -1,17 +1,17 @@
-"""Collection of sports betting AI tools.
+"""
+The :mod:`sportsbet` package is a collection of sports betting AI
+tools. It provides classes to extract sports betting data and create
+predictive models. It contains two main modules:
 
-``sports-betting`` is a set of tools for sports betting. It
-provides python functions to download data and test the
-performance of machine learning models.
-
-Subpackages
------------
 datasets
-    Module which provides functions to download and transform sports betting
+    Module which provides classes to extract sports betting
     datasets.
+evaluation
+    Module which provides classes to create and evaluate sports betting
+    predictive models.
 """
 
-from . import datasets
+from . import datasets, evaluation
 from ._version import __version__
 
-__all__ = ['datasets', '__version__']
+__all__ = ['datasets', 'evaluation', '__version__']
