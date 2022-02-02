@@ -90,8 +90,6 @@ class ClassifierBettor(_BaseBettor):
         Y : {array-like, sparse matrix} of shape (n_samples, n_outputs)
             The positive class probabilities.
         """
-        # if X.size == 0:
-
         return np.concatenate(
             [prob[:, -1].reshape(-1, 1) for prob in self.classifier_.predict_proba(X)],
             axis=1,
