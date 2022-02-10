@@ -4,10 +4,7 @@
 
 .. _documentation: https://sports-betting.readthedocs.io/en/latest/
 
-|CircleCI|_ |ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
-
-.. |CircleCI| image:: https://circleci.com/gh/georgedouzas/sports-betting/tree/master.svg?style=svg
-.. _CircleCI: https://circleci.com/gh/georgedouzas/sports-betting/tree/master
+|ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
 
 .. |ReadTheDocs| image:: https://readthedocs.org/projects/sports-betting/badge/?version=latest
 .. _ReadTheDocs: https://sports-betting.readthedocs.io/en/latest/?badge=latest
