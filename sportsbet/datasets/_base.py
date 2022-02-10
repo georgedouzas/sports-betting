@@ -3,12 +3,11 @@ Includes base class and functions for data preprocessing and loading.
 """
 
 from difflib import SequenceMatcher
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 
 import cloudpickle
 import numpy as np
 import pandas as pd
-from pandas.errors import MergeError
 from sklearn.model_selection import ParameterGrid
 from sklearn.utils import check_scalar
 
@@ -17,10 +16,8 @@ def _cols(x):
     return [f'{col}_team{x}' for col in ('home', 'away')]
 
 
-def _create_names_mapping_table(data_source1, data_source2):
+def _create_names_mapping_table(data_source1, data_source2, keys):
     """Map most similar teams names between two data sources."""
-
-    keys = ['date', 'league', 'division', 'year']
 
     # Generate teams names combinations
     names_combinations = pd.merge(
@@ -68,6 +65,18 @@ def _combine_odds(odds):
     return combined_odds
 
 
+def _is_odds_col(col):
+    return len(col.split('__')) == 3 and col.split('__')[-1] == 'odds'
+
+
+def _is_output_col(col):
+    return len(col.split('__')) == 2
+
+
+def _is_input_col(col):
+    return not _is_output_col(col)
+
+
 class _BaseDataLoader(metaclass=ABCMeta):
     """The base class for dataloaders.
 
@@ -75,159 +84,64 @@ class _BaseDataLoader(metaclass=ABCMeta):
     instead.
     """
 
+    SCHEMA = []
+    OUTCOMES = []
+    PARAMS = ParameterGrid([])
+
     def __init__(self, param_grid=None):
         self.param_grid = param_grid
 
-    @classmethod
-    @abstractmethod
-    def _get_schema(cls):
-        return
-
-    @classmethod
-    @abstractmethod
-    def _get_outcomes(cls):
-        return
-
-    @classmethod
-    @abstractmethod
-    def _get_params(cls):
-        return
-
     @abstractmethod
     def _get_data(self):
-        return
+        return pd.DataFrame()
 
     def _check_param_grid(self):
         """Check the parameters grid."""
         if self.param_grid is not None:
-            full_param_grid_df = pd.DataFrame(self._get_params())
-            try:
-                param_grid_df = pd.concat(
-                    [
-                        pd.merge(
-                            pd.DataFrame(ParameterGrid(params)),
-                            full_param_grid_df,
-                            how='left',
-                        )
-                        for params in ParameterGrid(self.param_grid).param_grid
-                    ]
-                )
-            except MergeError:
+            full_params_grid_df = pd.DataFrame(self.PARAMS)
+
+            # False names
+            params_grid_df = pd.DataFrame(ParameterGrid(self.param_grid))
+            available_names = set(full_params_grid_df.columns)
+            names = set(params_grid_df.columns)
+            if not available_names.issuperset(names):
                 raise ValueError(
-                    'Parameter grid includes parameters names '
-                    'not not allowed by available data'
+                    'Parameter grid includes the parameters name(s) '
+                    f'{list(names.difference(available_names))} that are not not '
+                    'allowed by available data.'
                 )
-            error_msg = 'Parameter grid includes values not allowed by available data.'
-            param_grid_df = pd.merge(param_grid_df, full_param_grid_df, how='left')
-            if np.any(pd.merge(param_grid_df, full_param_grid_df, how='left').isna()):
-                raise ValueError(error_msg)
-            param_grid_df = pd.merge(param_grid_df, full_param_grid_df)
-            if param_grid_df.size == 0:
-                raise ValueError(error_msg)
-            else:
-                self.param_grid_ = ParameterGrid(
-                    [
-                        {k: [v] for k, v in row.to_dict().items()}
-                        for _, row in param_grid_df.iterrows()
-                    ]
-                )
+
+            # False values
+            param_grid = []
+            for params in ParameterGrid(self.param_grid):
+                params_df = pd.DataFrame(
+                    {name: [value] for name, value in params.items()}
+                ).merge(full_params_grid_df)
+                if params_df.size == 0:
+                    raise ValueError(
+                        'Parameter grid includes the parameters value(s) '
+                        f'{params} that are not allowed by available data.'
+                    )
+                param_grid.append(pd.DataFrame(params_df).merge(full_params_grid_df))
+            param_grid = pd.concat(param_grid, ignore_index=True)
+            self.param_grid_ = ParameterGrid(
+                [
+                    {k: [v] for k, v in params.to_dict().items()}
+                    for _, params in param_grid.iterrows()
+                ]
+            )
         else:
-            self.param_grid_ = self._get_params()
-        return self
-
-    def _check_schema(self):
-        """Check the schema."""
-        schema = self._get_schema()
-        self.schema_ = [] if schema is None else schema
-        if any([data_type is None for *_, data_type in self.schema_]):
-            raise ValueError('All columns in schema should include a data type.')
-        self.schema_odds_cols_ = pd.Index(
-            [col for col, _ in self.schema_ if col.split('__')[-1] == 'odds'],
-            dtype=object,
-        )
-        self.schema_output_cols_ = pd.Index(
-            [col for col, _ in self.schema_ if len(col.split('__')) == 2],
-            dtype=object,
-        )
-        self.schema_input_cols_ = pd.Index(
-            [col for col, _ in self.schema_ if col not in self.schema_output_cols_],
-            dtype=object,
-        )
-        return self
-
-    def _check_outcomes(self):
-        """Check the outcomes."""
-        outcomes = self._get_outcomes()
-        self.outcomes_ = [] if outcomes is None else outcomes
-        return self
-
-    def _check_odds_type(self, odds_type):
-        """Check the odds type."""
-        self.odds_type_ = odds_type
-        odds_cols = [
-            col
-            for col in self.schema_odds_cols_
-            if col.split('__')[0] == self.odds_type_
-        ]
-        if self.odds_type_ is not None:
-            if not isinstance(self.odds_type_, str):
-                raise TypeError(
-                    'Parameter `odds_type` should be a string or None. '
-                    f'Got {type(self.odds_type_).__name__} instead.'
-                )
-            if not odds_cols:
-                raise ValueError(
-                    'Parameter `odds_type` should be a prefix of available odds '
-                    f'columns. Got {self.odds_type_} instead.'
-                )
-        return self
-
-    def _check_drop_na_thres(self, drop_na_thres):
-        """Check drop na threshold."""
-        self.drop_na_thres_ = drop_na_thres if drop_na_thres is not None else 0.0
-        check_scalar(
-            self.drop_na_thres_, 'drop_na_thres', float, min_val=0.0, max_val=1.0
-        )
-        return self
-
-    def _check_data(self):
-        """Check the data."""
-        data = self._get_data()
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError(
-                f'Data should be a pandas dataframe. Got {type(data).__name__} instead.'
-            )
-        if data.size == 0:
-            raise ValueError('Data should be a pandas dataframe with positive size.')
-        if 'fixtures' not in data.columns or data['fixtures'].dtype.name != 'bool':
-            raise KeyError(
-                'Data should include a boolean column `fixtures` to distinguish '
-                'between train and fixtures data.'
-            )
-        if 'date' not in data.columns or data['date'].dtype.name != 'datetime64[ns]':
-            raise KeyError(
-                'Data should include a datetime column `date` to represent the date.'
-            )
-        if self.schema_ and not set([col for col, _ in self.schema_]).issuperset(
-            data.columns.difference(['fixtures'])
-        ):
-            raise ValueError('Data contains columns not included in schema.')
-        if not set(data.columns).issuperset(pd.DataFrame(self.param_grid_).columns):
-            raise ValueError(
-                'Data columns should contain the parameters from parameters grid.'
-            )
-        data = data.set_index('date').sort_values('date')
-        self.data_ = data[~data.index.isna()]
+            self.param_grid_ = self.PARAMS
         return self
 
     def _convert_data_types(self, data):
         """Cast the data type of columns."""
-        data_types = set([data_type for _, data_type in self.schema_])
+        data_types = set([data_type for _, data_type in self.SCHEMA])
         for data_type in data_types:
             converted_cols = list(
                 {
                     col
-                    for col, selected_data_type in self.schema_
+                    for col, selected_data_type in self.SCHEMA
                     if selected_data_type is data_type and col in data.columns
                 }
             )
@@ -242,121 +156,89 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 )
         return data
 
-    def _drop_na_cols(self, data):
-
-        # Drop columns
-        self.dropped_na_cols_ = pd.Index([], dtype=object)
-        if self.drop_na_thres_ > 0.0:
-            input_cols = data.columns.intersection(self.schema_input_cols_)
-            data_dropped_na_cols = data[input_cols].dropna(
-                axis=1, thresh=int(data.shape[0] * self.drop_na_thres_)
+    def _validate_data(self):
+        """Validate the data."""
+        data = self._get_data()
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError(
+                'Data should be a pandas dataframe. Got '
+                f'{type(data).__name__} instead.'
             )
-            self.dropped_na_cols_ = pd.Index(
-                [
-                    col
-                    for col in data[input_cols]
-                    if col not in data_dropped_na_cols.columns
-                ],
-                dtype=object,
-            )
-        if data.columns.difference(self.dropped_na_cols_).size == 0:
-            raise ValueError(
-                'All columns were removed. Set `drop_na_thres` parameter to a '
-                'lower value.'
-            )
-
-        return self
-
-    def _extract_training_cols(self, data):
-        self.input_cols_ = pd.Index(
-            [
-                col
-                for col in data.columns
-                if col in self.schema_input_cols_ and col not in self.dropped_na_cols_
-            ],
-            dtype=object,
-        )
-        self.output_cols_ = pd.Index(
-            [col for col in data.columns if col in self.schema_output_cols_],
-            dtype=object,
-        )
-        self.odds_cols_ = pd.Index(
-            sorted(
-                [
-                    col
-                    for col in data.columns.append(self.dropped_na_cols_)
-                    if col in self.schema_odds_cols_
-                    and (col.split('__')[0] == self.odds_type_)
-                    and any(
-                        [
-                            col.split('__')[1] == outcome_col.split('__')[0]
-                            and any(
-                                [
-                                    outcome_col.split('__')[1]
-                                    == output_col.split('__')[1]
-                                    for output_col in self.output_cols_
-                                ]
-                            )
-                            for outcome_col, _ in self.outcomes_
-                        ]
-                    )
-                ],
-                key=lambda col: col.split('__')[1],
-            )
-            if self.odds_type_ is not None
-            else [],
-            dtype=object,
-        )
-
-    def _extract_train_data(self, drop_na_thres=None, odds_type=None):
-
-        # Checks parameters
-        self._check_param_grid()
-        self._check_schema()
-        self._check_outcomes()
-        self._check_drop_na_thres(drop_na_thres)
-        self._check_odds_type(odds_type)
-
-        # Extract training data
-        self._check_data()
-        mask = self.data_['fixtures']
-        data = self.data_[~mask].drop(columns=['fixtures'])
-
-        # Filter data
-        data = (
-            pd.merge(data.reset_index(), pd.DataFrame(self.param_grid_))
-            .set_index('date')
-            .sort_values('date')
-        )
         if data.size == 0:
-            raise ValueError('Parameter grid did not select any training data.')
+            raise ValueError('Data should be a pandas dataframe with positive size.')
+        if 'fixtures' not in data.columns or data['fixtures'].dtype.name != 'bool':
+            raise KeyError(
+                'Data should include a boolean column `fixtures` to distinguish '
+                'between train and fixtures data.'
+            )
+        if 'date' not in data.columns or data['date'].dtype.name != 'datetime64[ns]':
+            raise KeyError(
+                'Data should include a datetime column `date` to represent the date.'
+            )
+        if self.SCHEMA and not set([col for col, _ in self.SCHEMA]).issuperset(
+            data.columns.difference(['fixtures'])
+        ):
+            raise ValueError('Data contains columns not included in schema.')
 
-        # Drop missing values
-        self._drop_na_cols(data)
+        # Set date as index
+        data = data.set_index('date').sort_values('date')
 
-        # Extract training data columns
-        data_dropped_na_cols = data.drop(columns=self.dropped_na_cols_)
-        self._extract_training_cols(data_dropped_na_cols)
+        # Remove missing values of data
+        data = data[~data.index.isna()]
+
+        # Check consistency with available parameters
+        mask = data['fixtures']
+        train_data = data[~mask].drop(columns=['fixtures'])
+        params = pd.DataFrame(self.PARAMS)
+        train_data_params = (
+            train_data[params.columns].drop_duplicates().reset_index(drop=True)
+        )
+        try:
+            pd.testing.assert_frame_equal(
+                train_data_params.merge(params), train_data_params, check_dtype=False
+            )
+        except AssertionError:
+            raise ValueError('The raw data and available parameters are incompatible.')
 
         return data
 
-    def _extract_targets(self, data):
-        schema_odds_keys = {col.split('__')[1] for col in self.odds_cols_}
-        schema_output_keys = {col.split('__')[1] for col in self.output_cols_}
-        Y = []
-        output_cols = []
-        for col, func in sorted(self.outcomes_, key=lambda tpl: tpl[0]):
-            odds_key, output_key = col.split('__')
-            if (
-                odds_key in schema_odds_keys if schema_odds_keys else True
-            ) and output_key in schema_output_keys:
-                output_cols.extend(
-                    [col for col in data.columns if col.split('__')[-1] == output_key]
-                )
-                Y.append(pd.Series(func(data), name=col))
-        dropna = data[list(set(output_cols))].isna().sum(axis=1).astype(bool).values
-        Y = pd.concat(Y, axis=1).reset_index(drop=True)[~dropna] if Y else None
-        return Y
+    def _extract_train_data(self, data):
+
+        data = data[~data['fixtures']].drop(columns=['fixtures'])
+
+        # Keep selected parameters from train data
+        data = (
+            data.reset_index().merge(pd.DataFrame(self.param_grid_)).set_index('date')
+        )
+
+        # Drop rows and columns with missing values
+        data.dropna(
+            subset=self._extract_cols(data, _is_output_col), how='any', inplace=True
+        )
+        data.dropna(axis=1, how='all', inplace=True)
+
+        return data
+
+    def _check_dropped_na_cols(self, data, drop_na_thres):
+        remaining_cols = data.dropna(
+            axis=1, thresh=int(data.shape[0] * drop_na_thres)
+        ).columns
+        self.dropped_na_cols_ = pd.Index(
+            [
+                col
+                for col in self._extract_cols(data, _is_input_col)
+                if col not in remaining_cols
+            ]
+        )
+        if self._extract_cols(data, _is_input_col) == self.dropped_na_cols_.tolist():
+            raise ValueError(
+                'All input columns were removed. Set `drop_na_thres` parameter to a '
+                'lower value.'
+            )
+        return self
+
+    def _extract_cols(self, data, func):
+        return [col for col, _ in self.SCHEMA if col in data.columns if func(col)]
 
     def extract_train_data(self, drop_na_thres=0.0, odds_type=None):
         """Extract the training data.
@@ -401,20 +283,79 @@ class _BaseDataLoader(metaclass=ABCMeta):
             multi-output targets ``Y`` and the corresponding odds ``O``, respectively.
         """
 
-        # Extract training data
-        data = self._extract_train_data(drop_na_thres, odds_type)
+        # Validate the data
+        data = self._validate_data()
 
-        # Extract targets
-        Y = self._extract_targets(data)
+        # Check param grid
+        self._check_param_grid()
+
+        # Extract train data
+        data = self._extract_train_data(data)
+
+        # Check dropped columns
+        self.drop_na_thres_ = check_scalar(
+            drop_na_thres, 'drop_na_thres', float, min_val=0.0, max_val=1.0
+        )
+        self._check_dropped_na_cols(data, drop_na_thres)
+
+        # Check odds type
+        odds_types = sorted(
+            {col.split('__')[0] for col in data.columns if _is_odds_col(col)}
+        )
+        if odds_type is not None:
+            if odds_type not in odds_types:
+                raise ValueError(
+                    "Parameter `odds_type` should be a prefix of available odds "
+                    f"columns. Got `{odds_type}` instead."
+                )
+        self.odds_type_ = odds_type
+
+        # Extract input, output and odds columns
+        self.input_cols_ = pd.Index(
+            [
+                col
+                for col in self._extract_cols(data, _is_input_col)
+                if col not in self.dropped_na_cols_
+            ],
+            dtype=object,
+        )
+        self.odds_cols_ = pd.Index(
+            [
+                col
+                for col in self._extract_cols(data, _is_odds_col)
+                if col.split('__')[0] == self.odds_type_
+            ],
+            dtype=object,
+        )
 
         # Convert data types
-        data = self._convert_data_types(data).iloc[Y.index]
+        data = self._convert_data_types(data)
+
+        # Extract targets
+        Y = []
+        if self.odds_cols_.size == 0:
+            for col, func in self.OUTCOMES:
+                Y.append(pd.Series(func(data).reset_index(drop=True), name=col))
+        else:
+            for odds_col in self.odds_cols_:
+                outcomes = [
+                    (col, func)
+                    for col, func in self.OUTCOMES
+                    if col.split('__')[0] == odds_col.split('__')[1]
+                ]
+                if outcomes:
+                    col, func = outcomes[0]
+                    Y.append(pd.Series(func(data).reset_index(drop=True), name=col))
+                else:
+                    self.odds_cols_ = self.odds_cols_.drop(odds_col)
+        Y = pd.concat(Y, axis=1) if Y else None
+        self.output_cols_ = Y.columns
 
         return (
             data[self.input_cols_],
-            Y.reset_index(drop=True),
+            Y,
             data[self.odds_cols_].reset_index(drop=True)
-            if self.odds_cols_.size
+            if self.odds_type_ is not None
             else None,
         )
 
@@ -451,13 +392,19 @@ class _BaseDataLoader(metaclass=ABCMeta):
         """
 
         # Extract fixtures data
-        if hasattr(self, 'data_'):
-            mask = self.data_['fixtures']
-        else:
+        if not (
+            hasattr(self, 'input_cols_')
+            and hasattr(self, 'output_cols_')
+            and hasattr(self, 'odds_cols_')
+        ):
             raise AttributeError(
                 'Extract the training data before extracting the fixtures data.'
             )
-        data = self.data_[mask].drop(columns=['fixtures'])
+
+        data = self._validate_data()
+
+        # Extract fixtures data
+        data = data[data['fixtures']].drop(columns=['fixtures'])
 
         # Convert data types
         data = self._convert_data_types(data)
@@ -469,7 +416,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
             data[self.input_cols_],
             None,
             data[self.odds_cols_].reset_index(drop=True)
-            if self.odds_cols_.size
+            if self.odds_type_ is not None
             else None,
         )
 
@@ -502,18 +449,17 @@ class _BaseDataLoader(metaclass=ABCMeta):
         param_grid: list
             A list of all allowed params and values.
         """
-        all_params = pd.DataFrame(cls._get_params())
+        all_params = pd.DataFrame(cls.PARAMS)
         all_params = [
             {k: [v] for k, v in params.to_dict().items()}
             for _, params in all_params.sort_values(list(all_params.columns)).iterrows()
         ]
         return all_params
 
-    @classmethod
-    def get_odds_types(cls):
+    def get_odds_types(self):
         """Get the available odds types.
 
-        It can be used to get the allowed odds types of the dataloader's  class method
+        It can be used to get the allowed odds types of the dataloader's method
         :func:`~sportsbet.datasets._base._BaseDataLoader.extract_train_data`.
 
         Returns
@@ -521,11 +467,16 @@ class _BaseDataLoader(metaclass=ABCMeta):
         odds_types: list of str
             A list of available odds types.
         """
-        schema = cls._get_schema()
-        schema = [] if schema is None else schema
-        return sorted(
-            {col.split('__')[0] for col, _ in schema if col.split('__')[-1] == 'odds'}
-        )
+        # Validate the data
+        data = self._validate_data()
+
+        # Check param grid
+        self._check_param_grid()
+
+        # Extract train data
+        data = self._extract_train_data(data)
+
+        return sorted({col.split('__')[0] for col in data.columns if _is_odds_col(col)})
 
 
 def load(path):

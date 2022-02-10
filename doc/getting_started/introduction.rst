@@ -87,9 +87,9 @@ The output training data ``Y_train`` is the second component of the data
 tuple ``(X_train, Y_train, O_train)``::
 
     >>> print(Y_train)
-       away_win__full_time_goals  draw__full_time_goals  home_win__full_time_goals
-    0                      False                  False                       True
-    1                       True                  False                      False
+       home_win__full_time_goals  draw__full_time_goals  away_win__full_time_goals
+    0                       True                  False                      False
+    1                      False                  False                       True
     ...
 
 ``Y_train`` is a :class:`~pandas.DataFrame` that contains information
@@ -111,9 +111,9 @@ The odds training data ``O_train`` is the last component of the data
 tuple ``(X_train, Y_train, O_train)``::
 
     >>> print(O_train)
-       interwetten__away_win__odds  interwetten__draw__odds  interwetten__home_win__odds
-    0                          2.5                      3.5                          1.5
-    1                          3.5                      4.5                          2.0
+       interwetten__home_win__odds  interwetten__draw__odds  interwetten__away_win__odds
+    0                          1.5                      3.5                          2.5
+    1                          2.0                      4.5                          3.5
     ...
 
 ``O_train`` is a :class:`~pandas.DataFrame` that contains information related 
@@ -161,9 +161,9 @@ The odds fixtures data ``O_fix`` is the last component of the data
 tuple ``(X_fix, Y_fix, O_fix)``::
 
     >>> print(O_fix)
-       interwetten__away_win__odds  interwetten__draw__odds  interwetten__home_win__odds
-    0                          2.0                      2.5                          3.0
-    1                          2.5                      3.5                          1.5
+       interwetten__home_win__odds  interwetten__draw__odds  interwetten__away_win__odds
+    0                          3.0                      2.5                          2.0
+    1                          1.5                      3.5                          2.5
 
 ``O_fix`` is a :class:`~pandas.DataFrame` that contains information related 
 to the odds for various betting markets. The features of ``O_fix`` are identical 
@@ -219,8 +219,8 @@ Similarly, predicting positive class probabilities, i.e. the value ``True`` of `
 is simple::
 
     >>> bettor.predict_proba(X_fix)
-    array([[0.28571429, 0.28571429, 0.42857143],
-           [0.28571429, 0.28571429, 0.42857143]])
+    array([[0.375, 0.25 , 0.375],
+           [0.375, 0.25 , 0.375]])
 
 **Backtest**
 
@@ -236,7 +236,7 @@ periods and metrics::
     >>> print(bettor.backtest_results_)
       Training Start Training End Training Period Testing Start Testing End Testing Period  Start Value  End Value ...
     0     1997-05-04   1998-03-04        304 days    1999-03-04  1999-03-04         1 days       1000.0     1002.5 ...
-    1     1997-05-04   1999-03-04        669 days    2000-03-04  2000-03-04         1 days       1000.0     1000.0 ...
+    1     1997-05-04   1999-03-04        669 days    2000-03-04  2000-03-04         1 days       1000.0      999.0 ...
     2     1997-05-04   2000-03-04       1035 days    2001-06-04  2001-06-04         1 days       1000.0      999.0 ...
     3     1997-05-04   2001-06-04       1492 days    2017-03-17  2017-03-17         1 days       1000.0     1000.0 ...
-    4     1997-05-04   2017-03-17       7257 days    2019-03-17  2019-03-17         1 days       1000.0     1000.0 ...
+    4     1997-05-04   2017-03-17       7257 days    2019-03-17  2019-03-17         1 days       1000.0      999.0 ...

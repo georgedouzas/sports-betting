@@ -19,17 +19,17 @@ columns, while ``1.0`` removes any column with missing values.
 The parameter ``odds_type`` selects the type of odds that will be used for the odds matrix ``O_train``. 
 It also affects the columns of the multi-output targets ``Y_train`` since there is a match between 
 ``Y_train`` and ``Odds_train`` columns as explained in the :ref:`datatasets <datasets>` 
-section of the  :ref:`introduction <introduction>`. You can get the available odds types from the class
+section of the  :ref:`introduction <introduction>`. You can get the available odds types from the
 method :func:`~sportsbet.datasets.DummySoccerDataLoader.get_odds_types`:
 
    >>> from sportsbet.datasets import DummySoccerDataLoader
-   >>> DummySoccerDataLoader.get_odds_types()
+   >>> dataloader = DummySoccerDataLoader()
+   >>> dataloader.get_odds_types()
    ['interwetten', 'williamhill']
 
 We can extract the training data using the default values of ``drop_na_thres`` and ``odds_type``
 which are ``None`` for both of them::
    
-   >>> dataloader = DummySoccerDataLoader()
    >>> X_train, Y_train, O_train = dataloader.extract_train_data()
 
 No columns are dropped from the input matrix ``X_train``::
@@ -45,11 +45,11 @@ No columns are dropped from the input matrix ``X_train``::
 The multi-output targets matrix ``Y_train`` is the following::
 
    >>> print(Y_train)
-      away_win__full_time_goals  draw__full_time_goals  home_win__full_time_goals  over_2.5_goals__full_time_goals  under_2.5_goals__full_time_goals
-   0                      False                  False                       True                             True                             False
-   1                       True                  False                      False                             True                             False
-   2                      False                   True                      False                             True                             False
-   3                      False                  False                       True                             True                             False
+      home_win__full_time_goals  away_win__full_time_goals  draw__full_time_goals  over_2.5__full_time_goals  under_2.5__full_time_goals
+   0                       True                      False                  False                       True                       False
+   1                      False                       True                  False                       True                       False
+   2                      False                       True                  False                       True                       False
+   3                      False                      False                   True                       True                       False
    ...
 
 No odds matrix is returned:
@@ -64,31 +64,32 @@ Instead, if we may extract the training data using specific values of ``drop_na_
 Columns that contain missing values are dropped from the input matrix ``X_train``::
 
    >>> print(X_train) # doctest: +NORMALIZE_WHITESPACE
-               division   league  year    home_team    away_team  ...  williamhill__home_win__odds
-   date
-   1997-05-04         1    Spain  1997  Real Madrid    Barcelona  ...                          2.5
-   1998-03-04         3  England  1998    Liverpool      Arsenal  ...                          2.0
-   1999-03-04         2    Spain  1999    Barcelona  Real Madrid  ...                          2.0
+                division  year      home_team      away_team  interwetten__draw__odds  interwetten__away_win__odds  williamhill__home_win__odds
+   date                                                                                                                                       
+   1997-05-04          1  1997    Real Madrid      Barcelona                      3.5                          2.5                          2.5
+   1998-03-04          3  1998      Liverpool        Arsenal                      4.5                          3.5                          2.0
+   1998-03-04          1  1998      Liverpool        Arsenal                      2.5                          3.5                          4.0
    ...
 
 The multi-output targets ``Y_train`` is the following matrix::
 
    >>> print(Y_train)
-      away_win__full_time_goals  draw__full_time_goals  home_win__full_time_goals
-   0                      False                  False                       True
-   1                       True                  False                      False
-   2                      False                   True                      False
-   3                      False                  False                       True
+      home_win__full_time_goals  draw__full_time_goals  away_win__full_time_goals
+   0                       True                  False                      False
+   1                      False                  False                       True
+   2                      False                  False                       True
+   3                      False                   True                      False
    ...
 
 The odds data are the following:
 
    >>> print(O_train)
-      williamhill__away_win__odds  williamhill__draw__odds  williamhill__home_win__odds
-   0                          NaN                      2.5                          2.5
-   1                          NaN                      NaN                          2.0
-   2                          NaN                      NaN                          2.0
-   3                          3.0                      2.5                          2.5
+      williamhill__home_win__odds  williamhill__draw__odds  williamhill__away_win__odds
+   0                          2.5                      2.5                          NaN
+   1                          2.0                      NaN                          NaN
+   2                          4.0                      NaN                          NaN
+   3                          2.0                      NaN                          NaN
+   4                          2.5                      2.5                          3.0
    ...
    
 **Fixtures data**
@@ -103,16 +104,16 @@ The method accepts no parameters and the extracted fixtures input matrix has
 the same columns as the latest extracted input matrix for the training data::
 
    >>> print(X_fix) # doctest: +NORMALIZE_WHITESPACE
-                               division  league  ...  williamhill__home_win__odds
+                               division  year  ...  williamhill__home_win__odds
    date                                                                                                                                                                                      
-   ...                                4     NaN  ...                         3.5
-   ...                                3  France  ...                         2.5
+   ...                                4  2022  ...                         3.5
+   ...                                3  2022  ...                         2.5
 
 The odds matrix is the following::
 
    >>> print(O_fix)
-      williamhill__away_win__odds  williamhill__draw__odds  williamhill__home_win__odds
-   0                          2.0                      2.5                          3.5
+      williamhill__home_win__odds  williamhill__draw__odds  williamhill__away_win__odds
+   0                          3.5                      2.5                          2.0
    1                          2.5                      1.5                          2.5
 
 Since we are extracting the fixtures data, there is no target matrix::

@@ -59,8 +59,32 @@ LEAGUES_MAPPING = {
     1884: ('Greece', 1),
     1948: ('Australia', 1),
 }
+REMOVED_COLS = ['season', 'league_id']
+COLS_MAPPING = {
+    'team1': 'home_team',
+    'team2': 'away_team',
+    'date': 'date',
+    'spi1': 'home_team_soccer_power_index',
+    'spi2': 'away_team_soccer_power_index',
+    'prob1': 'home_team_probability_win',
+    'prob2': 'away_team_probability_win',
+    'probtie': 'probability_draw',
+    'proj_score1': 'home_team_projected_score',
+    'proj_score2': 'away_team_projected_score',
+    'importance1': 'home_team_match_importance',
+    'importance2': 'away_team_match_importance',
+    'score1': 'home_team__full_time_goals',
+    'score2': 'away_team__full_time_goals',
+    'xg1': 'home_team__full_time_shot_expected_goals',
+    'xg2': 'away_team__full_time_shot_expected_goals',
+    'nsxg1': 'home_team__full_time_non_shot_expected_goals',
+    'nsxg2': 'away_team__full_time_non_shot_expected_goals',
+    'adj_score1': 'home_team__full_time_adjusted_goals',
+    'adj_score2': 'away_team__full_time_adjusted_goals',
+}
 
 
+@lru_cache
 def _extract_data():
     data = _read_csv(URL).copy()
     data['date'] = pd.to_datetime(data['date'])
@@ -110,66 +134,37 @@ class FTESoccerDataLoader(_BaseDataLoader):
     True
     """
 
-    _removed_cols = ['season', 'league_id']
-    _cols_mapping = {
-        'team1': 'home_team',
-        'team2': 'away_team',
-        'date': 'date',
-        'spi1': 'home_team_soccer_power_index',
-        'spi2': 'away_team_soccer_power_index',
-        'prob1': 'home_team_probability_win',
-        'prob2': 'away_team_probability_win',
-        'probtie': 'probability_draw',
-        'proj_score1': 'home_team_projected_score',
-        'proj_score2': 'away_team_projected_score',
-        'importance1': 'home_team_match_importance',
-        'importance2': 'away_team_match_importance',
-        'score1': 'home_team__full_time_goals',
-        'score2': 'away_team__full_time_goals',
-        'xg1': 'home_team__full_time_shot_expected_goals',
-        'xg2': 'away_team__full_time_shot_expected_goals',
-        'nsxg1': 'home_team__full_time_non_shot_expected_goals',
-        'nsxg2': 'away_team__full_time_non_shot_expected_goals',
-        'adj_score1': 'home_team__full_time_adjusted_goals',
-        'adj_score2': 'away_team__full_time_adjusted_goals',
-    }
+    SCHEMA = [
+        ('year', int),
+        ('division', int),
+        ('match_quality', float),
+        ('league', object),
+        ('home_team', object),
+        ('away_team', object),
+        ('date', np.datetime64),
+        ('home_team_soccer_power_index', float),
+        ('away_team_soccer_power_index', float),
+        ('home_team_probability_win', float),
+        ('away_team_probability_win', float),
+        ('probability_draw', float),
+        ('home_team_projected_score', float),
+        ('away_team_projected_score', float),
+        ('home_team_match_importance', float),
+        ('away_team_match_importance', float),
+        ('home_team__full_time_goals', int),
+        ('away_team__full_time_goals', int),
+        ('home_team__full_time_shot_expected_goals', float),
+        ('away_team__full_time_shot_expected_goals', float),
+        ('home_team__full_time_non_shot_expected_goals', float),
+        ('away_team__full_time_non_shot_expected_goals', float),
+        ('home_team__full_time_adjusted_goals', float),
+        ('away_team__full_time_adjusted_goals', float),
+    ]
+    OUTCOMES = OUTCOMES
 
     @classmethod
-    def _get_schema(cls):
-        return [
-            ('year', int),
-            ('division', int),
-            ('match_quality', float),
-            ('league', object),
-            ('home_team', object),
-            ('away_team', object),
-            ('date', np.datetime64),
-            ('home_team_soccer_power_index', float),
-            ('away_team_soccer_power_index', float),
-            ('home_team_probability_win', float),
-            ('away_team_probability_win', float),
-            ('probability_draw', float),
-            ('home_team_projected_score', float),
-            ('away_team_projected_score', float),
-            ('home_team_match_importance', float),
-            ('away_team_match_importance', float),
-            ('home_team__full_time_goals', int),
-            ('away_team__full_time_goals', int),
-            ('home_team__full_time_shot_expected_goals', float),
-            ('away_team__full_time_shot_expected_goals', float),
-            ('home_team__full_time_non_shot_expected_goals', float),
-            ('away_team__full_time_non_shot_expected_goals', float),
-            ('home_team__full_time_adjusted_goals', float),
-            ('away_team__full_time_adjusted_goals', float),
-        ]
-
-    @classmethod
-    def _get_outcomes(cls):
-        return OUTCOMES
-
-    @classmethod
-    @lru_cache
-    def _get_params(cls):
+    @property
+    def PARAMS(cls):
         data = _extract_data()
         full_param_grid = (
             data[['league', 'division', 'year']].drop_duplicates().to_dict('records')
@@ -181,10 +176,9 @@ class FTESoccerDataLoader(_BaseDataLoader):
             ]
         )
 
-    @lru_cache
     def _get_data(self):
         data = _extract_data()
         data['match_quality'] = 2 / (1 / data['spi1'] + 1 / data['spi2'])
         data['fixtures'] = data['score1'].isna() & data['score2'].isna()
-        data = data.drop(columns=self._removed_cols).rename(columns=self._cols_mapping)
+        data = data.drop(columns=REMOVED_COLS).rename(columns=COLS_MAPPING)
         return data
