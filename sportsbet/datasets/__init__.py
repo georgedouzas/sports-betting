@@ -7,7 +7,7 @@ from ._base import load
 from ._soccer._combined import SoccerDataLoader
 from ._soccer._fd import FDSoccerDataLoader
 from ._soccer._fte import FTESoccerDataLoader
-from ._soccer._dummy import DummySoccerDataLoader
+from ._dummy import DummySoccerDataLoader
 
 __all__ = [
     'SoccerDataLoader',

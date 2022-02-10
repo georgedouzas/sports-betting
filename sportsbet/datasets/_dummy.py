@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from .._base import _BaseDataLoader
+from ._base import _BaseDataLoader
 
 
 class DummySoccerDataLoader(_BaseDataLoader):
@@ -49,20 +49,20 @@ class DummySoccerDataLoader(_BaseDataLoader):
     ... odds_type='interwetten')
     >>> # Training input data
     >>> print(X_train) # doctest: +NORMALIZE_WHITESPACE
-                division league  year    home_team ... williamhill__away_win__odds
+                division league  year    home_team ... williamhill__draw__odds
     date
-    1997-05-04         1  Spain  1997  Real Madrid ...                         NaN
-    1999-03-04         2  Spain  1999    Barcelona ...                         NaN
+    1997-05-04         1  Spain  1997  Real Madrid ...                     2.5
+    1999-03-04         2  Spain  1999    Barcelona ...                     NaN
     >>> # Training output data
     >>> print(Y_train)
-       away_win__full_time_goals  draw__full_time_goals  home_win__full_time_goals
-    0                      False                  False                       True
+       home_win__full_time_goals  draw__full_time_goals  away_win__full_time_goals
+    0                       True                  False                      False
     1                      False                   True                      False
     >>> # Training odds data
     >>> print(O_train)
-       interwetten__away_win__odds  interwetten__draw__odds  interwetten__home_win__odds
-    0                          2.5                      3.5                          1.5
-    1                          2.0                      4.5                          2.5
+       interwetten__home_win__odds  interwetten__draw__odds  interwetten__away_win__odds
+    0                          1.5                      3.5                          2.5
+    1                          2.5                      4.5                          2.0
     >>> # Extract the corresponding fixtures data
     >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     >>> # Training and fixtures input and odds data have the same column names
@@ -74,21 +74,27 @@ class DummySoccerDataLoader(_BaseDataLoader):
     """
 
     DATE = pd.Timestamp(datetime.now()) + pd.to_timedelta(1, 'd')
-    PARAMS = [
-        {'league': ['Greece'], 'division': [1], 'year': [2017, 2019]},
-        {'league': ['Spain'], 'division': [1], 'year': [1997]},
-        {'league': ['Spain'], 'division': [2], 'year': [1999]},
-        {'league': ['England'], 'division': [2], 'year': [1997]},
-        {'league': ['England'], 'division': [3], 'year': [1998]},
-        {'league': ['France'], 'division': [1], 'year': [2000]},
-        {'league': ['France'], 'division': [1], 'year': [2001]},
-    ]
+    PARAMS = ParameterGrid(
+        [
+            {'league': ['Greece'], 'division': [1], 'year': [2017, 2019]},
+            {'league': ['Spain'], 'division': [1], 'year': [1997]},
+            {'league': ['Spain'], 'division': [2], 'year': [1999]},
+            {'league': ['England'], 'division': [2], 'year': [1997]},
+            {'league': ['England'], 'division': [3], 'year': [1998]},
+            {'league': ['France'], 'division': [1], 'year': [2000]},
+            {'league': ['France'], 'division': [1], 'year': [2001]},
+            {'division': [1], 'year': [1998]},
+        ]
+    )
     SCHEMA = [
         ('division', int),
         ('league', object),
         ('date', np.datetime64),
+        ('year', int),
         ('home_team', object),
         ('away_team', object),
+        ('home_soccer_index', float),
+        ('away_soccer_index', float),
         ('home_team__full_time_goals', int),
         ('away_team__full_time_goals', int),
         ('interwetten__home_win__odds', float),
@@ -97,7 +103,8 @@ class DummySoccerDataLoader(_BaseDataLoader):
         ('williamhill__home_win__odds', float),
         ('williamhill__draw__odds', float),
         ('williamhill__away_win__odds', float),
-        ('year', int),
+        ('pinnacle__over_2.5__odds', float),
+        ('pinnacle__under_2.5__odds', float),
     ]
     OUTCOMES = [
         (
@@ -116,18 +123,19 @@ class DummySoccerDataLoader(_BaseDataLoader):
             == outputs['away_team__full_time_goals'],
         ),
         (
-            'over_2.5_goals__full_time_goals',
+            'over_2.5__full_time_goals',
             lambda outputs: outputs['home_team__full_time_goals']
             + outputs['away_team__full_time_goals']
             > 2.5,
         ),
         (
-            'under_2.5_goals__full_time_goals',
+            'under_2.5__full_time_goals',
             lambda outputs: outputs['home_team__full_time_goals']
             + outputs['away_team__full_time_goals']
             < 2.5,
         ),
     ]
+
     DATA = pd.DataFrame(
         {
             'division': [1.0, 2.0, 1.0, 1.0, 2.0, 2.0, 3.0, 1.0, 4.0, 3.0, 1.0, 1.0],
@@ -313,6 +321,20 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 3.0,
                 2.5,
             ],
+            'pinnacle__over_2.5__odds': [
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+            ],
             'fixtures': [
                 False,
                 False,
@@ -330,21 +352,5 @@ class DummySoccerDataLoader(_BaseDataLoader):
         }
     )
 
-    @classmethod
-    def _get_schema(cls):
-        return cls.SCHEMA
-
-    @classmethod
-    def _get_outcomes(cls):
-        return cls.OUTCOMES
-
-    @classmethod
-    def _get_params(cls):
-        return ParameterGrid(cls.PARAMS)
-
     def _get_data(self):
         return self.DATA
-
-    def set_data(self, data):
-        self.DATA = data
-        return self
