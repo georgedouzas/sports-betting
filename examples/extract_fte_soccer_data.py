@@ -27,6 +27,7 @@ FTESoccerDataLoader.get_all_params()
 # divisions of English league.
 
 param_grid = {'league': ['England'], 'year': [2021]}
+dataloader = FTESoccerDataLoader(param_grid=param_grid)
 
 ###############################################################################
 # Getting the available odds types
@@ -36,7 +37,7 @@ param_grid = {'league': ['England'], 'year': [2021]}
 # We can get the available odds types in order to match the output of the
 # training data, using the :meth:`get_odds_types` class method.
 
-FTESoccerDataLoader.get_odds_types()
+dataloader.get_odds_types()
 
 ###############################################################################
 # Therefore no odds data are available.
@@ -49,7 +50,6 @@ FTESoccerDataLoader.get_odds_types()
 # We extract the training data using the default values for the parameters
 # ``odds_type``` and ``drop_na_thres```.
 
-dataloader = FTESoccerDataLoader(param_grid=param_grid)
 X_train, Y_train, _ = dataloader.extract_train_data()
 
 ###############################################################################

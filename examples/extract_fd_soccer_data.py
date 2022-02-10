@@ -27,6 +27,7 @@ FDSoccerDataLoader.get_all_params()
 # division Spanish and Italian leagues.
 
 param_grid = {'league': ['Spain', 'Italy'], 'division': [1], 'year': [2021]}
+dataloader = FDSoccerDataLoader(param_grid=param_grid)
 
 ###############################################################################
 # Getting the available odds types
@@ -36,7 +37,7 @@ param_grid = {'league': ['Spain', 'Italy'], 'division': [1], 'year': [2021]}
 # We can get the available odds types in order to match the output of the
 # training data, using the :func:`~sportsbet.datasets.FDSoccerDataLoader.get_odds_types` class method.
 
-FDSoccerDataLoader.get_odds_types()
+dataloader.get_odds_types()
 
 ###############################################################################
 # We select the odds types to be the market average.
@@ -51,7 +52,6 @@ odds_type = 'market_average'
 # We extract the training data, keeping columns and rows with non missing
 # values by setting the ``drop_na_thres``` parameter equal to ``1.0```.
 
-dataloader = FDSoccerDataLoader(param_grid=param_grid)
 X_train, Y_train, O_train = dataloader.extract_train_data(
     drop_na_thres=1.0, odds_type=odds_type
 )
