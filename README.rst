@@ -4,7 +4,7 @@
 
 .. _documentation: https://sports-betting.readthedocs.io/en/latest/
 
-|ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_
+|ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_ |Black|_
 
 .. |ReadTheDocs| image:: https://readthedocs.org/projects/sports-betting/badge/?version=latest
 .. _ReadTheDocs: https://sports-betting.readthedocs.io/en/latest/?badge=latest
@@ -17,6 +17,9 @@
 
 .. |Conda| image:: https://anaconda.org/gdouzas/sports-betting/badges/installer/conda.svg
 .. _Conda: https://conda.anaconda.org/gdouzas
+
+.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+.. _Black: :target: https://github.com/psf/black
 
 ##############
 sports-betting
