@@ -57,11 +57,3 @@ the `pip` package manager, since it is available on the PyPi::
 
    $ pip install sports-betting
 
-*****
-Conda
-*****
-
-Another option is to use the `conda` package manager, as the package is
-released also in Anaconda Cloud platform::
-
-   $ conda install -c gdouzas sports-betting

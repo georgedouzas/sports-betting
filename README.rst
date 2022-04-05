@@ -65,10 +65,6 @@ install it via `pip`::
 
   pip install -U sports-betting
 
-The package is released also in Anaconda Cloud platform::
-
-  conda install -c gdouzas sports-betting
-
 *************
 Documentation
 *************
