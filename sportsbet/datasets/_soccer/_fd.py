@@ -22,7 +22,7 @@ from sklearn.model_selection import ParameterGrid
 from ._utils import OUTCOMES, _read_csv
 from .._base import _BaseDataLoader
 
-URL = 'http://www.football-data.co.uk'
+URL = 'https://www.football-data.co.uk'
 BASE_URLS = [
     'englandm.php',
     'scotlandm.php',
