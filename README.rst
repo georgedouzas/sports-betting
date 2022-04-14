@@ -4,7 +4,7 @@
 
 .. _documentation: https://sports-betting.readthedocs.io/en/latest/
 
-|ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Conda|_ |Black|_
+|ReadTheDocs|_ |PythonVersion|_ |Pypi|_ |Black|_
 
 .. |ReadTheDocs| image:: https://readthedocs.org/projects/sports-betting/badge/?version=latest
 .. _ReadTheDocs: https://sports-betting.readthedocs.io/en/latest/?badge=latest
