@@ -65,18 +65,6 @@ def _combine_odds(odds):
     return combined_odds
 
 
-def _is_odds_col(col):
-    return len(col.split('__')) == 3 and col.split('__')[-1] == 'odds'
-
-
-def _is_output_col(col):
-    return len(col.split('__')) == 2
-
-
-def _is_input_col(col):
-    return not _is_output_col(col)
-
-
 class _BaseDataLoader(metaclass=ABCMeta):
     """The base class for dataloaders.
 
@@ -85,7 +73,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
     """
 
     SCHEMA = []
-    OUTCOMES = []
+    OUTPUTS = []
     PARAMS = ParameterGrid([])
 
     def __init__(self, param_grid=None):
@@ -94,6 +82,12 @@ class _BaseDataLoader(metaclass=ABCMeta):
     @abstractmethod
     def _get_data(self):
         return pd.DataFrame()
+
+    @staticmethod
+    def _cols(data, col_type):
+        if col_type == 'input':
+            return [col for col in data.columns if not col.startswith('target')]
+        return [col for col in data.columns if col.startswith(col_type)]
 
     def _check_param_grid(self):
         """Check the parameters grid."""
@@ -180,6 +174,11 @@ class _BaseDataLoader(metaclass=ABCMeta):
         ):
             raise ValueError('Data contains columns not included in schema.')
 
+        # Reorder columns
+        data = data[
+            [col for col, _ in self.SCHEMA if col in data.columns] + ['fixtures']
+        ]
+
         # Set date as index
         data = data.set_index('date').sort_values('date')
 
@@ -203,42 +202,35 @@ class _BaseDataLoader(metaclass=ABCMeta):
         return data
 
     def _extract_train_data(self, data):
-
         data = data[~data['fixtures']].drop(columns=['fixtures'])
-
-        # Keep selected parameters from train data
         data = (
             data.reset_index().merge(pd.DataFrame(self.param_grid_)).set_index('date')
         )
-
-        # Drop rows and columns with missing values
-        data.dropna(
-            subset=self._extract_cols(data, _is_output_col), how='any', inplace=True
-        )
-        data.dropna(axis=1, how='all', inplace=True)
-
         return data
 
     def _check_dropped_na_cols(self, data, drop_na_thres):
-        remaining_cols = data.dropna(
-            axis=1, thresh=int(data.shape[0] * drop_na_thres)
-        ).columns
+        thres = int(data.shape[0] * drop_na_thres)
+        dropped_all_na_cols = data.columns.difference(
+            data.dropna(axis=1, how='all').columns
+        )
+        dropped_thres_na_cols = data.columns.difference(
+            data.dropna(axis=1, thresh=thres).columns
+        )
+        dropped_na_cols = dropped_all_na_cols.union(dropped_thres_na_cols)
         self.dropped_na_cols_ = pd.Index(
             [
                 col
-                for col in self._extract_cols(data, _is_input_col)
-                if col not in remaining_cols
-            ]
+                for col in data.columns
+                if col in dropped_na_cols and col not in self._cols(data, 'target')
+            ],
+            dtype=object,
         )
-        if self._extract_cols(data, _is_input_col) == self.dropped_na_cols_.tolist():
+        if self._cols(data, 'input') == self.dropped_na_cols_.tolist():
             raise ValueError(
                 'All input columns were removed. Set `drop_na_thres` parameter to a '
                 'lower value.'
             )
         return self
-
-    def _extract_cols(self, data, func):
-        return [col for col, _ in self.SCHEMA if col in data.columns if func(col)]
 
     def extract_train_data(self, drop_na_thres=0.0, odds_type=None):
         """Extract the training data.
@@ -299,8 +291,15 @@ class _BaseDataLoader(metaclass=ABCMeta):
         self._check_dropped_na_cols(data, drop_na_thres)
 
         # Check odds type
+        dropped_all_na_cols = data.columns.difference(
+            data.dropna(axis=1, how='all').columns
+        )
         odds_types = sorted(
-            {col.split('__')[0] for col in data.columns if _is_odds_col(col)}
+            {
+                col.split('__')[1]
+                for col in self._cols(data, 'odds')
+                if col not in dropped_all_na_cols
+            }
         )
         if odds_type is not None:
             if odds_type not in odds_types:
@@ -310,54 +309,75 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 )
         self.odds_type_ = odds_type
 
-        # Extract input, output and odds columns
+        # Extract input, odds and output columns
+        output_keys = [col.split('__')[1:] for col, _ in self.OUTPUTS]
+        target_keys = [col.split('__')[2:] for col in self._cols(data, 'target')]
+        odds_keys = [
+            col.split('__')[2:]
+            for col in self._cols(data, 'odds')
+            if col.split('__')[1] == self.odds_type_
+        ]
+        output_keys = [
+            key
+            for key in (odds_keys if self.odds_type_ is not None else output_keys)
+            if key in output_keys and key[-1:] in target_keys
+        ]
+        target_keys = list({key for *_, key in output_keys})
         self.input_cols_ = pd.Index(
             [
                 col
-                for col in self._extract_cols(data, _is_input_col)
+                for col in self._cols(data, 'input')
                 if col not in self.dropped_na_cols_
             ],
             dtype=object,
         )
         self.odds_cols_ = pd.Index(
             [
+                f'odds__{self.odds_type_}__{key1}__{key2}'
+                for key1, key2 in output_keys
+                if self.odds_type_ is not None
+            ],
+            dtype=object,
+        )
+        self.output_cols_ = pd.Index(
+            [
+                f'output__{key1}__{key2}'
+                for key1, key2 in output_keys
+                if key2 in target_keys
+            ],
+            dtype=object,
+        )
+        self.target_cols_ = pd.Index(
+            [
                 col
-                for col in self._extract_cols(data, _is_odds_col)
-                if col.split('__')[0] == self.odds_type_
+                for col in self._cols(data, 'target')
+                if col.split('__')[-1] in target_keys
             ],
             dtype=object,
         )
 
+        # Remove missing target data
+        data = data.dropna(subset=self.target_cols_, how='any')
+
         # Convert data types
         data = self._convert_data_types(data)
 
-        # Extract targets
+        # Extract outputs
         Y = []
-        if self.odds_cols_.size == 0:
-            for col, func in self.OUTCOMES:
-                Y.append(pd.Series(func(data).reset_index(drop=True), name=col))
-        else:
-            for odds_col in self.odds_cols_:
-                outcomes = [
-                    (col, func)
-                    for col, func in self.OUTCOMES
-                    if col.split('__')[0] == odds_col.split('__')[1]
-                ]
-                if outcomes:
-                    col, func = outcomes[0]
-                    Y.append(pd.Series(func(data).reset_index(drop=True), name=col))
-                else:
-                    self.odds_cols_ = self.odds_cols_.drop(odds_col)
-        Y = pd.concat(Y, axis=1) if Y else None
-        self.output_cols_ = Y.columns
+        outputs_mapping = dict(self.OUTPUTS)
+        for col in self.output_cols_:
+            func = outputs_mapping[col]
+            Y.append(pd.Series(func(data[self.target_cols_]), name=col))
+        Y = pd.concat(Y, axis=1).reset_index(drop=True)
 
-        return (
-            data[self.input_cols_],
-            Y,
+        # Extract odds
+        O = (
             data[self.odds_cols_].reset_index(drop=True)
             if self.odds_type_ is not None
-            else None,
+            else None
         )
+
+        return data[self.input_cols_], Y, O
 
     def extract_fixtures_data(self):
         """Extract the fixtures data.
@@ -396,6 +416,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
             hasattr(self, 'input_cols_')
             and hasattr(self, 'output_cols_')
             and hasattr(self, 'odds_cols_')
+            and hasattr(self, 'target_cols_')
         ):
             raise AttributeError(
                 'Extract the training data before extracting the fixtures data.'
@@ -412,13 +433,14 @@ class _BaseDataLoader(metaclass=ABCMeta):
         # Remove past data
         data = data[data.index >= pd.to_datetime('today').floor('D')]
 
-        return (
-            data[self.input_cols_],
-            None,
+        # Extract odds
+        O = (
             data[self.odds_cols_].reset_index(drop=True)
             if self.odds_type_ is not None
-            else None,
+            else None
         )
+
+        return data[self.input_cols_], None, O
 
     def save(self, path):
         """Save the dataloader object.
@@ -449,10 +471,18 @@ class _BaseDataLoader(metaclass=ABCMeta):
         param_grid: list
             A list of all allowed params and values.
         """
-        all_params = pd.DataFrame(cls.PARAMS)
+        all_params_df = pd.DataFrame(cls.PARAMS)
+        all_params = all_params_df.sort_values(all_params_df.columns.tolist()).to_dict(
+            'records'
+        )
         all_params = [
-            {k: [v] for k, v in params.to_dict().items()}
-            for _, params in all_params.sort_values(list(all_params.columns)).iterrows()
+            {
+                param: val
+                for param, val in params.items()
+                if not isinstance(val, float)
+                or (isinstance(val, float) and np.isfinite(val))
+            }
+            for params in all_params
         ]
         return all_params
 
@@ -476,7 +506,18 @@ class _BaseDataLoader(metaclass=ABCMeta):
         # Extract train data
         data = self._extract_train_data(data)
 
-        return sorted({col.split('__')[0] for col in data.columns if _is_odds_col(col)})
+        # Drop columns with only missing values
+        dropped_all_na_cols = data.columns.difference(
+            data.dropna(axis=1, how='all').columns
+        )
+
+        return sorted(
+            {
+                col.split('__')[1]
+                for col in self._cols(data, 'odds')
+                if col not in dropped_all_na_cols
+            }
+        )
 
 
 def load(path):

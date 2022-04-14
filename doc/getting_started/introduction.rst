@@ -65,10 +65,10 @@ The input training data ``X_train`` is the first component of the data
 tuple ``(X_train, Y_train, O_train)``::
 
     >>> print(X_train)  # doctest: +NORMALIZE_WHITESPACE
-                division   league  year      home_team  ...  williamhill__away_win__odds
+                division   league  year      home_team  ...  odds__williamhill__away_win__full_time_goals
     date
-    1997-05-04         1    Spain  1997    Real Madrid  ...                          NaN
-    1998-03-04         3  England  1998      Liverpool  ...                          NaN
+    1997-05-04         1    Spain  1997    Real Madrid  ...                                           NaN
+    1998-03-04         3  England  1998      Liverpool  ...                                           NaN
     ...
 
 ``X_train`` is a :class:`~pandas.DataFrame` that contains information known before
@@ -87,18 +87,18 @@ The output training data ``Y_train`` is the second component of the data
 tuple ``(X_train, Y_train, O_train)``::
 
     >>> print(Y_train)
-       home_win__full_time_goals  draw__full_time_goals  away_win__full_time_goals
-    0                       True                  False                      False
-    1                      False                  False                       True
+       output__home_win__full_time_goals  output__draw__full_time_goals  output__away_win__full_time_goals
+    0                               True                          False                              False
+    1                              False                          False                               True
     ...
 
 ``Y_train`` is a :class:`~pandas.DataFrame` that contains information
 known after the end of the betting event like goals or points
 scored, fouls commited etc. Column names follow a naming convention 
-of the form ``'betting_market__key'``. The ``'betting_market'`` prefix
-is any supported betting market like home win, over 2.5, draw and home points
-while the ``'key'`` postfix is the outcome that was used to extract the targets
-like ``'full_time_goals'``, ``'half_time_goals'`` and ``'full_time_points'``.
+of the form ``f'output__{betting_market}__{target}'``. The ``betting_market`` 
+parameter is any supported betting market like home win, over 2.5, draw and home 
+points while the ``target`` parameter is the outcome that was used to extract the 
+targets like ``'full_time_goals'``, ``'half_time_goals'`` and ``'full_time_points'``.
 The entries of ``Y_train`` show whether or not an outcome of a betting event is 
 ``True`` or ``False``. In order to make the data suitable for modelling, ``Y_train``
 does not contain any missing values i.e. rows of raw data that contain any missing 
@@ -111,24 +111,24 @@ The odds training data ``O_train`` is the last component of the data
 tuple ``(X_train, Y_train, O_train)``::
 
     >>> print(O_train)
-       interwetten__home_win__odds  interwetten__draw__odds  interwetten__away_win__odds
-    0                          1.5                      3.5                          2.5
-    1                          2.0                      4.5                          3.5
+       odds__interwetten__home_win__full_time_goals  odds__interwetten__draw__full_time_goals  odds__interwetten__away_win__full_time_goals
+    0                                           1.5                                       3.5                                           2.5
+    1                                           2.0                                       4.5                                           3.5
     ...
 
 ``O_train`` is a :class:`~pandas.DataFrame` that contains information related 
 to the odds for various betting markets. Column names follow a naming convention 
-of the form ``'bookmaker__betting_market__odds'``. The ``'bookmaker'`` prefix 
-is any supported bookmaker or aggregation of bookmakers like Pinnacle, Bet365 and 
-market maximum as returned by the class method 
+of the form ``f'odds__{bookmaker}__{betting_market}__{target}'``. The ``bookmaker`` 
+parameter is any supported bookmaker or aggregation of bookmakers like ``'pinnacle'``', 
+``'bet365'`` and ``'market_maximum'`` as returned by the class method 
 :func:`~sportsbet.datasets._base._BaseDataLoader.get_odds_types`. 
-The ``'betting_market'`` infix is similar to the one appearing to the columns of 
-``Y_train``, while ``'odds'`` postfix is always present to denote an odd column. 
-The entries of ``O_train`` are the odd values of betting events and depending on the
-data source it may contain missing values. ``Y_train`` and ``O_train`` columns match, 
-i.e. ``Y_train`` and ``O_train`` have the same shape and ``'betting_market__key'`` 
-column of ``Y_train`` is at the same position as the ``'bookmaker__betting_market__odds'`` 
-column of ``O_train``. The correspondence is clear in the examples above.
+The ``betting_market`` and ``target`` parameters are similar to the ones appearing to 
+the columns of ``Y_train``. The entries of ``O_train`` are the odd values of 
+betting events and, depending on the data source, it may contain missing values. 
+``Y_train`` and ``O_train`` columns match, i.e. ``Y_train`` and ``O_train`` have the 
+same shape and ``f'output__{betting_market}__{target}'`` column of ``Y_train`` is at the 
+same position as the ``f'odds__{bookmaker}__{betting_market}__{target}'`` column of ``O_train``. 
+The correspondence is clear in the examples above.
 
 **X_fix**
 
@@ -136,10 +136,10 @@ The input fixtures data ``X_fix`` is the first component of the data
 tuple ``(X_fix, Y_fix, O_fix)``::
 
     >>> print(X_fix) # doctest: +NORMALIZE_WHITESPACE
-                                division  league  year  home_team  ...  williamhill__away_win__odds
+                                division  league  year  home_team  ...  odds__williamhill__away_win__full_time_goals
     date
-    2022...                            4     NaN  2022  Barcelona  ...                          2.0
-    2022...                            3  France  2022     Monaco  ...                          2.5
+    2022...                            4     NaN  2022  Barcelona  ...                                           2.0
+    2022...                            3  France  2022     Monaco  ...                                           2.5
 
 ``X_fix`` is a :class:`~pandas.DataFrame` that contains information known before
 the start of the betting event. The features of ``X_fix`` are identical to the features
@@ -161,9 +161,9 @@ The odds fixtures data ``O_fix`` is the last component of the data
 tuple ``(X_fix, Y_fix, O_fix)``::
 
     >>> print(O_fix)
-       interwetten__home_win__odds  interwetten__draw__odds  interwetten__away_win__odds
-    0                          3.0                      2.5                          2.0
-    1                          1.5                      3.5                          2.5
+       odds__interwetten__home_win__full_time_goals  odds__interwetten__draw__full_time_goals  odds__interwetten__away_win__full_time_goals
+    0                                           3.0                                       2.5                                           2.0
+    1                                           1.5                                       3.5                                           2.5
 
 ``O_fix`` is a :class:`~pandas.DataFrame` that contains information related 
 to the odds for various betting markets. The features of ``O_fix`` are identical 

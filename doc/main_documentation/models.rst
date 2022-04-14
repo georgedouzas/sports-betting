@@ -28,6 +28,6 @@ The extracted fixtures data can be used to predict the value bets::
 
     >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     >>> bettor.bet(X_fix, O_fix)
-       interwetten__home_win__odds  interwetten__draw__odds  interwetten__away_win__odds
-    0                         True                    False                        False
-    1                        False                    False                        False
+       odds__interwetten__home_win__full_time_goals  odds__interwetten__draw__full_time_goals  odds__interwetten__away_win__full_time_goals
+    0                                          True                                     False                                         False
+    1                                         False                                     False                                         False

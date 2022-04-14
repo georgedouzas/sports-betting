@@ -15,14 +15,18 @@ from sportsbet.datasets import DummySoccerDataLoader
 def test_get_all_params():
     """Test all parameters."""
     dataloader = DummySoccerDataLoader()
-    all_params = pd.DataFrame(ParameterGrid(dataloader.get_all_params()))
-    expected_all_params = pd.DataFrame(dataloader.PARAMS)
-    pd.testing.assert_frame_equal(
-        all_params,
-        expected_all_params.sort_values(
-            list(expected_all_params.columns), ignore_index=True
-        ),
-    )
+    all_params = dataloader.get_all_params()
+    assert all_params == [
+        {'division': 1, 'league': 'France', 'year': 2000},
+        {'division': 1, 'league': 'France', 'year': 2001},
+        {'division': 1, 'league': 'Greece', 'year': 2017},
+        {'division': 1, 'league': 'Greece', 'year': 2019},
+        {'division': 1, 'league': 'Spain', 'year': 1997},
+        {'division': 1, 'year': 1998},
+        {'division': 2, 'league': 'England', 'year': 1997},
+        {'division': 2, 'league': 'Spain', 'year': 1999},
+        {'division': 3, 'league': 'England', 'year': 1998},
+    ]
 
 
 def test_get_odds_types():
@@ -36,9 +40,17 @@ def test_param_grid_default():
     dataloader = DummySoccerDataLoader()
     dataloader.extract_train_data()
     params = pd.DataFrame(dataloader.param_grid_)
-    expected_params = pd.DataFrame(ParameterGrid(dataloader.get_all_params()))
+    expected_params = pd.DataFrame(
+        ParameterGrid(
+            [
+                {param: [val] for param, val in params.items()}
+                for params in dataloader.get_all_params()
+            ]
+        )
+    )
     pd.testing.assert_frame_equal(
-        params.sort_values(list(params.columns), ignore_index=True), expected_params
+        params.sort_values(list(params.columns), ignore_index=True),
+        expected_params.sort_values(list(expected_params.columns), ignore_index=True),
     )
 
 
@@ -47,10 +59,18 @@ def test_param_grid():
     dataloader = DummySoccerDataLoader(param_grid={'division': [1]})
     dataloader.extract_train_data()
     params = pd.DataFrame(dataloader.param_grid_)
-    expected_params = pd.DataFrame(ParameterGrid(dataloader.get_all_params()))
+    expected_params = pd.DataFrame(
+        ParameterGrid(
+            [
+                {param: [val] for param, val in params.items()}
+                for params in dataloader.get_all_params()
+            ]
+        )
+    )
     expected_params = expected_params[expected_params["division"] == 1]
     pd.testing.assert_frame_equal(
-        params.sort_values(list(params.columns), ignore_index=True), expected_params
+        params.sort_values(list(params.columns), ignore_index=True),
+        expected_params.sort_values(list(expected_params.columns), ignore_index=True),
     )
 
 
@@ -147,7 +167,8 @@ def test_drop_na_cols_default():
     dataloader = DummySoccerDataLoader()
     dataloader.extract_train_data()
     pd.testing.assert_index_equal(
-        dataloader.dropped_na_cols_, pd.Index([], dtype=object)
+        dataloader.dropped_na_cols_,
+        pd.Index(['odds__pinnacle__over_2.5__full_time_goals'], dtype=object),
     )
 
 
@@ -160,9 +181,10 @@ def test_drop_na_cols():
         pd.Index(
             [
                 'league',
-                'interwetten__home_win__odds',
-                'williamhill__draw__odds',
-                'williamhill__away_win__odds',
+                'odds__interwetten__home_win__full_time_goals',
+                'odds__williamhill__draw__full_time_goals',
+                'odds__williamhill__away_win__full_time_goals',
+                'odds__pinnacle__over_2.5__full_time_goals',
             ],
             dtype='object',
         ),
@@ -181,11 +203,11 @@ def test_input_cols_default():
                 for col in DummySoccerDataLoader.DATA.columns
                 if col
                 not in (
-                    'home_team__full_time_goals',
-                    'away_team__full_time_goals',
+                    'target__home_team__full_time_goals',
+                    'target__away_team__full_time_goals',
                     'fixtures',
                     'date',
-                    'pinnacle__over_2.5__odds',
+                    'odds__pinnacle__over_2.5__full_time_goals',
                 )
             ],
             dtype=object,
@@ -205,15 +227,15 @@ def test_input_cols():
                 for col in DummySoccerDataLoader.DATA.columns
                 if col
                 not in (
-                    'home_team__full_time_goals',
-                    'away_team__full_time_goals',
+                    'target__home_team__full_time_goals',
+                    'target__away_team__full_time_goals',
                     'fixtures',
-                    'williamhill__draw__odds',
-                    'williamhill__away_win__odds',
-                    'pinnacle__over_2.5__odds',
+                    'odds__williamhill__draw__full_time_goals',
+                    'odds__williamhill__away_win__full_time_goals',
+                    'odds__pinnacle__over_2.5__full_time_goals',
                     'date',
                     'league',
-                    'interwetten__home_win__odds',
+                    'odds__interwetten__home_win__full_time_goals',
                 )
             ],
             dtype=object,
@@ -229,11 +251,11 @@ def test_output_cols_default():
         dataloader.output_cols_,
         pd.Index(
             [
-                'home_win__full_time_goals',
-                'away_win__full_time_goals',
-                'draw__full_time_goals',
-                'over_2.5__full_time_goals',
-                'under_2.5__full_time_goals',
+                'output__home_win__full_time_goals',
+                'output__away_win__full_time_goals',
+                'output__draw__full_time_goals',
+                'output__over_2.5__full_time_goals',
+                'output__under_2.5__full_time_goals',
             ],
             dtype=object,
         ),
@@ -248,9 +270,9 @@ def test_output_cols():
         dataloader.output_cols_,
         pd.Index(
             [
-                'home_win__full_time_goals',
-                'draw__full_time_goals',
-                'away_win__full_time_goals',
+                'output__home_win__full_time_goals',
+                'output__draw__full_time_goals',
+                'output__away_win__full_time_goals',
             ],
             dtype=object,
         ),
@@ -275,9 +297,9 @@ def test_odds_cols():
         dataloader.odds_cols_,
         pd.Index(
             [
-                'williamhill__home_win__odds',
-                'williamhill__draw__odds',
-                'williamhill__away_win__odds',
+                'odds__williamhill__home_win__full_time_goals',
+                'odds__williamhill__draw__full_time_goals',
+                'odds__williamhill__away_win__full_time_goals',
             ]
         ),
     )
@@ -323,7 +345,7 @@ def test_extract_train_data_default():
                     'Panathinaikos',
                     'AEK',
                 ],
-                'interwetten__home_win__odds': [
+                'odds__interwetten__home_win__full_time_goals': [
                     1.5,
                     2.0,
                     np.nan,
@@ -333,10 +355,37 @@ def test_extract_train_data_default():
                     2.0,
                     2.0,
                 ],
-                'interwetten__draw__odds': [3.5, 4.5, 2.5, 4.5, 2.5, 2.5, 2.0, 2.0],
-                'interwetten__away_win__odds': [2.5, 3.5, 3.5, 2.0, 3.0, 2.0, 2.0, 3.0],
-                'williamhill__home_win__odds': [2.5, 2.0, 4.0, 2.0, 2.5, 2.5, 2.0, 3.5],
-                'williamhill__draw__odds': [
+                'odds__interwetten__draw__full_time_goals': [
+                    3.5,
+                    4.5,
+                    2.5,
+                    4.5,
+                    2.5,
+                    2.5,
+                    2.0,
+                    2.0,
+                ],
+                'odds__interwetten__away_win__full_time_goals': [
+                    2.5,
+                    3.5,
+                    3.5,
+                    2.0,
+                    3.0,
+                    2.0,
+                    2.0,
+                    3.0,
+                ],
+                'odds__williamhill__home_win__full_time_goals': [
+                    2.5,
+                    2.0,
+                    4.0,
+                    2.0,
+                    2.5,
+                    2.5,
+                    2.0,
+                    3.5,
+                ],
+                'odds__williamhill__draw__full_time_goals': [
                     2.5,
                     np.nan,
                     np.nan,
@@ -346,7 +395,7 @@ def test_extract_train_data_default():
                     2.0,
                     1.5,
                 ],
-                'williamhill__away_win__odds': [
+                'odds__williamhill__away_win__full_time_goals': [
                     np.nan,
                     np.nan,
                     np.nan,
@@ -377,7 +426,7 @@ def test_extract_train_data_default():
         Y,
         pd.DataFrame(
             {
-                'home_win__full_time_goals': [
+                'output__home_win__full_time_goals': [
                     True,
                     False,
                     False,
@@ -387,7 +436,7 @@ def test_extract_train_data_default():
                     False,
                     True,
                 ],
-                'away_win__full_time_goals': [
+                'output__away_win__full_time_goals': [
                     False,
                     True,
                     True,
@@ -397,7 +446,7 @@ def test_extract_train_data_default():
                     False,
                     False,
                 ],
-                'draw__full_time_goals': [
+                'output__draw__full_time_goals': [
                     False,
                     False,
                     False,
@@ -407,7 +456,7 @@ def test_extract_train_data_default():
                     True,
                     False,
                 ],
-                'over_2.5__full_time_goals': [
+                'output__over_2.5__full_time_goals': [
                     True,
                     True,
                     True,
@@ -417,7 +466,7 @@ def test_extract_train_data_default():
                     False,
                     False,
                 ],
-                'under_2.5__full_time_goals': [
+                'output__under_2.5__full_time_goals': [
                     False,
                     False,
                     False,
@@ -446,11 +495,11 @@ def test_extract_train_data():
                 'year': [2017, 2019],
                 'home_team': ['Olympiakos', 'Panathinaikos'],
                 'away_team': ['Panathinaikos', 'AEK'],
-                'interwetten__home_win__odds': [2.0, 2.0],
-                'interwetten__draw__odds': [2.0, 2.0],
-                'interwetten__away_win__odds': [2.0, 3.0],
-                'williamhill__home_win__odds': [2.0, 3.5],
-                'williamhill__draw__odds': [2.0, 1.5],
+                'odds__interwetten__home_win__full_time_goals': [2.0, 2.0],
+                'odds__interwetten__draw__full_time_goals': [2.0, 2.0],
+                'odds__interwetten__away_win__full_time_goals': [2.0, 3.0],
+                'odds__williamhill__home_win__full_time_goals': [2.0, 3.5],
+                'odds__williamhill__draw__full_time_goals': [2.0, 1.5],
             }
         ).set_index(
             pd.Index(
@@ -466,9 +515,9 @@ def test_extract_train_data():
         Y,
         pd.DataFrame(
             {
-                'home_win__full_time_goals': [False, True],
-                'draw__full_time_goals': [True, False],
-                'away_win__full_time_goals': [False, False],
+                'output__home_win__full_time_goals': [False, True],
+                'output__draw__full_time_goals': [True, False],
+                'output__away_win__full_time_goals': [False, False],
             }
         ),
     )
@@ -476,9 +525,9 @@ def test_extract_train_data():
         O,
         pd.DataFrame(
             {
-                'interwetten__home_win__odds': [2.0, 2.0],
-                'interwetten__draw__odds': [2.0, 2.0],
-                'interwetten__away_win__odds': [2.0, 3.0],
+                'odds__interwetten__home_win__full_time_goals': [2.0, 2.0],
+                'odds__interwetten__draw__full_time_goals': [2.0, 2.0],
+                'odds__interwetten__away_win__full_time_goals': [2.0, 3.0],
             }
         ),
     )
@@ -501,9 +550,9 @@ def test_extract_fixtures_data():
                 ],
                 'home_team': ['Barcelona', 'Monaco'],
                 'away_team': ['Real Madrid', 'PSG'],
-                'interwetten__draw__odds': [2.5, 3.5],
-                'interwetten__away_win__odds': [2.0, 2.5],
-                'williamhill__home_win__odds': [3.5, 2.5],
+                'odds__interwetten__draw__full_time_goals': [2.5, 3.5],
+                'odds__interwetten__away_win__full_time_goals': [2.0, 2.5],
+                'odds__williamhill__home_win__full_time_goals': [3.5, 2.5],
             }
         ).set_index(
             pd.DatetimeIndex(
@@ -520,9 +569,9 @@ def test_extract_fixtures_data():
         O,
         pd.DataFrame(
             {
-                'interwetten__home_win__odds': [3.0, 1.5],
-                'interwetten__draw__odds': [2.5, 3.5],
-                'interwetten__away_win__odds': [2.0, 2.5],
+                'odds__interwetten__home_win__full_time_goals': [3.0, 1.5],
+                'odds__interwetten__draw__full_time_goals': [2.5, 3.5],
+                'odds__interwetten__away_win__full_time_goals': [2.0, 2.5],
             }
         ),
     )

@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
 from .._base import _BaseDataLoader
-from ._utils import OUTCOMES
+from ._utils import OUTPUTS
 from ._fd import FDSoccerDataLoader
 from ._fte import FTESoccerDataLoader
 
@@ -376,7 +376,7 @@ class SoccerDataLoader(_BaseDataLoader):
     >>> import pandas as pd
     >>> # Get all available parameters to select the training data
     >>> SoccerDataLoader.get_all_params()
-    [{'division': [1], 'league': ['Argentina'], 'year': [2013]}, ...
+    [{'division': 1, 'league': 'Argentina', 'year': 2013}, ...
     >>> # Select only the traning data for the French and Spanish leagues of 2020 year
     >>> dataloader = SoccerDataLoader(
     ... param_grid={'league': ['England', 'Spain'], 'year':[2020]})
@@ -389,7 +389,7 @@ class SoccerDataLoader(_BaseDataLoader):
     ... odds_type='market_average', drop_na_thres=1.0)
     >>> # Odds data include the selected market average odds
     >>> O_train.columns
-    Index(['market_average__home_win__odds', 'market_average__draw__odds', ...
+    Index(['odds__market_average__home_win__full_time_goals', ...
     >>> # Extract the corresponding fixtures data
     >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     >>> # Training and fixtures input and odds data have the same column names
@@ -405,16 +405,18 @@ class SoccerDataLoader(_BaseDataLoader):
         for col in FTESoccerDataLoader.SCHEMA
         if col not in FDSoccerDataLoader.SCHEMA
     ]
-    OUTCOMES = OUTCOMES
+    OUTPUTS = OUTPUTS
 
     @classmethod
     @property
     def PARAMS(cls):
-        full_param_grid = ParameterGrid(
-            FDSoccerDataLoader.get_all_params() + FTESoccerDataLoader.get_all_params()
-        )
         full_param_grid = (
-            pd.DataFrame(full_param_grid).drop_duplicates().to_dict('records')
+            pd.DataFrame(
+                FDSoccerDataLoader.get_all_params()
+                + FTESoccerDataLoader.get_all_params()
+            )
+            .drop_duplicates()
+            .to_dict('records')
         )
         return ParameterGrid(
             [

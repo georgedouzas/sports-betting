@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from ._utils import OUTCOMES, _read_csv
+from ._utils import OUTPUTS, _read_csv
 from .._base import _BaseDataLoader
 
 URL = 'https://projects.fivethirtyeight.com/soccer-api/club/spi_matches.csv'
@@ -73,14 +73,14 @@ COLS_MAPPING = {
     'proj_score2': 'away_team_projected_score',
     'importance1': 'home_team_match_importance',
     'importance2': 'away_team_match_importance',
-    'score1': 'home_team__full_time_goals',
-    'score2': 'away_team__full_time_goals',
-    'xg1': 'home_team__full_time_shot_expected_goals',
-    'xg2': 'away_team__full_time_shot_expected_goals',
-    'nsxg1': 'home_team__full_time_non_shot_expected_goals',
-    'nsxg2': 'away_team__full_time_non_shot_expected_goals',
-    'adj_score1': 'home_team__full_time_adjusted_goals',
-    'adj_score2': 'away_team__full_time_adjusted_goals',
+    'score1': 'target__home_team__full_time_goals',
+    'score2': 'target__away_team__full_time_goals',
+    'xg1': 'target__home_team__full_time_shot_expected_goals',
+    'xg2': 'target__away_team__full_time_shot_expected_goals',
+    'nsxg1': 'target__home_team__full_time_non_shot_expected_goals',
+    'nsxg2': 'target__away_team__full_time_non_shot_expected_goals',
+    'adj_score1': 'target__home_team__full_time_adjusted_goals',
+    'adj_score2': 'target__away_team__full_time_adjusted_goals',
 }
 
 
@@ -151,16 +151,16 @@ class FTESoccerDataLoader(_BaseDataLoader):
         ('away_team_projected_score', float),
         ('home_team_match_importance', float),
         ('away_team_match_importance', float),
-        ('home_team__full_time_goals', int),
-        ('away_team__full_time_goals', int),
-        ('home_team__full_time_shot_expected_goals', float),
-        ('away_team__full_time_shot_expected_goals', float),
-        ('home_team__full_time_non_shot_expected_goals', float),
-        ('away_team__full_time_non_shot_expected_goals', float),
-        ('home_team__full_time_adjusted_goals', float),
-        ('away_team__full_time_adjusted_goals', float),
+        ('target__home_team__full_time_goals', int),
+        ('target__away_team__full_time_goals', int),
+        ('target__home_team__full_time_shot_expected_goals', float),
+        ('target__away_team__full_time_shot_expected_goals', float),
+        ('target__home_team__full_time_non_shot_expected_goals', float),
+        ('target__away_team__full_time_non_shot_expected_goals', float),
+        ('target__home_team__full_time_adjusted_goals', float),
+        ('target__away_team__full_time_adjusted_goals', float),
     ]
-    OUTCOMES = OUTCOMES
+    OUTPUTS = OUTPUTS
 
     @classmethod
     @property

@@ -15,7 +15,7 @@ from ._base import _BaseDataLoader
 
 
 class DummySoccerDataLoader(_BaseDataLoader):
-    """Dataloader for dummy data.
+    """Dataloader for soccer dummy data.
 
     The data are provided only for convenience, since they require
     no downloading, and to familiarize the user with the methods
@@ -38,7 +38,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
     >>> import pandas as pd
     >>> # Get all available parameters to select the training data
     >>> DummySoccerDataLoader.get_all_params()
-    [{'division': [1], 'league': ['France'], 'year': [2000]}, ...
+    [{'division': 1, 'league': 'France', 'year': 2000}, ...
     >>> # Select only the traning data for the Spanish league
     >>> dataloader = DummySoccerDataLoader(param_grid={'league': ['Spain']})
     >>> # Get available odds types
@@ -49,20 +49,20 @@ class DummySoccerDataLoader(_BaseDataLoader):
     ... odds_type='interwetten')
     >>> # Training input data
     >>> print(X_train) # doctest: +NORMALIZE_WHITESPACE
-                division league  year    home_team ... williamhill__draw__odds
+                division league  year ... odds__williamhill__draw__full_time_goals
     date
-    1997-05-04         1  Spain  1997  Real Madrid ...                     2.5
-    1999-03-04         2  Spain  1999    Barcelona ...                     NaN
+    1997-05-04         1  Spain  1997 ...                                      2.5
+    1999-03-04         2  Spain  1999 ...                                      NaN
     >>> # Training output data
     >>> print(Y_train)
-       home_win__full_time_goals  draw__full_time_goals  away_win__full_time_goals
-    0                       True                  False                      False
-    1                      False                   True                      False
+       output__home_win__full_time_goals ... output__away_win__full_time_goals
+    0                               True ...                             False
+    1                              False ...                             False
     >>> # Training odds data
     >>> print(O_train)
-       interwetten__home_win__odds  interwetten__draw__odds  interwetten__away_win__odds
-    0                          1.5                      3.5                          2.5
-    1                          2.5                      4.5                          2.0
+       odds__interwetten__home_win__full_time_goals ...
+    0                                           1.5 ...
+    1                                           2.5 ...
     >>> # Extract the corresponding fixtures data
     >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     >>> # Training and fixtures input and odds data have the same column names
@@ -95,43 +95,43 @@ class DummySoccerDataLoader(_BaseDataLoader):
         ('away_team', object),
         ('home_soccer_index', float),
         ('away_soccer_index', float),
-        ('home_team__full_time_goals', int),
-        ('away_team__full_time_goals', int),
-        ('interwetten__home_win__odds', float),
-        ('interwetten__draw__odds', float),
-        ('interwetten__away_win__odds', float),
-        ('williamhill__home_win__odds', float),
-        ('williamhill__draw__odds', float),
-        ('williamhill__away_win__odds', float),
-        ('pinnacle__over_2.5__odds', float),
-        ('pinnacle__under_2.5__odds', float),
+        ('target__home_team__full_time_goals', int),
+        ('target__away_team__full_time_goals', int),
+        ('odds__interwetten__home_win__full_time_goals', float),
+        ('odds__interwetten__draw__full_time_goals', float),
+        ('odds__interwetten__away_win__full_time_goals', float),
+        ('odds__williamhill__home_win__full_time_goals', float),
+        ('odds__williamhill__draw__full_time_goals', float),
+        ('odds__williamhill__away_win__full_time_goals', float),
+        ('odds__pinnacle__over_2.5__full_time_goals', float),
+        ('odds__pinnacle__under_2.5__full_time_goals', float),
     ]
-    OUTCOMES = [
+    OUTPUTS = [
         (
-            'home_win__full_time_goals',
-            lambda outputs: outputs['home_team__full_time_goals']
-            > outputs['away_team__full_time_goals'],
+            'output__home_win__full_time_goals',
+            lambda outputs: outputs['target__home_team__full_time_goals']
+            > outputs['target__away_team__full_time_goals'],
         ),
         (
-            'away_win__full_time_goals',
-            lambda outputs: outputs['home_team__full_time_goals']
-            < outputs['away_team__full_time_goals'],
+            'output__away_win__full_time_goals',
+            lambda outputs: outputs['target__home_team__full_time_goals']
+            < outputs['target__away_team__full_time_goals'],
         ),
         (
-            'draw__full_time_goals',
-            lambda outputs: outputs['home_team__full_time_goals']
-            == outputs['away_team__full_time_goals'],
+            'output__draw__full_time_goals',
+            lambda outputs: outputs['target__home_team__full_time_goals']
+            == outputs['target__away_team__full_time_goals'],
         ),
         (
-            'over_2.5__full_time_goals',
-            lambda outputs: outputs['home_team__full_time_goals']
-            + outputs['away_team__full_time_goals']
+            'output__over_2.5__full_time_goals',
+            lambda outputs: outputs['target__home_team__full_time_goals']
+            + outputs['target__away_team__full_time_goals']
             > 2.5,
         ),
         (
-            'under_2.5__full_time_goals',
-            lambda outputs: outputs['home_team__full_time_goals']
-            + outputs['away_team__full_time_goals']
+            'output__under_2.5__full_time_goals',
+            lambda outputs: outputs['target__home_team__full_time_goals']
+            + outputs['target__away_team__full_time_goals']
             < 2.5,
         ),
     ]
@@ -209,7 +209,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 'Monaco',
                 'Lens',
             ],
-            'home_team__full_time_goals': [
+            'target__home_team__full_time_goals': [
                 1,
                 np.nan,
                 1,
@@ -223,7 +223,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 2,
                 1,
             ],
-            'away_team__full_time_goals': [
+            'target__away_team__full_time_goals': [
                 1,
                 np.nan,
                 0,
@@ -237,7 +237,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 1,
                 2,
             ],
-            'interwetten__home_win__odds': [
+            'odds__interwetten__home_win__full_time_goals': [
                 2.0,
                 1.5,
                 2,
@@ -251,7 +251,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 2.0,
                 3.0,
             ],
-            'interwetten__draw__odds': [
+            'odds__interwetten__draw__full_time_goals': [
                 2,
                 2,
                 2,
@@ -265,7 +265,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 2.5,
                 2.5,
             ],
-            'interwetten__away_win__odds': [
+            'odds__interwetten__away_win__full_time_goals': [
                 2,
                 2,
                 3,
@@ -279,7 +279,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 3.0,
                 2.0,
             ],
-            'williamhill__home_win__odds': [
+            'odds__williamhill__home_win__full_time_goals': [
                 2,
                 1.5,
                 3.5,
@@ -293,7 +293,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 2.5,
                 2.5,
             ],
-            'williamhill__draw__odds': [
+            'odds__williamhill__draw__full_time_goals': [
                 2,
                 np.nan,
                 1.5,
@@ -307,7 +307,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 2.5,
                 3.0,
             ],
-            'williamhill__away_win__odds': [
+            'odds__williamhill__away_win__full_time_goals': [
                 2,
                 np.nan,
                 np.nan,
@@ -321,7 +321,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 3.0,
                 2.5,
             ],
-            'pinnacle__over_2.5__odds': [
+            'odds__pinnacle__over_2.5__full_time_goals': [
                 np.nan,
                 np.nan,
                 np.nan,
