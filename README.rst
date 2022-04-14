@@ -15,9 +15,6 @@
 .. |Pypi| image:: https://badge.fury.io/py/sports-betting.svg
 .. _Pypi: https://badge.fury.io/py/sports-betting
 
-.. |Conda| image:: https://anaconda.org/gdouzas/sports-betting/badges/installer/conda.svg
-.. _Conda: https://conda.anaconda.org/gdouzas
-
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
 .. _Black: :target: https://github.com/psf/black
 
