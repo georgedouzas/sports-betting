@@ -15,5 +15,7 @@ Version 0.1
 Version 0.2
 ***********
 
-- The module :mod:`evaluation` has been added.
+.. currentmodule:: sportsbet
+
+- The module :mod:`sportsbet.evaluation` has been added.
 - Downloading speed has been improved.
