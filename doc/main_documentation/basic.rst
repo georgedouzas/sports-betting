@@ -50,7 +50,7 @@ For example, the available parameters for the
 
    >>> from sportsbet.datasets import DummySoccerDataLoader
    >>> DummySoccerDataLoader.get_all_params()
-   [{'division': 1, 'league': 'France', 'year': 2000}, ...]
+   [{'division': 1, 'year': 1998}, ...]
 
 The default value of ``param_grid`` is ``None`` and corresponds to the selection 
 of all training data. In the following example, we select only the training data of 

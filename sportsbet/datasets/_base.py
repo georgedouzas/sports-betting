@@ -128,15 +128,14 @@ class _BaseDataLoader(metaclass=ABCMeta):
             self.param_grid_ = self.PARAMS
         return self
 
-    @staticmethod
-    def _convert_data_types(schema, data):
+    def _convert_data_types(self, data):
         """Cast the data type of columns."""
-        data_types = set([data_type for _, data_type in schema])
+        data_types = set([data_type for _, data_type in self.SCHEMA])
         for data_type in data_types:
             converted_cols = list(
                 {
                     col
-                    for col, selected_data_type in schema
+                    for col, selected_data_type in self.SCHEMA
                     if selected_data_type is data_type and col in data.columns
                 }
             )
@@ -361,7 +360,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = data.dropna(subset=self.target_cols_, how='any')
 
         # Convert data types
-        data = self._convert_data_types(self.SCHEMA, data)
+        data = self._convert_data_types(data)
 
         # Extract outputs
         Y = []
@@ -429,7 +428,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = data[data['fixtures']].drop(columns=['fixtures'])
 
         # Convert data types
-        data = self._convert_data_types(self.SCHEMA, data)
+        data = self._convert_data_types(data)
 
         # Remove past data
         data = data[data.index >= pd.to_datetime('today').floor('D')]
@@ -472,21 +471,16 @@ class _BaseDataLoader(metaclass=ABCMeta):
         param_grid: list
             A list of all allowed params and values.
         """
-        all_params_df = pd.DataFrame(cls.PARAMS)
-        all_params_df = cls._convert_data_types(cls.SCHEMA, all_params_df)
-        all_params = all_params_df.sort_values(all_params_df.columns.tolist()).to_dict(
-            'records'
+        params_names = sorted(
+            {param_name for params in cls.PARAMS for param_name in params.keys()}
         )
-        all_params = [
-            {
-                param: val
-                for param, val in params.items()
-                if not isinstance(val, float)
-                or (isinstance(val, float) and np.isfinite(val))
-                or (isinstance(val, int) and val == -1)
-            }
-            for params in all_params
-        ]
+        all_params = sorted(
+            cls.PARAMS,
+            key=lambda params: tuple(
+                params.get(name, '' if dict(cls.SCHEMA)[name] is object else 0)
+                for name in params_names
+            ),
+        )
         return all_params
 
     def get_odds_types(self):

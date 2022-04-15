@@ -17,12 +17,12 @@ def test_get_all_params():
     dataloader = DummySoccerDataLoader()
     all_params = dataloader.get_all_params()
     assert all_params == [
+        {'division': 1, 'year': 1998},
         {'division': 1, 'league': 'France', 'year': 2000},
         {'division': 1, 'league': 'France', 'year': 2001},
         {'division': 1, 'league': 'Greece', 'year': 2017},
         {'division': 1, 'league': 'Greece', 'year': 2019},
         {'division': 1, 'league': 'Spain', 'year': 1997},
-        {'division': 1, 'year': 1998},
         {'division': 2, 'league': 'England', 'year': 1997},
         {'division': 2, 'league': 'Spain', 'year': 1999},
         {'division': 3, 'league': 'England', 'year': 1998},
@@ -48,9 +48,10 @@ def test_param_grid_default():
             ]
         )
     )
+    cols = list(params.columns)
     pd.testing.assert_frame_equal(
-        params.sort_values(list(params.columns), ignore_index=True),
-        expected_params.sort_values(list(expected_params.columns), ignore_index=True),
+        params[cols].sort_values(cols, ignore_index=True),
+        expected_params[cols].sort_values(cols, ignore_index=True),
     )
 
 
@@ -68,9 +69,10 @@ def test_param_grid():
         )
     )
     expected_params = expected_params[expected_params["division"] == 1]
+    cols = list(params.columns)
     pd.testing.assert_frame_equal(
-        params.sort_values(list(params.columns), ignore_index=True),
-        expected_params.sort_values(list(expected_params.columns), ignore_index=True),
+        params[cols].sort_values(cols, ignore_index=True),
+        expected_params[cols].sort_values(cols, ignore_index=True),
     )
 
 

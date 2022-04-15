@@ -38,7 +38,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
     >>> import pandas as pd
     >>> # Get all available parameters to select the training data
     >>> DummySoccerDataLoader.get_all_params()
-    [{'division': 1, 'league': 'France', 'year': 2000}, ...
+    [{'division': 1, 'year': 1998}, ...
     >>> # Select only the traning data for the Spanish league
     >>> dataloader = DummySoccerDataLoader(param_grid={'league': ['Spain']})
     >>> # Get available odds types
