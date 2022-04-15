@@ -4,11 +4,12 @@ tools to extract sports betting data.
 """
 
 from ._base import load
+from ._dummy import DummySoccerDataLoader, DummyBasketballDataLoader
 from ._soccer._data import SoccerDataLoader
-from ._dummy import DummySoccerDataLoader
 
 __all__ = [
-    'SoccerDataLoader',
     'DummySoccerDataLoader',
+    'DummyBasketballDataLoader',
+    'SoccerDataLoader',
     'load',
 ]
