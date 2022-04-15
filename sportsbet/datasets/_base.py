@@ -483,6 +483,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 for param, val in params.items()
                 if not isinstance(val, float)
                 or (isinstance(val, float) and np.isfinite(val))
+                or (isinstance(val, int) and val == -1)
             }
             for params in all_params
         ]
