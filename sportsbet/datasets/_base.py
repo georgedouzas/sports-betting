@@ -128,14 +128,15 @@ class _BaseDataLoader(metaclass=ABCMeta):
             self.param_grid_ = self.PARAMS
         return self
 
-    def _convert_data_types(self, data):
+    @staticmethod
+    def _convert_data_types(schema, data):
         """Cast the data type of columns."""
-        data_types = set([data_type for _, data_type in self.SCHEMA])
+        data_types = set([data_type for _, data_type in schema])
         for data_type in data_types:
             converted_cols = list(
                 {
                     col
-                    for col, selected_data_type in self.SCHEMA
+                    for col, selected_data_type in schema
                     if selected_data_type is data_type and col in data.columns
                 }
             )
@@ -360,7 +361,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = data.dropna(subset=self.target_cols_, how='any')
 
         # Convert data types
-        data = self._convert_data_types(data)
+        data = self._convert_data_types(self.SCHEMA, data)
 
         # Extract outputs
         Y = []
@@ -428,7 +429,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = data[data['fixtures']].drop(columns=['fixtures'])
 
         # Convert data types
-        data = self._convert_data_types(data)
+        data = self._convert_data_types(self.SCHEMA, data)
 
         # Remove past data
         data = data[data.index >= pd.to_datetime('today').floor('D')]
@@ -472,6 +473,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
             A list of all allowed params and values.
         """
         all_params_df = pd.DataFrame(cls.PARAMS)
+        all_params_df = cls._convert_data_types(cls.SCHEMA, all_params_df)
         all_params = all_params_df.sort_values(all_params_df.columns.tolist()).to_dict(
             'records'
         )
