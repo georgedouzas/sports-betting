@@ -427,8 +427,12 @@ class SoccerDataLoader(_BaseDataLoader):
 
     @lru_cache
     def _get_data(self):
-        fd_data = FDSoccerDataLoader(self.param_grid)._validate_data()
-        fte_data = FTESoccerDataLoader(self.param_grid)._validate_data()
+        fd_data = (
+            FDSoccerDataLoader(self.param_grid)._check_param_grid()._validate_data()
+        )
+        fte_data = (
+            FTESoccerDataLoader(self.param_grid)._check_param_grid()._validate_data()
+        )
         for col in ('home_team', 'away_team'):
             fte_data[col] = fte_data[col].apply(
                 lambda name: NAMES_MAPPING.get(name, name)

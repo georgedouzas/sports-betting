@@ -108,8 +108,6 @@ COLS_MAPPING = {
     'PH': 'odds__pinnacle__home_win__full_time_goals',
     'PD': 'odds__pinnacle__draw__full_time_goals',
     'PA': 'odds__pinnacle__away_win__full_time_goals',
-    'HG': 'home_team__full_time_goals',
-    'AG': 'away_team__full_time_goals',
     'HomeTeam': 'home_team',
     'AwayTeam': 'away_team',
     'Date': 'date',
@@ -240,6 +238,8 @@ COLS_MAPPING = {
     'AvgC<2.5': 'odds__market_average_closing__under_2.5__full_time_goals',
     'AvgCAHH': 'odds__market_average_closing__asian_handicap_home_team__full_time_goals',
     'AvgCAHA': 'odds__market_average_closing__asian_handicap_away_team__full_time_goals',
+    'HG': 'target__home_team__full_time_goals',
+    'AG': 'target__away_team__full_time_goals',
     'FTHG': 'target__home_team__full_time_goals',
     'FTAG': 'target__away_team__full_time_goals',
     'HTHG': 'target__home_team__half_time_goals',
@@ -567,8 +567,6 @@ class FDSoccerDataLoader(_BaseDataLoader):
 
     @lru_cache
     def _get_data(self):
-
-        self._check_param_grid()
 
         # Training data
         data_container = []

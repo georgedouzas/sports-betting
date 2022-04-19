@@ -275,11 +275,11 @@ class _BaseDataLoader(metaclass=ABCMeta):
             multi-output targets ``Y`` and the corresponding odds ``O``, respectively.
         """
 
-        # Validate the data
-        data = self._validate_data()
-
         # Check param grid
         self._check_param_grid()
+
+        # Validate the data
+        data = self._validate_data()
 
         # Extract train data
         data = self._extract_train_data(data)
@@ -494,11 +494,12 @@ class _BaseDataLoader(metaclass=ABCMeta):
         odds_types: list of str
             A list of available odds types.
         """
-        # Validate the data
-        data = self._validate_data()
 
         # Check param grid
         self._check_param_grid()
+
+        # Validate the data
+        data = self._validate_data()
 
         # Extract train data
         data = self._extract_train_data(data)

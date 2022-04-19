@@ -50,7 +50,7 @@ odds_type = 'market_average'
 
 ###############################################################################
 # We extract the training data, keeping columns and rows with non missing
-# values by setting the ``drop_na_thres``` parameter equal to ``1.0```.
+# values by setting the ``drop_na_thres`` parameter equal to ``1.0``.
 
 X_train, Y_train, O_train = dataloader.extract_train_data(
     drop_na_thres=1.0, odds_type=odds_type
