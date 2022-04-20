@@ -1,16 +1,16 @@
 """
-###########################
-FiveThirtyEight soccer data
-###########################
+###########
+Soccer data
+###########
 
-This example illustrates the usage of FiveThirtyEight soccer dataloader.
+This example illustrates the usage of soccer dataloader.
 
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
-from sportsbet.datasets import FTESoccerDataLoader
+from sportsbet.datasets import SoccerDataLoader
 
 ###############################################################################
 # Getting the available parameters
@@ -18,16 +18,16 @@ from sportsbet.datasets import FTESoccerDataLoader
 
 ###############################################################################
 # We can get the available parameters in order to select the training data
-# to be extracted, using the :func:`get_all_params` class method.
+# to be extracted, using the :meth:`get_all_params` class method.
 
-FTESoccerDataLoader.get_all_params()
+SoccerDataLoader.get_all_params()
 
 ###############################################################################
-# We select to extract training data only for the year 2021 of all the
-# divisions of English league.
+# We select to extract training data only for the year 2021 of the first
+# division Spanish and Italian leagues.
 
-param_grid = {'league': ['England'], 'year': [2021]}
-dataloader = FTESoccerDataLoader(param_grid=param_grid)
+param_grid = {'league': ['Spain', 'Italy'], 'division': [1], 'year': [2021]}
+dataloader = SoccerDataLoader(param_grid=param_grid)
 
 ###############################################################################
 # Getting the available odds types
@@ -35,22 +35,31 @@ dataloader = FTESoccerDataLoader(param_grid=param_grid)
 
 ###############################################################################
 # We can get the available odds types in order to match the output of the
-# training data, using the :meth:`get_odds_types` class method.
+# training data, using the :func:`~sportsbet.datasets.FDSoccerDataLoader.get_odds_types` class method.
 
 dataloader.get_odds_types()
-
-###############################################################################
-# Therefore no odds data are available.
 
 ###############################################################################
 # Extracting the training data
 ###############################################################################
 
 ###############################################################################
-# We extract the training data using the default values for the parameters
-# ``odds_type``` and ``drop_na_thres```.
+# We select the odds types to be the market average.
 
-X_train, Y_train, _ = dataloader.extract_train_data()
+odds_type = 'market_average'
+
+###############################################################################
+# We keep columns with non missing values for the training data by setting the
+# ``drop_na_thres`` parameter equal to ``1.0``.
+
+drop_na_thres = 1.0
+
+###############################################################################
+# We extract the training data:
+
+X_train, Y_train, O_train = dataloader.extract_train_data(
+    drop_na_thres=drop_na_thres, odds_type=odds_type
+)
 
 ###############################################################################
 # The input data:
@@ -61,6 +70,10 @@ print(X_train)
 print(Y_train)
 
 ###############################################################################
+# The market average odds:
+print(O_train)
+
+###############################################################################
 # Extracting the fixtures data
 ###############################################################################
 
@@ -69,8 +82,12 @@ print(Y_train)
 # training data. On the other hand, the fixtures data are not affected by
 # the ``param_grid`` selection.
 
-X_fix, *_ = dataloader.extract_fixtures_data()
+X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
 ###############################################################################
 # The input data:
 print(X_fix)
+
+###############################################################################
+# The market average odds:
+print(O_fix)

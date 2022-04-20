@@ -28,8 +28,8 @@ Datasets
 Sports betting datasets usually come in a format not suitable for modelling.
 The dataloader objects deal with this issue by providing methods to extract 
 the data in a cosistent format that makes it easy to create predictive models. 
-Currently, there  are various dataloaders available and `sports-betting` 
-aims to include more in the future, covering various sports betting markets. 
+Currently, there are various dataloaders available and `sports-betting` 
+aims to include more in the future, covering multiple sports betting markets. 
 For every dataloader, the extracted data are either training data or fixtures 
 data, returned as tuple ``(X, Y, O)`` where ``X`` is the input data, 
 ``Y`` is the output data (equal to ``None`` for fixtures) and ``O`` is 

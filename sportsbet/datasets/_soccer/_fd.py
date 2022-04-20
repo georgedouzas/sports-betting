@@ -2,7 +2,7 @@
 Download and transform historical and fixtures data
 for various leagues from Football-Data.co.uk.
 
-Football-Data.co.uk: http://www.football-data.co.uk/data.php
+Football-Data.co.uk: https://www.football-data.co.uk/data.php
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -16,7 +16,6 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
-from rich.progress import track
 from sklearn.model_selection import ParameterGrid
 
 from ._utils import OUTPUTS, _read_csv
@@ -337,51 +336,11 @@ def _get_params():
     return ParameterGrid(full_param_grid)
 
 
-class FDSoccerDataLoader(_BaseDataLoader):
+class _FDSoccerDataLoader(_BaseDataLoader):
     """Dataloader for Football-Data.co.uk soccer data.
 
     It downloads historical and fixtures data from
-    `Football-Data.co.uk <http://www.football-data.co.uk/data.php>`_.
-
-    Read more in the :ref:`user guide <user_guide>`.
-
-    Parameters
-    ----------
-    param_grid : dict of str to sequence, or sequence of such parameter, default=None
-        It selects the type of information that the data include. The keys of
-        dictionaries might be parameters like ``'league'`` or ``'division'`` while
-        the values are sequences of allowed values. It works in a similar way as the
-        ``param_grid`` parameter of the :class:`~sklearn.model_selection.ParameterGrid`
-        class. The default value ``None`` corresponds to all parameters.
-
-    Examples
-    --------
-    >>> from sportsbet.datasets import FDSoccerDataLoader
-    >>> import pandas as pd
-    >>> # Get all available parameters to select the training data
-    >>> FDSoccerDataLoader.get_all_params()
-    [{'division': 1, 'league': 'Argentina', 'year': 2013}, ...
-    >>> # Select only the traning data for the English league and 2020, 2021 years
-    >>> dataloader = FDSoccerDataLoader(
-    ... param_grid={'league': ['England'], 'year': [2020, 2021]})
-    >>> # Get available odds types
-    >>> dataloader.get_odds_types()
-    Football-Data.co.uk...
-    [..., 'market_average', ...]
-    >>> # Select the market average odds and drop colums with missing values
-    >>> X_train, Y_train, O_train = dataloader.extract_train_data(
-    ... odds_type='market_average', drop_na_thres=1.0)
-    >>> # Odds data include the selected market average odds
-    >>> O_train.columns
-    Index(['odds__market_average__home_win__full_time_goals', ...
-    >>> # Extract the corresponding fixtures data
-    >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
-    >>> # Training and fixtures input and odds data have the same column names
-    >>> pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
-    >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
-    >>> # Fixtures data have always no output
-    >>> Y_fix is None
-    True
+    `Football-Data.co.uk <https://www.football-data.co.uk/data.php>`_.
     """
 
     SCHEMA = [
@@ -571,7 +530,7 @@ class FDSoccerDataLoader(_BaseDataLoader):
         # Training data
         data_container = []
         urls = _param_grid_to_csv_urls(self.param_grid_)
-        for params, url in track(urls, description='Football-Data.co.uk:'):
+        for params, url in urls:
 
             data = _read_csv(url).replace('#REF!', np.nan)
             try:

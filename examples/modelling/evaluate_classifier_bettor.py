@@ -20,7 +20,7 @@ from sklearn.model_selection import cross_val_score, TimeSeriesSplit
 ###############################################################################
 
 ###############################################################################
-# We extract the training data for the Spanish league.
+# We extract the training data for the Spanish soccer league.
 # We also remove columns that contain missing values and select the market
 # maximum odds.
 

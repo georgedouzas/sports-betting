@@ -31,16 +31,15 @@ class ClassifierBettor(_BaseBettor):
     >>> from sklearn.pipeline import make_pipeline
     >>> from sklearn.compose import make_column_transformer
     >>> from sportsbet.evaluation import ClassifierBettor
-    >>> from sportsbet.datasets import FDSoccerDataLoader
+    >>> from sportsbet.datasets import SoccerDataLoader
     >>> # Select only backtesting data for the Italian league and years 2020, 2021
     >>> param_grid = {'league': ['Italy'], 'year': [2020, 2021]}
-    >>> dataloader = FDSoccerDataLoader(param_grid)
+    >>> dataloader = SoccerDataLoader(param_grid)
     >>> # Select the odds of Pinnacle bookmaker
     >>> X, Y, O = dataloader.extract_train_data(
     ... odds_type='pinnacle',
     ... drop_na_thres=1.0
     ... )
-    Football-Data.co.uk...
     >>> # Create a pipeline to handle categorical features and missing values
     >>> clf_pipeline = make_pipeline(
     ... make_column_transformer(

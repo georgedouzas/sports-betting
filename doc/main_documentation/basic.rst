@@ -1,4 +1,5 @@
-.. _football-data.co.uk: http://www.football-data.co.uk/data.php
+.. _football-data.co.uk: https://www.football-data.co.uk/data.php
+.. _fivethirtyeight: https://github.com/fivethirtyeight/data/tree/master/soccer-spi
 
 *******************
 Basic functionality
@@ -9,15 +10,15 @@ download sports betting data. Additionally, it includes tools
 to evaluate the performance of predictive models.
 
 The dataloader objects and their methods can be used to download sports
-betting data. For each data source or combination of data sources a
-corresponding dataloader class is provided. For example, the
-:class:`~sportsbet.datasets.FDSoccerDataLoader` class can be used to 
-download soccer historical data and fixtures from Football-Data.co.uk_::
+betting data. For each sport, a combination of data sources 
+is used and a dataloader class is provided. For example, the
+:class:`~sportsbet.datasets.SoccerDataLoader` class can be used to 
+download soccer historical and fixtures data from Football-Data.co.uk_ 
+and FiveThirtyEight_::
 
-   >>> from sportsbet.datasets import FDSoccerDataLoader
-   >>> dataloader = FDSoccerDataLoader(param_grid={'league': ['Italy', 'Spain'], 'year': [2019, 2020]})
+   >>> from sportsbet.datasets import SoccerDataLoader
+   >>> dataloader = SoccerDataLoader(param_grid={'league': ['Italy', 'Spain'], 'year': [2019, 2020]})
    >>> X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='pinnacle')
-   Football-Data.co.uk...
    >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 
 Bettor objects like :class:`~sportsbet.evaluation.ClassifierBettor`
@@ -34,8 +35,8 @@ More information about dataloaders and bettors is provided below.
 
 **Dataloaders**
 
-A dataloader class corresponds to a data source or a combination 
-of data sources. Their methods return datasets suitable for machine 
+A dataloader class corresponds to a combination of data sources 
+for a specific sport. Their methods return datasets suitable for machine 
 learning modelling. There various dataloaders available while all of 
 them inherit from the same base class, thus providing the same public API.
 

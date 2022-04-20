@@ -95,43 +95,11 @@ def _extract_data():
     return data
 
 
-class FTESoccerDataLoader(_BaseDataLoader):
+class _FTESoccerDataLoader(_BaseDataLoader):
     """Dataloader for FiveThirtyEight soccer data.
 
     It downloads historical and fixtures data from
     `FiveThirtyEight <https://github.com/fivethirtyeight/data/tree/master/soccer-spi>`_.
-
-    Read more in the :ref:`user guide <user_guide>`.
-
-    Parameters
-    ----------
-    param_grid : dict of str to sequence, or sequence of such parameter, default=None
-        It selects the type of information that the data include. The keys of
-        dictionaries might be parameters like ``'league'`` or ``'division'`` while
-        the values are sequences of allowed values. It works in a similar way as the
-        ``param_grid`` parameter of the :class:`~sklearn.model_selection.ParameterGrid`
-        class. The default value ``None`` corresponds to all parameters.
-
-    Examples
-    --------
-    >>> from sportsbet.datasets import FTESoccerDataLoader
-    >>> import pandas as pd
-    >>> # Select all training data
-    >>> dataloader = FTESoccerDataLoader()
-    >>> # No odds data are available
-    >>> dataloader.get_odds_types()
-    []
-    >>> X_train, Y_train, O_train = dataloader.extract_train_data()
-    >>> # Extract the corresponding fixtures data
-    >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
-    >>> # Training and fixtures input data have the same column names
-    >>> pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
-    >>> # Fixtures data have no output
-    >>> Y_fix is None
-    True
-    >>> # No odds data are available
-    >>> O_train is None and O_fix is None
-    True
     """
 
     SCHEMA = [

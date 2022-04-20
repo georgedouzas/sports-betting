@@ -20,7 +20,7 @@ The parameter ``odds_type`` selects the type of odds that will be used for the o
 It also affects the columns of the multi-output targets ``Y_train`` since there is a match between 
 ``Y_train`` and ``Odds_train`` columns as explained in the :ref:`datatasets <datasets>` 
 section of the  :ref:`introduction <introduction>`. You can get the available odds types from the
-method :func:`~sportsbet.datasets.DummySoccerDataLoader.get_odds_types`:
+method :func:`~sportsbet.datasets._BaseDataLoader.get_odds_types`:
 
    >>> from sportsbet.datasets import DummySoccerDataLoader
    >>> dataloader = DummySoccerDataLoader()

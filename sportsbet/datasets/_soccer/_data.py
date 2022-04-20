@@ -15,8 +15,8 @@ from sklearn.model_selection import ParameterGrid
 
 from .._base import _BaseDataLoader
 from ._utils import OUTPUTS
-from ._fd import FDSoccerDataLoader
-from ._fte import FTESoccerDataLoader
+from ._fd import _FDSoccerDataLoader
+from ._fte import _FTESoccerDataLoader
 
 NAMES_MAPPING = {
     'SK Austria Klagenfurt': 'A. Klagenfurt',
@@ -376,13 +376,12 @@ class SoccerDataLoader(_BaseDataLoader):
     >>> import pandas as pd
     >>> # Get all available parameters to select the training data
     >>> SoccerDataLoader.get_all_params()
-    [{'division': 1, 'league': 'Argentina', 'year': 2013}, ...
+    [{'data_source': 'fivethirtyeight', 'division': 1, ...
     >>> # Select only the traning data for the French and Spanish leagues of 2020 year
     >>> dataloader = SoccerDataLoader(
     ... param_grid={'league': ['England', 'Spain'], 'year':[2020]})
     >>> # Get available odds types
     >>> dataloader.get_odds_types()
-    Football-Data.co.uk...
     [..., 'market_average', ...]
     >>> # Select the market average odds and drop colums with missing values
     >>> X_train, Y_train, O_train = dataloader.extract_train_data(
@@ -400,21 +399,28 @@ class SoccerDataLoader(_BaseDataLoader):
     True
     """
 
-    SCHEMA = FDSoccerDataLoader.SCHEMA + [
-        col
-        for col in FTESoccerDataLoader.SCHEMA
-        if col not in FDSoccerDataLoader.SCHEMA
-    ]
+    SCHEMA = (
+        _FDSoccerDataLoader.SCHEMA
+        + [
+            col
+            for col in _FTESoccerDataLoader.SCHEMA
+            if col not in _FDSoccerDataLoader.SCHEMA
+        ]
+        + [('data_source', object)]
+    )
     OUTPUTS = OUTPUTS
 
     @classmethod
     @property
     def PARAMS(cls):
+        fd_full_param_grid_df = pd.DataFrame(
+            _FDSoccerDataLoader.get_all_params()
+        ).assign(data_source='footballdata')
+        fte_full_param_grid_df = pd.DataFrame(
+            _FTESoccerDataLoader.get_all_params()
+        ).assign(data_source='fivethirtyeight')
         full_param_grid = (
-            pd.DataFrame(
-                FDSoccerDataLoader.get_all_params()
-                + FTESoccerDataLoader.get_all_params()
-            )
+            pd.concat([fd_full_param_grid_df, fte_full_param_grid_df])
             .drop_duplicates()
             .to_dict('records')
         )
@@ -427,15 +433,56 @@ class SoccerDataLoader(_BaseDataLoader):
 
     @lru_cache
     def _get_data(self):
-        fd_data = (
-            FDSoccerDataLoader(self.param_grid)._check_param_grid()._validate_data()
-        )
-        fte_data = (
-            FTESoccerDataLoader(self.param_grid)._check_param_grid()._validate_data()
-        )
-        for col in ('home_team', 'away_team'):
-            fte_data[col] = fte_data[col].apply(
-                lambda name: NAMES_MAPPING.get(name, name)
+        param_grids = {}
+        for data_source in ('footballdata', 'fivethirtyeight'):
+            param_grids[data_source] = [
+                {
+                    param: [val]
+                    for param, val in params.items()
+                    if param != 'data_source'
+                }
+                for params in self.param_grid_
+                if params['data_source'] == data_source
+            ]
+        if param_grids['footballdata']:
+            fd_data = (
+                _FDSoccerDataLoader(param_grids['footballdata'])
+                ._check_param_grid()
+                ._validate_data()
+                .reset_index()
             )
-        data = pd.merge(fd_data.reset_index(), fte_data.reset_index())
+            if not param_grids['fivethirtyeight']:
+                return fd_data.assign(data_source='footballdata')
+        if param_grids['fivethirtyeight']:
+            fte_data = (
+                _FTESoccerDataLoader(param_grids['fivethirtyeight'])
+                ._check_param_grid()
+                ._validate_data()
+                .reset_index()
+            )
+            for col in ('home_team', 'away_team'):
+                fte_data[col] = fte_data[col].apply(
+                    lambda name: NAMES_MAPPING.get(name, name)
+                )
+            if not param_grids['footballdata']:
+                return fte_data.assign(data_source='fivethirtyeight')
+        data = pd.merge(fd_data, fte_data)
         return data
+
+    def extract_train_data(self, drop_na_thres=0.0, odds_type=None):
+        X, Y, O = super(SoccerDataLoader, self).extract_train_data(
+            drop_na_thres, odds_type
+        )
+        self.input_cols_ = pd.Index(
+            [col for col in self.input_cols_ if col != 'data_source'], dtype=object
+        )
+        X = X.reset_index().drop_duplicates(subset=self.input_cols_)
+        return (
+            X.set_index('date')[self.input_cols_],
+            Y.take(X.index),
+            O.take(X.index) if O is not None else None,
+        )
+
+    def extract_fixtures_data(self):
+        X, Y, O = super(SoccerDataLoader, self).extract_fixtures_data()
+        return X, Y, O

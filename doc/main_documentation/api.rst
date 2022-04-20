@@ -25,8 +25,6 @@ datasets
    :template: class.rst
 
     datasets.DummySoccerDataLoader
-    datasets.FDSoccerDataLoader
-    datasets.FTESoccerDataLoader
     datasets.SoccerDataLoader
 
 .. autosummary::

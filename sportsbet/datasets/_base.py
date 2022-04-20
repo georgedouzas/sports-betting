@@ -12,12 +12,11 @@ from sklearn.model_selection import ParameterGrid
 from sklearn.utils import check_scalar
 
 
-def _cols(x):
-    return [f'{col}_team{x}' for col in ('home', 'away')]
-
-
 def _create_names_mapping_table(data_source1, data_source2, keys):
     """Map most similar teams names between two data sources."""
+
+    def _cols(x):
+        return [f'{col}_team{x}' for col in ('home', 'away')]
 
     # Generate teams names combinations
     names_combinations = pd.merge(
@@ -189,6 +188,9 @@ class _BaseDataLoader(metaclass=ABCMeta):
         mask = data['fixtures']
         train_data = data[~mask].drop(columns=['fixtures'])
         params = pd.DataFrame(self.PARAMS)
+        params = params[
+            [col for col in params.columns if col in train_data.columns]
+        ].drop_duplicates()
         train_data_params = (
             train_data[params.columns].drop_duplicates().reset_index(drop=True)
         )
