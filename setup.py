@@ -25,7 +25,6 @@ INSTALL_REQUIRES = [
     'scikit-learn>=1.0.0',
     'cloudpickle>=2.0.0',
     'beautifulsoup4>=4.0.0',
-    'rich>=4.28',
     'vectorbt>=0.22.0',
     'QuantStats>=0.0.47'
 ]
@@ -38,8 +37,7 @@ CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Operating System :: POSIX',
                'Operating System :: Unix',
                'Operating System :: MacOS',
-               'Programming Language :: Python :: 3.9',
-               'Programming Language :: Python :: 3.10']
+               'Programming Language :: Python :: 3.9']
 EXTRAS_REQUIRE = {
     'tests': [
         'pytest',
