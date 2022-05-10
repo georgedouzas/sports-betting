@@ -30,7 +30,7 @@ code-format:
 
 code-analysis:
 
-	flake8 sportsbet --max-line-length=95 --extend-ignore=E203,E741
+	flake8 sportsbet --max-line-length=100 --extend-ignore=E203,E741
 	pylint -E sportsbet/ -d E1103,E0611,E1101
 
 upload-pypi:
