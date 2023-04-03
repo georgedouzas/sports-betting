@@ -13,7 +13,7 @@ import pytz
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
-from .. import FixturesData, TrainingData
+from .. import FixturesData, ParamGrid, TrainingData
 from ._base import _BaseDataLoader
 
 OVER_UNDER = 2.5
@@ -41,25 +41,25 @@ class DummySoccerDataLoader(_BaseDataLoader):
             The checked value of parameters grid. It includes all possible parameters if
             `param_grid` is `None`.
 
-        dropped_na_cols_:
+        dropped_na_cols_ (pd.Index):
             The columns with missing values that are dropped.
 
-        drop_na_thres_:
+        drop_na_thres_(float):
             The checked value of `drop_na_thres`.
 
-        odds_type_:
+        odds_type_ (str | None):
             The checked value of `odds_type`.
 
-        input_cols_:
+        input_cols_ (pd.Index):
             The columns of `X_train` and `X_fix`.
 
-        output_cols_:
+        output_cols_ (pd.Index):
             The columns of `Y_train` and `Y_fix`.
 
-        odds_cols_:
+        odds_cols_ (pd.Index):
             The columns of `O_train` and `O_fix`.
 
-        target_cols_:
+        target_cols_ (pd.Index):
             The columns used for the extraction of output and odds columns.
 
     Examples:
@@ -104,16 +104,16 @@ class DummySoccerDataLoader(_BaseDataLoader):
 
     DATE = datetime.now(tz=pytz.utc) + timedelta(2)
     SCHEMA = [
-        ('division', int),
+        ('division', np.int64),
         ('league', object),
         ('date', np.datetime64),
-        ('year', int),
+        ('year', np.int64),
         ('home_team', object),
         ('away_team', object),
         ('home_soccer_index', float),
         ('away_soccer_index', float),
-        ('target__home_team__full_time_goals', int),
-        ('target__away_team__full_time_goals', int),
+        ('target__home_team__full_time_goals', np.int64),
+        ('target__away_team__full_time_goals', np.int64),
         ('odds__interwetten__home_win__full_time_goals', float),
         ('odds__interwetten__draw__full_time_goals', float),
         ('odds__interwetten__away_win__full_time_goals', float),
@@ -372,6 +372,9 @@ class DummySoccerDataLoader(_BaseDataLoader):
             ],
         },
     )
+
+    def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
+        super().__init__(param_grid)
 
     @classmethod
     def _get_full_param_grid(cls: type[DummySoccerDataLoader]) -> ParameterGrid:

@@ -17,7 +17,7 @@ import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
-from ... import FixturesData, TrainingData
+from ... import FixturesData, ParamGrid, TrainingData
 from .._base import _BaseDataLoader
 from ._fd import _FDSoccerDataLoader
 from ._fte import _FTESoccerDataLoader
@@ -378,19 +378,26 @@ class SoccerDataLoader(_BaseDataLoader):
         param_grid_ (ParameterGrid):
             The checked value of parameters grid. It includes all possible parameters if
             `param_grid` is `None`.
-        dropped_na_cols_:
+
+        dropped_na_cols_ (pd.Index):
             The columns with missing values that are dropped.
-        drop_na_thres_:
+
+        drop_na_thres_(float):
             The checked value of `drop_na_thres`.
-        odds_type_:
+
+        odds_type_ (str | None):
             The checked value of `odds_type`.
-        input_cols_:
+
+        input_cols_ (pd.Index):
             The columns of `X_train` and `X_fix`.
-        output_cols_:
+
+        output_cols_ (pd.Index):
             The columns of `Y_train` and `Y_fix`.
-        odds_cols_:
+
+        odds_cols_ (pd.Index):
             The columns of `O_train` and `O_fix`.
-        target_cols_:
+
+        target_cols_ (pd.Index):
             The columns used for the extraction of output and odds columns.
 
     Examples:
@@ -427,6 +434,9 @@ class SoccerDataLoader(_BaseDataLoader):
         + [('data_source', object)]
     )
     OUTPUTS = OUTPUTS
+
+    def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
+        super().__init__(param_grid)
 
     @classmethod
     @lru_cache
