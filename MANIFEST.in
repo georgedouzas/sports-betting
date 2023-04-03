@@ -1,4 +1,0 @@
-recursive-include doc *
-recursive-include examples *
-include requirements.txt
-include README.rst

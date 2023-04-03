@@ -1,0 +1,83 @@
+site_name: "sports-betting"
+site_description: "Python sports betting toolbox."
+site_url: "https://georgedouzas.github.io/sports-betting"
+repo_url: "https://github.com/georgedouzas/sports-betting"
+repo_name: "georgedouzas/sports-betting"
+site_dir: "site"
+watch: [README.md, CONTRIBUTING.md, CHANGELOG.md, src/sportsbet]
+
+theme:
+  name: material
+  features:
+  - content.code.copy
+  - content.code.annotate
+  - navigation.tabs
+  - navigation.tabs.sticky
+  - navigation.top
+  palette:
+    primary: blue
+
+nav:
+  - Overview:
+    - index.md
+    - User guide: 
+      - overview/user_guide/index.md
+      - Dataloader: overview/user_guide/dataloader.md
+      - Bettor: overview/user_guide/bettor.md
+    - Changelog: overview/changelog.md
+    - License: overview/license.md
+  - API: api/
+  - Examples: generated/gallery
+  - Development:
+    - development/index.md
+    - Contributing: development/contributing.md
+    - Code of Conduct: development/code_of_conduct.md
+
+extra_css:
+  - css/style.css
+  - css/material.css
+  - css/mkdocstrings.css
+
+markdown_extensions:
+  - admonition
+  - callouts
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.magiclink
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist
+
+plugins:
+  - search
+  - autorefs
+  - gallery:
+      conf_script: docs/gallery_conf.py
+      examples_dirs:
+        - docs/examples
+      gallery_dirs:
+        - docs/generated/gallery
+  - markdown-exec
+  - gen-files:
+      scripts:
+      - docs/generate_api.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            docstring_options:
+              ignore_init_summary: yes
+            merge_init_into_class: yes
+            show_submodules: no
+
+extra:
+  social:
+  - icon: fontawesome/brands/github
+    link: https://github.com/georgedouzas

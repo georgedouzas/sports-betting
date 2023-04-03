@@ -1,64 +1,21 @@
-# Editors
-.vscode
-
-# Virtual environment
-.*venv
-.python-version
-
-# Byte-compiled / optimized / DLL files
+.idea/
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# scikit-learn specific
-doc/_build/
-doc/auto_examples/
-doc/modules/generated/
-doc/datasets/generated/
-
-# Distribution / packaging
-.Python
-env/
-build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 *.egg-info/
-.installed.cfg
-*.egg
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
+build/
 htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*,cover
-.hypothesis/
+.coverage*
+pip-wheel-metadata/
 .pytest_cache/
-
-# Sphinx documentation
-doc/_build/
-doc/generated/
-
-# PyBuilder
-target/
-
-# Various
+.mypy_cache/
+site/
+docs/generated/
+pdm.lock
+.pdm-python
+__pypackages__/
+.venv/
+.nox
+.ruff_cache
+.vscode
 .DS_Store

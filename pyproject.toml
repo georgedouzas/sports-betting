@@ -1,0 +1,164 @@
+[build-system]
+requires = ["pdm-pep517"]
+build-backend = "pdm.pep517.api"
+
+[project]
+name = "sports-betting"
+description = "Python sports betting toolbox."
+authors = [{name = "Georgios Douzas", email = "gdouzas@icloud.com"}]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.10, <3.11"
+keywords = []
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Documentation",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+dependencies = [
+    "nptyping>=2.5.0",
+    "pandas>=1.0.0",
+    "scikit-learn>=1.0.0",
+    "cloudpickle>=2.0.0",
+    "beautifulsoup4>=4.0.0",
+    "vectorbt>=0.24.5",
+    "QuantStats>=0.0.47",
+    "typing-extensions>=4.5.0",
+    "click>=8.1.3",
+    "rich>=13.3.3",
+]
+
+[project.urls]
+Homepage = "https://georgedouzas.github.io/sports-betting"
+Documentation = "https://georgedouzas.github.io/sports-betting"
+Changelog = "https://georgedouzas.github.io/sports-betting/changelog"
+Repository = "https://github/georgedouzas/sports-betting"
+Issues = "https://github/georgedouzas/sports-betting/issues"
+Discussions = "https://github/georgedouzas/sports-betting/discussions"
+Gitter = "https://gitter.im/sports-betting/community"
+Funding = "https://github/sponsors/georgedouzas"
+
+[project.scripts]
+sportsbet = "sportsbet.cli:main"
+
+[tool.pdm]
+version = {source = "scm"}
+build = {package-dir = "src", editable-backend = "editables"}
+
+[tool.pdm.scripts]
+clean = {shell = """rm -rf .mypy_cache .pytest_cache tests/.pytest_cache build dist \
+htmlcov pip-wheel-metadata site __pycache__ \
+&& find . -type d -name __pycache__ | xargs rm -rf \
+&& find . -name '*.rej'  -delete \
+&& find . -name '.coverage*'  -delete"""}
+docs = "nox --error-on-external-run -R -s docs -- {args:serve}"
+formatting = "nox --error-on-external-run -R -s formatting -- {args:all}"
+checks = "nox --error-on-external-run -R -s checks -- {args:all}"
+tests = "nox --error-on-external-run -R -s tests"
+changelog = "nox --error-on-external-run -R -s changelog"
+release = "nox --error-on-external-run -R -s release -- {args}"
+
+[tool.pdm.dev-dependencies]
+maintenance = [
+    "nox>=2022.8.7",
+]
+docs = [
+    "mkdocs>=1.3",
+    "mkdocs-coverage>=0.2",
+    "mkdocs-gen-files>=0.3",
+    "mkdocs-literate-nav>=0.4",
+    "mkdocs-material>=7.3",
+    "mkdocs-gallery>=0.7.6",
+    "mkdocs-section-index>=0.3",
+    "mkdocstrings[python]>=0.20",
+    "markdown-callouts>=0.2",
+    "markdown-exec>=0.5",
+    'pandas>=1.5.0',
+]
+formatting = [
+    "black>=21.10b0",
+    "docformatter>=1.5.1",
+]
+checks = [
+    "ruff>=0.0.237",
+    "safety>=2",
+    "mypy>=0.910",
+    "types-markdown>=3.3",
+    "types-toml>=0.10",
+    "types-pytz>=2023.2.0.1"
+]
+tests = [
+    "pytest>=6.2",
+    "pytest-cov>=3.0",
+    "pytest-randomly>=3.10",
+    "pytest-xdist>=2.4",
+]
+changelog = [
+    "git-changelog>=1.0.0",
+]
+release = [
+    "twine>=4.0.0",
+]
+
+[tool.black]
+line-length = 120
+extend-exclude = "(tests/fixtures|docs/generated)"
+skip-string-normalization = true
+
+[tool.ruff]
+select = ["C", "E", "F", "W", "B", "I", "D", "N", "UP", "YTT", "ANN", "S",
+"BLE", "A", "COM", "C4", "DTZ", "T10", "EM", "EXE", "ISC", "ICN", "G",
+"INP", "PIE", "T20", "PT", "Q", "RET501", "RET502", "RET503", "SIM",
+"PTH", "PD", "PGH", "PL", "TRY", "RUF", "PLE", "PLR", "PLW", "TRY", "RUF"]
+ignore = ["D202", "N806", "N803", "S101", "INP001", "Q000", "TRY002", "PLR0913", "EXE001", "EXE002"]
+fix = true
+fixable = ["C", "E", "F", "W", "B", "I", "D", "N", "UP", "YTT", "ANN", "S",
+"BLE", "A", "COM", "C4", "DTZ", "T10", "EM", "EXE", "ISC", "ICN", "G",
+"INP", "PIE", "T20", "PT", "Q", "RET501", "RET502", "RET503", "SIM",
+"PTH", "PD", "PGH", "PL", "TRY", "RUF", "PLE", "PLR", "PLW", "TRY", "RUF"]
+extend-exclude = ["docs/generated"]
+force-exclude = true
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.per-file-ignores]
+"docs/examples/*" = ["ANN", "D"]
+"docs/generated/*" = ["ANN", "D"]
+"test_*" = ["ANN"]
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+ignore_missing_imports = true
+exclude = ["tests/fixtures/", "docs/examples/", "docs/generated/"]
+warn_unused_ignores = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+addopts = "--cov"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["src", "tests"]
+
+[tool.coverage.paths]
+equivalent = ["src", "__pypackages__"]
+
+[tool.coverage.report]
+precision = 2
+omit = ["src/*/__init__.py", "tests/__init__.py"]
+
+[tool.coverage.json]
+output = "htmlcov/coverage.json"
