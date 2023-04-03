@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discussions
+    url: https://github.com/georgedouzas/sports-betting/discussions
+    about: Ask questions and discuss with other community members
+  - name: Gitter
+    url: https://gitter.im/sports-betting/community
+    about: Users and developers can sometimes be found on the gitter channel
+  - name: Blank issue
+    url: https://github.com/georgedouzas/sports-betting/issues/new
+    about: Please note that Github Discussions should be used in most cases instead
