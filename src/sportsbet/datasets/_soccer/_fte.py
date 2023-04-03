@@ -107,8 +107,8 @@ class _FTESoccerDataLoader(_BaseDataLoader):
     """
 
     SCHEMA = [
-        ('year', int),
-        ('division', int),
+        ('year', np.int64),
+        ('division', np.int64),
         ('match_quality', float),
         ('league', object),
         ('home_team', object),
@@ -123,8 +123,8 @@ class _FTESoccerDataLoader(_BaseDataLoader):
         ('away_team_projected_score', float),
         ('home_team_match_importance', float),
         ('away_team_match_importance', float),
-        ('target__home_team__full_time_goals', int),
-        ('target__away_team__full_time_goals', int),
+        ('target__home_team__full_time_goals', np.int64),
+        ('target__away_team__full_time_goals', np.int64),
         ('target__home_team__full_time_shot_expected_goals', float),
         ('target__away_team__full_time_shot_expected_goals', float),
         ('target__home_team__full_time_non_shot_expected_goals', float),
