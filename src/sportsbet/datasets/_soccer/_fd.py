@@ -278,7 +278,7 @@ def _convert_base_url_to_league(base_url: str) -> str:
 
 
 def _extract_csv_urls(base_url: str) -> set[str]:
-    html = urlopen('/'.join([URL, base_url]))
+    html = urlopen('/'.join([URL, base_url]))  # noqa: S310
     bsObj = BeautifulSoup(html.read(), features='html.parser')
     return {el.get('href') for el in bsObj.find_all('a') if el.get('href').endswith('csv')}
 
