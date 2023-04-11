@@ -91,7 +91,7 @@ def print_console(dfs: list[pd.DataFrame], titles: list[str]) -> None:
     pd.set_option('display.max_rows', None)
     console = Console()
     with console.pager(styles=True):
-        for df, title in zip(dfs, titles, strict=True):
+        for df, title in zip(dfs, titles):
             formatted_title = Panel.fit(f'[bold green]{title}')
             console.print(formatted_title)
             console.print(df)
@@ -104,11 +104,13 @@ def main() -> None:
     This command is executed when you type `sportsbet` or `python -m
     sportsbet`.
     """
+    return
 
 
 @main.group()
 def dataloader() -> None:
     """Use or create a dataloader."""
+    return
 
 
 @dataloader.command()

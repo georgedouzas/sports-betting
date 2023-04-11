@@ -28,7 +28,6 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
 
     def _check_backtest_params(self: Self, tscv: TimeSeriesSplit | None, init_cash: float | None) -> Self:
         """Check backtest parameters."""
-
         # Check cross validator
         if tscv is None:
             tscv = TimeSeriesSplit()
@@ -65,7 +64,6 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
     @staticmethod
     def _extract_stats(portfolio: Portfolio, training_start: int, training_end: int) -> pd.DataFrame:
         """Extract statistics from portfolio."""
-
         portfolio_stats = portfolio.stats()
         if portfolio_stats is None:
             return pd.DataFrame([])
@@ -307,7 +305,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
                     portfolio.plot_value,
                 ),
             )
-        self.backtest_results_, plot_value_funcs = zip(*results, strict=True)
+        self.backtest_results_, plot_value_funcs = zip(*results)
         self.backtest_results_ = pd.concat(self.backtest_results_, ignore_index=True)
         self.backtest_plot_value_ = lambda ind: plot_value_funcs[ind]()
 

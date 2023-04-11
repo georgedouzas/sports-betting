@@ -41,7 +41,7 @@ def _create_names_mapping_table(data_source1: pd.DataFrame, data_source2: pd.Dat
     matching1 = names_matching.loc[:, ['home_team_x', 'home_team_y']].drop_duplicates()
     matching2 = names_matching.loc[:, ['away_team_x', 'away_team_y']].drop_duplicates()
     matching1.columns = matching2.columns = cols = ['team1', 'team2']
-    matching = matching1.append(matching2)
+    matching = pd.concat([matching1, matching2])
     similarity = matching.apply(lambda row: SequenceMatcher(None, row.team1, row.team2).ratio(), axis=1)
     names_combinations_similarity = pd.concat([matching, similarity], axis=1).reset_index(drop=True)
     indices = names_combinations_similarity.groupby('team1').iloc[0].idxmax()
@@ -343,7 +343,6 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 multi-output targets `Y` equal to `None` and the
                 corresponding odds `O`, respectively.
         """
-
         # Extract fixtures data
         if not (
             hasattr(self, 'input_cols_')
@@ -363,7 +362,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = self._convert_data_types(data)
 
         # Remove past data
-        data = data[data.index >= pd.to_datetime('today')]
+        data = data.loc[data.index >= pd.to_datetime('today')]
 
         # Extract odds
         O_fix = data[self.odds_cols_].reset_index(drop=True) if self.odds_type_ is not None else None
@@ -416,7 +415,6 @@ class _BaseDataLoader(metaclass=ABCMeta):
             odds_types:
                 A list of available odds types.
         """
-
         # Check param grid
         self._check_param_grid()
 
