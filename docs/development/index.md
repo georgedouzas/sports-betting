@@ -9,4 +9,4 @@ environment you can follow the next steps:
 
 - Fork and clone the repository.
 
-- `pdm install -dG :all` from the root of the project to install the main and development dependencies.
+- `pdm install` from the root of the project to install the main and development dependencies.

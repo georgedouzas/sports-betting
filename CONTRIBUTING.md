@@ -7,29 +7,29 @@ Contributions are welcome, and they are greatly appreciated.
 This project uses [nox](https://nox.thea.codes/en/stable/) to run development tasks. Please check the `noxfile.py` at the root of
 the project for more details. You can run any of the following commands and subcommands that corresponds to a particular task:
 
-#### Documentation
+### Documentation
 
 - `pdm docs serve` or `pdm docs`: Serve the documentation.
 - `pdm docs build`: Build locally the documentation.
 
-#### Formatting
+### Formatting
 
 - `pdm formatting all` or `pdm formatting`: Format both the code and docstrings.
     - `pdm formatting code`: Format only the code.
     - `pdm formatting docstrings`: Format only the docstrings.
 
-#### Checks
+### Checks
 
 - `pdm checks all` or `pdm checks`: Run all checks.
     - `pdm checks quality`: Check only code quality.
     - `pdm checks types`: Check only type annotations.
     - `pdm checks dependencies`: Check only for vulnerabilities in dependencies.
 
-#### Changelog
+### Changelog
 
 - `pdm changelog build`: Build the changelog.
 
-#### Release
+### Release
 
 - `pdm release`: Release a new Python package with an updated version.
 
@@ -48,9 +48,9 @@ The next steps should be followed during development:
 Commit messages follow conventions based on the [Angular
 style](https://gist.github.com/stephenparish/9941e89d80e2bc58a153#format-of-the-commit-message).
 
-#### Structure
+### Structure
 
-```
+```bash
 <type>(<scope>): <subject>
 
 <body>
@@ -58,7 +58,7 @@ style](https://gist.github.com/stephenparish/9941e89d80e2bc58a153#format-of-the-
 <footer>
 ```
 
-#### Example
+### Example
 
 ```
 feat(directive): A new feature of code
@@ -78,13 +78,13 @@ Related to PR namespace/other-project#15: https://github.com/namespace/other-pro
 - Subject must have proper casing, i.e. uppercase for first letter if it makes sense.
 - Subject must have no dot at the end and no punctuation.
 - Type can be:
-  - `feat`: New feature implementation.
-  - `fix`: Bug fix.
-  - `docs`: Documentation changes.
-  - `style`: Code style or format changes.
-  - `refactor`: Changes that are not features or bug fixes.
-  - `tests`: Test additions or corrections.
-  - `chore`: Maintenance code changes.
+    - `feat`: New feature implementation.
+    - `fix`: Bug fix.
+    - `docs`: Documentation changes.
+    - `style`: Code style or format changes.
+    - `refactor`: Changes that are not features or bug fixes.
+    - `tests`: Test additions or corrections.
+    - `chore`: Maintenance code changes.
 
 ## Pull Request guidelines
 

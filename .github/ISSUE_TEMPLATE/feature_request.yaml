@@ -5,7 +5,7 @@ labels: ['feat']
 body:
 - type: textarea
   attributes:
-    label: Describe the new feauture you propose to be implemented
+    label: Describe the new feature you propose to be implemented
   validations:
     required: true
 - type: textarea

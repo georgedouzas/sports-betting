@@ -55,7 +55,7 @@ build = {package-dir = "src", editable-backend = "editables"}
 
 [tool.pdm.scripts]
 clean = {shell = """rm -rf .mypy_cache .pytest_cache tests/.pytest_cache build dist \
-htmlcov pip-wheel-metadata site __pycache__ \
+htmlcov pip-wheel-metadata site __pycache__ docs/generated .nox .ruff_cache pdm.lock \
 && find . -type d -name __pycache__ | xargs rm -rf \
 && find . -name '*.rej'  -delete \
 && find . -name '.coverage*'  -delete"""}
@@ -127,7 +127,7 @@ fixable = ["C", "E", "F", "W", "B", "I", "D", "N", "UP", "YTT", "ANN", "S",
 extend-exclude = ["docs/generated"]
 force-exclude = true
 line-length = 120
-target-version = "py310"
+target-version = "py39"
 
 [tool.ruff.per-file-ignores]
 "docs/examples/*" = ["ANN", "D", "B018"]
