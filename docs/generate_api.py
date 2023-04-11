@@ -1,11 +1,13 @@
 """Generate the API pages and navigation."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import mkdocs_gen_files
 
 nav = mkdocs_gen_files.nav.Nav()
-exclude_modules = ['sportsbet.cli']
+exclude_modules: list[str] = ['sportsbet.cli']
 
 paths = sorted(Path('src').rglob('*.py'))
 paths = [

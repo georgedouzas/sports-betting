@@ -1,5 +1,4 @@
 [scikit-learn]: <http://scikit-learn.org/stable/>
-[imbalanced-learn]: <http://imbalanced-learn.org/stable/>
 [black badge]: <https://img.shields.io/badge/%20style-black-000000.svg>
 [black]: <https://github.com/psf/black>
 [docformatter badge]: <https://img.shields.io/badge/%20formatter-docformatter-fedcba.svg>
@@ -42,10 +41,19 @@ evaluate their performance. It is compatible with [scikit-learn].
 
 ## Installation
 
-`sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
+For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
 
 ```bash
 pip install sports-betting
+```
+
+Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
+project as well as the main and development dependencies:
+
+```bash
+git clone https://github.com/georgedouzas/sports-betting.git
+cd sports-betting
+pdm install
 ```
 
 ## Usage
