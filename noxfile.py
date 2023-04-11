@@ -7,7 +7,7 @@ import nox
 
 os.environ.update({'PDM_IGNORE_SAVED_PYTHON': '1'})
 
-PYTHON_VERSIONS = ['3.10']
+PYTHON_VERSIONS = ['3.9', '3.10']
 FILES = ['src', 'tests', 'docs', 'noxfile.py']
 
 
@@ -75,7 +75,6 @@ def checks(session: nox.Session, file: str) -> None:
         requirements_types = zip(
             FILES,
             [['--prod'], ['-dG', 'tests'], ['-dG', 'docs'], ['-dG', 'maintenance']],
-            strict=True,
         )
         args = ['pdm', 'export', '-f', 'requirements', '--without-hashes', '-o', requirements_path]
         session.run(*(args + dict(requirements_types)[file]), external=True)
