@@ -6,13 +6,30 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## [0.2.9](https://github.com/georgedouzas/sports-betting/releases/tag/0.2.9) - 2023-04-03
+## [0.3.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.3.0) - 2023-04-11
 
-<small>[Compare with 0.2.8](https://github.com/georgedouzas/sports-betting/compare/0.2.8...0.2.9)</small>
+<small>[Compare with 0.2.8](https://github.com/georgedouzas/sports-betting/compare/0.2.8...0.3.0)</small>
+
+### Features
+
+- Support Python 3.9 and 3.10 ([30ebdfd](https://github.com/georgedouzas/sports-betting/commit/30ebdfde5009f52f4c1ae488e86b223c5850bbaa) by georgedouzas).
+
+### Docs
+
+- Ignore ruff warning and add attributes type ([4d65bd3](https://github.com/georgedouzas/sports-betting/commit/4d65bd39b6c6e3a4cebb1d87b194c1238bfa8228) by georgedouzas).
+
+### Code Refactoring
+
+- Change `int` type to `np.int64` ([ee6cee8](https://github.com/georgedouzas/sports-betting/commit/ee6cee856381e7eae83e460f9ac4ac4eb2e6f490) by georgedouzas).
+- Ignore ruff error ([6aee287](https://github.com/georgedouzas/sports-betting/commit/6aee2870929bbed707fc782ecb03e55fc9e62a25) by georgedouzas).
 
 ### Chore
 
-- Use copier template for project restructure ([fadb4d9](https://github.com/georgedouzas/sports-betting/commit/fadb4d94490d501328f17ca8e5ad45142d269bb0) by georgedouzas).
+- Modify type hints to support Python 3.9 ([53a8f29](https://github.com/georgedouzas/sports-betting/commit/53a8f29926a220bdd134d681c769845b8a7a8518) by georgedouzas).
+- Use copier new template version 0.3.6 ([4e7c415](https://github.com/georgedouzas/sports-betting/commit/4e7c415b3383bb60625c615add101ed3b59345fe) by georgedouzas).
+- Restricted python version for pandas ([23ff003](https://github.com/georgedouzas/sports-betting/commit/23ff00333fbafaab033c1aa2f5111e02a9c35e34) by georgedouzas).
+- Release 0.2.9 ([b66e204](https://github.com/georgedouzas/sports-betting/commit/b66e204ea7fb20aa1e6f475e7ecc2ae66e857144) by georgedouzas).
+- Use copier template for project restructure ([c2f5f94](https://github.com/georgedouzas/sports-betting/commit/c2f5f942f37964521da679c1f5fd49335f5ce89c) by georgedouzas).
 
 ## [0.2.8](https://github.com/georgedouzas/sports-betting/releases/tag/0.2.8) - 2022-04-20
 
