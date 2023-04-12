@@ -23,6 +23,13 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
+    - name: Install Python versions
+      uses: actions/setup-python@v4
+      with:
+        python-version: |
+            3.9
+            3.10
+            
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v3
       with:
@@ -56,7 +63,6 @@ jobs:
         python-version: |
             3.9
             3.10
-            3.11
             
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v3

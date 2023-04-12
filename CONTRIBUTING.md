@@ -31,7 +31,7 @@ the project for more details. You can run any of the following commands and subc
 
 ### Release
 
-- `pdm release`: Release a new Python package with an updated version.
+- `pdm release <version>`: Release a new Python package with an updated version.
 
 ## Development
 
