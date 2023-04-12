@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.3.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.3.1) - 2023-04-12
+
+<small>[Compare with 0.3.0](https://github.com/georgedouzas/sports-betting/compare/0.3.0...0.3.1)</small>
+
+### Chore
+
+- Export requirements from pyproject ([fd43f0d](https://github.com/georgedouzas/sports-betting/commit/fd43f0df99398c68022c9888e941de34cc09df7e) by georgedouzas).
+- Updated copier template ([764f624](https://github.com/georgedouzas/sports-betting/commit/764f624ce37e3d1a9245d469ab5a5c35b8330573) by georgedouzas).
+- Split to multiple CI job ([9639fac](https://github.com/georgedouzas/sports-betting/commit/9639fac7a3a412d05e8aba2f16e3f34de49b39ec) by georgedouzas).
+- Add multiple Python versions to CI ([e6c2147](https://github.com/georgedouzas/sports-betting/commit/e6c21476ea839d5a16fbaa2089054c1dd7a5a5fc) by georgedouzas).
+
 ## [0.3.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.3.0) - 2023-04-11
 
 <small>[Compare with 0.2.8](https://github.com/georgedouzas/sports-betting/compare/0.2.8...0.3.0)</small>
@@ -25,6 +36,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Chore
 
+- Release 0.3.0 ([fc271b2](https://github.com/georgedouzas/sports-betting/commit/fc271b2a957bb8d58ac32aa5d143b11fd6b9e935) by georgedouzas).
 - Modify type hints to support Python 3.9 ([53a8f29](https://github.com/georgedouzas/sports-betting/commit/53a8f29926a220bdd134d681c769845b8a7a8518) by georgedouzas).
 - Use copier new template version 0.3.6 ([4e7c415](https://github.com/georgedouzas/sports-betting/commit/4e7c415b3383bb60625c615add101ed3b59345fe) by georgedouzas).
 - Restricted python version for pandas ([23ff003](https://github.com/georgedouzas/sports-betting/commit/23ff00333fbafaab033c1aa2f5111e02a9c35e34) by georgedouzas).
