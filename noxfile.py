@@ -72,10 +72,8 @@ def checks(session: nox.Session, file: str) -> None:
         session.run('mypy', file)
     if session.posargs[0] in ['dependencies', 'all']:
         requirements_path = (Path(session.create_tmp()) / 'requirements.txt').as_posix()
-        requirements_types = zip(
-            FILES,
-            [['--prod'], ['-dG', 'tests'], ['-dG', 'docs'], ['-dG', 'maintenance']],
-        )
+        args_groups = [['--prod']] + [['--no-default', '-dG', group] for group in ['tests', 'docs', 'maintenance']]
+        requirements_types = zip(FILES, args_groups)
         args = ['pdm', 'export', '-f', 'requirements', '--without-hashes', '-o', requirements_path]
         session.run(*(args + dict(requirements_types)[file]), external=True)
         session.run('safety', 'check', '-r', requirements_path)
