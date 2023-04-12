@@ -39,8 +39,14 @@ jobs:
     - name: Install dependencies
       run: pdm install --no-editable -G maintenance -G checks
 
-    - name: Check the code quality, type annotations and vulnerabilities in dependencies
-      run: pdm checks
+    - name: Check the code quality
+      run: pdm checks quality
+      
+    - name: Check the type annotations
+      run: pdm checks types
+      
+    - name: Check the vulnerabilities in dependencies
+      run: pdm checks dependencies
 
   tests:
 
