@@ -31,11 +31,14 @@ class ClassifierBettor(_BaseBettor):
         tscv_ (TimeSeriesSplit):
             The checked value of time series cross-validator object. If `tscv` is `None`,
             it uses the default `TimeSeriesSplit` object.
+
         init_cash_:
             The checked value of initial cash. If `init_cash` is `None`, it uses the value
             of `1e3`.
+
         backtest_results_ (pd.DataFrame):
-            The backtesting resutsl.
+            The backtesting results.
+
         backtest_plot_value_ (FigureWidget):
             Figure widget that show the value of the portfolio over time.
 
@@ -109,7 +112,7 @@ class ClassifierBettor(_BaseBettor):
         self: Self,
         X: pd.DataFrame,
         Y: pd.DataFrame,
-        O: pd.DataFrame | None,  # noqa: E741
+        O: pd.DataFrame | None,
         tscv: TimeSeriesSplit | None = None,
         init_cash: float | None = 1e3,
         refit: bool | None = True,
