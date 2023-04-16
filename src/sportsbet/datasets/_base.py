@@ -186,7 +186,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
 
     def _extract_train_data(self: Self, data: pd.DataFrame) -> pd.DataFrame:
         data = data[~data['fixtures']].drop(columns=['fixtures'])
-        data = data.reset_index().merge(pd.DataFrame(self.param_grid_)).set_index('date')
+        data = data.reset_index().merge(pd.DataFrame(self.param_grid_)).set_index('date').sort_index()
         return data
 
     def _check_dropped_na_cols(self: Self, data: pd.DataFrame, drop_na_thres: float) -> Self:

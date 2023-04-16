@@ -530,8 +530,8 @@ class SoccerDataLoader(_BaseDataLoader):
         X_train = X_train.reset_index().drop_duplicates(subset=self.input_cols_)
         return (
             X_train.set_index('date')[self.input_cols_],
-            Y_train.take(X_train.index.to_list()),
-            O_train.take(X_train.index.to_list()) if O_train is not None else None,
+            Y_train.take(X_train.index.to_list()).reset_index(drop=True),
+            O_train.take(X_train.index.to_list()).reset_index(drop=True) if O_train is not None else None,
         )
 
     def extract_fixtures_data(self: Self) -> FixturesData:
