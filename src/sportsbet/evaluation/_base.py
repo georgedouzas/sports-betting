@@ -49,13 +49,24 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         self.init_cash_ = float(init_cash)
         return self
 
-    def _check_dates(self: Self, X: pd.DataFrame) -> pd.DatetimeIndex:
-        if isinstance(X, pd.DataFrame) and isinstance(X.index, pd.DatetimeIndex):
-            dates = X.index
-        else:
+    def _validate_data(
+        self: Self,
+        X: pd.DataFrame,
+        Y: pd.DataFrame,
+        O: pd.DataFrame,
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        check_consistent_length(X, Y, O)
+        if not isinstance(X, pd.DataFrame) or not isinstance(X.index, pd.DatetimeIndex):
             error_msg = 'Input data `X` should be pandas dataframe with a date index.'
             raise TypeError(error_msg)
-        return dates
+        if not isinstance(Y, pd.DataFrame):
+            error_msg = 'Output data `Y` should be pandas dataframe.'
+            raise TypeError(error_msg)
+        if not isinstance(O, pd.DataFrame):
+            error_msg = 'Odds data `O` should be pandas dataframe.'
+            raise TypeError(error_msg)
+        indices = np.argsort(X.index)
+        return X.iloc[indices], Y.iloc[indices], O.iloc[indices]
 
     def _extract_portfolio(self: Self, prices: pd.DataFrame, orders: pd.DataFrame) -> Portfolio:
         """Extract portfolio."""
@@ -179,7 +190,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         decision_threshold = 0.5
         return self._predict_proba(X) > decision_threshold
 
-    def bet(self: Self, X: pd.DataFrame, O: pd.DataFrame) -> BoolData:  # noqa: E741
+    def bet(self: Self, X: pd.DataFrame, O: pd.DataFrame) -> BoolData:
         """Predict the value bets for the provided input data and odds.
 
         Args:
@@ -201,7 +212,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         self: Self,
         X: pd.DataFrame,
         Y: pd.DataFrame,
-        O: pd.DataFrame | None,  # noqa: E741
+        O: pd.DataFrame | None,
         tscv: TimeSeriesSplit | None = None,
         init_cash: float | None = 1e3,
         refit: bool | None = True,
@@ -211,20 +222,18 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         Args:
             X:
                 The input data. Each row of `X` represents information that is available
-                before the start of a specific match. The rows should be
-                sorted by an index named as `'date'`.
+                before the start of a specific match. The index should be of type
+                `datetime`, named as `'date'`.
 
             Y:
                 The multi-output targets. Each row of `Y` represents information
-                that is available after the end of a specific match. The column
+                that is available after the end of a specific event. The column
                 names follow the convention for the output data `Y` of the method
-                `extract_train_data`.
+                `extract_train_data` of dataloaders.
 
             O:
-                The odds data. Each row of `O` represents information
-                that is available after the end of a specific match. The column
-                names follow the convention for the output data `Y` of the method
-                `extract_train_data`.
+                The odds data. The column names follow the convention for the odds
+                data `O` of the method `extract_train_data` of dataloaders.
 
             tscv:
                 Provides train/test indices to split time series data samples
@@ -241,11 +250,14 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
             self:
                 The backtested bettor.
         """
-        if O is None:
+        if O is None or O.empty:
             return self
-        check_consistent_length(X, Y, O)
+
+        # Apply checks
+        X, Y, O = self._validate_data(X, Y, O)
         self._check_backtest_params(tscv, init_cash)
-        dates = self._check_dates(X)
+
+        dates = X.index
 
         # Calculate cross-validation stats
         results = []
@@ -318,4 +330,4 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         return self
 
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
-        return np.array([], dtype=bool)
+        return np.array([], dtype=float)
