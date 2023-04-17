@@ -184,7 +184,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
 
         Returns:
             Y:
-                The positive class probabilities.
+                The positive class labels.
         """
         check_is_fitted(self)
         decision_threshold = 0.5
