@@ -10,7 +10,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils import check_scalar
 from typing_extensions import Self
 
-from .. import Data
+from .. import BoolData, Data
 from ._base import _BaseBettor
 
 
@@ -123,6 +123,64 @@ class OddsComparisonBettor(_BaseBettor):
             proba_cont.append(X[odds_cols].mean(axis=1))
         proba = (1 / pd.concat(proba_cont, axis=1) - self.alpha_).fillna(0.0).to_numpy()
         return proba
+
+    def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame) -> Self:
+        """Fit the bettor to the input data and multi-output targets.
+
+        Args:
+            X:
+                The input data.
+
+            Y:
+                The multi-output targets.
+
+        Returns:
+            self:
+                The fitted bettor object.
+        """
+        return super().fit(X, Y)
+
+    def predict_proba(self: Self, X: pd.DataFrame) -> Data:
+        """Predict class probabilities for multi-output targets.
+
+        Args:
+            X:
+                The input data.
+
+        Returns:
+            Y:
+                The positive class probabilities.
+        """
+        return super().predict_proba(X)
+
+    def predict(self: Self, X: pd.DataFrame) -> BoolData:
+        """Predict class probabilities for multi-output targets.
+
+        Args:
+            X:
+                The input data.
+
+        Returns:
+            Y:
+                The positive class labels.
+        """
+        return super().predict(X)
+
+    def bet(self: Self, X: pd.DataFrame, O: pd.DataFrame) -> BoolData:
+        """Predict the value bets for the provided input data and odds.
+
+        Args:
+            X:
+                The input data.
+
+            O:
+                The odds data.
+
+        Returns:
+            B:
+                The value bets.
+        """
+        return super().bet(X, O)
 
     def backtest(
         self: Self,

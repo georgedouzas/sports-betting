@@ -99,6 +99,7 @@ fig
 # We extract the fixtures data to estimate the value bets.
 
 X_fix, _, Odds_fix = dataloader.extract_fixtures_data()
+X_fix = X_fix[num_cols]
 assert Odds_fix is not None
 
 # %%
