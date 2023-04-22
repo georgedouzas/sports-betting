@@ -41,11 +41,11 @@ dependencies = [
 Homepage = "https://georgedouzas.github.io/sports-betting"
 Documentation = "https://georgedouzas.github.io/sports-betting"
 Changelog = "https://georgedouzas.github.io/sports-betting/changelog"
-Repository = "https://github/georgedouzas/sports-betting"
+Repository = "https://github.com/georgedouzas/sports-betting"
 Issues = "https://github/georgedouzas/sports-betting/issues"
-Discussions = "https://github/georgedouzas/sports-betting/discussions"
+Discussions = "https://github.com/georgedouzas/sports-betting/discussions"
 Gitter = "https://gitter.im/sports-betting/community"
-Funding = "https://github/sponsors/georgedouzas"
+Funding = "https://github.com/sponsors/georgedouzas"
 
 [project.scripts]
 sportsbet = "sportsbet.cli:main"
