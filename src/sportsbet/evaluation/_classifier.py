@@ -39,9 +39,6 @@ class ClassifierBettor(_BaseBettor):
         backtest_results_ (pd.DataFrame):
             The backtesting results.
 
-        backtest_plot_value_ (FigureWidget):
-            Figure widget that show the value of the portfolio over time.
-
     Examples:
         >>> from sklearn.tree import DecisionTreeClassifier
         >>> from sklearn.preprocessing import OneHotEncoder

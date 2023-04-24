@@ -47,9 +47,6 @@ class OddsComparisonBettor(_BaseBettor):
         backtest_results_ (pd.DataFrame):
             The backtesting resuts.
 
-        backtest_plot_value_ (FigureWidget):
-            Figure widget that show the value of the portfolio over time.
-
     Examples:
         >>> from sportsbet.evaluation import OddsComparisonBettor
         >>> from sportsbet.datasets import SoccerDataLoader
@@ -120,8 +117,9 @@ class OddsComparisonBettor(_BaseBettor):
                 odds_col = f'odds__{odds_type}__{key}'
                 if odds_col in X.columns:
                     odds_cols.append(odds_col)
-            proba_cont.append(X[odds_cols].mean(axis=1))
-        proba = (1 / pd.concat(proba_cont, axis=1) - self.alpha_).fillna(0.0).to_numpy()
+            proba_cont.append(1 / X[odds_cols].mean(axis=1))
+        proba = (pd.concat(proba_cont, axis=1) - self.alpha_).fillna(0.0).to_numpy()
+        proba[proba < 0] = 0.0
         return proba
 
     def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame) -> Self:

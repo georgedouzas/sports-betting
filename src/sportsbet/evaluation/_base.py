@@ -6,9 +6,12 @@
 from __future__ import annotations
 
 from abc import ABCMeta
+from pathlib import Path
 
+import cloudpickle
 import numpy as np
 import pandas as pd
+from rich.progress import track
 from sklearn.base import BaseEstimator, ClassifierMixin, MultiOutputMixin
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils import check_consistent_length, check_scalar
@@ -214,7 +217,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         Y: pd.DataFrame,
         O: pd.DataFrame | None,
         tscv: TimeSeriesSplit | None = None,
-        init_cash: float | None = 1e3,
+        init_cash: float | None = None,
         refit: bool | None = True,
     ) -> Self:
         """Backtest the bettor.
@@ -261,7 +264,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
 
         # Calculate cross-validation stats
         results = []
-        for train_ind, test_ind in self.tscv_.split(X):
+        for train_ind, test_ind in track(list(self.tscv_.split(X)), description='Backtesting bettor', transient=True):
             # Fit bettor
             self.fit(X.iloc[train_ind], Y.iloc[train_ind])
 
@@ -311,15 +314,8 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
 
             # Get portofolio from prices and orders
             portfolio = self._extract_portfolio(prices, orders)
-            results.append(
-                (
-                    self._extract_stats(portfolio, X.index[train_ind[0]], X.index[train_ind[-1]]),
-                    portfolio.plot_value,
-                ),
-            )
-        self.backtest_results_, plot_value_funcs = zip(*results)
-        self.backtest_results_ = pd.concat(self.backtest_results_, ignore_index=True)
-        self.backtest_plot_value_ = lambda ind: plot_value_funcs[ind]()
+            results.append(self._extract_stats(portfolio, X.index[train_ind[0]], X.index[train_ind[-1]]))
+        self.backtest_results_ = pd.concat(results, ignore_index=True)
 
         if refit:
             self.fit(X, Y)
@@ -331,3 +327,34 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
 
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
         return np.array([], dtype=float)
+
+    def save(self: Self, path: str) -> Self:
+        """Save the bettor object.
+
+        Args:
+            path:
+                The path to save the object.
+
+        Returns:
+            self:
+                The bettor object.
+        """
+        with Path(path).open('wb') as file:
+            cloudpickle.dump(self, file)
+        return self
+
+
+def load_bettor(path: str) -> _BaseBettor:
+    """Load the bettor object.
+
+    Args:
+        path:
+            The path of the bettor pickled file.
+
+    Returns:
+        bettor:
+            The bettor object.
+    """
+    with Path(path).open('rb') as file:
+        bettor = cloudpickle.load(file)
+    return bettor
