@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - gh-pages
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -32,22 +31,10 @@ jobs:
     - name: Setup Pages
       uses: actions/configure-pages@v3
 
-    - name: Set up PDM
-      uses: pdm-project/setup-pdm@v3
-      with:
-        cache: true
-        cache-dependency-path: pyproject.toml
-
-    - name: Install dependencies
-      run: pdm install --no-editable -dG maintenance -dG docs
-
-    - name: Build documentation
-      run: pdm docs build
-
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v1
       with:
-        path: 'site'
+        path: '.'
 
     - name: Deploy to GitHub Pages
       id: deployment
