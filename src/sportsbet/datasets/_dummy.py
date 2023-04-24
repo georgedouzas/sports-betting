@@ -13,7 +13,7 @@ import pytz
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
-from .. import FixturesData, ParamGrid, TrainingData
+from .. import FixturesData, ParamGrid, TrainData
 from ._base import _BaseDataLoader
 
 OVER_UNDER = 2.5
@@ -61,6 +61,14 @@ class DummySoccerDataLoader(_BaseDataLoader):
 
         target_cols_ (pd.Index):
             The columns used for the extraction of output and odds columns.
+
+        train_data_ (TrainData):
+            The tuple (X, Y, O) that represents the training data as extracted from
+            the method `extract_train_data`.
+
+        fixtures_data_ (FixturesData):
+            The tuple (X, Y, O) that represents the fixtures data as extracted from
+            the method `extract_fixtures_data`.
 
     Examples:
         >>> from sportsbet.datasets import DummySoccerDataLoader
@@ -398,7 +406,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
         self: Self,
         drop_na_thres: float = 0.0,
         odds_type: str | None = None,
-    ) -> TrainingData:
+    ) -> TrainData:
         """Extract the training data.
 
         Read more in the [user guide][dataloader].

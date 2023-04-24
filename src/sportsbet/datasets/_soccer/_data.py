@@ -17,7 +17,7 @@ import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
-from ... import FixturesData, ParamGrid, TrainingData
+from ... import FixturesData, ParamGrid, TrainData
 from .._base import _BaseDataLoader
 from ._fd import _FDSoccerDataLoader
 from ._fte import _FTESoccerDataLoader
@@ -400,6 +400,14 @@ class SoccerDataLoader(_BaseDataLoader):
         target_cols_ (pd.Index):
             The columns used for the extraction of output and odds columns.
 
+        train_data_ (TrainData):
+            The tuple (X, Y, O) that represents the training data as extracted from
+            the method `extract_train_data`.
+
+        fixtures_data_ (FixturesData):
+            The tuple (X, Y, O) that represents the fixtures data as extracted from
+            the method `extract_fixtures_data`.
+
     Examples:
         >>> from sportsbet.datasets import SoccerDataLoader
         >>> import pandas as pd
@@ -488,7 +496,7 @@ class SoccerDataLoader(_BaseDataLoader):
         self: Self,
         drop_na_thres: float = 0.0,
         odds_type: str | None = None,
-    ) -> TrainingData:
+    ) -> TrainData:
         """Extract the training data.
 
         Read more in the [user guide][dataloader].
@@ -528,11 +536,14 @@ class SoccerDataLoader(_BaseDataLoader):
         X_train, Y_train, O_train = super().extract_train_data(drop_na_thres, odds_type)
         self.input_cols_ = pd.Index([col for col in self.input_cols_ if col != 'data_source'], dtype=object)
         X_train = X_train.reset_index().drop_duplicates(subset=self.input_cols_)
-        return (
+
+        self.train_data_ = (
             X_train.set_index('date')[self.input_cols_],
             Y_train.take(X_train.index.to_list()).reset_index(drop=True),
             O_train.take(X_train.index.to_list()).reset_index(drop=True) if O_train is not None else None,
         )
+
+        return self.train_data_
 
     def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.
@@ -560,5 +571,4 @@ class SoccerDataLoader(_BaseDataLoader):
                 multi-output targets `Y` equal to `None` and the
                 corresponding odds `O`, respectively.
         """
-        X_fix, Y_fix, O_fix = super().extract_fixtures_data()
-        return X_fix, Y_fix, O_fix
+        return super().extract_fixtures_data()
