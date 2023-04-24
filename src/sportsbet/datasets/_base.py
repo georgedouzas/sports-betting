@@ -13,7 +13,7 @@ from sklearn.model_selection import ParameterGrid
 from sklearn.utils import check_scalar
 from typing_extensions import Self
 
-from .. import FixturesData, Outputs, Param, ParamGrid, Schema, TrainingData
+from .. import FixturesData, Outputs, Param, ParamGrid, Schema, TrainData
 
 
 def _create_names_mapping_table(data_source1: pd.DataFrame, data_source2: pd.DataFrame, keys: list) -> pd.DataFrame:
@@ -130,7 +130,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 },
             )
             if converted_cols:
-                data_converted_cols = data[converted_cols].fillna(-1 if data_type is int else np.nan)
+                data_converted_cols = data[converted_cols].fillna(-1 if data_type is np.int64 else np.nan)
                 data[converted_cols] = (
                     data_converted_cols.to_numpy().astype(data_type)
                     if data_type is not np.datetime64
@@ -207,7 +207,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         self: Self,
         drop_na_thres: float = 0.0,
         odds_type: str | None = None,
-    ) -> TrainingData:
+    ) -> TrainData:
         """Extract the training data.
 
         Read more in the [user guide][dataloader].
@@ -315,7 +315,11 @@ class _BaseDataLoader(metaclass=ABCMeta):
         # Extract odds
         O_train = data[self.odds_cols_].reset_index(drop=True) if self.odds_type_ is not None else None
 
-        return data[self.input_cols_], Y_train, O_train
+        self.train_data_ = data[self.input_cols_], Y_train, O_train
+        if hasattr(self, 'fixtures_data_'):
+            delattr(self, 'fixtures_data_')
+
+        return self.train_data_
 
     def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.
@@ -344,12 +348,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 corresponding odds `O`, respectively.
         """
         # Extract fixtures data
-        if not (
-            hasattr(self, 'input_cols_')
-            and hasattr(self, 'output_cols_')
-            and hasattr(self, 'odds_cols_')
-            and hasattr(self, 'target_cols_')
-        ):
+        if not hasattr(self, 'train_data_'):
             error_msg = 'Extract the training data before extracting the fixtures data.'
             raise AttributeError(error_msg)
 
@@ -367,7 +366,9 @@ class _BaseDataLoader(metaclass=ABCMeta):
         # Extract odds
         O_fix = data[self.odds_cols_].reset_index(drop=True) if self.odds_type_ is not None else None
 
-        return data[self.input_cols_], None, O_fix
+        self.fixtures_data_ = data[self.input_cols_], None, O_fix
+
+        return self.fixtures_data_
 
     def save(self: Self, path: str) -> Self:
         """Save the dataloader object.
@@ -430,7 +431,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         return sorted({col.split('__')[1] for col in self._cols(data, 'odds') if col not in dropped_all_na_cols})
 
 
-def load(path: str) -> _BaseDataLoader:
+def load_dataloader(path: str) -> _BaseDataLoader:
     """Load the dataloader object.
 
     Args:
