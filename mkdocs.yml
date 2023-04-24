@@ -60,6 +60,13 @@ plugins:
         - docs/examples
       gallery_dirs:
         - docs/generated/gallery
+      binder:
+        org: georgedouzas
+        repo: sports-betting
+        branch: master
+        dependencies: docs/binder_cfg/requirements.txt
+        notebooks_dir: notebooks
+        use_jupyter_lab: True
   - markdown-exec
   - gen-files:
       scripts:
