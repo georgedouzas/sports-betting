@@ -519,7 +519,7 @@ class _FDSoccerDataLoader(_BaseDataLoader):
         data_container = []
         urls = _param_grid_to_csv_urls(self.param_grid_)
         for params, url in track(urls, description='Downloading training data', transient=True):
-            data = _read_csv(url).replace('#REF!', np.nan)
+            data = _read_csv(url).replace('^#', np.nan, regex=True)
             try:
                 data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
             except ValueError:
