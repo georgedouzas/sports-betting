@@ -85,14 +85,6 @@ _ = bettor.backtest(X_train, Y_train, O_train)
 bettor.backtest_results_
 
 # %%
-# We can also plot the portfolio value for any testing period from the above
-# backtesting results.
-
-testing_period = 2
-fig = bettor.backtest_plot_value_(testing_period)
-fig
-
-# %%
 # Estimating the value bets
 # -------------------------
 #
