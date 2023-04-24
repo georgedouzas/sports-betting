@@ -65,7 +65,7 @@ plugins:
         repo: sports-betting
         branch: master
         dependencies: docs/binder_cfg/requirements.txt
-        notebooks_dir: docs/notebooks
+        notebooks_dir: notebooks
         use_jupyter_lab: True
   - markdown-exec
   - gen-files:

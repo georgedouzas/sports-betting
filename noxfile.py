@@ -28,12 +28,12 @@ def check_cli(session: nox.Session, args: list[str]) -> None:
 
 @nox.session
 def docs(session: nox.Session) -> None:
-    """Build or serve the documentation.
+    """Build, serve or deploy the documentation.
 
     Arguments:
         session: The nox session.
     """
-    check_cli(session, ['serve', 'build'])
+    check_cli(session, ['serve', 'build', 'deploy'])
     session.run('pdm', 'install', '-dG', 'docs', external=True)
     session.run('mkdocs', session.posargs[0])
 
