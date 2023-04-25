@@ -1,8 +1,8 @@
-name: CI
+name: CI and documentation
 
 on:
   push:
-    branches:
+    branches-ignore:
       - master
 
 jobs:
@@ -80,3 +80,27 @@ jobs:
 
     - name: Run the test suite
       run: pdm tests
+
+  doc:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10"]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up PDM
+      uses: pdm-project/setup-pdm@v3
+      with:
+        cache: true
+        cache-dependency-path: pyproject.toml
+
+    - name: Install dependencies
+      run: pdm install --no-editable -dG maintenance -dG docs
+
+    - name: Build documentation with Python ${{ matrix.python-version }}
+      run: pdm docs build

@@ -9,8 +9,10 @@ and evaluate its performance on soccer historical data.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import make_pipeline
 from sportsbet.datasets import SoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor
 
@@ -23,7 +25,7 @@ from sportsbet.evaluation import ClassifierBettor
 # maximum odds.
 
 dataloader = SoccerDataLoader(param_grid={'league': ['Spain'], 'year': [2020, 2021, 2022]})
-X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='market_maximum')
+X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='market_maximum')
 
 # %%
 # The input data:
@@ -47,9 +49,11 @@ X_train = X_train[num_cols]
 # -----------------
 #
 # We can use [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor] class to create
-# a classifier-based bettor. The scikit-learn's `DummyClassifier` is selected for convenience.
+# a classifier-based bettor. We use a pipeline of an imputer to handle missing values
+# and a KNN classifier.
 
-bettor = ClassifierBettor(KNeighborsClassifier())
+clf = make_pipeline(SimpleImputer(), KNeighborsClassifier())
+bettor = ClassifierBettor(clf)
 
 # %%
 # Any bettor is a classifier, therefore we can fit it on the training data.
@@ -97,4 +101,4 @@ assert Odds_fix is not None
 # %%
 # We can estimate the value bets by using the fitted classifier.
 
-bettor.bet(X_fix, Odds_fix)
+_ = bettor.bet(X_fix, Odds_fix)
