@@ -158,7 +158,7 @@ def release(session: nox.Session) -> None:
 
     # Create and merge PR from release branch to master
     session.run('gh', 'pr', 'create', '--base', 'master', external=True)
-    session.run('gh', 'pr', 'merge', 'master', '--rebase', '-delete-branch', external=True)
+    session.run('gh', 'pr', 'merge', '--rebase', '--delete-branch', external=True)
 
     # Create tag
     session.run('git', 'checkout', 'master', external=True)
