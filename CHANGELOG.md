@@ -6,24 +6,60 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.4.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.4.0) - 2023-04-25
+
+<small>[Compare with 0.3.1](https://github.com/georgedouzas/sports-betting/compare/0.3.1...0.4.0)</small>
+
+### Features
+
+- Add configs for dataloaders and bettors ([73ba86d](https://github.com/georgedouzas/sports-betting/commit/73ba86db9bf279be6042cb3314ef3f54585d7603) by georgedouzas).
+- Add more commands ([ae5a8e0](https://github.com/georgedouzas/sports-betting/commit/ae5a8e0fc5416724f35f6e4205ad79e6b416e37e) by georgedouzas).
+- Add rule-based bettor ([db154fb](https://github.com/georgedouzas/sports-betting/commit/db154fb1265351d7c12d66b9e9adbe78bdf5910f) by georgedouzas).
+
+### Bug Fixes
+
+- Replace string with regex ([bedd98e](https://github.com/georgedouzas/sports-betting/commit/bedd98e17dd24d8d90d1c8b5d1f290ea7a9f054d) by georgedouzas).
+- Sort data by date ([c0e51de](https://github.com/georgedouzas/sports-betting/commit/c0e51de922d7fb479dff94b98e21a7664a2310a0) by georgedouzas).
+
+### Docs
+
+- Remove plot of portfolio value ([2d0b185](https://github.com/georgedouzas/sports-betting/commit/2d0b185e5ad1d85634d3a14012df23e41ca223e4) by georgedouzas).
+- Add description for CLI and sports betting ([9a14f76](https://github.com/georgedouzas/sports-betting/commit/9a14f762975a674106910e4136a5f11bcdbdb6ca) by georgedouzas).
+- Add all methods to bettors ([f94bde9](https://github.com/georgedouzas/sports-betting/commit/f94bde98ab5b5a80abcfc1f63ea77ad1ea217097) by georgedouzas).
+
+### Code Refactoring
+
+- Rename load function and type hint ([0d89209](https://github.com/georgedouzas/sports-betting/commit/0d89209fadc23d0572be17f4669a9c521f78a504) by georgedouzas).
+- Run tests serial or parallel ([a495aa2](https://github.com/georgedouzas/sports-betting/commit/a495aa2eb5803de498078618299d03ec2d664f78) by georgedouzas).
+- Modify base class and subclasses ([c232624](https://github.com/georgedouzas/sports-betting/commit/c2326249bd0f616c845cd17ffe9b04237c28ce7b) by georgedouzas).
+- Validate data for backtesting ([ab3101c](https://github.com/georgedouzas/sports-betting/commit/ab3101c3ed44f08065a30cbf63528deb6538ffdd) by georgedouzas).
+
+### Chore
+
+- Automate release process ([2d12818](https://github.com/georgedouzas/sports-betting/commit/2d128187c47076cd88412eb3151a91cf73d68912) by georgedouzas).
+- Downgrade mkdocs gallery version ([b916110](https://github.com/georgedouzas/sports-betting/commit/b9161109feb8898a677e0bc7c96e7ac81c811953) by georgedouzas).
+- Fix pypi page links ([a1d83a9](https://github.com/georgedouzas/sports-betting/commit/a1d83a9db656a9b1d95946dd3d1f584557ff3450) by Nicholas Cassarino).
+- Add keywords and ignore variable name ([e6d99d6](https://github.com/georgedouzas/sports-betting/commit/e6d99d60051c96d8fbb8985850a313613f6e849f) by georgedouzas).
+
 ## [0.3.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.3.1) - 2023-04-12
 
 <small>[Compare with 0.3.0](https://github.com/georgedouzas/sports-betting/compare/0.3.0...0.3.1)</small>
 
 ### Chore
 
-- Export requirements from pyproject ([fd43f0d](https://github.com/georgedouzas/sports-betting/commit/fd43f0df99398c68022c9888e941de34cc09df7e) by georgedouzas).
-- Updated copier template ([764f624](https://github.com/georgedouzas/sports-betting/commit/764f624ce37e3d1a9245d469ab5a5c35b8330573) by georgedouzas).
-- Split to multiple CI job ([9639fac](https://github.com/georgedouzas/sports-betting/commit/9639fac7a3a412d05e8aba2f16e3f34de49b39ec) by georgedouzas).
-- Add multiple Python versions to CI ([e6c2147](https://github.com/georgedouzas/sports-betting/commit/e6c21476ea839d5a16fbaa2089054c1dd7a5a5fc) by georgedouzas).
+- Release 0.3.1 ([06b8109](https://github.com/georgedouzas/sports-betting/commit/06b810950aabfb8f58f57203e773aa8606ff1074) by georgedouzas).
+- Export requirements from pyproject ([1624021](https://github.com/georgedouzas/sports-betting/commit/1624021c20f07be5c47c747b808ac289ec4eea96) by georgedouzas).
+- Updated copier template ([c362bc1](https://github.com/georgedouzas/sports-betting/commit/c362bc11114364fe9a9eca6e55a3e51bd2d94465) by georgedouzas).
+- Split to multiple CI job ([5aa7bda](https://github.com/georgedouzas/sports-betting/commit/5aa7bda2cd0d037d5ab0d95fb93115e53fb332fc) by georgedouzas).
+- Add multiple Python versions to CI ([60d8d2f](https://github.com/georgedouzas/sports-betting/commit/60d8d2f715158a9bd03ce43fd4c64e781222046f) by georgedouzas).
 
-## [0.3.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.3.0) - 2023-04-11
+## [0.3.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.3.0) - 2023-04-12
 
-<small>[Compare with 0.2.8](https://github.com/georgedouzas/sports-betting/compare/0.2.8...0.3.0)</small>
+<small>[Compare with 0.2.9](https://github.com/georgedouzas/sports-betting/compare/0.2.9...0.3.0)</small>
 
 ### Features
 
-- Support Python 3.9 and 3.10 ([30ebdfd](https://github.com/georgedouzas/sports-betting/commit/30ebdfde5009f52f4c1ae488e86b223c5850bbaa) by georgedouzas).
+- Support Python 3.9 and 3.10 ([8eb16e7](https://github.com/georgedouzas/sports-betting/commit/8eb16e7e0272c0897444ef01e02d200de3af8d52) by georgedouzas).
 
 ### Docs
 
@@ -36,10 +72,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Chore
 
-- Release 0.3.0 ([fc271b2](https://github.com/georgedouzas/sports-betting/commit/fc271b2a957bb8d58ac32aa5d143b11fd6b9e935) by georgedouzas).
-- Modify type hints to support Python 3.9 ([53a8f29](https://github.com/georgedouzas/sports-betting/commit/53a8f29926a220bdd134d681c769845b8a7a8518) by georgedouzas).
-- Use copier new template version 0.3.6 ([4e7c415](https://github.com/georgedouzas/sports-betting/commit/4e7c415b3383bb60625c615add101ed3b59345fe) by georgedouzas).
+- Release 0.3.0 ([f85cd17](https://github.com/georgedouzas/sports-betting/commit/f85cd17c34f273e4849608c6734bf6c7a1c7d13b) by georgedouzas).
+- Modify type hints to support Python 3.9 ([535cf2d](https://github.com/georgedouzas/sports-betting/commit/535cf2d91db7eed894a678815a87ec951a8e3f3e) by georgedouzas).
+- Use copier new template version 0.3.6 ([cecce6b](https://github.com/georgedouzas/sports-betting/commit/cecce6b5379588dcdd57a6b7c0ba4cf6231109f7) by georgedouzas).
 - Restricted python version for pandas ([23ff003](https://github.com/georgedouzas/sports-betting/commit/23ff00333fbafaab033c1aa2f5111e02a9c35e34) by georgedouzas).
+
+## [0.2.9](https://github.com/georgedouzas/sports-betting/releases/tag/0.2.9) - 2023-04-03
+
+<small>[Compare with 0.2.8](https://github.com/georgedouzas/sports-betting/compare/0.2.8...0.2.9)</small>
+
+### Chore
+
 - Release 0.2.9 ([b66e204](https://github.com/georgedouzas/sports-betting/commit/b66e204ea7fb20aa1e6f475e7ecc2ae66e857144) by georgedouzas).
 - Use copier template for project restructure ([c2f5f94](https://github.com/georgedouzas/sports-betting/commit/c2f5f942f37964521da679c1f5fd49335f5ce89c) by georgedouzas).
 
