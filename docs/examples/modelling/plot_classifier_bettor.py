@@ -39,7 +39,7 @@ O_train
 
 # %%
 # In order to simplify the selected classifier, we keep only numerical features of the input data:
-num_cols = X_train.columns[X_train.dtypes == 'float64']
+num_cols = X_train.columns[['float' in col_type.name for col_type in X_train.dtypes]]
 X_train = X_train[num_cols]
 
 # %%
