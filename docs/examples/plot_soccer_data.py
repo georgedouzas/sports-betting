@@ -66,15 +66,7 @@ O_train
 # Extracting the fixtures data
 # ----------------------------
 #
-# The fixtures data are extractedwith columns that match the columns of the
+# The fixtures data are extracted with columns that match the columns of the
 # training data:
 
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
-
-# %%
-# The input data:
-X_fix
-
-# %%
-# The market average odds:
-O_fix
