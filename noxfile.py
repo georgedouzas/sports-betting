@@ -1,14 +1,27 @@
 """Development tasks."""
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
+from typing import Any
 
 import nox
 
 os.environ.update({'PDM_IGNORE_SAVED_PYTHON': '1'})
 
-PYTHON_VERSIONS = ['3.9', '3.10']
-FILES = ['src', 'tests', 'docs', 'noxfile.py']
+PYTHON_VERSIONS: list[str] = ['3.9', '3.10']
+FILES: list[str] = ['src', 'tests', 'docs', 'noxfile.py']
+CHANGELOG_ARGS: dict[str, Any] = {
+    'repository': '.',
+    'convention': 'angular',
+    'template': 'keepachangelog',
+    'parse_trailers': True,
+    'parse_refs': False,
+    'sections': ['feat', 'fix', 'docs', 'style', 'refactor', 'tests', 'chore'],
+    'bump_latest': True,
+    'output': 'CHANGELOG.md',
+}
 
 
 def check_cli(session: nox.Session, args: list[str]) -> None:
@@ -117,16 +130,7 @@ def changelog(session: nox.Session) -> None:
     from git_changelog.cli import build_and_render
 
     session.run('pdm', 'install', '-dG', 'changelog', external=True)
-    build_and_render(
-        repository='.',
-        output='CHANGELOG.md',
-        convention='angular',
-        template='keepachangelog',
-        parse_trailers=True,
-        parse_refs=False,
-        sections=['feat', 'fix', 'docs', 'style', 'refactor', 'tests', 'chore'],
-        bump_latest=True,
-    )
+    build_and_render(**CHANGELOG_ARGS)
 
 
 @nox.session
@@ -136,16 +140,32 @@ def release(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
-    if not session.posargs:
-        session.skip('No version was provided')
-    session.run('pdm', 'install', '-dG', 'release', external=True)
+    from git_changelog.cli import build_and_render
 
-    session.run('git', 'add', 'pyproject.toml', 'CHANGELOG.md', external=True)
-    session.run('git', 'commit', '-m', f'chore: Release {session.posargs[0]}', external=True)
-    try:
-        session.run('git', 'tag', session.posargs[0], external=True)
-        session.run('git', 'push', external=True)
-        session.run('git', 'push', '--tags', external=True)
-    finally:
-        session.run('pdm', 'build', external=True)
-        session.run('twine', 'upload', '--skip-existing', 'dist/*')
+    session.run('pdm', 'install', '-dG', 'release', external=True)
+    changelog, _ = build_and_render(**CHANGELOG_ARGS)
+    if changelog.versions_list[0].tag:
+        session.skip('Commit has already a tag. Release is aborted.')
+    version = changelog.versions_list[0].planned_tag
+    if version is None:
+        session.skip('Next version was not possible to be specified. Release is aborted.')
+
+    # Create release branch and commit changelog
+    session.run('git', 'checkout', '-b', f'release_{version}', external=True)
+    session.run('git', 'add', 'CHANGELOG.md', external=True)
+    session.run('git', 'commit', '-m', f'chore: Release {version}', '--allow-empty', external=True)
+    session.run('git', 'push', '-u', 'origin', f'release_{version}', external=True)
+
+    # Create and merge PR from release branch to master
+    session.run('gh', 'pr', 'create', '--base', 'master', external=True)
+    session.run('gh', 'pr', 'merge', 'master', '--rebase', '-delete-branch', external=True)
+
+    # Create tag
+    session.run('git', 'checkout', 'master', external=True)
+    session.run('git', 'pull', '--rebase', external=True)
+    session.run('git', 'tag', version, external=True)
+    session.run('git', 'push', '--tags', external=True)
+
+    # Build and upload artifacts
+    session.run('pdm', 'build', external=True)
+    session.run('twine', 'upload', '--skip-existing', 'dist/*')
