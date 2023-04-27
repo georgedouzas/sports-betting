@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.5.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.5.0) - 2023-04-27
+
+<small>[Compare with 0.4.0](https://github.com/georgedouzas/sports-betting/compare/0.4.0...0.5.0)</small>
+
+### Features
+
+- Implement async downloading of data ([9842052](https://github.com/georgedouzas/sports-betting/commit/98420521b64825513d8b2de2b039487322babef8) by georgedouzas).
+
+### Docs
+
+- Fix wrong issues link ([06cfb4c](https://github.com/georgedouzas/sports-betting/commit/06cfb4c6e2a96c9441908e3ba46978dcf71f596e) by georgedouzas).
+- Relax condition for numerical columns ([2aa53fb](https://github.com/georgedouzas/sports-betting/commit/2aa53fb977b0aa94d0ae0d7dfabbbf08cc9b9330) by georgedouzas).
+
+### Chore
+
+- Add github workflow for CI and documentation ([1052fab](https://github.com/georgedouzas/sports-betting/commit/1052fab308b8bdedc866a3fd0a304f4f8f3246f5) by georgedouzas).
+- Automate release process ([adebdaa](https://github.com/georgedouzas/sports-betting/commit/adebdaa888d1684d358a236496d5e24ade9736f8) by georgedouzas).
+
 ## [0.4.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.4.0) - 2023-04-25
 
 <small>[Compare with 0.3.1](https://github.com/georgedouzas/sports-betting/compare/0.3.1...0.4.0)</small>
@@ -36,7 +54,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Chore
 
-- Automate release process ([2d12818](https://github.com/georgedouzas/sports-betting/commit/2d128187c47076cd88412eb3151a91cf73d68912) by georgedouzas).
+- Release 0.4.0 ([aaf7f48](https://github.com/georgedouzas/sports-betting/commit/aaf7f48cb7b05c27ed7ccb9210a47a4af482b6cb) by georgedouzas).
+- Automate release process ([c4ff404](https://github.com/georgedouzas/sports-betting/commit/c4ff4041776a126b7c01e33aadc65059902831dd) by georgedouzas).
 - Downgrade mkdocs gallery version ([b916110](https://github.com/georgedouzas/sports-betting/commit/b9161109feb8898a677e0bc7c96e7ac81c811953) by georgedouzas).
 - Fix pypi page links ([a1d83a9](https://github.com/georgedouzas/sports-betting/commit/a1d83a9db656a9b1d95946dd3d1f584557ff3450) by Nicholas Cassarino).
 - Add keywords and ignore variable name ([e6d99d6](https://github.com/georgedouzas/sports-betting/commit/e6d99d60051c96d8fbb8985850a313613f6e849f) by georgedouzas).
