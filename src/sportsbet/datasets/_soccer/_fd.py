@@ -12,18 +12,16 @@ from __future__ import annotations
 
 from datetime import datetime
 from functools import lru_cache
-from urllib.request import urlopen
 
 import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
-from rich.progress import track
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
 from ... import Param
 from .._base import _BaseDataLoader
-from ._utils import OUTPUTS, _read_csv
+from ._utils import OUTPUTS, _read_csv, _read_csvs, _read_urls_content
 
 URL = 'https://www.football-data.co.uk'
 BASE_URLS = [
@@ -277,10 +275,16 @@ def _convert_base_url_to_league(base_url: str) -> str:
     return league
 
 
-def _extract_csv_urls(base_url: str) -> set[str]:
-    html = urlopen('/'.join([URL, base_url]))  # noqa: S310
-    bsObj = BeautifulSoup(html.read(), features='html.parser')
-    return {el.get('href') for el in bsObj.find_all('a') if el.get('href').endswith('csv')}
+def _extract_all_urls() -> list[tuple[str, str, tuple[str, ...], set[str]]]:
+    base_urls = ['/'.join([URL, base_url]) for base_url in BASE_URLS]
+    bsObjs = [BeautifulSoup(html, features='html.parser') for html in _read_urls_content(base_urls)]
+    all_urls = []
+    for base_url, bsObj in zip(BASE_URLS, bsObjs):
+        league = _convert_base_url_to_league(base_url)
+        divisions = LEAGUES_MAPPING[league][1:]
+        urls = {el.get('href') for el in bsObj.find_all('a') if el.get('href').endswith('csv')}
+        all_urls.append((base_url, league, divisions, urls))
+    return all_urls
 
 
 def _param_grid_to_csv_urls(param_grid: ParameterGrid) -> list[tuple[Param, str]]:
@@ -487,39 +491,53 @@ class _FDSoccerDataLoader(_BaseDataLoader):
     @classmethod
     @lru_cache
     def _get_full_param_grid(cls: type[_FDSoccerDataLoader]) -> ParameterGrid:
-        full_param_grid = []
-        for base_url in track(BASE_URLS, description='Downloading parameters data', transient=True):
-            league = _convert_base_url_to_league(base_url)
-            divisions = LEAGUES_MAPPING[league][1:]
-            urls = _extract_csv_urls(base_url)
+        # Get all URLs
+        all_urls = _extract_all_urls()
+
+        urls_main, urls_extra = [], []
+        for base_url, league, divisions, urls in all_urls:
             for url in urls:
+                url_full = '/'.join([URL, url])
                 if base_url[0].islower():
-                    _, year, division = url.split('/')
-                    division = division.replace('.csv', '')[-1]
-                    param_grid = {
-                        'league': [league],
-                        'division': [int(division) + int('0' in divisions) if division != 'C' else 5],
-                        'year': [datetime.strptime(year[2:], '%y').astimezone().year],
-                    }
+                    urls_main.append((league, divisions, url_full))
                 else:
-                    years = _read_csv('/'.join([URL, url]))['Season']
-                    years = list(
-                        {
-                            season + 1 if type(season) is not str else int(season.split('/')[-1])
-                            for season in years.unique()
-                        },
-                    )
-                    param_grid = {'league': [league], 'division': [1], 'year': years}
-                full_param_grid.append(param_grid)
+                    urls_extra.append((league, divisions, url_full))
+
+        # Download CSVs for extra leagues
+        csvs_extra = _read_csvs([url for *_, url in urls_extra])
+
+        full_param_grid = []
+
+        # Extra leagues
+        for (league, *_), csv in zip(urls_extra, csvs_extra):
+            years = csv['Season']
+            years = list(
+                {season + 1 if type(season) is not str else int(season.split('/')[-1]) for season in years.unique()},
+            )
+            param_grid = {'league': [league], 'division': [1], 'year': years}
+            full_param_grid.append(param_grid)
+
+        # Main leagues
+        for league, divisions, url in urls_main:
+            *_, year, division = url.split('/')
+            division = division.replace('.csv', '')[-1]
+            param_grid = {
+                'league': [league],
+                'division': [int(division) + int('0' in divisions) if division != 'C' else 5],
+                'year': [datetime.strptime(year[2:], '%y').astimezone().year],
+            }
+            full_param_grid.append(param_grid)
+
         return ParameterGrid(full_param_grid)
 
     @lru_cache  # noqa: B019
     def _get_data(self: Self) -> pd.DataFrame:
         # Training data
         data_container = []
-        urls = _param_grid_to_csv_urls(self.param_grid_)
-        for params, url in track(urls, description='Downloading training data', transient=True):
-            data = _read_csv(url).replace('^#', np.nan, regex=True)
+        urls_params = _param_grid_to_csv_urls(self.param_grid_)
+        csvs = _read_csvs([url for _, url in urls_params])
+        for (params, url), csv in zip(urls_params, csvs):
+            data = csv.replace('^#', np.nan, regex=True)
             try:
                 data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
             except ValueError:
