@@ -116,6 +116,9 @@ pdm install
 
 ## Usage
 
+You can use the Python API or the CLI to access the full functionality of `sports-betting`. Nevertheless, it is recommended to be
+familiar with the Python API since it is still needed to write configuration files for the CLI.
+
 ### API
 
 The `sports-betting` package makes it easy to download sports betting data:
@@ -213,5 +216,5 @@ sportsbet bettor backtest -b bettor_config.py -d dataloader_config.py
 Get the value bets:
 
 ```bash
-sportsbet bettor bettor -b bettor_config.py -d dataloader_config.py
+sportsbet bettor bet -b bettor_config.py -d dataloader_config.py
 ```
