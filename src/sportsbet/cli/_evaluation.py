@@ -53,7 +53,8 @@ def backtest(bettor_config_path: str, dataloader_config_path: str) -> None:
     backtesting_params = get_backtesting_params(bettor_mod)
     bettor.backtest(X, Y, O, **backtesting_params, refit=True)
     if bettor_mod is not None:
-        path = str(Path(bettor_config_path).parent / bettor_mod.MAIN.get('path'))
+        path = Path(bettor_config_path).parent / bettor_mod.MAIN.get('path')
+        path.parent.mkdir(parents=True, exist_ok=True)
         bettor.save(path)
         print_console([bettor.backtest_results_], ['Backtesting results'])
 
@@ -93,6 +94,7 @@ def bet(bettor_config_path: str, dataloader_config_path: str) -> None:
         bettor.fit(*dataloader.train_data_[:-1])
     value_bets = bettor.bet(X, O)
     if bettor_mod is not None:
-        path = str(Path(bettor_config_path).parent / bettor_mod.MAIN.get('path'))
+        path = Path(bettor_config_path).parent / bettor_mod.MAIN.get('path')
+        path.parent.mkdir(parents=True, exist_ok=True)
         bettor.save(path)
         print_console([value_bets], ['Value bets'])
