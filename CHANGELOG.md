@@ -6,13 +6,25 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.5.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.5.1) - 2023-06-05
+
+<small>[Compare with 0.5.0](https://github.com/georgedouzas/sports-betting/compare/0.5.0...0.5.1)</small>
+
+### Bug Fixes
+
+- Create missing directories for configuration data ([88d6cfc](https://github.com/georgedouzas/sports-betting/commit/88d6cfc94d7c12ff052c631b32ab79b032c31a10) by georgedouzas).
+
+### Docs
+
+- Update information ([2f69470](https://github.com/georgedouzas/sports-betting/commit/2f694709e76223276da9c57375042b01a457f511) by georgedouzas).
+
 ## [0.5.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.5.0) - 2023-04-27
 
 <small>[Compare with 0.4.0](https://github.com/georgedouzas/sports-betting/compare/0.4.0...0.5.0)</small>
 
 ### Features
 
-- Implement async downloading of data ([9842052](https://github.com/georgedouzas/sports-betting/commit/98420521b64825513d8b2de2b039487322babef8) by georgedouzas).
+- Implement async downloading of data ([a600307](https://github.com/georgedouzas/sports-betting/commit/a6003078a2b263c0a60fd2edc11cea45cc878284) by georgedouzas).
 
 ### Docs
 
@@ -21,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Chore
 
+- Release 0.5.0 ([9cda706](https://github.com/georgedouzas/sports-betting/commit/9cda7063e927530c32052f6781ccc1dd65e81cad) by georgedouzas).
 - Add github workflow for CI and documentation ([1052fab](https://github.com/georgedouzas/sports-betting/commit/1052fab308b8bdedc866a3fd0a304f4f8f3246f5) by georgedouzas).
 - Automate release process ([adebdaa](https://github.com/georgedouzas/sports-betting/commit/adebdaa888d1684d358a236496d5e24ade9736f8) by georgedouzas).
 
