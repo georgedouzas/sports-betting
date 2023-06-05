@@ -59,7 +59,8 @@ def training(dataloader_config_path: str) -> None:
     train_params = get_train_params(mod)
     X_train, Y_train, O_train = dataloader.extract_train_data(**train_params)
     if mod is not None:
-        path = str(Path(dataloader_config_path).parent / mod.MAIN.get('path'))
+        path = Path(dataloader_config_path).parent / mod.MAIN.get('path')
+        path.parent.mkdir(parents=True, exist_ok=True)
         dataloader.save(path)
         print_console(
             [X_train, Y_train] + ([O_train] if O_train is not None else []),
@@ -96,7 +97,8 @@ def fixtures(dataloader_config_path: str) -> None:
             return
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
     if mod is not None:
-        path = str(Path(dataloader_config_path).parent / mod.MAIN.get('path'))
+        path = Path(dataloader_config_path).parent / mod.MAIN.get('path')
+        path.parent.mkdir(parents=True, exist_ok=True)
         dataloader.save(path)
     if not X_fix.empty:
         print_console([X_fix], ['Fixtures input data'])
