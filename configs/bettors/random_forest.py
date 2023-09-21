@@ -3,9 +3,9 @@
 from sklearn.compose import make_column_transformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.model_selection import TimeSeriesSplit
 from sportsbet.evaluation import ClassifierBettor
 
 MAIN = {
@@ -22,5 +22,5 @@ OPTIONAL = {
         RandomForestClassifier(),
     ),
     'tscv': TimeSeriesSplit(8),
-    'init_cash': 1000
+    'init_cash': 1000,
 }
