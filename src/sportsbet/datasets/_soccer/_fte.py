@@ -11,12 +11,14 @@ Data source:
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
+from ... import Outputs, Schema
 from .._base import _BaseDataLoader
 from ._utils import OUTPUTS, _read_csv
 
@@ -106,7 +108,7 @@ class _FTESoccerDataLoader(_BaseDataLoader):
     [FiveThirtyEight](https://github.com/fivethirtyeight/data/tree/master/soccer-spi).
     """
 
-    SCHEMA = [
+    SCHEMA: ClassVar[Schema] = [
         ('year', np.int64),
         ('division', np.int64),
         ('match_quality', float),
@@ -132,7 +134,7 @@ class _FTESoccerDataLoader(_BaseDataLoader):
         ('target__home_team__full_time_adjusted_goals', float),
         ('target__away_team__full_time_adjusted_goals', float),
     ]
-    OUTPUTS = OUTPUTS
+    OUTPUTS: ClassVar[Outputs] = OUTPUTS
 
     @classmethod
     @lru_cache

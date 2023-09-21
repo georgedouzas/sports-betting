@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,7 @@ import pytz
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
-from .. import FixturesData, ParamGrid, TrainData
+from .. import FixturesData, Outputs, ParamGrid, Schema, TrainData
 from ._base import _BaseDataLoader
 
 OVER_UNDER = 2.5
@@ -111,7 +112,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
     """
 
     DATE = datetime.now(tz=pytz.utc) + timedelta(2)
-    SCHEMA = [
+    SCHEMA: ClassVar[Schema] = [
         ('division', np.int64),
         ('league', object),
         ('date', np.datetime64),
@@ -132,7 +133,7 @@ class DummySoccerDataLoader(_BaseDataLoader):
         (f'odds__pinnacle__under_{OVER_UNDER}__full_time_goals', float),
     ]
 
-    OUTPUTS = [
+    OUTPUTS: ClassVar[Outputs] = [
         (
             'output__home_win__full_time_goals',
             lambda outputs: outputs['target__home_team__full_time_goals']
