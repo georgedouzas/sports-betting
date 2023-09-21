@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from functools import lru_cache
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -19,7 +20,7 @@ from bs4 import BeautifulSoup
 from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
-from ... import Param
+from ... import Outputs, Param, Schema
 from .._base import _BaseDataLoader
 from ._utils import OUTPUTS, _read_csv, _read_csvs, _read_urls_content
 
@@ -312,7 +313,7 @@ class _FDSoccerDataLoader(_BaseDataLoader):
     [Football-Data.co.uk](https://www.football-data.co.uk/data.php).
     """
 
-    SCHEMA = [
+    SCHEMA: ClassVar[Schema] = [
         ('league', object),
         ('division', np.int64),
         ('year', np.int64),
@@ -486,7 +487,7 @@ class _FDSoccerDataLoader(_BaseDataLoader):
         ('target__home_team__bookings_points', float),
         ('target__away_team__bookings_points', float),
     ]
-    OUTPUTS = OUTPUTS
+    OUTPUTS: ClassVar[Outputs] = OUTPUTS
 
     @classmethod
     @lru_cache
@@ -512,7 +513,10 @@ class _FDSoccerDataLoader(_BaseDataLoader):
         for (league, *_), csv in zip(urls_extra, csvs_extra):
             years = csv['Season']
             years = list(
-                {season + 1 if type(season) is not str else int(season.split('/')[-1]) for season in years.unique()},
+                {
+                    season + 1 if not isinstance(season, str) else int(season.split('/')[-1])
+                    for season in years.unique()
+                },
             )
             param_grid = {'league': [league], 'division': [1], 'year': years}
             full_param_grid.append(param_grid)
@@ -553,7 +557,7 @@ class _FDSoccerDataLoader(_BaseDataLoader):
             else:
                 data = data.assign(league=params['league'], division=params['division'], fixtures=False)
                 data['year'] = data['Season'].apply(
-                    lambda season: season + 1 if type(season) is not str else int(season.split('/')[-1]),
+                    lambda season: season + 1 if not isinstance(season, str) else int(season.split('/')[-1]),
                 )
                 data = data[data.year == params['year']]
 

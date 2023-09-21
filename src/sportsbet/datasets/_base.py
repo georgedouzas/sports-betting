@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from difflib import SequenceMatcher
 from pathlib import Path
+from typing import ClassVar
 
 import cloudpickle
 import numpy as np
@@ -57,8 +58,8 @@ class _BaseDataLoader(metaclass=ABCMeta):
     instead.
     """
 
-    SCHEMA: Schema = []
-    OUTPUTS: Outputs = []
+    SCHEMA: ClassVar[Schema] = []
+    OUTPUTS: ClassVar[Outputs] = []
 
     def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
         self.param_grid = param_grid
