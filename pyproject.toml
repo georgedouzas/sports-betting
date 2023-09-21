@@ -9,7 +9,7 @@ authors = [{name = "Georgios Douzas", email = "gdouzas@icloud.com"}]
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.9, <3.11"
-keywords = ["sports betting", "sports analytics", "machine learning"]
+keywords = []
 dynamic = ["version"]
 classifiers = [
     "Development Status :: 4 - Beta",

@@ -3,7 +3,8 @@ name: CI and documentation
 on:
   push:
     branches-ignore:
-      - master
+      - main
+  workflow_dispatch:
 
 jobs:
 
@@ -29,6 +30,7 @@ jobs:
             3.9
             3.10
             
+
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v3
       with:
@@ -36,7 +38,7 @@ jobs:
         cache-dependency-path: pyproject.toml
 
     - name: Install dependencies
-      run: pdm install --no-editable -dG maintenance -dG checks
+      run: pdm install --no-default -dG maintenance -dG checks
 
     - name: Check code quality
       run: pdm checks quality
@@ -69,6 +71,7 @@ jobs:
             3.9
             3.10
             
+
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v3
       with:
@@ -76,7 +79,7 @@ jobs:
         cache-dependency-path: pyproject.toml
 
     - name: Install dependencies
-      run: pdm install --no-editable -dG maintenance -dG tests
+      run: pdm install -dG maintenance -dG tests
 
     - name: Run the test suite
       run: pdm tests
@@ -87,7 +90,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.9", "3.10"]
+          python-version: ['3.9', '3.10']
 
     steps:
     - name: Checkout
@@ -100,7 +103,7 @@ jobs:
         cache-dependency-path: pyproject.toml
 
     - name: Install dependencies
-      run: pdm install --no-editable -dG maintenance -dG docs
+      run: pdm install -dG maintenance -dG docs
 
     - name: Build documentation with Python ${{ matrix.python-version }}
       run: pdm docs build
