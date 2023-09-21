@@ -17,9 +17,9 @@
 [discussions]: <https://github.com/georgedouzas/sports-betting/discussions>
 [discussions badge]: <https://img.shields.io/github/discussions/georgedouzas/sports-betting>
 [ci]: <https://github.com/georgedouzas/sports-betting/actions?query=workflow>
-[ci badge]: <https://github.com/georgedouzas/sports-betting/actions/workflows/ci.yml/badge.svg>
+[ci badge]: <https://github.com/georgedouzas/sports-betting/actions/workflows/ci.yml/badge.svg?branch=main>
 [doc]: <https://github.com/georgedouzas/sports-betting/actions?query=workflow>
-[doc badge]: <https://github.com/georgedouzas/sports-betting/actions/workflows/doc.yml/badge.svg?branch=master>
+[doc badge]: <https://github.com/georgedouzas/sports-betting/actions/workflows/doc.yml/badge.svg?branch=main>
 
 # sports-betting
 

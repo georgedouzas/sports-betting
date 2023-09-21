@@ -12,7 +12,7 @@ pip-wheel-metadata/
 site/
 docs/generated/
 pdm.lock
-.pdm.toml
+pdm.toml
 .pdm-python
 __pypackages__/
 .venv/

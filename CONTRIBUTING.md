@@ -25,23 +25,27 @@ the project for more details. You can run any of the following commands and subc
     - `pdm checks types`: Check only type annotations.
     - `pdm checks dependencies`: Check only for vulnerabilities in dependencies.
 
+### Tests
+
+- `pdm tests`: Run the tests.
+
 ### Changelog
 
-- `pdm changelog build`: Build the changelog.
+- `pdm changelog`: Build the changelog.
 
 ### Release
 
-- `pdm release <version>`: Release a new Python package with an updated version.
+- `pdm release`: Release a new Python package with an updated version.
 
 ## Development
 
 The next steps should be followed during development:
 
 - `git checkout -b new-branch-name` to create a new branch and then modify the code.
-- `pdm formattting` to auto-format the code and docstrings.
+- `pdm formatting` to auto-format the code and docstrings.
 - `pdm checks` to apply all checks.
-- `pdm test` to run the tests.
-- `pdm serve-docs` if you updated the documentation or the project dependencies to check that everything looks as expected.
+- `pdm tests` to run the tests.
+- `pdm docs serve` if you updated the documentation or the project dependencies to check that everything looks as expected.
 
 ## Commit message convention
 

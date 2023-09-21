@@ -127,9 +127,9 @@ def changelog(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
+    session.run('pdm', 'install', '-dG', 'changelog', '--no-default', external=True)
     from git_changelog.cli import build_and_render
 
-    session.run('pdm', 'install', '-dG', 'changelog', external=True)
     build_and_render(**CHANGELOG_ARGS)
 
 
@@ -140,9 +140,9 @@ def release(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
+    session.run('pdm', 'install', '-dG', 'changelog', '-dG', 'release', '--no-default', external=True)
     from git_changelog.cli import build_and_render
 
-    session.run('pdm', 'install', '-dG', 'release', external=True)
     changelog, _ = build_and_render(**CHANGELOG_ARGS)
     if changelog.versions_list[0].tag:
         session.skip('Commit has already a tag. Release is aborted.')
@@ -156,12 +156,12 @@ def release(session: nox.Session) -> None:
     session.run('git', 'commit', '-m', f'chore: Release {version}', '--allow-empty', external=True)
     session.run('git', 'push', '-u', 'origin', f'release_{version}', external=True)
 
-    # Create and merge PR from release branch to master
-    session.run('gh', 'pr', 'create', '--base', 'master', external=True)
+    # Create and merge PR from release branch to main
+    session.run('gh', 'pr', 'create', '--base', 'main', external=True)
     session.run('gh', 'pr', 'merge', '--rebase', '--delete-branch', external=True)
 
     # Create tag
-    session.run('git', 'checkout', 'master', external=True)
+    session.run('git', 'checkout', 'main', external=True)
     session.run('git', 'pull', '--rebase', external=True)
     session.run('git', 'tag', version, external=True)
     session.run('git', 'push', '--tags', external=True)

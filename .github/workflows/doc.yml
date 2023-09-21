@@ -3,8 +3,7 @@ name: Documentation
 on:
   push:
     branches:
-      - master
-  workflow_dispatch:
+      - main
 
 permissions:
   contents: read
@@ -39,7 +38,7 @@ jobs:
         cache-dependency-path: pyproject.toml
 
     - name: Install dependencies
-      run: pdm install --no-editable -dG maintenance -dG docs
+      run: pdm install -dG maintenance -dG docs
 
     - name: Build documentation
       run: pdm docs build
