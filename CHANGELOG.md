@@ -6,17 +6,39 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.6.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.6.0) - 2023-09-21
+
+<small>[Compare with 0.5.1](https://github.com/georgedouzas/sports-betting/compare/0.5.1...0.6.0)</small>
+
+### Features
+
+- Include daily tips ([f44d968](https://github.com/georgedouzas/sports-betting/commit/f44d96821b2b35e99f856fd18e269c192a05f9dc) by georgedouzas).
+
+### Style
+
+- Apply ruff guide ([1f411c4](https://github.com/georgedouzas/sports-betting/commit/1f411c42d9555402e345bbbe15905815d5f56720) by georgedouzas).
+- Split long line ([dfbcf9a](https://github.com/georgedouzas/sports-betting/commit/dfbcf9a7ca8d2638ec567dc18853550bf8a1dec3) by georgedouzas).
+
+### Chore
+
+- Modify type aliases ([7b40a12](https://github.com/georgedouzas/sports-betting/commit/7b40a121c98a5c3ff243238b082ab65f048a33d5) by georgedouzas).
+- Update copier template to 0.6.8 ([b212e5e](https://github.com/georgedouzas/sports-betting/commit/b212e5ec1174e0a5411d4abb853dc458134c6728) by georgedouzas).
+
 ## [0.5.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.5.1) - 2023-06-05
 
 <small>[Compare with 0.5.0](https://github.com/georgedouzas/sports-betting/compare/0.5.0...0.5.1)</small>
 
 ### Bug Fixes
 
-- Create missing directories for configuration data ([88d6cfc](https://github.com/georgedouzas/sports-betting/commit/88d6cfc94d7c12ff052c631b32ab79b032c31a10) by georgedouzas).
+- Create missing directories for configuration data ([bd9dd9f](https://github.com/georgedouzas/sports-betting/commit/bd9dd9fae552972ed1b739547dc9a71d73c2ae89) by georgedouzas).
 
 ### Docs
 
-- Update information ([2f69470](https://github.com/georgedouzas/sports-betting/commit/2f694709e76223276da9c57375042b01a457f511) by georgedouzas).
+- Update information ([d581fc5](https://github.com/georgedouzas/sports-betting/commit/d581fc5ab5b3be25c70118bb27ce6dcbcfa94efb) by georgedouzas).
+
+### Chore
+
+- Release 0.5.1 ([4355bef](https://github.com/georgedouzas/sports-betting/commit/4355bef98d78c3578ecef612a8f60c2e6d6f3c45) by georgedouzas).
 
 ## [0.5.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.5.0) - 2023-04-27
 
