@@ -65,7 +65,7 @@ betting strategies.
 ### Parameters
 
 Assume that we would like to fetch historical data of various leagues for specific years, including the maximum odds of the market
-and dropping columns that contain more than 80% of missing values:
+and dropping columns that contain more than 20% of missing values:
 
 ```python
 leagues = ['England', 'Scotland', 'Germany', 'Italy', 'Spain', 'France', 'Netherlands', 'Belgium', 'Portugal', 'Turkey', 'Greece']
@@ -99,7 +99,7 @@ Finally, our backtesting parameters would include a 5-fold time ordered cross-va
 ```python
 from sklearn.model_selection import TimeSeriesSplit
 tscv = TimeSeriesSplit(5)
-init_cash=1000
+init_cash = 1000
 ```
 
 ### Process
