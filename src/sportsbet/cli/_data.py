@@ -12,7 +12,7 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
-from ._options import get_dataloader_config_path_option
+from ._options import get_config_path_option, get_data_path_option
 from ._utils import get_dataloader, get_module, get_train_params, print_console
 
 
@@ -23,10 +23,10 @@ def dataloader() -> None:
 
 
 @dataloader.command()
-@get_dataloader_config_path_option()
-def params(dataloader_config_path: str) -> None:
+@get_config_path_option()
+def params(config_path: str) -> None:
     """Show the available parameters to select data for a dataloader."""
-    mod = get_module(dataloader_config_path)
+    mod = get_module(config_path)
     dataloader = get_dataloader(mod)
     if dataloader is None:
         return
@@ -37,10 +37,10 @@ def params(dataloader_config_path: str) -> None:
 
 
 @dataloader.command()
-@get_dataloader_config_path_option()
-def odds_types(dataloader_config_path: str) -> None:
+@get_config_path_option()
+def odds_types(config_path: str) -> None:
     """List the odds types that can be selected to extract odds data."""
-    mod = get_module(dataloader_config_path)
+    mod = get_module(config_path)
     dataloader = get_dataloader(mod)
     if dataloader is None:
         return
@@ -49,61 +49,50 @@ def odds_types(dataloader_config_path: str) -> None:
 
 
 @dataloader.command()
-@get_dataloader_config_path_option()
-def training(dataloader_config_path: str) -> None:
+@get_config_path_option()
+@get_data_path_option()
+def training(config_path: str, data_path: str) -> None:
     """Use a dataloader to extract the training data."""
-    mod = get_module(dataloader_config_path)
+    mod = get_module(config_path)
     dataloader = get_dataloader(mod)
     if dataloader is None:
         return
     train_params = get_train_params(mod)
     X_train, Y_train, O_train = dataloader.extract_train_data(**train_params)
-    if mod is not None:
-        path = Path(dataloader_config_path).parent / mod.MAIN.get('path')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        dataloader.save(path)
-        print_console(
-            [X_train, Y_train] + ([O_train] if O_train is not None else []),
-            ['Training input data', 'Training output data'] + (['Training odds data'] if O_train is not None else []),
-        )
+    print_console(
+        [X_train, Y_train] + ([O_train] if O_train is not None else []),
+        ['Training input data', 'Training output data'] + (['Training odds data'] if O_train is not None else []),
+    )
+    if data_path is not None:
+        (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
+        X_train.to_csv(Path(data_path) / 'sports-betting-data' / 'X_train.csv')
+        Y_train.to_csv(Path(data_path) / 'sports-betting-data' / 'Y_train.csv')
+        if O_train is not None:
+            O_train.to_csv(Path(data_path) / 'sports-betting-data' / 'O_train.csv')
 
 
 @dataloader.command()
-@get_dataloader_config_path_option()
-def fixtures(dataloader_config_path: str) -> None:
+@get_config_path_option()
+@get_data_path_option()
+def fixtures(config_path: str, data_path: str) -> None:
     """Use a dataloader to extract the fixtures data."""
     console = Console()
-    mod = get_module(dataloader_config_path)
+    mod = get_module(config_path)
     dataloader = get_dataloader(mod)
     if dataloader is None:
         return
-    if not hasattr(dataloader, 'train_data_'):
-        warning = Panel.fit(
-            '[bold red]No information was extracted. Dataloader has not be used yet to extract training data.',
-        )
-        console.print(warning)
-        return
-    if mod is not None:
-        param_grid = mod.OPTIONAL.get('param_grid')
-        train_params = get_train_params(mod)
-        if param_grid != dataloader.param_grid or train_params != {
-            'drop_na_thres': dataloader.drop_na_thres_,
-            'odds_type': dataloader.odds_type_,
-        }:
-            warning = Panel.fit(
-                '[bold red]Configuration file has been modified. Extract again the training data.',
-            )
-            console.print(warning)
-            return
+    train_params = get_train_params(mod)
+    dataloader.extract_train_data(**train_params)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
-    if mod is not None:
-        path = Path(dataloader_config_path).parent / mod.MAIN.get('path')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        dataloader.save(path)
     if not X_fix.empty:
         print_console([X_fix], ['Fixtures input data'])
         if O_fix is not None and not O_fix.empty:
             print_console([O_fix], ['Fixtures odds data'])
+        if data_path is not None:
+            (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
+            X_fix.to_csv(Path(data_path) / 'sports-betting-data' / 'X_fix.csv')
+            if O_fix is not None and not O_fix.empty:
+                O_fix.to_csv(Path(data_path) / 'sports-betting-data' / 'O_fix.csv')
     else:
         warning = Panel.fit(
             '[bold red]Fixtures data were empty',

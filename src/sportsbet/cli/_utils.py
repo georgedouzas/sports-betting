@@ -6,17 +6,16 @@
 from __future__ import annotations
 
 from importlib.util import module_from_spec, spec_from_file_location
-from inspect import getfile
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Union, cast
+from typing import Any, Union
 
 import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
-from ..datasets import DummySoccerDataLoader, SoccerDataLoader, load_dataloader
-from ..evaluation import ClassifierBettor, OddsComparisonBettor, load_bettor
+from ..datasets import DummySoccerDataLoader, SoccerDataLoader
+from ..evaluation import ClassifierBettor, OddsComparisonBettor
 
 DataLoader = Union[SoccerDataLoader, DummySoccerDataLoader]
 Bettor = Union[ClassifierBettor, OddsComparisonBettor]
@@ -50,29 +49,26 @@ def get_dataloader(mod: ModuleType | None) -> DataLoader | None:
     console = Console()
     if mod is None:
         return None
-    if not hasattr(mod, 'MAIN'):
+    if not hasattr(mod, 'CONFIG'):
         warning = Panel.fit(
-            '[bold red]Configuration file does not have a `MAIN` dictionary.',
+            '[bold red]Configuration file does not have a `CONFIG` dictionary.',
         )
         console.print(warning)
         return None
-    elif mod.MAIN.get('dataloader') not in (SoccerDataLoader, DummySoccerDataLoader):
+    elif mod.CONFIG.get('data') is None:
         warning = Panel.fit(
-            '[bold red]`MAIN` dictionary should have a `\'dataloader\'` key and a dataloader class value.',
+            '[bold red]`CONFIG` dictionary should have a `\'data\'` key.',
         )
         console.print(warning)
         return None
-    elif not isinstance(mod.MAIN.get('path'), str):
-        warning = Panel.fit('[bold red]`MAIN` dictionary should have a `\'path\'` key and a path value.')
+    elif mod.CONFIG['data'].get('dataloader') not in (SoccerDataLoader, DummySoccerDataLoader):
+        warning = Panel.fit(
+            '[bold red]`CONFIG` dictionary should have a `\'dataloader\'` key and a '
+            'dataloader class value in `\'data\'` key.',
+        )
         console.print(warning)
         return None
-    path = Path(getfile(mod)).parent / mod.MAIN.get('path')
-    if path.exists():
-        dataloader = cast(DataLoader, load_dataloader(str(path)))
-    elif hasattr(mod, 'OPTIONAL'):
-        dataloader = mod.MAIN['dataloader'](mod.OPTIONAL.get('param_grid'))
-    else:
-        dataloader = mod.MAIN['dataloader']()
+    dataloader = mod.CONFIG['data']['dataloader'](mod.CONFIG['data'].get('param_grid'))
     return dataloader
 
 
@@ -81,43 +77,44 @@ def get_bettor(mod: ModuleType | None) -> Bettor | None:
     console = Console()
     if mod is None:
         return None
-    if not hasattr(mod, 'MAIN'):
+    if not hasattr(mod, 'CONFIG'):
         warning = Panel.fit(
-            '[bold red]Configuration file does not have a `MAIN` dictionary.',
+            '[bold red]Configuration file does not have a `CONFIG` dictionary.',
         )
         console.print(warning)
         return None
-    elif mod.MAIN.get('bettor') not in (ClassifierBettor, OddsComparisonBettor):
-        warning = Panel.fit('[bold red]`MAIN` dictionary should have a `\'bettor\'` key and a bettor class value.')
+    elif mod.CONFIG.get('data') is None:
+        warning = Panel.fit(
+            '[bold red]`CONFIG` dictionary should have a `\'betting\'` key.',
+        )
         console.print(warning)
         return None
-    elif not isinstance(mod.MAIN.get('path'), str):
-        warning = Panel.fit('[bold red]`MAIN` dictionary should have a `\'path\'` key and a path value.')
+    elif mod.CONFIG['betting'].get('bettor') not in (ClassifierBettor, OddsComparisonBettor):
+        warning = Panel.fit(
+            '[bold red]`CONFIG` dictionary should have a `\'bettor\'` key '
+            'and a bettor class value in `\'betting\'` key.',
+        )
         console.print(warning)
         return None
-    path = Path(getfile(mod)).parent / mod.MAIN.get('path')
-    if path.exists():
-        bettor = cast(Bettor, load_bettor(str(path)))
-    elif hasattr(mod, 'OPTIONAL'):
-        bettor = mod.MAIN['bettor'](**{k: v for k, v in mod.OPTIONAL.items() if k not in ('tscv', 'init_cash')})
-    else:
-        bettor = mod.MAIN['bettor']()
+    bettor = mod.CONFIG['betting']['bettor'](
+        **{k: v for k, v in mod.CONFIG['betting'].items() if k not in ('bettor', 'tscv', 'init_cash')},
+    )
     return bettor
 
 
 def get_train_params(mod: ModuleType | None) -> dict[str, Any]:
     train_params = {'drop_na_thres': 0.0, 'odds_type': None}
-    if mod is not None and hasattr(mod, 'OPTIONAL'):
-        train_params['drop_na_thres'] = mod.OPTIONAL.get('drop_na_thres', 0.0)
-        train_params['odds_type'] = mod.OPTIONAL.get('odds_type')
+    if mod is not None and hasattr(mod, 'CONFIG'):
+        train_params['drop_na_thres'] = mod.CONFIG['data'].get('drop_na_thres', 0.0)
+        train_params['odds_type'] = mod.CONFIG['data'].get('odds_type')
     return train_params
 
 
 def get_backtesting_params(mod: ModuleType | None) -> dict[str, Any]:
     backtesting_params = {'tscv': None, 'init_cash': None}
-    if mod is not None and hasattr(mod, 'OPTIONAL'):
-        backtesting_params['tscv'] = mod.OPTIONAL.get('tscv')
-        backtesting_params['init_cash'] = mod.OPTIONAL.get('init_cash')
+    if mod is not None and hasattr(mod, 'CONFIG'):
+        backtesting_params['tscv'] = mod.CONFIG['betting'].get('tscv')
+        backtesting_params['init_cash'] = mod.CONFIG['betting'].get('init_cash')
     return backtesting_params
 
 
