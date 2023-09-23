@@ -82,6 +82,7 @@ def bet(config_path: str, data_path: str) -> None:
         print_console([value_bets], ['Value bets'])
         if data_path is not None:
             (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
-            pd.DataFrame(value_bets, columns=O_fix.columns).to_csv(
+            columns = [col.split('__')[2] for col in O_fix.columns]
+            pd.DataFrame(value_bets, columns=columns).to_csv(
                 Path(data_path) / 'sports-betting-data' / 'value_bets.csv',
             )
