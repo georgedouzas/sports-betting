@@ -65,6 +65,7 @@ docs = "nox --error-on-external-run -R -s docs -- {args:serve}"
 formatting = "nox --error-on-external-run -R -s formatting -- {args:all}"
 checks = "nox --error-on-external-run -R -s checks -- {args:all}"
 tests = "nox --error-on-external-run -R -s tests"
+results = "nox --error-on-external-run -R -s results"
 changelog = "nox --error-on-external-run -R -s changelog"
 release = "nox --error-on-external-run -R -s release -- {args}"
 
@@ -102,6 +103,9 @@ tests = [
     "pytest-cov>=3.0",
     "pytest-randomly>=3.10",
     "pytest-xdist>=2.4",
+]
+results = [
+    "jinja2>=3.1.2",
 ]
 changelog = [
     "git-changelog>=1.0.0",
