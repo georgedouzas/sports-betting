@@ -6,23 +6,45 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.7.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.7.0) - 2023-09-23
+
+<small>[Compare with 0.6.0](https://github.com/georgedouzas/sports-betting/compare/0.6.0...0.7.0)</small>
+
+### Features
+
+- Create script to update results ([618d3e9](https://github.com/georgedouzas/sports-betting/commit/618d3e9ddb1d2b3d98e8b8322d4739f62278d43e) by georgedouzas).
+- Simplify CLI functionality ([269223f](https://github.com/georgedouzas/sports-betting/commit/269223fd57852981f00ff797f4e440a63f99e5df) by georgedouzas).
+
+### Bug Fixes
+
+- Use GB classifier instead of RF classifier ([9305a57](https://github.com/georgedouzas/sports-betting/commit/9305a5767a434b01fa1349aea6fe67d20edf6c2c) by georgedouzas).
+
+### Docs
+
+- Fix wrong description ([1424776](https://github.com/georgedouzas/sports-betting/commit/1424776547e9debb95830b08520d81fcfa820973) by georgedouzas).
+
+### Chore
+
+- Add more descriptive names for columns ([41bf859](https://github.com/georgedouzas/sports-betting/commit/41bf8593f728f8f91064b90fc9c1a476aeb99cfd) by georgedouzas).
+
 ## [0.6.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.6.0) - 2023-09-21
 
 <small>[Compare with 0.5.1](https://github.com/georgedouzas/sports-betting/compare/0.5.1...0.6.0)</small>
 
 ### Features
 
-- Include daily tips ([f44d968](https://github.com/georgedouzas/sports-betting/commit/f44d96821b2b35e99f856fd18e269c192a05f9dc) by georgedouzas).
+- Include daily tips ([5df1910](https://github.com/georgedouzas/sports-betting/commit/5df191065abd151bbbcca03a47913a84f93da683) by georgedouzas).
 
 ### Style
 
-- Apply ruff guide ([1f411c4](https://github.com/georgedouzas/sports-betting/commit/1f411c42d9555402e345bbbe15905815d5f56720) by georgedouzas).
-- Split long line ([dfbcf9a](https://github.com/georgedouzas/sports-betting/commit/dfbcf9a7ca8d2638ec567dc18853550bf8a1dec3) by georgedouzas).
+- Apply ruff guide ([bcc40b4](https://github.com/georgedouzas/sports-betting/commit/bcc40b4cf542c055619b5bdcf544a27d10d64038) by georgedouzas).
+- Split long line ([2148c1c](https://github.com/georgedouzas/sports-betting/commit/2148c1ce464ab340cc491854844f0d2ae0a52a87) by georgedouzas).
 
 ### Chore
 
-- Modify type aliases ([7b40a12](https://github.com/georgedouzas/sports-betting/commit/7b40a121c98a5c3ff243238b082ab65f048a33d5) by georgedouzas).
-- Update copier template to 0.6.8 ([b212e5e](https://github.com/georgedouzas/sports-betting/commit/b212e5ec1174e0a5411d4abb853dc458134c6728) by georgedouzas).
+- Release 0.6.0 ([5d647d7](https://github.com/georgedouzas/sports-betting/commit/5d647d79b1ca750f4b67518f98ecefe87c053521) by georgedouzas).
+- Modify type aliases ([e719d06](https://github.com/georgedouzas/sports-betting/commit/e719d0604a58bf24127414411ca528a0cb5ca3f1) by georgedouzas).
+- Update copier template to 0.6.8 ([7f5c484](https://github.com/georgedouzas/sports-betting/commit/7f5c484b77ba07c383260b154a31d4d71792ddc2) by georgedouzas).
 
 ## [0.5.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.5.1) - 2023-06-05
 
