@@ -1,9 +1,10 @@
-"""Configuration file for bettor based on Random Forest classifier."""
+"""Configuration file for bettor based on Gradient Boosting Classifier."""
 
 from sklearn.compose import make_column_transformer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 from sportsbet.datasets import SoccerDataLoader
@@ -39,7 +40,7 @@ CONFIG = {
                 remainder='passthrough',
             ),
             SimpleImputer(),
-            RandomForestClassifier(),
+            MultiOutputClassifier(GradientBoostingClassifier(random_state=5)),
         ),
         'tscv': TimeSeriesSplit(5),
         'init_cash': 1000,
