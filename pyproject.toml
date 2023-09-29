@@ -67,7 +67,7 @@ checks = "nox --error-on-external-run -R -s checks -- {args:all}"
 tests = "nox --error-on-external-run -R -s tests"
 results = "nox --error-on-external-run -R -s results"
 changelog = "nox --error-on-external-run -R -s changelog"
-release = "nox --error-on-external-run -R -s release -- {args}"
+release = "nox --error-on-external-run -R -s release"
 
 [tool.pdm.dev-dependencies]
 maintenance = [
