@@ -143,7 +143,8 @@ def results(session: nox.Session) -> None:
         {'league': mod.CONFIG['data']['param_grid']['league'], 'year': mod.CONFIG['data']['param_grid']['year']},
     )
     X_train, Y_train, O_train = dataloader.extract_train_data(
-        drop_na_thres=mod.CONFIG['data']['drop_na_thres'], odds_type=mod.CONFIG['data']['odds_type'],
+        drop_na_thres=mod.CONFIG['data']['drop_na_thres'],
+        odds_type=mod.CONFIG['data']['odds_type'],
     )
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
@@ -159,7 +160,8 @@ def results(session: nox.Session) -> None:
         env = Environment(loader=FileSystemLoader(template_path), autoescape=True)
         template = env.from_string(template_file.read())
     readme = template.render(
-        backtest_results=bettor.backtest_results_.to_markdown(), value_bets=value_bets.to_markdown(),
+        backtest_results=bettor.backtest_results_.to_markdown(),
+        value_bets=value_bets.to_markdown(),
     )
     with Path.open(Path(__file__).parent / 'README.md', 'wt') as readme_file:
         readme_file.write(readme)
