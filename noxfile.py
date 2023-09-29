@@ -125,6 +125,7 @@ def tests(session: nox.Session) -> None:
 def results(session: nox.Session) -> None:
     """Update the README file with backtesting and value bets results."""
     session.run('pdm', 'install', '-dG', 'results', external=True)
+    import numpy as np
     import pandas as pd
     from jinja2 import Environment, FileSystemLoader
 
@@ -139,9 +140,7 @@ def results(session: nox.Session) -> None:
         return
 
     # Extract training and fixtures data
-    dataloader = mod.CONFIG['data']['dataloader'](
-        {'league': mod.CONFIG['data']['param_grid']['league'], 'year': mod.CONFIG['data']['param_grid']['year']},
-    )
+    dataloader = mod.CONFIG['data']['dataloader'](mod.CONFIG['data']['param_grid'])
     X_train, Y_train, O_train = dataloader.extract_train_data(
         drop_na_thres=mod.CONFIG['data']['drop_na_thres'],
         odds_type=mod.CONFIG['data']['odds_type'],
@@ -151,8 +150,15 @@ def results(session: nox.Session) -> None:
     # Get backtesting and value bets results
     bettor = mod.CONFIG['betting']['bettor'](classifier=mod.CONFIG['betting']['classifier'])
     bettor.backtest(X_train, Y_train, O_train)
+    match_info = (
+        X_fix[['league', 'home_team', 'away_team']]
+        .reset_index()
+        .rename(columns=lambda col: col.replace('_', ' ').title())
+    )
+    match_info['Date'] = match_info['Date'].astype(str)
     columns = [" ".join(col.split('__')[2].split('_')).title() for col in O_fix.columns]
-    value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=columns)
+    O_pred = pd.DataFrame(np.round(1 / bettor.predict_proba(X_fix), 2), columns=columns)
+    value_bets = pd.concat([match_info, O_pred], axis=1)
 
     # Update README
     template_path = Path(__file__).parent
@@ -160,8 +166,8 @@ def results(session: nox.Session) -> None:
         env = Environment(loader=FileSystemLoader(template_path), autoescape=True)
         template = env.from_string(template_file.read())
     readme = template.render(
-        backtest_results=bettor.backtest_results_.to_markdown(),
-        value_bets=value_bets.to_markdown(),
+        backtest_results=bettor.backtest_results_.to_markdown(index=False),
+        value_bets=value_bets.to_markdown(index=False),
     )
     with Path.open(Path(__file__).parent / 'README.md', 'wt') as readme_file:
         readme_file.write(readme)
