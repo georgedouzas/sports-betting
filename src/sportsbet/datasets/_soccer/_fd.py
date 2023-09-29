@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from functools import lru_cache
 from typing import ClassVar
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -545,7 +546,9 @@ class _FDSoccerDataLoader(_BaseDataLoader):
             try:
                 data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
             except ValueError:
-                data['Date'] = pd.to_datetime(data['Date'], infer_datetime_format=True)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', category=UserWarning)
+                    data['Date'] = pd.to_datetime(data['Date'], infer_datetime_format=True)
 
             if url.split('/')[-2] != 'new':
                 data = data.assign(
@@ -575,14 +578,16 @@ class _FDSoccerDataLoader(_BaseDataLoader):
         data['league'] = data['Div'].apply(lambda div: inv_leagues_mapping[div[:-1]])
         data['division'] = data['Div'].apply(lambda div: div[-1])
         data['divisions'] = data['league'].apply(lambda league: LEAGUES_MAPPING[league][1:])
-        data['division'] = (
-            data[['division', 'divisions']]
-            .apply(
-                lambda row: row[0] if 'C' not in row[1] else (row[0] - 1 if isinstance(row[0], int) else 4),
-                axis=1,
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=FutureWarning)
+            data['division'] = (
+                data[['division', 'divisions']]
+                .apply(
+                    lambda row: row[0] if 'C' not in row[1] else (row[0] - 1 if isinstance(row[0], int) else 4),
+                    axis=1,
+                )
+                .astype(int)
             )
-            .astype(int)
-        )
         years = (pd.DataFrame(self._get_full_param_grid()).groupby(['league', 'division']).max()).reset_index()
         data = data.merge(years, how='left')
         data = data.drop(columns=[col for col in data.columns if 'Unnamed' in col or col in REMOVED_COLS]).rename(
