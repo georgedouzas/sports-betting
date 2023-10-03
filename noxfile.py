@@ -146,6 +146,8 @@ def results(session: nox.Session) -> None:
         odds_type=mod.CONFIG['data']['odds_type'],
     )
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
+    if X_fix.empty and O_fix.empty:
+        session.skip('Fixtures data are not available.')
 
     # Get backtesting and value bets results
     bettor = mod.CONFIG['betting']['bettor'](classifier=mod.CONFIG['betting']['classifier'])
