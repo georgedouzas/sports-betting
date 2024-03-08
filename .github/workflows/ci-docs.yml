@@ -21,7 +21,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install Python versions
       uses: actions/setup-python@v4
@@ -32,7 +32,7 @@ jobs:
             
 
     - name: Set up PDM
-      uses: pdm-project/setup-pdm@v3
+      uses: pdm-project/setup-pdm@v4
       with:
         cache: true
         cache-dependency-path: pyproject.toml
@@ -62,7 +62,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install Python versions
       uses: actions/setup-python@v4
@@ -73,7 +73,7 @@ jobs:
             
 
     - name: Set up PDM
-      uses: pdm-project/setup-pdm@v3
+      uses: pdm-project/setup-pdm@v4
       with:
         cache: true
         cache-dependency-path: pyproject.toml
@@ -94,10 +94,10 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up PDM
-      uses: pdm-project/setup-pdm@v3
+      uses: pdm-project/setup-pdm@v4
       with:
         cache: true
         cache-dependency-path: pyproject.toml
