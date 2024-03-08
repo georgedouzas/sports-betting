@@ -12,16 +12,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Bug Fixes
 
-- Decode response and convert data types ([a265162](https://github.com/georgedouzas/sports-betting/commit/a2651620a44993000bcfa1f5d91ae2b0ff219461) by georgedouzas).
+- Decode response and convert data types ([55f6c33](https://github.com/georgedouzas/sports-betting/commit/55f6c337b6ce588af2d7b5745a78391845d31a3b) by georgedouzas).
 
 ### Docs
 
-- Fix README typo ([ad67830](https://github.com/georgedouzas/sports-betting/commit/ad6783081d6ee2ab646a255aa82bf875db3efc1d) by georgedouzas).
+- Fix README typo ([5477a30](https://github.com/georgedouzas/sports-betting/commit/5477a303dc602bafc5a0201f21272899784d00a3) by georgedouzas).
 
 ### Chore
 
-- Sort imports ([eebf12f](https://github.com/georgedouzas/sports-betting/commit/eebf12f8911539aba36dc5f16a2763a087bf8fbc) by georgedouzas).
-- Silence ruff usage and configuration warnings ([b4a9815](https://github.com/georgedouzas/sports-betting/commit/b4a9815969274c35b48420a3e6647267be2c9617) by georgedouzas).
+- Release 0.8.1 ([33fe943](https://github.com/georgedouzas/sports-betting/commit/33fe943d4356c895283def585c4b821c83255074) by georgedouzas).
+- Sort imports ([0940efc](https://github.com/georgedouzas/sports-betting/commit/0940efcae77f1bfb31e80675749ce309a38e9504) by georgedouzas).
+- Silence ruff usage and configuration warnings ([e85e56f](https://github.com/georgedouzas/sports-betting/commit/e85e56fb11ba338b81c240d703c85bf67e26f3d2) by georgedouzas).
 - Predictions 13/10/2023 ([77a3a72](https://github.com/georgedouzas/sports-betting/commit/77a3a723b464cd45418936076d27fb14e2bfc0b1) by georgedouzas).
 - Predictions 03/10/2023 ([6af121b](https://github.com/georgedouzas/sports-betting/commit/6af121be9aef9b4c51bfd7866ddfb9b38e6b5576) by georgedouzas).
 - Skip session if fixtures data are empty ([00d3eeb](https://github.com/georgedouzas/sports-betting/commit/00d3eeb0eb491f94f1036096d97f7fab6e303b98) by georgedouzas).
