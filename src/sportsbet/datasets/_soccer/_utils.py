@@ -72,7 +72,7 @@ CONNECTIONS_LIMIT = 20
 async def _read_url_content_async(client: aiohttp.ClientSession, url: str) -> str:
     """Read asynchronously the URL content."""
     async with client.get(url) as response:
-        with io.StringIO(await response.text()) as text_io:
+        with io.StringIO(await response.text(encoding='ISO-8859-1')) as text_io:
             return text_io.getvalue()
 
 

@@ -131,7 +131,12 @@ class _BaseDataLoader(metaclass=ABCMeta):
                 },
             )
             if converted_cols:
-                data_converted_cols = data[converted_cols].fillna(-1 if data_type is np.int64 else np.nan)
+                data_converted_cols = data[converted_cols]
+                if data_type is float or data_type is np.int64:
+                    data_converted_cols = data_converted_cols.replace('-', np.nan)
+                    data_converted_cols = data_converted_cols.infer_objects().fillna(
+                        -1 if data_type is np.int64 else np.nan,
+                    )
                 data[converted_cols] = (
                     data_converted_cols.to_numpy().astype(data_type)
                     if data_type is not np.datetime64
