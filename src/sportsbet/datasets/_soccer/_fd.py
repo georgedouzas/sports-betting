@@ -10,10 +10,10 @@ Data source:
 
 from __future__ import annotations
 
+import warnings
 from datetime import datetime
 from functools import lru_cache
 from typing import ClassVar
-import warnings
 
 import numpy as np
 import pandas as pd
