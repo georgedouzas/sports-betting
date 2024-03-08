@@ -6,23 +6,44 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## [0.8.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.0) - 2023-09-30
+## [0.8.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.1) - 2024-03-08
+
+<small>[Compare with 0.8.0](https://github.com/georgedouzas/sports-betting/compare/0.8.0...0.8.1)</small>
+
+### Bug Fixes
+
+- Decode response and convert data types ([a265162](https://github.com/georgedouzas/sports-betting/commit/a2651620a44993000bcfa1f5d91ae2b0ff219461) by georgedouzas).
+
+### Docs
+
+- Fix README typo ([ad67830](https://github.com/georgedouzas/sports-betting/commit/ad6783081d6ee2ab646a255aa82bf875db3efc1d) by georgedouzas).
+
+### Chore
+
+- Sort imports ([eebf12f](https://github.com/georgedouzas/sports-betting/commit/eebf12f8911539aba36dc5f16a2763a087bf8fbc) by georgedouzas).
+- Silence ruff usage and configuration warnings ([b4a9815](https://github.com/georgedouzas/sports-betting/commit/b4a9815969274c35b48420a3e6647267be2c9617) by georgedouzas).
+- Predictions 13/10/2023 ([77a3a72](https://github.com/georgedouzas/sports-betting/commit/77a3a723b464cd45418936076d27fb14e2bfc0b1) by georgedouzas).
+- Predictions 03/10/2023 ([6af121b](https://github.com/georgedouzas/sports-betting/commit/6af121be9aef9b4c51bfd7866ddfb9b38e6b5576) by georgedouzas).
+- Skip session if fixtures data are empty ([00d3eeb](https://github.com/georgedouzas/sports-betting/commit/00d3eeb0eb491f94f1036096d97f7fab6e303b98) by georgedouzas).
+
+## [0.8.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.0) - 2023-09-29
 
 <small>[Compare with 0.7.0](https://github.com/georgedouzas/sports-betting/compare/0.7.0...0.8.0)</small>
 
 ### Features
 
-- Use footballdata only for data source ([2b41ad0](https://github.com/georgedouzas/sports-betting/commit/2b41ad05c336ec769882b1ff39179c42d686ee65) by georgedouzas).
+- Use footballdata only for data source ([582d547](https://github.com/georgedouzas/sports-betting/commit/582d54782a299312badc19641c15ba632a7934ea) by georgedouzas).
 
 ### Style
 
-- Split line ([893cd70](https://github.com/georgedouzas/sports-betting/commit/893cd70c17c9f57e149c27adb83c0629f80bdda5) by georgedouzas).
+- Split line ([6b93930](https://github.com/georgedouzas/sports-betting/commit/6b9393045ad00930bac816fa46266e8763ec4099) by georgedouzas).
 
 ### Chore
 
-- Ignore warnings ([36ff455](https://github.com/georgedouzas/sports-betting/commit/36ff455dcf6dce6583a991218b79b88ef4db4e91) by georgedouzas).
-- Update Pandas dependency ([cf179d8](https://github.com/georgedouzas/sports-betting/commit/cf179d8c48c4b8c7942f25c700c56a3a8b05630c) by georgedouzas).
-- Update copier template ([e5b5a0a](https://github.com/georgedouzas/sports-betting/commit/e5b5a0a606ecfefdc8a7aa3e3779032dc3589914) by georgedouzas).
+- Release 0.8.0 ([b611337](https://github.com/georgedouzas/sports-betting/commit/b611337962073f27cb2c403586657e05c3293365) by georgedouzas).
+- Ignore warnings ([6b78adc](https://github.com/georgedouzas/sports-betting/commit/6b78adc69618eb96f3a2cefa890a8beafe6cb181) by georgedouzas).
+- Update Pandas dependency ([51a9a13](https://github.com/georgedouzas/sports-betting/commit/51a9a139a6e7ccfa09a56039bbd8f683dbef9dff) by georgedouzas).
+- Update copier template ([a724b9e](https://github.com/georgedouzas/sports-betting/commit/a724b9e6bfeca4a5f04595e2c8670448c6e0d866) by georgedouzas).
 
 ## [0.7.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.7.0) - 2023-09-23
 
