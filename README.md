@@ -274,7 +274,7 @@ The dictionary `CONFIG` has the following structure:
 - The `'data'` key has a nested dictionary as a value with a mandatory key '`dataloader`' and the optional keys `'param_grid'`,
   `'drop_na_thres'` and `'drop_na'`. You can refer to the [API](api/datasets) for more details about their values.
 - The `'betting'` key has a nested dictionary as a value with a mandatory key '`bettor`' and the optional keys `'tscv'`, and
-  `'inti_cash'`. You can refer to the [API](api/datasets) for more details about their values.
+  `'init_cash'`. You can refer to the [API](api/datasets) for more details about their values.
 
 #### Dataloader
 
@@ -293,7 +293,7 @@ sportsbet dataloader odds-types -c config.py
 Extract training data and save them as CSV files:
 
 ```bash
-sportsbet dataloader training -c dataloader_config.py -d /path/to/directory
+sportsbet dataloader training -c config.py -d /path/to/directory
 ```
 
 Extract fixtures data and save them as CSV files:
