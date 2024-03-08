@@ -81,7 +81,7 @@ def checks(session: nox.Session, file: str) -> None:
     check_cli(session, ['all', 'quality', 'dependencies', 'types'])
     session.run('pdm', 'install', '-dG', 'checks', '--no-default', external=True)
     if session.posargs[0] in ['quality', 'all']:
-        session.run('ruff', file)
+        session.run('ruff', 'check', file)
     if session.posargs[0] in ['types', 'all']:
         session.run('mypy', file)
     if session.posargs[0] in ['dependencies', 'all']:
