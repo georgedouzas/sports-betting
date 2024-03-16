@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import click
 
+from ._betting import bettor
 from ._data import dataloader
-from .betting import bettor
 
 
 @click.group()
