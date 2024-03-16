@@ -151,7 +151,7 @@ def results(session: nox.Session) -> None:
 
     # Get backtesting and value bets results
     bettor = mod.CONFIG['betting']['bettor'](classifier=mod.CONFIG['betting']['classifier'])
-    bettor.backtest(X_train, Y_train, O_train)
+    bettor.backtest(X_train, Y_train, O_train, mod.CONFIG['betting']['tscv'], mod.CONFIG['betting']['init_cash'])
     match_info = (
         X_fix[['league', 'home_team', 'away_team']]
         .reset_index()
