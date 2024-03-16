@@ -43,7 +43,7 @@ CONFIG = {
             SimpleImputer(),
             MultiOutputClassifier(GradientBoostingClassifier(random_state=5)),
         ),
-        'tscv': TimeSeriesSplit(5),
+        'tscv': TimeSeriesSplit(4),
         'init_cash': 1000,
     },
 }
