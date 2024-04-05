@@ -104,5 +104,4 @@ def _read_csvs(urls: list[str]) -> list[pd.DataFrame]:
 
 def _read_csv(url: str) -> pd.DataFrame:
     """Read the CSV."""
-    """Read csv file from URL as a pandas dataframe."""
     return _read_csvs([url])[0]
