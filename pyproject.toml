@@ -103,9 +103,6 @@ tests = [
     "pytest-randomly>=3.10",
     "pytest-xdist>=2.4",
 ]
-results = [
-    "jinja2>=3.1.2",
-]
 changelog = [
     "git-changelog>=1.0.0",
 ]
