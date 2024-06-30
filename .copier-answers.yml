@@ -10,7 +10,7 @@ copyright_license: MIT License
 project_description: Python sports betting toolbox.
 python_package_distribution_name: sports-betting
 python_package_import_name: sportsbet
-python_versions: '>=3.9, <3.13'
+python_versions: '>=3.10, <3.13'
 repository_name: sports-betting
 repository_namespace: georgedouzas
 

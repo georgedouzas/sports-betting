@@ -8,7 +8,7 @@ description = "Python sports betting toolbox."
 authors = [{name = "Georgios Douzas", email = "gdouzas@icloud.com"}]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.9, <3.13"
+requires-python = ">=3.10, <3.13"
 keywords = []
 dynamic = ["version"]
 classifiers = [
@@ -17,7 +17,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -120,7 +119,7 @@ fix = true
 extend-exclude = ["docs/generated"]
 force-exclude = true
 line-length = 120
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 fixable = ["C", "E", "F", "W", "B", "I", "D", "N", "UP", "YTT", "ANN", "S",
