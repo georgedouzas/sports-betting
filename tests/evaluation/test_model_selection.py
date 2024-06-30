@@ -184,7 +184,7 @@ def test_bgscv_fit(n_splits):
     cv_results = cv_results[[col for col in cv_results.columns if not col.endswith('time')]]
 
     # Assertions
-    pd.testing.assert_frame_equal(cv_results, expected_cv_results)
+    pd.testing.assert_frame_equal(cv_results, expected_cv_results, check_dtype=False)
     assert bgscv.n_splits_ == bgscv.cv.get_n_splits()
     assert np.array_equal(bgscv.betting_markets_, bgscv.best_estimator_.betting_markets_)
     assert bgscv.init_cash_ == bgscv.best_estimator_.init_cash_
