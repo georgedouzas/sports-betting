@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any
 
@@ -119,60 +118,6 @@ def tests(session: nox.Session) -> None:
     session.run('coverage', 'combine')
     session.run('coverage', 'report')
     session.run('coverage', 'html')
-
-
-@nox.session
-def results(session: nox.Session) -> None:
-    """Update the README file with backtesting and value bets results."""
-    session.run('pdm', 'install', '-dG', 'results', external=True)
-    import numpy as np
-    import pandas as pd
-    from jinja2 import Environment, FileSystemLoader
-
-    # Import configuration file as module
-    config_path = Path(__file__).parent / 'configs' / 'main_leagues_ml.py'
-    spec = spec_from_file_location('mod', config_path)
-    if spec is not None:
-        mod = module_from_spec(spec)
-        if spec.loader is not None:
-            spec.loader.exec_module(mod)
-    if mod is None:
-        return
-
-    # Extract training and fixtures data
-    dataloader = mod.CONFIG['data']['dataloader'](mod.CONFIG['data']['param_grid'])
-    X_train, Y_train, O_train = dataloader.extract_train_data(
-        drop_na_thres=mod.CONFIG['data']['drop_na_thres'],
-        odds_type=mod.CONFIG['data']['odds_type'],
-    )
-    X_fix, _, O_fix = dataloader.extract_fixtures_data()
-    if X_fix.empty and O_fix.empty:
-        session.skip('Fixtures data are not available.')
-
-    # Get backtesting and value bets results
-    bettor = mod.CONFIG['betting']['bettor'](classifier=mod.CONFIG['betting']['classifier'])
-    bettor.backtest(X_train, Y_train, O_train, mod.CONFIG['betting']['tscv'], mod.CONFIG['betting']['init_cash'])
-    match_info = (
-        X_fix[['league', 'home_team', 'away_team']]
-        .reset_index()
-        .rename(columns=lambda col: col.replace('_', ' ').title())
-    )
-    match_info['Date'] = match_info['Date'].astype(str)
-    columns = [" ".join(col.split('__')[2].split('_')).title() for col in O_fix.columns]
-    O_pred = pd.DataFrame(np.round(1 / bettor.predict_proba(X_fix), 2), columns=columns)
-    value_bets = pd.concat([match_info, O_pred], axis=1)
-
-    # Update README
-    template_path = Path(__file__).parent
-    with Path.open(template_path / 'docs' / 'README.md.jinja', encoding='utf-8') as template_file:
-        env = Environment(loader=FileSystemLoader(template_path), autoescape=True)
-        template = env.from_string(template_file.read())
-    readme = template.render(
-        backtest_results=bettor.backtest_results_.to_markdown(index=False),
-        value_bets=value_bets.to_markdown(index=False),
-    )
-    with Path.open(Path(__file__).parent / 'README.md', 'wt') as readme_file:
-        readme_file.write(readme)
 
 
 @nox.session
