@@ -1,5 +1,4 @@
 [ParameterGrid]: <https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.ParameterGrid.html>
-[FiveThirtyEight]: <https://github.com/fivethirtyeight/data/tree/master/soccer-spi>
 [pandas DataFrame]: <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html>
 [pandas DateTimeIndex]: <https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.html>
 
@@ -46,13 +45,13 @@ Similarly, for [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]:
 ```python
 from sportsbet.datasets import SoccerDataLoader
 assert SoccerDataLoader.get_all_params() == [
-    {'data_source': 'fivethirtyeight', 'division': 1, 'league': 'Argentina', 'year': 2018},
-    {'data_source': 'fivethirtyeight', 'division': 1, 'league': 'Argentina', 'year': 2019},
-    {'data_source': 'fivethirtyeight', 'division': 1, 'league': 'Argentina', 'year': 2020},
+    {'division': 1, 'league': 'Argentina', 'year': 2018},
+    {'division': 1, 'league': 'Argentina', 'year': 2019},
+    {'division': 1, 'league': 'Argentina', 'year': 2020},
     ...,
-    {'data_source': 'footballdata', 'division': 5,  'league': 'England', 'year': 2021},
-    {'data_source': 'footballdata','division': 5, 'league': 'England', 'year': 2022},
-    {'data_source': 'footballdata', 'division': 5, 'league': 'England', 'year': 2023}
+    {'division': 5,  'league': 'England', 'year': 2022},
+    {'division': 5, 'league': 'England', 'year': 2023},
+    {'division': 5, 'league': 'England', 'year': 2024}
 ]
 ```
 
@@ -62,15 +61,15 @@ The parameter `param_grid` has the same usage as the initialization parameter of
 of `param_grid` is `None` and corresponds to the selection of all training data i.e. all leagues, years and divisions. If
 `param_grid` is provided, then it should be a list of dictionaries with the above keys and values as lists.
 
-For example, if we use the [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader] and include data only from [FiveThirtyEight]
-data source for the Spanish and Italian leagues of first division and 2018-2020 years, as well as data for the French league of
-all divisions for 2020-2021 years, we will use the following `param_grid` and dataloader:
+For example, if we use the [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader] and include data for the Spanish and Italian
+leagues of first division and 2018-2020 years, as well as data for the French league of all divisions for 2020-2021 years, we will
+use the following `param_grid` and dataloader:
 
 ```python
 from sportsbet.datasets import SoccerDataLoader
 param_grid = [
-    {'data_source': ['fivethirtyeight'], 'division': [1], 'league': ['Spain', 'Italy'], 'year': [2018, 2019, 2020]},
-    {'data_source': ['fivethirtyeight'], 'league': ['France'], 'year': [2020, 2021]} 
+    {'division': [1], 'league': ['Spain', 'Italy'], 'year': [2018, 2019, 2020]},
+    {'league': ['France'], 'year': [2020, 2021]} 
 ]
 dataloader = SoccerDataLoader(param_grid=param_grid)
 ```
@@ -99,14 +98,14 @@ that have many missing values, therefore their presence does not enhance the pre
 
     ```python
     X_train, *_ = dataloader.extract_train_data()
-    assert len(X_train.columns) == 112
+    assert len(X_train.columns) == 39
     ```
 
-    Similarly, if we set `drop_na_thres=0` then only columns with non-missing values are kept:
+    Similarly, if we set `drop_na_thres=1.0` then only columns with non-missing values are kept:
 
     ```python
     X_train, *_ = dataloader.extract_train_data(drop_na_thres=1.0)
-    assert len(X_train.columns) == 19
+    assert len(X_train.columns) == 5
     ```
 
 - Parameter `odds_type` selects the type of odds that will be used for the odds' matrix `O_train`. It also affects the columns of
@@ -114,27 +113,7 @@ the multi-output targets `Y_train` since there is a match between `Y_train` and 
 the available odds types from the method `get_odds_types`:
 
     ```python
-    assert dataloader.get_odds_types() == [
-        'bet365',
-        'bet365_closing',
-        'betbrain',
-        'betbrain_average',
-        'betbrain_maximum',
-        'betwin',
-        'betwin_closing',
-        'interwetten',
-        'interwetten_closing',
-        'market_average',
-        'market_average_closing',
-        'market_maximum',
-        'market_maximum_closing',
-        'pinnacle',
-        'pinnacle_closing',
-        'vcbet',
-        'vcbet_closing',
-        'williamhill',
-        'williamhill_closing'
-    ]
+    assert dataloader.get_odds_types() == ['market_average', 'market_maximum']
     ```
 
     When `odds_type` is not provided, its default value is `None` and `O_train` is None:
@@ -144,60 +123,34 @@ the available odds types from the method `get_odds_types`:
     assert O_train is None
     ```
 
-    Selecting one of the above bookmakers, returns the corresponding data:
+    Selecting one of the above odds types, returns the corresponding data:
 
     ```python
-    X_train, _, O_train, = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='pinnacle')
+    X_train, _, O_train, = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='market_average')
     assert O_train.columns.tolist() == [
-        'odds__pinnacle__home_win__full_time_goals',
-        'odds__pinnacle__draw__full_time_goals',
-        'odds__pinnacle__away_win__full_time_goals',
-        'odds__pinnacle__over_2.5__full_time_goals',
-        'odds__pinnacle__under_2.5__full_time_goals'
+        'odds__market_average__home_win__full_time_goals',
+        'odds__market_average__draw__full_time_goals',
+        'odds__market_average__away_win__full_time_goals',
+        'odds__market_average__over_2.5__full_time_goals',
+        'odds__market_average__under_2.5__full_time_goals'
     ]
     ```
 
     Notice that `odds_type` parameter affects only the odds matrix. The input matrix `X_train` still contains information from all
-    available bookmakers:
+    available odds types:
 
     ```python
-    assert [ col for col in X_train.columns if col.startswith('odds')] == [
-        'odds__bet365__home_win__full_time_goals',
-        'odds__bet365__draw__full_time_goals',
-        'odds__bet365__away_win__full_time_goals',
-        'odds__betbrain_maximum__home_win__full_time_goals',
-        'odds__betbrain_maximum__draw__full_time_goals',
-        'odds__betbrain_maximum__away_win__full_time_goals',
-        'odds__betbrain_maximum__over_2.5__full_time_goals',
-        'odds__betbrain_maximum__under_2.5__full_time_goals',
-        'odds__betbrain_maximum__asian_handicap_home_team__full_time_goals',
-        'odds__betbrain_maximum__asian_handicap_away_team__full_time_goals',
-        'odds__betbrain_average__home_win__full_time_goals',
-        'odds__betbrain_average__draw_win__full_time_goals',
-        'odds__betbrain_average__away_win__full_time_goals',
-        'odds__betbrain_average__over_2.5__full_time_goals',
-        'odds__betbrain_average__under_2.5__full_time_goals',
-        'odds__betbrain_average__asian_handicap_home_team__full_time_goals',
-        'odds__betbrain_average__asian_handicap_away_team__full_time_goals',
-        'odds__betbrain__size_of_asian_handicap_home_team__full_time_goals',
-        'odds__betwin__home_win__full_time_goals',
-        'odds__betwin__draw__full_time_goals',
-        'odds__betwin__away_win__full_time_goals',
-        'odds__interwetten__home_win__full_time_goals',
-        'odds__interwetten__draw__full_time_goals',
-        'odds__interwetten__away_win__full_time_goals',
-        'odds__pinnacle__home_win__full_time_goals',
-        'odds__pinnacle__draw__full_time_goals',
-        'odds__pinnacle__away_win__full_time_goals',
-        'odds__pinnacle_closing__home_win__full_time_goals',
-        'odds__pinnacle_closing__draw__full_time_goals',
-        'odds__pinnacle_closing__away_win__full_time_goals',
-        'odds__vcbet__home_win__full_time_goals',
-        'odds__vcbet__draw__full_time_goals',
-        'odds__vcbet__away_win__full_time_goals',
-        'odds__williamhill__home_win__full_time_goals',
-        'odds__williamhill__draw__full_time_goals',
-        'odds__williamhill__away_win__full_time_goals'
+    assert [col for col in X_train.columns if col.startswith('odds')] == [
+        'odds__market_maximum__home_win__full_time_goals',
+        'odds__market_maximum__draw__full_time_goals',
+        'odds__market_maximum__away_win__full_time_goals',
+        'odds__market_maximum__over_2.5__full_time_goals',
+        'odds__market_maximum__under_2.5__full_time_goals',
+        'odds__market_average__home_win__full_time_goals',
+        'odds__market_average__draw__full_time_goals',
+        'odds__market_average__away_win__full_time_goals',
+        'odds__market_average__over_2.5__full_time_goals',
+        'odds__market_average__under_2.5__full_time_goals'
     ]
     ```
 
@@ -215,7 +168,7 @@ param_grid = [
     {'division': [1], 'league': ['Spain', 'Italy'], 'year': [2018, 2019, 2020]},
 ]
 dataloader = SoccerDataLoader(param_grid=param_grid)
-X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='williamhill')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
@@ -246,7 +199,7 @@ As an example we use the following data:
 from sportsbet.datasets import SoccerDataLoader
 param_grid = {'league': ['England'], 'year': [2021]}
 dataloader = SoccerDataLoader(param_grid=param_grid)
-X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='bet365')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
@@ -255,82 +208,50 @@ A detailed description of the above tuples of data is provided below.
 ### X_train
 
 `X_train` is the first component of the training data tuple. `X_train` is a [pandas DataFrame] that contains information known
-before the start of the betting event like the date, the names of the opponents, indices related to the strength of the opponents
-and any other information useful for predictive modelling:
+before the start of the betting event like the date, the names of the opponents, features related to the past performance of the
+opponents and any other information useful for predictive modelling:
 
 ```python
-assert X_train.columns.tolist() = [
+assert X_train.columns.tolist() == [
     'league',
     'division',
     'year',
     'home_team',
     'away_team',
-    'odds__bet365__home_win__full_time_goals',
-    'odds__bet365__draw__full_time_goals',
-    'odds__bet365__away_win__full_time_goals',
-    'odds__bet365_closing__home_win__full_time_goals',
-    'odds__bet365_closing__draw__full_time_goals',
-    'odds__bet365_closing__away_win__full_time_goals',
-    'odds__bet365_closing__over_2.5__full_time_goals',
-    'odds__bet365_closing__under_2.5__full_time_goals',
-    'odds__bet365_closing__asian_handicap_home_team__full_time_goals',
-    'odds__bet365_closing__asian_handicap_away_team__full_time_goals',
-    'odds__interwetten__home_win__full_time_goals',
-    'odds__interwetten__draw__full_time_goals',
-    'odds__interwetten__away_win__full_time_goals',
-    'odds__interwetten_closing__home_win__full_time_goals',
-    'odds__interwetten_closing__draw__full_time_goals',
-    'odds__interwetten_closing__away_win__full_time_goals',
-    'odds__vcbet__home_win__full_time_goals',
-    'odds__vcbet__draw__full_time_goals',
-    'odds__vcbet__away_win__full_time_goals',
-    'odds__vcbet_closing__home_win__full_time_goals',
-    'odds__vcbet_closing__draw__full_time_goals',
-    'odds__vcbet_closing__away_win__full_time_goals',
-    'odds__williamhill__home_win__full_time_goals',
-    'odds__williamhill__draw__full_time_goals',
-    'odds__williamhill__away_win__full_time_goals',
-    'odds__williamhill_closing__home_win__full_time_goals',
-    'odds__williamhill_closing__draw__full_time_goals',
-    'odds__williamhill_closing__away_win__full_time_goals',
     'odds__market_maximum__home_win__full_time_goals',
     'odds__market_maximum__draw__full_time_goals',
     'odds__market_maximum__away_win__full_time_goals',
     'odds__market_maximum__over_2.5__full_time_goals',
     'odds__market_maximum__under_2.5__full_time_goals',
-    'odds__market_maximum__asian_handicap_home_team__full_time_goals',
-    'odds__market_maximum__asian_handicap_away_team__full_time_goals',
-    'odds__market_maximum_closing__home_win__full_time_goals',
-    'odds__market_maximum_closing__draw__full_time_goals',
-    'odds__market_maximum_closing__away_win__full_time_goals',
-    'odds__market_maximum_closing__over_2.5__full_time_goals',
-    'odds__market_maximum_closing__under_2.5__full_time_goals',
-    'odds__market_maximum_closing__asian_handicap_home_team__full_time_goals',
-    'odds__market_maximum_closing__asian_handicap_away_team__full_time_goals',
     'odds__market_average__home_win__full_time_goals',
     'odds__market_average__draw__full_time_goals',
     'odds__market_average__away_win__full_time_goals',
     'odds__market_average__over_2.5__full_time_goals',
     'odds__market_average__under_2.5__full_time_goals',
-    'odds__market_average__asian_handicap_home_team__full_time_goals',
-    'odds__market_average__asian_handicap_away_team__full_time_goals',
-    'odds__market_average_closing__home_win__full_time_goals',
-    'odds__market_average_closing__draw__full_time_goals',
-    'odds__market_average_closing__away_win__full_time_goals',
-    'odds__market_average_closing__over_2.5__full_time_goals',
-    'odds__market_average_closing__under_2.5__full_time_goals',
-    'odds__market_average_closing__asian_handicap_home_team__full_time_goals',
-    'odds__market_average_closing__asian_handicap_away_team__full_time_goals',
-    'odds__market_average__size_of_handicap_home_team__full_time_goals',
-    'odds__market_average_closing__size_of_asian_handicap_home_team__full_time_goals',
-    'match_quality',
-    'home_team_soccer_power_index',
-    'away_team_soccer_power_index',
-    'home_team_probability_win',
-    'away_team_probability_win',
-    'probability_draw',
-    'home_team_projected_score',
-    'away_team_projected_score'
+    'home__points__avg',
+    'home__adj_points__avg',
+    'home__goals_for__avg',
+    'home__goals_against__avg',
+    'home__adj_goals_for__avg',
+    'home__adj_goals_against__avg',
+    'home__points__latest_avg',
+    'home__adj_points__latest_avg',
+    'home__goals_for__latest_avg',
+    'home__goals_against__latest_avg',
+    'home__adj_goals_for__latest_avg',
+    'home__adj_goals_against__latest_avg',
+    'away__points__avg',
+    'away__adj_points__avg',
+    'away__goals_for__avg',
+    'away__goals_against__avg',
+    'away__adj_goals_for__avg',
+    'away__adj_goals_against__avg',
+    'away__points__latest_avg',
+    'away__adj_points__latest_avg',
+    'away__goals_for__latest_avg',
+    'away__goals_against__latest_avg',
+    'away__adj_goals_for__latest_avg',
+    'away__adj_goals_against__latest_avg'
 ]
 ```
 
@@ -378,18 +299,18 @@ values are removed. This last step also includes `X_train` and `O_train`: Their 
 
 ```python
 assert O_train.columns.tolist() == [
-    'odds__bet365__home_win__full_time_goals',
-    'odds__bet365__draw__full_time_goals',
-    'odds__bet365__away_win__full_time_goals',
-    'odds__bet365__over_2.5__full_time_goals',
-    'odds__bet365__under_2.5__full_time_goals'
+    'odds__market_maximum__home_win__full_time_goals',
+    'odds__market_maximum__draw__full_time_goals',
+    'odds__market_maximum__away_win__full_time_goals',
+    'odds__market_maximum__over_2.5__full_time_goals',
+    'odds__market_maximum__under_2.5__full_time_goals'
 ]
 ```
 
 `O_train` is a [pandas DataFrame] that contains information related to the odds for various betting markets. Column names follow a
 naming convention of the form `f'odds__{bookmaker}__{betting_market}__{target}'`:
 
-- `bookmaker`: Any supported bookmaker or aggregation of bookmakers like `'pinnacle'`', `'bet365'`, `'market_maximum'` etc.
+- `bookmaker`: Any supported bookmaker or aggregation of bookmakers return by the method `get_odds_types`.
 - `betting_market`: Similar to `Y_train`.
 - `target`: Similar to `Y_train`.
 

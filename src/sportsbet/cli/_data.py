@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ._options import get_config_path_option, get_data_path_option
-from ._utils import get_dataloader, get_module, get_train_params, print_console
+from ._utils import get_dataloader_cls, get_drop_na_thres, get_module, get_odds_type, get_param_grid, print_console
 
 
 @click.group()
@@ -27,10 +27,10 @@ def dataloader() -> None:
 def params(config_path: str) -> None:
     """Show the available parameters to select data for a dataloader."""
     mod = get_module(config_path)
-    dataloader = get_dataloader(mod)
-    if dataloader is None:
+    dataloader_cls = get_dataloader_cls(mod)
+    if dataloader_cls is None:
         return
-    all_params = dataloader.get_all_params()
+    all_params = dataloader_cls.get_all_params()
     cols = list({param for params in all_params for param in params})
     available_params = pd.DataFrame({col: [params.get(col, '-') for params in all_params] for col in cols})
     print_console([available_params], ['Available parameters'])
@@ -39,12 +39,13 @@ def params(config_path: str) -> None:
 @dataloader.command()
 @get_config_path_option()
 def odds_types(config_path: str) -> None:
-    """List the odds types that can be selected to extract odds data."""
+    """Show the odds types that can be selected to extract odds data."""
     mod = get_module(config_path)
-    dataloader = get_dataloader(mod)
-    if dataloader is None:
+    dataloader_cls = get_dataloader_cls(mod)
+    if dataloader_cls is None:
         return
-    odds_types = pd.DataFrame(dataloader.get_odds_types(), columns=['Type'])
+    param_grid = get_param_grid(mod)
+    odds_types = pd.DataFrame(dataloader_cls(param_grid).get_odds_types(), columns=['Type'])
     print_console([odds_types], ['Available odds types'])
 
 
@@ -54,11 +55,14 @@ def odds_types(config_path: str) -> None:
 def training(config_path: str, data_path: str) -> None:
     """Use a dataloader to extract the training data."""
     mod = get_module(config_path)
-    dataloader = get_dataloader(mod)
-    if dataloader is None:
+    dataloader_cls = get_dataloader_cls(mod)
+    if dataloader_cls is None:
         return
-    train_params = get_train_params(mod)
-    X_train, Y_train, O_train = dataloader.extract_train_data(**train_params)
+    param_grid = get_param_grid(mod)
+    drop_na_thres = get_drop_na_thres(mod)
+    odds_type = get_odds_type(mod)
+    dataloader = dataloader_cls(param_grid)
+    X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
     print_console(
         [X_train, Y_train] + ([O_train] if O_train is not None else []),
         ['Training input data', 'Training output data'] + (['Training odds data'] if O_train is not None else []),
@@ -78,11 +82,14 @@ def fixtures(config_path: str, data_path: str) -> None:
     """Use a dataloader to extract the fixtures data."""
     console = Console()
     mod = get_module(config_path)
-    dataloader = get_dataloader(mod)
-    if dataloader is None:
+    dataloader_cls = get_dataloader_cls(mod)
+    if dataloader_cls is None:
         return
-    train_params = get_train_params(mod)
-    dataloader.extract_train_data(**train_params)
+    param_grid = get_param_grid(mod)
+    drop_na_thres = get_drop_na_thres(mod)
+    odds_type = get_odds_type(mod)
+    dataloader = dataloader_cls(param_grid)
+    dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
     if not X_fix.empty:
         print_console([X_fix], ['Fixtures input data'])

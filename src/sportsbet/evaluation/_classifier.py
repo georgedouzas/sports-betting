@@ -5,19 +5,18 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, clone, is_classifier
-from sklearn.model_selection import TimeSeriesSplit
+from sklearn.base import BaseEstimator, MetaEstimatorMixin, clone, is_classifier
 from typing_extensions import Self
 
 from .. import BoolData, Data
 from ._base import _BaseBettor
 
 
-class ClassifierBettor(_BaseBettor):
+class ClassifierBettor(MetaEstimatorMixin, _BaseBettor):
     """Bettor based on a Scikit-Learn classifier.
 
     Read more in the [user guide][user-guide].
@@ -26,6 +25,15 @@ class ClassifierBettor(_BaseBettor):
         classifier:
             A scikit-learn classifier object implementing `fit`, `score`
             and `predict_proba`.
+
+        betting_markets:
+            Select the betting markets from the ones included in the data.
+
+        init_cash:
+            The initial cash to use when betting.
+
+        stake:
+            The stake of each bet.
 
     Attributes:
         tscv_ (TimeSeriesSplit):
@@ -36,7 +44,7 @@ class ClassifierBettor(_BaseBettor):
             The checked value of initial cash. If `init_cash` is `None`, it uses the value
             of `1e3`.
 
-        backtest_results_ (pd.DataFrame):
+        backtesting_results_ (pd.DataFrame):
             The backtesting results.
 
     Examples:
@@ -66,15 +74,21 @@ class ClassifierBettor(_BaseBettor):
         ... )
         >>> # Backtest the bettor
         >>> bettor = ClassifierBettor(clf_pipeline)
-        >>> bettor.backtest(X, Y, O)
-        ClassifierBettor(classifier=...
-        >>> # Display backtesting results
-        >>> bettor.backtest_results_
-        Training Start ... Avg Bet Yield [%]  Std Bet Yield [%]
+        >>> backtest(bettor, X, Y, O)
+        Training Start ... Yield percentage per bet (away_win__full_time_goals)
         ...
     """
 
-    def __init__(self: Self, classifier: BaseEstimator) -> None:
+    _required_parameters: ClassVar = ['classifier']
+
+    def __init__(
+        self: Self,
+        classifier: BaseEstimator,
+        betting_markets: list[str] | None = None,
+        init_cash: float | None = None,
+        stake: float | None = None,
+    ) -> None:
+        super().__init__(betting_markets, init_cash, stake)
         self.classifier = classifier
 
     def _check_classifier(self: Self) -> Self:
@@ -84,7 +98,7 @@ class ClassifierBettor(_BaseBettor):
         self.classifier_: Any = clone(self.classifier)
         return self
 
-    def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame) -> Self:
+    def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame) -> Self:
         self._check_classifier()
         self.classifier_.fit(X, Y)
         return self
@@ -105,7 +119,7 @@ class ClassifierBettor(_BaseBettor):
             axis=1,
         )
 
-    def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame) -> Self:
+    def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
         """Fit the bettor to the input data and multi-output targets.
 
         Args:
@@ -115,11 +129,14 @@ class ClassifierBettor(_BaseBettor):
             Y:
                 The multi-output targets.
 
+            O:
+                The odds data.
+
         Returns:
             self:
                 The fitted bettor object.
         """
-        return super().fit(X, Y)
+        return super().fit(X, Y, O)
 
     def predict_proba(self: Self, X: pd.DataFrame) -> Data:
         """Predict class probabilities for multi-output targets.
@@ -135,7 +152,7 @@ class ClassifierBettor(_BaseBettor):
         return super().predict_proba(X)
 
     def predict(self: Self, X: pd.DataFrame) -> BoolData:
-        """Predict class probabilities for multi-output targets.
+        """Predict class labels for multi-output targets.
 
         Args:
             X:
@@ -162,51 +179,3 @@ class ClassifierBettor(_BaseBettor):
                 The value bets.
         """
         return super().bet(X, O)
-
-    def backtest(
-        self: Self,
-        X: pd.DataFrame,
-        Y: pd.DataFrame,
-        O: pd.DataFrame | None,
-        tscv: TimeSeriesSplit | None = None,
-        init_cash: float | None = 1e3,
-        refit: bool | None = True,
-    ) -> Self:
-        """Backtest the bettor.
-
-        Args:
-            X:
-                The input data. Each row of `X` represents information that is available
-                before the start of a specific match. The rows should be
-                sorted by an index named as `'date'`.
-
-            Y:
-                The multi-output targets. Each row of `Y` represents information
-                that is available after the end of a specific match. The column
-                names follow the convention for the output data `Y` of the method
-                `extract_train_data`.
-
-            O:
-                The odds data. Each row of `O` represents information
-                that is available after the end of a specific match. The column
-                names follow the convention for the output data `Y` of the method
-                `extract_train_data`.
-
-            tscv:
-                Provides train/test indices to split time series data samples
-                that are observed at fixed time intervals, in train/test sets. The
-                default value of the parameter is `None`.
-
-            init_cash:
-                The initial cash to use for backtesting.
-
-            refit:
-                Refit the bettor using the whole input data and multi-output targets.
-
-        Returns:
-            self:
-                The backtested bettor.
-        """
-        self._check_classifier()
-        super().backtest(X, Y, O, tscv, init_cash, refit)
-        return self

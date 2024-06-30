@@ -8,17 +8,15 @@ from __future__ import annotations
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Union
 
 import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
+from sklearn.model_selection import TimeSeriesSplit
 
-from ..datasets import DummySoccerDataLoader, SoccerDataLoader
-from ..evaluation import ClassifierBettor, OddsComparisonBettor
-
-DataLoader = Union[SoccerDataLoader, DummySoccerDataLoader]
-Bettor = Union[ClassifierBettor, OddsComparisonBettor]
+from .. import ParamGrid
+from ..datasets._base import _BaseDataLoader
+from ..evaluation._base import _BaseBettor
 
 
 def get_module(config_path: str) -> ModuleType | None:
@@ -44,84 +42,94 @@ def get_module(config_path: str) -> ModuleType | None:
     return None
 
 
-def get_dataloader(mod: ModuleType | None) -> DataLoader | None:
-    """Get the dataloader."""
+def get_dataloader_cls(mod: ModuleType | None) -> type[_BaseDataLoader] | None:
+    """Get the dataloader class."""
     console = Console()
     if mod is None:
         return None
-    if not hasattr(mod, 'CONFIG'):
+    if not hasattr(mod, 'DATALOADER_CLASS'):
         warning = Panel.fit(
-            '[bold red]Configuration file does not have a `CONFIG` dictionary.',
+            '[bold red]Configuration file does not have a `DATALOADER_CLASS` variable.',
         )
         console.print(warning)
         return None
-    elif mod.CONFIG.get('data') is None:
+    elif not issubclass(mod.DATALOADER_CLASS, _BaseDataLoader):
         warning = Panel.fit(
-            '[bold red]`CONFIG` dictionary should have a `\'data\'` key.',
+            '[bold red]`DATALOADER_CLASS` variable should be a `\'dataloader\'` class.',
         )
         console.print(warning)
         return None
-    elif mod.CONFIG['data'].get('dataloader') not in (SoccerDataLoader, DummySoccerDataLoader):
-        warning = Panel.fit(
-            '[bold red]`CONFIG` dictionary should have a `\'dataloader\'` key and a '
-            'dataloader class value in `\'data\'` key.',
-        )
-        console.print(warning)
-        return None
-    dataloader = mod.CONFIG['data']['dataloader'](mod.CONFIG['data'].get('param_grid'))
-    return dataloader
+    return mod.DATALOADER_CLASS
 
 
-def get_bettor(mod: ModuleType | None) -> Bettor | None:
+def get_param_grid(mod: ModuleType | None) -> ParamGrid | None:
+    """Get the parameters grid class."""
+    if mod is not None and hasattr(mod, 'PARAM_GRID'):
+        return mod.PARAM_GRID
+    return None
+
+
+def get_drop_na_thres(mod: ModuleType | None) -> float:
+    if mod is not None and hasattr(mod, 'DROP_NA_THRES'):
+        return mod.DROP_NA_THRES
+    return 0.0
+
+
+def get_odds_type(mod: ModuleType | None) -> str | None:
+    if mod is not None and hasattr(mod, 'ODDS_TYPE'):
+        return mod.ODDS_TYPE
+    return None
+
+
+def get_bettor(mod: ModuleType | None) -> _BaseBettor | None:
     """Get the bettor."""
     console = Console()
     if mod is None:
         return None
-    if not hasattr(mod, 'CONFIG'):
+    if not hasattr(mod, 'BETTOR'):
         warning = Panel.fit(
-            '[bold red]Configuration file does not have a `CONFIG` dictionary.',
+            '[bold red]Configuration file does not have a `BETTOR` variable.',
         )
         console.print(warning)
         return None
-    elif mod.CONFIG.get('data') is None:
+    elif not hasattr(mod, 'DATALOADER_CLASS'):
         warning = Panel.fit(
-            '[bold red]`CONFIG` dictionary should have a `\'betting\'` key.',
+            '[bold red]Configuration file does not have a `DATALOADER_CLASS` variable.',
         )
         console.print(warning)
         return None
-    elif mod.CONFIG['betting'].get('bettor') not in (ClassifierBettor, OddsComparisonBettor):
+    elif not isinstance(mod.BETTOR, _BaseBettor):
         warning = Panel.fit(
-            '[bold red]`CONFIG` dictionary should have a `\'bettor\'` key '
-            'and a bettor class value in `\'betting\'` key.',
+            '[bold red]`BETTOR` variable should be a `\'bettor\'` object.',
         )
         console.print(warning)
         return None
-    bettor = mod.CONFIG['betting']['bettor'](
-        **{k: v for k, v in mod.CONFIG['betting'].items() if k not in ('bettor', 'tscv', 'init_cash')},
-    )
-    return bettor
+    return mod.BETTOR
 
 
-def get_train_params(mod: ModuleType | None) -> dict[str, Any]:
-    train_params = {'drop_na_thres': 0.0, 'odds_type': None}
-    if mod is not None and hasattr(mod, 'CONFIG'):
-        train_params['drop_na_thres'] = mod.CONFIG['data'].get('drop_na_thres', 0.0)
-        train_params['odds_type'] = mod.CONFIG['data'].get('odds_type')
-    return train_params
+def get_cv(mod: ModuleType | None) -> TimeSeriesSplit | None:
+    if mod is not None and hasattr(mod, 'CV'):
+        return mod.CV
+    return None
 
 
-def get_backtesting_params(mod: ModuleType | None) -> dict[str, Any]:
-    backtesting_params = {'tscv': None, 'init_cash': None}
-    if mod is not None and hasattr(mod, 'CONFIG'):
-        backtesting_params['tscv'] = mod.CONFIG['betting'].get('tscv')
-        backtesting_params['init_cash'] = mod.CONFIG['betting'].get('init_cash')
-    return backtesting_params
+def get_n_jobs(mod: ModuleType | None) -> int:
+    if mod is not None and hasattr(mod, 'N_JOBS'):
+        return mod.N_JOBS
+    return -1
+
+
+def get_verbose(mod: ModuleType | None) -> int:
+    if mod is not None and hasattr(mod, 'VERBOSE'):
+        return mod.VERBOSE
+    return 0
 
 
 def print_console(dfs: list[pd.DataFrame], titles: list[str]) -> None:
     """Print to the console."""
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_colwidth', None)
+    pd.set_option('display.max_columns', None)
     console = Console()
     with console.pager(styles=True):
         for df, title in zip(dfs, titles):

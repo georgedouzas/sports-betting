@@ -1,4 +1,4 @@
-"""Test the RulesBettor class."""
+"""Test the OddsComparisonBettor class."""
 
 import numpy as np
 import pytest
@@ -9,70 +9,90 @@ X_train, Y_train, O_train = DummySoccerDataLoader().extract_train_data(odds_type
 
 
 @pytest.mark.parametrize('odds_types', ['market_average', ('bet365',), ['williamhill', None]])
-def test_backtest_raise_type_error_odds_types(odds_types):
+def test_fit_raise_type_error_odds_types(odds_types):
     """Test raising a type error on odds types."""
+    bettor = OddsComparisonBettor(odds_types=odds_types)
     with pytest.raises(
         TypeError,
-        match='Parameter `odds_type` should be either',
+        match='Parameter `odds_types` should be either',
     ):
-        OddsComparisonBettor(odds_types=odds_types).backtest(X_train, Y_train, O_train)
+        bettor.fit(X_train, Y_train)
 
 
-def test_backtest_raise_value_error_no_odds():
+def test_fit_raise_value_error_no_odds():
     """Test raising a value error when odds columns are missing."""
     X = X_train[[col for col in X_train.columns if not col.startswith('odds__')]]
+    bettor = OddsComparisonBettor()
     with pytest.raises(
         ValueError,
         match='Input data do not include any odds columns.',
     ):
-        OddsComparisonBettor().backtest(X, Y_train, O_train)
+        bettor.fit(X, Y_train)
 
 
 @pytest.mark.parametrize('odds_types', [['market_average'], ['bet365']])
-def test_backtest_raise_value_error_odds_types(odds_types):
-    """Test raising a value error on odds types."""
+def test_fit_raise_value_error_odds_types(odds_types):
+    """Test raising a value error on wrong odds types."""
+    bettor = OddsComparisonBettor(odds_types=odds_types)
     with pytest.raises(
         ValueError,
-        match='Parameter `odds_type` should be either',
+        match='Parameter `odds_types` should be either',
     ):
-        OddsComparisonBettor(odds_types=odds_types).backtest(X_train, Y_train, O_train)
+        bettor.fit(X_train, Y_train)
 
 
 @pytest.mark.parametrize('alpha', ['alpha', None, 3])
-def test_backtest_raise_type_error_alpha(alpha):
+def test_fit_raise_type_error_alpha(alpha):
     """Test raising a type error on alpha."""
+    bettor = OddsComparisonBettor(alpha=alpha)
     with pytest.raises(
         TypeError,
         match='alpha must be an instance of float, not',
     ):
-        OddsComparisonBettor(alpha=alpha).backtest(X_train, Y_train, O_train)
+        bettor.fit(X_train, Y_train)
 
 
 @pytest.mark.parametrize('alpha', [-0.3, 1.4])
 def test_backtest_raise_value_error_alpha(alpha):
     """Test raising a value error on alpha."""
+    bettor = OddsComparisonBettor(alpha=alpha)
     with pytest.raises(
         ValueError,
         match=f'alpha == {alpha}, must be',
     ):
-        OddsComparisonBettor(alpha=alpha).backtest(X_train, Y_train, O_train)
+        bettor.fit(X_train, Y_train)
 
 
 def test_fit_check_odds_types_default():
     """Test the checked odds types default value."""
-    bettor = OddsComparisonBettor().fit(X_train, Y_train)
+    bettor = OddsComparisonBettor()
+    bettor = bettor.fit(X_train, Y_train)
     assert bettor.odds_types_ == ['interwetten', 'williamhill']
 
 
 @pytest.mark.parametrize('odds_types', [['williamhill'], ['interwetten'], ['interwetten', 'williamhill']])
 def test_fit_check_odds_types(odds_types):
     """Test the checked odds types value."""
-    bettor = OddsComparisonBettor(odds_types=odds_types).fit(X_train, Y_train)
+    bettor = OddsComparisonBettor(odds_types=odds_types)
+    bettor.fit(X_train, Y_train)
     assert bettor.odds_types_ == odds_types
 
 
 def test_bet():
     """Test the bet method."""
     assert O_train is not None
-    bettor = OddsComparisonBettor(odds_types=['williamhill']).fit(X_train, Y_train)
-    np.testing.assert_array_equal(bettor.bet(X_train, O_train), np.array([False, False, False]) * (O_train > 1))
+    bettor = OddsComparisonBettor(odds_types=['williamhill'])
+    bettor.fit(X_train, Y_train)
+    expected_value_bets = np.array(
+        [
+            [False, True, False],
+            [True, False, False],
+            [True, False, False],
+            [True, False, False],
+            [False, False, False],
+            [False, False, False],
+            [False, False, False],
+            [False, True, False],
+        ],
+    )
+    assert np.array_equal(bettor.bet(X_train, O_train), expected_value_bets)

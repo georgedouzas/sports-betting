@@ -14,7 +14,7 @@ from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
 from sportsbet.datasets import SoccerDataLoader
-from sportsbet.evaluation import ClassifierBettor
+from sportsbet.evaluation import ClassifierBettor, backtest
 
 # %%
 # Extracting the training data
@@ -73,7 +73,7 @@ bettor.predict(X_train)
 # %%
 # Finally, we can evaluate its cross-validation accuracy.
 
-cross_val_score(bettor, X_train, Y_train, cv=TimeSeriesSplit()).mean()
+cross_val_score(bettor, X_train, Y_train, cv=TimeSeriesSplit(), scoring='accuracy').mean()
 
 # %%
 # Backtesting the bettor
@@ -81,12 +81,12 @@ cross_val_score(bettor, X_train, Y_train, cv=TimeSeriesSplit()).mean()
 #
 # We can backtest the bettor using the historical data.
 
-_ = bettor.backtest(X_train, Y_train, O_train)
+backtesting_results = backtest(bettor, X_train, Y_train, O_train)
 
 # %%
 # Various backtesting statistics are calculated.
 
-bettor.backtest_results_
+backtesting_results
 
 # %%
 # Estimating the value bets

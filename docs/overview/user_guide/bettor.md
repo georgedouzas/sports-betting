@@ -1,23 +1,16 @@
-[pandas]: <https://pandas.pydata.org>
 [scikit-learn]: <https://scikit-learn.org>
-[vectorbt]: <https://vectorbt.pro>
-[scikit-learn classifiers]: <https://scikit-learn.org/stable/glossary.html#class-apis-and-estimator-types>
 [dummy classifier]: <https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html>
 
 # Bettor
 
-This section presents the bettor object in details. The available bettor is the following:
+This section presents the bettor object in details. The available bettors are the following:
 
+- [`OddsComparisonBettor`][sportsbet.evaluation.ClassifierBettor]: Bettor based on comparison of average and maximum market odds.
 - [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor]: Bettor based on a classifier.
-
-We aim to include in the future more bettors, based on various methods:
-
-- Rule based
-- Reinforcement Learning based
 
 ## Initialization
 
-Every bettor has its own initialization parameters. Currently, the provided bettor
+Every bettor has its own initialization parameters. For example, the provided bettor
 [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor] is initialized with the parameter `classifier`, that defines the
 [scikit-learn] classifier to predict the probabilities of betting events.
 
@@ -126,46 +119,46 @@ Their interpretation is similar to the one in the previous section.
 Backtesting the bettor's strategy requires the training data tuple `(X_train, Y_train, O_train)` to be used:
 
 ```python
-bettor.backtest(X_train, Y_train, O_train)
+from sportsbet.evaluation import backtest
+backtesting_results = backtest(bettor, X_train, Y_train, O_train)
 ```
 
 The backtesting results include information of the various training/testing periods and metrics:
 
 ```python
-assert bettor.backtest_results_.columns.tolist() == [
-    'Training Start', 
-    'Training End', 
-    'Training Period', 
-    'Testing Start',
-    'Testing End', 
-    'Testing Period', 
-    'Start Value', 
-    'End Value',
-    'Total Return [%]', 
-    'Max Drawdown [%]', 
-    'Max Drawdown Duration',
-    'Total Bets', 
-    'Win Rate [%]', 
-    'Best Bet [%]', 
-    'Worst Bet [%]',
-    'Avg Winning Bet [%]', 
-    'Avg Losing Bet [%]', 
-    'Profit Factor',
-    'Sharpe Ratio', 
-    'Avg Bet Yield [%]', 
-    'Std Bet Yield [%]'
+assert backtesting_results.index.names == [
+    'Training start',
+    'Training end',
+    'Testing start',
+    'Testing end'
+]
+assert backtesting_results.columns.tolist() == [
+    'Number of betting days',
+    'Number of bets',
+    'Yield percentage per bet',
+    'ROI percentage',
+    'Final cash',
+    'Number of bets (home_win__full_time_goals)',
+    'Number of bets (draw__full_time_goals)',
+    'Number of bets (away_win__full_time_goals)',
+    'Yield percentage per bet (home_win__full_time_goals)',
+    'Yield percentage per bet (draw__full_time_goals)',
+    'Yield percentage per bet (away_win__full_time_goals)'
 ]
 ```
 
 ## Value bets prediction
 
-Similarly, the fitted bettor can be used to predict the value bets. We can combine these predictions with `X_fix` to get a
-DataFrame that contains information about the selected betting events and markets:
+Similarly, the fitted bettor can be used to predict the value bets. We can combine these predictions with `X_fix`:
 
 ```python
-betting_events_info = X_fix[['home_team', 'away_team']].reset_index(drop=True)
-betting_markets_info = bettor.bet(X_fix, O_fix).rename(columns=lambda col: col.split('__')[2])
-value_bets = pd.concat([betting_events_info, betting_markets_info], axis=1)
+import pandas as pd
+value_bets = pd.concat(
+    [
+        X_fix.reset_index()[['date', 'home_team', 'away_team']],
+        pd.DataFrame(bettor.bet(X_fix, O_fix), columns=[col.split('__')[2] for col in O_fix.columns])
+    ], axis=1
+).set_index('date')
 assert value_bets.columns.tolist() == ['home_team', 'away_team', 'home_win', 'draw', 'away_win']
 assert value_bets.values.tolist() == [
     ['Barcelona', 'Real Madrid', True, False, False],

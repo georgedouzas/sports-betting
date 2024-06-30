@@ -5,6 +5,18 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+CONFIG = """
+from sklearn.model_selection import TimeSeriesSplit
+from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.evaluation import OddsComparisonBettor
+DATALOADER_CLASS = DummySoccerDataLoader
+PARAM_GRID = {'league': ['England', 'Greece']}
+DROP_NA_THRES = 0.8
+ODDS_TYPE = 'interwetten'
+BETTOR = OddsComparisonBettor(alpha=0.03)
+CV = TimeSeriesSplit(2)
+"""
+
 
 @pytest.fixture(autouse=True, scope='session')
 def pandas_terminal_width() -> None:  # noqa: PT004
@@ -17,22 +29,5 @@ def pandas_terminal_width() -> None:  # noqa: PT004
 def cli_config_path(tmp_path: Path) -> Path:
     """Create configuration file."""
     with Path.open(tmp_path / 'config.py', 'wt') as config_file:
-        config_file.write(
-            """
-from sklearn.model_selection import TimeSeriesSplit
-from sportsbet.datasets import DummySoccerDataLoader
-from sportsbet.evaluation import OddsComparisonBettor
-CONFIG = {
-    'data': {
-    'dataloader': DummySoccerDataLoader,
-        'param_grid': {
-            'league': ['England', 'Greece'],
-        },
-        'drop_na_thres': 0.8,
-        'odds_type': 'interwetten',
-    },
-    'betting': {'bettor': OddsComparisonBettor, 'alpha': 0.03, 'tscv': TimeSeriesSplit(2)},
-}
-""",
-        )
+        config_file.write(CONFIG)
     return tmp_path / 'config.py'
