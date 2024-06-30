@@ -12,8 +12,20 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
+from ..evaluation import backtest as bt
 from ._options import get_config_path_option, get_data_path_option
-from ._utils import get_backtesting_params, get_bettor, get_dataloader, get_module, get_train_params, print_console
+from ._utils import (
+    get_bettor,
+    get_cv,
+    get_dataloader_cls,
+    get_drop_na_thres,
+    get_module,
+    get_n_jobs,
+    get_odds_type,
+    get_param_grid,
+    get_verbose,
+    print_console,
+)
 
 
 @click.group()
@@ -27,16 +39,18 @@ def bettor() -> None:
 @get_data_path_option()
 def backtest(config_path: str, data_path: str) -> None:
     """Apply backtesting to the bettor."""
-    dataloader_mod = get_module(config_path)
-    dataloader = get_dataloader(dataloader_mod)
-    if dataloader is None:
-        return
     mod = get_module(config_path)
+    dataloader_cls = get_dataloader_cls(mod)
+    if dataloader_cls is None:
+        return
+    param_grid = get_param_grid(mod)
+    drop_na_thres = get_drop_na_thres(mod)
+    odds_type = get_odds_type(mod)
+    dataloader = dataloader_cls(param_grid)
+    X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
     bettor = get_bettor(mod)
     if bettor is None:
         return
-    train_params = get_train_params(mod)
-    X_train, Y_train, O_train = dataloader.extract_train_data(**train_params)
     if O_train is None:
         console = Console()
         warning = Panel.fit(
@@ -44,13 +58,20 @@ def backtest(config_path: str, data_path: str) -> None:
         )
         console.print(warning)
         return
-    backtesting_params = get_backtesting_params(mod)
-    bettor.backtest(X_train, Y_train, O_train, **backtesting_params, refit=False)
+    backtesting_results = bt(
+        bettor,
+        X_train,
+        Y_train,
+        O_train,
+        cv=get_cv(mod),
+        n_jobs=get_n_jobs(mod),
+        verbose=get_verbose(mod),
+    )
     if mod is not None:
-        print_console([bettor.backtest_results_], ['Backtesting results'])
+        print_console([backtesting_results], ['Backtesting results'])
         if data_path is not None:
             (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
-            bettor.backtest_results_.to_csv(Path(data_path) / 'sports-betting-data' / 'backtesting_results.csv')
+            backtesting_results.to_csv(Path(data_path) / 'sports-betting-data' / 'backtesting_results.csv')
 
 
 @bettor.command()
@@ -58,16 +79,19 @@ def backtest(config_path: str, data_path: str) -> None:
 @get_data_path_option()
 def bet(config_path: str, data_path: str) -> None:
     """Get value bets."""
-    dataloader_mod = get_module(config_path)
-    dataloader = get_dataloader(dataloader_mod)
-    if dataloader is None:
-        return
     mod = get_module(config_path)
+    dataloader_cls = get_dataloader_cls(mod)
+    if dataloader_cls is None:
+        return
+    param_grid = get_param_grid(mod)
+    drop_na_thres = get_drop_na_thres(mod)
+    odds_type = get_odds_type(mod)
+    dataloader = dataloader_cls(param_grid)
+    X_train, Y_train, _ = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
     bettor = get_bettor(mod)
     if bettor is None:
         return
-    train_params = get_train_params(mod)
-    X_train, Y_train, _ = dataloader.extract_train_data(**train_params)
+    X_train, Y_train, _ = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
     if O_fix is None or (X_fix.empty and O_fix is not None and O_fix.empty):
         console = Console()

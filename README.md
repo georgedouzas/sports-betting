@@ -1,4 +1,5 @@
 [scikit-learn]: <http://scikit-learn.org/stable/>
+[sports-betting-data]: <https://github.com/georgedouzas/sports-betting-data>
 [black badge]: <https://img.shields.io/badge/%20style-black-000000.svg>
 [black]: <https://github.com/psf/black>
 [docformatter badge]: <https://img.shields.io/badge/%20formatter-docformatter-fedcba.svg>
@@ -39,111 +40,69 @@ Python sports betting toolbox.
 The `sports-betting` package is a collection of tools that makes it easy to create machine learning models for sports betting and
 evaluate their performance. It is compatible with [scikit-learn].
 
-## Daily bet tips
+The main components of `sports-betting` are dataloaders and bettors objects.
 
-This section will contain **daily** updated value bets of a betting strategy based on a machine learning model. You can read the
-quick start guide below to understand the details or reproduce the results. Alternatively, you can visit regularly this page to
-use the predictions for your own betting.
+- Dataloaders download and prepare data suitable for predictive modelling. You may check the repo [sports-betting-data] for more
+details.
 
-**Value bets**
-
-| Date       | League   | Home Team        | Away Team      |   Home Win |   Draw |   Away Win |   Over 2.5 |   Under 2.5 |
-|:-----------|:---------|:-----------------|:---------------|-----------:|-------:|-----------:|-----------:|------------:|
-| 2024-03-30 | England  | Bournemouth      | Everton        |       2.4  |   4.12 |       3.53 |       1.81 |        2.24 |
-| 2024-03-30 | England  | Brentford        | Man United     |       2.62 |   4.23 |       3.35 |       1.83 |        2.21 |
-| 2024-03-30 | England  | Aston Villa      | Wolves         |       2.22 |   4.36 |       4    |       1.81 |        2.23 |
-| 2024-03-30 | England  | Tottenham        | Luton          |       1.45 |   6.72 |       4.6  |       1.75 |        2.34 |
-| 2024-03-30 | England  | Sheffield United | Fulham         |       2.67 |   5.17 |       3.33 |       1.83 |        2.21 |
-| 2024-03-30 | England  | Nott&#39;m Forest    | Crystal Palace |       2.35 |   4.12 |       3.53 |       1.82 |        2.22 |
-| 2024-03-30 | England  | Chelsea          | Burnley        |       1.67 |   4.72 |       4.6  |       1.75 |        2.34 |
-| 2024-03-30 | England  | Newcastle        | West Ham       |       2.29 |   4.27 |       3.5  |       1.8  |        2.25 |
-| 2024-03-31 | England  | Liverpool        | Brighton       |       1.65 |   4.44 |       4.6  |       1.82 |        2.22 |
-| 2024-03-31 | England  | Man City         | Arsenal        |       2.19 |   4.18 |       3.53 |       1.8  |        2.25 |
-
-**Backtesting results**
-
-| Training Start      | Training End        | Training Period    | Testing Start       | Testing End         | Testing Period    |   Start Value |   End Value |   Total Return [%] |   Total Bets |   Win Rate [%] |   Best Bet [%] |   Worst Bet [%] |   Avg Winning Bet [%] |   Avg Losing Bet [%] |   Profit Factor |   Sharpe Ratio |   Avg Bet Yield [%] |   Std Bet Yield [%] |
-|:--------------------|:--------------------|:-------------------|:--------------------|:--------------------|:------------------|--------------:|------------:|-------------------:|-------------:|---------------:|---------------:|----------------:|----------------------:|---------------------:|----------------:|---------------:|--------------------:|--------------------:|
-| 2016-01-08 00:00:00 | 2018-01-04 00:00:00 | 727 days 00:00:00  | 2018-01-04 00:00:00 | 2019-08-24 00:00:00 | 598 days 00:00:00 |          1000 |     1068.13 |              6.813 |          102 |        55.8824 |        298.667 |        -175     |               88.1371 |             -84.3974 |         1.48295 |        1.40566 |           12.8464   |            108.893  |
-| 2016-01-08 00:00:00 | 2019-08-24 00:00:00 | 1324 days 00:00:00 | 2019-08-24 00:00:00 | 2021-03-19 00:00:00 | 574 days 00:00:00 |          1000 |     1821.24 |             82.124 |         2070 |        48.3575 |       1033.33  |        -183.333 |               83.6747 |             -67.1339 |         1.25694 |        2.92704 |            5.92305  |            102.424  |
-| 2016-01-08 00:00:00 | 2021-03-19 00:00:00 | 1897 days 00:00:00 | 2021-03-19 00:00:00 | 2022-10-15 00:00:00 | 576 days 00:00:00 |          1000 |     1736.31 |             73.631 |         1887 |        49.0726 |        623.714 |        -190.476 |               80.8128 |             -66.551  |         1.24244 |        2.87283 |            5.83482  |             98.3174 |
-| 2016-01-08 00:00:00 | 2022-10-15 00:00:00 | 2472 days 00:00:00 | 2022-10-15 00:00:00 | 2024-03-26 00:00:00 | 529 days 00:00:00 |          1000 |     1423.12 |             42.312 |         1898 |        47.7345 |        601.333 |        -183.333 |               76.3329 |             -69.2708 |         1.14059 |        1.69542 |            0.414822 |             96.0365 |
+- Bettors provide an easy way to backtest betting strategies and predict the value bets of future events.
 
 ## Quick start
 
 `sports-betting` supports all common sports betting needs i.e. fetching historical and fixtures data as well as backtesting of
-betting strategies.
+betting strategies and prediction of value bets. Assume we would like to backtest the following scenario and use the bettor object
+to predict value bets:
 
-### Parameters
-
-Assume that we would like to fetch historical data of various leagues for specific years, including the maximum odds of the market
-and dropping columns that contain more than 20% of missing values:
+- Selection of data
+  - First and second division of German, Italian and French leagues for the years 2021-2024
+  - Maximum odds of the market in order to backtest our betting strategy
+- Configuration of betting strategy
+  - 5-fold time ordered cross-validation
+  - Initial cash of 10000 euros
+  - Stake of 50 euros for each bet
+  - Use match odds (home win, away win and draw) as betting markets
+  - Logistic regression classifier to predict probabilities and value bets
 
 ```python
-leagues = ['England', 'Scotland', 'Germany', 'Italy', 'Spain', 'France', 'Netherlands', 'Belgium', 'Portugal', 'Turkey', 'Greece']
-years = [2017, 2018, 2019, 2020, 2021, 2022, 2023]
+# Selection of data
+from sportsbet.datasets import SoccerDataLoader
+
+leagues = ['Germany', 'Italy', 'France']
+divisions = [1, 2]
+years = [2021, 2022, 2023, 2024]
 odds_type = 'market_maximum'
-drop_na_thres = 0.8
-```
+dataloader = SoccerDataLoader({'league': leagues, 'year': years, 'division': divisions})
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type=odds_type)
+X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
-We would like also to use a `GradientBoostingClassifier` to support our betting strategy:
-
-```python
+# Configuration of betting strategy
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.compose import make_column_transformer
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.multioutput import MultiOutputClassifier
-from sportsbet.evaluation import ClassifierBettor
+from sportsbet.evaluation import ClassifierBettor, backtest
 
+tscv = TimeSeriesSplit(5)
+init_cash = 10000.0
+stake = 50.0
+betting_markets = ['home_win__full_time_goals', 'draw__full_time_goals', 'away_win__full_time_goals']
 classifier = make_pipeline(
   make_column_transformer(
     (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']), remainder='passthrough'
   ),
   SimpleImputer(),
-  MultiOutputClassifier(GradientBoostingClassifier(random_state=5)),
+  MultiOutputClassifier(LogisticRegression(solver='liblinear', random_state=7, class_weight='balanced', C=50)),
 )
-```
+bettor = ClassifierBettor(classifier, betting_markets=betting_markets, stake=stake, init_cash=init_cash)
 
-Finally, our backtesting parameters would include a 5-fold time ordered cross-validation and initial portfolio value of 1000:
+# Apply backtesting and get results
+backtesting_results = backtest(bettor, X_train, Y_train, O_train, cv=tscv)
 
-```python
-from sklearn.model_selection import TimeSeriesSplit
-tscv = TimeSeriesSplit(5)
-init_cash = 1000
-```
-
-### Process
-
-Using the above selections, the betting process is the following:
-
-- Create a dataloader that is used to fetch the training and fixtures data.
-
-```python
-from sportsbet.datasets import SoccerDataLoader
-dataloader = SoccerDataLoader({'league': leagues, 'year': years})
-X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
-X_fix, _, O_fix = dataloader.extract_fixtures_data()
-```
-
-- Create a bettor that selects and configures the betting strategy.
-
-```python
-from sportsbet.evaluation import ClassifierBettor
-bettor = ClassifierBettor(classifier)
-```
-
-- Backtest the bettor on the training data to evaluate the betting strategy:
-
-```python
-bettor.backtest(X_train, Y_train, O_train, tscv=tscv, init_cash=init_cash)
-bettor.backtest_results_[['Sharpe Ratio', 'Total Return [%]', 'Testing Period']].mean()
-```
-
-- Predict the value bets:
-
-```python
+# Get value bets for upcoming betting events
+bettor.fit(X_train, Y_train)
 bettor.bet(X_fix, O_fix)
 ```
 
@@ -202,7 +161,7 @@ The `sports-betting` package makes it easy to download sports betting data:
 ```python
 from sportsbet.datasets import SoccerDataLoader
 dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', drop_na_thres=1.0)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
@@ -210,15 +169,16 @@ X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 performance of a bettor model:
 
 ```python
-from sportsbet.evaluation import ClassifierBettor
+from sportsbet.evaluation import ClassifierBettor, backtest
 from sklearn.dummy import DummyClassifier
 bettor = ClassifierBettor(DummyClassifier())
-bettor.backtest(X_train, Y_train, O_train)
+backtest(bettor, X_train, Y_train, O_train)
 ```
 
 We can use the trained bettor model to predict the value bets using the fixtures data:
 
 ```python
+bettor.fit(X_train, Y_train)
 bettor.bet(X_fix, O_fix)
 ```
 
@@ -230,37 +190,34 @@ add the `--help` flag to get more information about its usage.
 #### Configuration
 
 In order to use the commands, a configuration file is required. You can find examples of such configuration files in
-`sports-betting/configs/`. The configuration file should have a Python file extension and contain a dictionary `CONFIG`:
+`sports-betting/configs/`. The configuration file should have a Python file extension and contain a few variables. The variables 
+`DATALOADER_CLASS` and `PARAM_GRID` are mandatory while the rest are optional.
 
-```python
-CONFIG = {
-  'data': {
-    'dataloader': ...,
-    'param_grid': {
+The following variables configure the data extraction:
 
-    },
-    'drop_na_thres': ...,
-    'odds_type': ...
-  },
-  'betting': {
-    ...: ...,
-    'bettor': ...,
-    'tscv': ...,
-    'init_cash': ...
-  }
-}
-```
+- `DATALOADER_CLASS`: The dataloader class to use.
 
-The dictionary `CONFIG` has the following structure:
+- `PARAM_GRID`: The parameters grid to select the type of information that the data includes.
 
-- Two mandatory keys `'data'` and `'betting'` that configure the data extraction and betting strategy, respectively and contain
-  other nested dictionaries as values.
-- The `'data'` key has a nested dictionary as a value with a mandatory key '`dataloader`' and the optional keys `'param_grid'`,
-  `'drop_na_thres'` and `'drop_na'`. You can refer to the [API](api/datasets) for more details about their values.
-- The `'betting'` key has a nested dictionary as a value with a mandatory key '`bettor`' and the optional keys `'tscv'`, and
-  `'init_cash'`. You can refer to the [API](api/datasets) for more details about their values.
+- `DROP_NA_THRES`: The parameter `drop_na_thres` of the dataloader's `extract_train_data`.
 
-#### Dataloader
+- `ODDS_TYPE`: The parameter `odds_type` of the dataloader's `extract_train_data`.
+
+The following variables configure the betting process:
+
+- `BETTOR`: A bettor object.
+
+- `CV`: The parameter `cv` of the function `backtest`.
+
+- `N_JOBS`: The parameter `n_jobs` of the function `backtest`.
+
+- `VERBOSE`: The parameter `verbose` of the function `backtest`.
+
+#### Commands
+
+Once these variables are provided, we can select the appropriate commands to select any of the `sports-betting`'s functionalities.
+
+##### Dataloader
 
 Show available parameters for dataloaders:
 
@@ -286,7 +243,7 @@ Extract fixtures data and save them as CSV files:
 sportsbet dataloader fixtures -c config.py -d /path/to/directory
 ```
 
-#### Bettor
+##### Bettor
 
 Backtest the bettor and save the results as CSV file:
 
