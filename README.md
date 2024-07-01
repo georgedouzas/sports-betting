@@ -42,9 +42,7 @@ evaluate their performance. It is compatible with [scikit-learn].
 
 The main components of `sports-betting` are dataloaders and bettors objects.
 
-- Dataloaders download and prepare data suitable for predictive modelling. You may check the repo [sports-betting-data] for more
-details.
-
+- Dataloaders download and prepare data suitable for predictive modelling.
 - Bettors provide an easy way to backtest betting strategies and predict the value bets of future events.
 
 ## Quick start
