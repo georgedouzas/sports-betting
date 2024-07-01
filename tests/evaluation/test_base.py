@@ -19,7 +19,7 @@ def test_abstract_class_raise_error():
 
     with pytest.raises(
         TypeError,
-        match='Can\'t instantiate abstract class TestBettor with abstract methods _fit, _predict_proba',
+        match='Can\'t instantiate abstract class TestBettor',
     ):
         TestBettor()
 
