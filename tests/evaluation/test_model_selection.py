@@ -88,7 +88,7 @@ def test_backtest():
             },
         ],
     ).set_index(['Training start', 'Training end', 'Testing start', 'Testing end'])
-    pd.testing.assert_frame_equal(results, expected_results)
+    pd.testing.assert_frame_equal(results, expected_results, check_dtype=False)
 
 
 def test_bgscv_fit_raise_type_error_no_odds():

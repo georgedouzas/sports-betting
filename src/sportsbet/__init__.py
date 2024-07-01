@@ -10,18 +10,18 @@ submodules:
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from nptyping import Bool, Float, Int, NDArray, Shape
 
 Param = dict[str, Any]
-ParamGrid = Union[dict[str, list[Any]], list[dict[str, list[Any]]]]
-TrainData = tuple[pd.DataFrame, pd.DataFrame, Union[pd.DataFrame, None]]
-FixturesData = tuple[pd.DataFrame, None, Union[pd.DataFrame, None]]
+ParamGrid = dict[str, list[Any]] | list[dict[str, list[Any]]]
+TrainData = tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame | None]
+FixturesData = tuple[pd.DataFrame, None, pd.DataFrame | None]
 Data = NDArray[Shape['*, *'], Float]
 BoolData = NDArray[Shape['*, *'], Bool]
 Indices = NDArray[Shape['*, *'], Int]
-Schema = list[tuple[str, Union[type[int], type[float], type[object], type[np.datetime64]]]]
+Schema = list[tuple[str, type[int] | type[float] | type[object] | type[np.datetime64]]]
 Outputs = list[tuple[str, Callable[..., pd.DataFrame]]]
