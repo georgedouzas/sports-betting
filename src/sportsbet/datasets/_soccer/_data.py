@@ -28,12 +28,10 @@ FIXTURES_URL = (
 
 
 class SoccerDataLoader(_BaseDataLoader):
-    """Dataloader for soccer data from combining all data sources.
+    """Dataloader for soccer data.
 
-    It downloads historical and fixtures data from
-    [Football-Data.co.uk](http://www.football-data.co.uk/data.php) and
-    [FiveThirtyEight](https://github.com/fivethirtyeight/data/tree/master/soccer-spi).
-    The data are combined in a consistent way.
+    It downloads historical and fixtures data for various
+    leagues, years and divisions.
 
     Read more in the [user guide][user-guide].
 
