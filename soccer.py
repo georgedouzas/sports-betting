@@ -869,7 +869,7 @@ def transform_processed_data(
 
 @task(
     description='Extract the modelling training data',
-    tags=['mdoelling', 'training', 'extract'],
+    tags=['modelling', 'training', 'extract'],
 )
 def extract_modelling_training_data(modelling_data: pd.DataFrame) -> pd.DataFrame:
     """Extract the training modelling data."""
@@ -882,7 +882,7 @@ def extract_modelling_training_data(modelling_data: pd.DataFrame) -> pd.DataFram
 
 @task(
     description='Extract the modelling fixtures data',
-    tags=['mdoelling', 'fixtures', 'extract'],
+    tags=['modelling', 'fixtures', 'extract'],
 )
 def extract_modelling_fixtures_data(modelling_data: pd.DataFrame) -> pd.DataFrame:
     """Extract the modelling fixtures data."""
