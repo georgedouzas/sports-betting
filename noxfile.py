@@ -86,7 +86,7 @@ def checks(session: nox.Session, file: str) -> None:
     if session.posargs[0] in ['dependencies', 'all']:
         requirements_path = (Path(session.create_tmp()) / 'requirements.txt').as_posix()
         args_groups = [['--prod']] + [['-dG', group] for group in ['tests', 'docs', 'maintenance']]
-        requirements_types = zip(FILES, args_groups)
+        requirements_types = zip(FILES, args_groups, strict=True)
         args = [
             'pdm',
             'export',

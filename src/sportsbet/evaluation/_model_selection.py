@@ -5,8 +5,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -67,13 +68,14 @@ def _fit_bet(
         **results,
         **{
             f'Number of bets ({market})': ret
-            for market, ret in zip(bettor.betting_markets_, (returns != 0).sum(axis=0))
+            for market, ret in zip(bettor.betting_markets_, (returns != 0).sum(axis=0), strict=True)
         },
         **{
             f'Yield percentage per bet ({market})': ret
             for market, ret in zip(
                 bettor.betting_markets_,
                 [round(100 * val if betting_returns.size > 0 else 0, 1) for val in returns.sum(axis=0) / n_bets],
+                strict=True,
             )
         },
     }

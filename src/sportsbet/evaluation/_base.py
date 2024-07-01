@@ -144,8 +144,8 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         )
         if {len(tokens) for tokens in Y_cols} != {3}:
             raise ValueError(error_msg)
-        Y_prefix, *Y_betting_markets_tokens = zip(*Y_cols)
-        Y_betting_markets = ['__'.join(tokens) for tokens in zip(*Y_betting_markets_tokens)]
+        Y_prefix, *Y_betting_markets_tokens = zip(*Y_cols, strict=True)
+        Y_betting_markets = ['__'.join(tokens) for tokens in zip(*Y_betting_markets_tokens, strict=True)]
         if set(Y_prefix) != {'output'}:
             error_msg = 'Prefixes of output data column names should be equal to `output`.'
             raise ValueError(error_msg)
@@ -177,14 +177,14 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         )
         if {len(tokens) for tokens in O_cols} != {4}:
             raise ValueError(error_msg)
-        O_prefix, O_bookmakers, *O_betting_markets_tokens = zip(*O_cols)
+        O_prefix, O_bookmakers, *O_betting_markets_tokens = zip(*O_cols, strict=True)
         if set(O_prefix) != {'odds'}:
             error_msg = 'Prefixes of odds data column names should be equal to `odds`.'
             raise ValueError(error_msg)
         if len(set(O_bookmakers)) != 1:
             error_msg = 'Bookmakers of odds data column names should be unique.'
             raise ValueError(error_msg)
-        O_betting_markets = ['__'.join(tokens) for tokens in zip(*O_betting_markets_tokens)]
+        O_betting_markets = ['__'.join(tokens) for tokens in zip(*O_betting_markets_tokens, strict=True)]
 
         return X, O, O_betting_markets
 
