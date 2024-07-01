@@ -132,7 +132,7 @@ def print_console(dfs: list[pd.DataFrame], titles: list[str]) -> None:
     pd.set_option('display.max_columns', None)
     console = Console()
     with console.pager(styles=True):
-        for df, title in zip(dfs, titles):
+        for df, title in zip(dfs, titles, strict=True):
             formatted_title = Panel.fit(f'[bold green]{title}')
             console.print(formatted_title)
             console.print(df)
