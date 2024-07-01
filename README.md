@@ -1,5 +1,4 @@
 [scikit-learn]: <http://scikit-learn.org/stable/>
-[sports-betting-data]: <https://github.com/georgedouzas/sports-betting-data>
 [black badge]: <https://img.shields.io/badge/%20style-black-000000.svg>
 [black]: <https://github.com/psf/black>
 [docformatter badge]: <https://img.shields.io/badge/%20formatter-docformatter-fedcba.svg>
