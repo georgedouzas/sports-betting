@@ -20,10 +20,10 @@ from ... import FixturesData, ParamGrid, Schema, TrainData
 from .._base import _BaseDataLoader
 from ._utils import OUTPUTS, _read_csv, _read_csvs, _read_urls_content
 
-MODELLING_URL = 'https://github.com/georgedouzas/sports-betting-data/tree/main/data/soccer/modelling'
-TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting-data/main/data/soccer/modelling/{league}_{division}_{year}.csv'
+MODELLING_URL = 'https://github.com/georgedouzas/sports-betting/tree/data/data/soccer/modelling'
+TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/{league}_{division}_{year}.csv'
 FIXTURES_URL = (
-    'https://raw.githubusercontent.com/georgedouzas/sports-betting-data/main/data/soccer/modelling/fixtures.csv'
+    'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/fixtures.csv'
 )
 
 
