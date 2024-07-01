@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.9.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.0) - 2024-07-01
+
+<small>[Compare with 0.8.1](https://github.com/georgedouzas/sports-betting/compare/0.8.1...0.9.0)</small>
+
+### Features
+
+- Implement bettor grid search ([6db237a](https://github.com/georgedouzas/sports-betting/commit/6db237a6e6c5169360f621077b9b830260d8da6c) by georgedouzas).
+
+### Bug Fixes
+
+- Add `strict=True` ([f6798d1](https://github.com/georgedouzas/sports-betting/commit/f6798d1967744febe40e93e244f2fe2507e9a967) by georgedouzas).
+- Use parameters from config file ([06e46dc](https://github.com/georgedouzas/sports-betting/commit/06e46dcd56af970ed968441d01c2293df528ef8a) by georgedouzas).
+
+### Docs
+
+- Add class link ([df3b61f](https://github.com/georgedouzas/sports-betting/commit/df3b61f7393e4609b9898efadbc7021e60753cbc) by georgedouzas).
+- Simplify attribute description ([244ec7d](https://github.com/georgedouzas/sports-betting/commit/244ec7df1bf9480661e5ddb186e80b3ce5fbc34b) by georgedouzas).
+- Remove `sports-betting-data` ([0cdd625](https://github.com/georgedouzas/sports-betting/commit/0cdd625c61a7acd0e8eb6dcf014c6e88b2f14022) by georgedouzas).
+- Fix README template and CHANGELOG ([96368dd](https://github.com/georgedouzas/sports-betting/commit/96368dd303b8e9ab43a1a69413c5d778b178a755) by georgedouzas).
+
+### Tests
+
+- Match regex for all Python versions ([00cc2e3](https://github.com/georgedouzas/sports-betting/commit/00cc2e30e605d1fd06881ec92b558c7a293ef683) by georgedouzas).
+- Ignore type comparison ([7d81e37](https://github.com/georgedouzas/sports-betting/commit/7d81e37eb3029afb590431932282b9c163e3ebd4) by georgedouzas).
+
+### Chore
+
+- Make it compatible to new Python versions ([9343e13](https://github.com/georgedouzas/sports-betting/commit/9343e137ad28666984a9dd1b4ee954fe4650ebf4) by georgedouzas).
+- Update dependencies ([0a75393](https://github.com/georgedouzas/sports-betting/commit/0a753930b9241b1d537b08fc387010d195df3f1e) by georgedouzas).
+- Remove support for Python 3.9 ([006774f](https://github.com/georgedouzas/sports-betting/commit/006774f849ba6a50a0bf5b6cb47a71c5ba0f81a4) by georgedouzas).
+- Remove non used group ([5546e94](https://github.com/georgedouzas/sports-betting/commit/5546e94633f862181279ba4d6f6ab629b1b13a01) by georgedouzas).
+- Support Python 3.11 and 3.12 ([351a060](https://github.com/georgedouzas/sports-betting/commit/351a06062d8cc18c4d36271070c582681dcf750c) by georgedouzas).
+- Remove script to generate results ([d119a9f](https://github.com/georgedouzas/sports-betting/commit/d119a9fc4671051722d45819f6991a493ced591f) by georgedouzas).
+- Remove duplicate docstring ([e829037](https://github.com/georgedouzas/sports-betting/commit/e829037820c470cd9705d354c751a5635170ce17) by georgedouzas).
+- Predictions 29/03/2024 ([de32b51](https://github.com/georgedouzas/sports-betting/commit/de32b51c25874d1263758ce7c8554e29c8ad0d89) by georgedouzas).
+- Predictions 24/03/2024 ([3b64b79](https://github.com/georgedouzas/sports-betting/commit/3b64b798ecd69f3b383b6d2500eafa3d1d3b1e0e) by georgedouzas).
+- Predictions 16/03/2024 ([ea644d5](https://github.com/georgedouzas/sports-betting/commit/ea644d55e8ba36b21b8ae674680d46ad16c270d3) by georgedouzas).
+- Follow private module convention ([bfcb854](https://github.com/georgedouzas/sports-betting/commit/bfcb854726c6c556391238bf54cea8f116644860) by georgedouzas).
+- Decrease number of splits of `TimeSeriesSplit` ([c045834](https://github.com/georgedouzas/sports-betting/commit/c0458344eae0f78743b67fc16fdc1dcdfa131da4) by georgedouzas).
+- Predictions 13/03/2024 ([3120e91](https://github.com/georgedouzas/sports-betting/commit/3120e91003de8eab7700796d2b8276a0532b0083) by georgedouzas).
+- Predictions 11/03/2024 ([1503f88](https://github.com/georgedouzas/sports-betting/commit/1503f88f343854bf876d879099412ae6a99bce4d) by georgedouzas).
+- Update copier template and Github workflows ([f38468d](https://github.com/georgedouzas/sports-betting/commit/f38468d099cd96f5e0f43d36031df21889066733) by georgedouzas).
+
 ## [0.8.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.1) - 2024-03-08
 
 <small>[Compare with 0.8.0](https://github.com/georgedouzas/sports-betting/compare/0.8.0...0.8.1)</small>
