@@ -949,8 +949,8 @@ def sync_repo() -> None:
             f'https://{block.token.get_secret_value()}@{remote.url.split("://")[-1]}',
             remote.url,
         )
-        repo.git.pull('--rebase')
-        repo.git.push('-u', 'origin', 'main')
+        repo.git.pull('origin', 'data', '--rebase')
+        repo.git.push('-u', 'origin', 'data')
 
 
 @flow(description='Update the training and fixtures data')
