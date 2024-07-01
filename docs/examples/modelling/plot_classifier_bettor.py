@@ -2,7 +2,7 @@
 Classifier bettor
 =================
 
-This example illustrates how to use a classifier-based bettor
+This example illustrates how to use [`ClassfierBettor`][sportsbet.evaluation.ClassifierBettor]
 and evaluate its performance on soccer historical data.
 """
 
