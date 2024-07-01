@@ -1,0 +1,17 @@
+.idea/
+__pycache__/
+*.py[cod]
+dist/
+*.egg-info/
+build/
+htmlcov/
+.coverage*
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+__pypackages__/
+.venv/
+.nox
+.ruff_cache
+.vscode
+.DS_Store
