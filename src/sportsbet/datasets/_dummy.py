@@ -67,10 +67,6 @@ class DummySoccerDataLoader(_BaseDataLoader):
             The tuple (X, Y, O) that represents the training data as extracted from
             the method `extract_train_data`.
 
-        fixtures_data_ (FixturesData):
-            The tuple (X, Y, O) that represents the fixtures data as extracted from
-            the method `extract_fixtures_data`.
-
     Examples:
         >>> from sportsbet.datasets import DummySoccerDataLoader
         >>> import pandas as pd
@@ -405,8 +401,9 @@ class DummySoccerDataLoader(_BaseDataLoader):
 
     def extract_train_data(
         self: Self,
-        drop_na_thres: float = 0.0,
         odds_type: str | None = None,
+        drop_na_thres: float = 0.0,
+        keep_num_cols: bool = False,
     ) -> TrainData:
         """Extract the training data.
 
@@ -423,10 +420,16 @@ class DummySoccerDataLoader(_BaseDataLoader):
 
         The method selects only the the data allowed by the `param_grid`
         parameter of the initialization method. Additionally, columns with missing
-        values are dropped through the `drop_na_thres` parameter, while the
+        values are dropped through the `drop_na_thres` parameter and only numerical
+        columns are returned through the `keep_num_cols` parameter, while the
         types of odds returned is defined by the `odds_type` parameter.
 
         Args:
+            odds_type:
+                The selected odds type. It should be one of the available odds columns
+                prefixes returned by the method `get_odds_types`. If `odds_type=None`
+                then no odds are returned.
+
             drop_na_thres:
                 The threshold that specifies the input columns to drop. It is a float in
                 the `[0.0, 1.0]` range. Higher values result in dropping more values.
@@ -434,17 +437,17 @@ class DummySoccerDataLoader(_BaseDataLoader):
                 maximum value `drop_na_thres=1.0` keeps only columns with non
                 missing values.
 
-            odds_type:
-                The selected odds type. It should be one of the available odds columns
-                prefixes returned by the method `get_odds_types`. If `odds_type=None`
-                then no odds are returned.
+            keep_num_cols:
+                Keep only numerical columns for the input data. If `keep_num_cols=True`
+                only the numerical columns are kept, while `keep_num_cols=False` keeps all
+                columns.
 
         Returns:
             (X, Y, O):
                 Each of the components represent the training input data `X`, the
                 multi-output targets `Y` and the corresponding odds `O`, respectively.
         """
-        return super().extract_train_data(drop_na_thres, odds_type)
+        return super().extract_train_data(odds_type=odds_type, drop_na_thres=drop_na_thres, keep_num_cols=keep_num_cols)
 
     def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.

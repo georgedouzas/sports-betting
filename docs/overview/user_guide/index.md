@@ -21,7 +21,7 @@ dataloader = SoccerDataLoader(param_grid={'league': ['Italy', 'Spain'], 'year': 
 The next step is to extract the training data, including the market maximum odds:
 
 ```python
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', keep_num_cols=True)
 ```
 
 Finally, the corresponding fixtures data are easily extracted:
@@ -45,16 +45,15 @@ from sklearn.pipeline import make_pipeline
 bettor = ClassifierBettor(classifier=make_pipeline(SimpleImputer(), KNeighborsClassifier()))
 ```
 
-For the backtesting of the bettor's performance we use only the historical data and numerical features:
+For the backtesting of the bettor's performance we use only the historical data:
 
 ```python
-num_cols = X_train.columns[['float' in col_type.name for col_type in X_train.dtypes]]
-backtest(bettor, X_train[num_cols], Y_train, O_train)
+backtest(bettor, X_train, Y_train, O_train)
 ```
 
 Similarly to get the value bets for upcoming betting events, we use the fixtures data:
 
 ```python
-bettor.fit(X_train[num_cols], Y_train)
-value_bets = bettor.bet(X_fix[num_cols], O_fix)
+bettor.fit(X_train, Y_train)
+value_bets = bettor.bet(X_fix, O_fix)
 ```

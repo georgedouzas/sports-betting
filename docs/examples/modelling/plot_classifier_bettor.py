@@ -21,11 +21,15 @@ from sportsbet.evaluation import ClassifierBettor, backtest
 # ----------------------------
 #
 # We extract the training data for the Spanish soccer league.
-# We also remove columns that contain missing values and select the market
-# maximum odds.
+# We also remove columns that contain missing values, select the market
+# maximum odds and keep only the numerical features.
 
 dataloader = SoccerDataLoader(param_grid={'league': ['Spain'], 'year': [2020, 2021, 2022]})
-X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='market_maximum')
+X_train, Y_train, O_train = dataloader.extract_train_data(
+    drop_na_thres=0.5,
+    odds_type='market_maximum',
+    keep_num_cols=True,
+)
 
 # %%
 # The input data:
@@ -38,11 +42,6 @@ Y_train
 # %%
 # The odds data:
 O_train
-
-# %%
-# In order to simplify the selected classifier, we keep only numerical features of the input data:
-num_cols = X_train.columns[['float' in col_type.name for col_type in X_train.dtypes]]
-X_train = X_train[num_cols]
 
 # %%
 # Classifier bettor
@@ -95,7 +94,6 @@ backtesting_results
 # We extract the fixtures data to estimate the value bets.
 
 X_fix, _, Odds_fix = dataloader.extract_fixtures_data()
-X_fix = X_fix[num_cols]
 assert Odds_fix is not None
 
 # %%

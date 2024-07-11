@@ -106,7 +106,7 @@ def test_drop_na_thres_raise_type_error(drop_na_thres):
     """Test the raise of type error for check of drop na threshold."""
     dataloader = DummySoccerDataLoader()
     with pytest.raises(TypeError):
-        dataloader.extract_train_data(drop_na_thres)
+        dataloader.extract_train_data(drop_na_thres=drop_na_thres)
 
 
 @pytest.mark.parametrize('drop_na_thres', [1.5, -0.4])
@@ -116,7 +116,7 @@ def test_drop_na_thres_raise_value_error(drop_na_thres):
     drop_na_thres_min = 0.0
     suffix = '>= 0.0' if drop_na_thres < drop_na_thres_min else '<= 1.0'
     with pytest.raises(ValueError, match=f'drop_na_thres == {drop_na_thres}, must be {suffix}.'):
-        dataloader.extract_train_data(drop_na_thres)
+        dataloader.extract_train_data(drop_na_thres=drop_na_thres)
 
 
 def test_odds_type_default():
