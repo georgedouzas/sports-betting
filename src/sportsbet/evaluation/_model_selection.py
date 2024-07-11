@@ -165,7 +165,7 @@ def backtest(
 class BettorGridSearchCV(GridSearchCV, _BaseBettor):
     """Exhaustive search over specified parameter values for a bettor.
 
-    BettorGridSearchCV implements a `fit`, a`predict`, a `predict_proba',
+    BettorGridSearchCV implements a `fit`, a`predict`, a `predict_proba`,
     a `bet` and a `score` method.
 
     The parameters of the bettor used to apply these methods are optimized
@@ -191,7 +191,7 @@ class BettorGridSearchCV(GridSearchCV, _BaseBettor):
             If `scoring` represents a single score, one can use:
 
             - a single string
-            - a callable (see :ref:`scoring`) that returns a single value
+            - a callable that returns a single value
 
             If `scoring` represents multiple scores, one can use:
 
