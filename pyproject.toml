@@ -62,14 +62,14 @@ htmlcov pip-wheel-metadata site __pycache__ docs/generated .nox .ruff_cache pdm.
 && find . -name '.coverage*'  -delete"""}
 docs = "nox --error-on-external-run -R -s docs -- {args:serve}"
 formatting = "nox --error-on-external-run -R -s formatting -- {args:all}"
-checks = "nox --error-on-external-run -R -s checks -- {args:all}"
-tests = "nox --error-on-external-run -R -s tests"
+checks = "nox --default-venv-backend uv --error-on-external-run -R -s checks -- {args:all}"
+tests = "nox --default-venv-backend uv --error-on-external-run -R -s tests"
 changelog = "nox --error-on-external-run -R -s changelog"
 release = "nox --error-on-external-run -R -s release"
 
 [tool.pdm.dev-dependencies]
 maintenance = [
-    "nox>=2022.8.7",
+    "nox[uv]>=2024.4.15",
 ]
 docs = [
     "mkdocs>=1.5.3",
@@ -87,28 +87,28 @@ docs = [
     "pandas>=2.0.0",
 ]
 formatting = [
-    "black>=21.10b0",
-    "docformatter>=1.5.1",
+    "black>=24.4.2",
+    "docformatter>=1.7.5",
 ]
 checks = [
-    "ruff>=0.0.237",
-    "safety>=2",
-    "mypy>=0.910",
-    "types-markdown>=3.3",
-    "types-toml>=0.10",
-    "types-pytz>=2023.2.0.1"
+    "ruff>=0.5.0",
+    "safety>=3.2.3",
+    "mypy[install-types]>=1.10.1",
+    "types-markdown>=3.6.0.20240316",
+    "types-toml>=0.10.8.20240310",
+    "types-pytz"
 ]
 tests = [
-    "pytest>=6.2",
-    "pytest-cov>=3.0",
-    "pytest-randomly>=3.10",
-    "pytest-xdist>=2.4",
+    "pytest>=8.2.2",
+    "pytest-cov>=5.0.0",
+    "pytest-randomly>=3.15.0",
+    "pytest-xdist>=3.6.1",
 ]
 changelog = [
-    "git-changelog>=1.0.0",
+    "git-changelog>=2.5.2",
 ]
 release = [
-    "twine>=4.0.0",
+    "twine>=5.1.1",
 ]
 
 [tool.black]
@@ -117,17 +117,12 @@ extend-exclude = "(tests/fixtures|docs/generated)"
 skip-string-normalization = true
 
 [tool.ruff]
-fix = true
 extend-exclude = ["docs/generated"]
 force-exclude = true
 line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-fixable = ["C", "E", "F", "W", "B", "I", "D", "N", "UP", "YTT", "ANN", "S",
-"BLE", "A", "COM", "C4", "DTZ", "T10", "EM", "EXE", "ISC", "ICN", "G",
-"INP", "PIE", "T20", "PT", "Q", "RET501", "RET502", "RET503", "SIM",
-"PTH", "PD", "PGH", "PL", "TRY", "RUF", "PLE", "PLR", "PLW", "TRY", "RUF"]
 ignore = ["D202", "N806", "N803", "S101", "INP001", "Q000", "TRY002", "PLR0913", "EXE001", "EXE002", "E741"]
 select = ["C", "E", "F", "W", "B", "I", "D", "N", "UP", "YTT", "ANN", "S",
 "BLE", "A", "COM", "C4", "DTZ", "T10", "EM", "EXE", "ISC", "ICN", "G",
