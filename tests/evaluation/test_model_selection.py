@@ -8,8 +8,8 @@ import pandas as pd
 import pytest
 from sklearn.dummy import DummyClassifier
 from sklearn.model_selection import KFold, TimeSeriesSplit
-from sportsbet.evaluation import BettorGridSearchCV, ClassifierBettor, OddsComparisonBettor, backtest
 
+from sportsbet.evaluation import BettorGridSearchCV, ClassifierBettor, OddsComparisonBettor, backtest
 from tests.evaluation import O_train, TestBettor, X_train, Y_train
 
 

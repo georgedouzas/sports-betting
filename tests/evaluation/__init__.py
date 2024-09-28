@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Self
+
 from sportsbet import Data
 from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation._base import _BaseBettor
-from typing_extensions import Self
 
 X_train, Y_train, O_train = DummySoccerDataLoader().extract_train_data(odds_type='williamhill')
 

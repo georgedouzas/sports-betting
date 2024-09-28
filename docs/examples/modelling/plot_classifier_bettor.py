@@ -13,6 +13,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
+
 from sportsbet.datasets import SoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor, backtest
 

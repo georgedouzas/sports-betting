@@ -5,6 +5,7 @@ import pytest
 from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
+
 from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor
 

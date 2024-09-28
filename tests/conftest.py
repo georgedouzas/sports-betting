@@ -25,7 +25,7 @@ def pandas_terminal_width() -> None:  # noqa: PT004
     pd.set_option('display.max_columns', 1000)
 
 
-@pytest.fixture()
+@pytest.fixture
 def cli_config_path(tmp_path: Path) -> Path:
     """Create configuration file."""
     with Path.open(tmp_path / 'config.py', 'wt') as config_file:

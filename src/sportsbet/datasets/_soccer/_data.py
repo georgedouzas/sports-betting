@@ -22,9 +22,7 @@ from ._utils import OUTPUTS, _read_csv, _read_csvs, _read_urls_content
 
 MODELLING_URL = 'https://github.com/georgedouzas/sports-betting/tree/data/data/soccer/modelling'
 TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/{league}_{division}_{year}.csv'
-FIXTURES_URL = (
-    'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/fixtures.csv'
-)
+FIXTURES_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/fixtures.csv'
 
 
 class SoccerDataLoader(_BaseDataLoader):
