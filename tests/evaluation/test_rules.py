@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+
 from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor
 

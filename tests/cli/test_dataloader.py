@@ -1,6 +1,7 @@
 """Test the dataloader commands."""
 
 import pytest
+
 from sportsbet.cli import main
 
 

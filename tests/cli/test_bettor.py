@@ -1,6 +1,7 @@
 """Test the bettor commands."""
 
 import pytest
+
 from sportsbet.cli import main
 
 
