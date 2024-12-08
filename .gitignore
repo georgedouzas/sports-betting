@@ -20,3 +20,7 @@ __pypackages__/
 .ruff_cache
 .vscode
 .DS_Store
+*.db
+*.py[cod]
+.web
+assets/external/

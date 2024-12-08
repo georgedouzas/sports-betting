@@ -35,6 +35,8 @@ dependencies = [
     "click>=8.1.3",
     "rich>=13.3.3",
     "aiohttp>=3.8.4",
+    "reflex>=0.6.0",
+    "reflex-ag-grid>=0.0.7",
 ]
 
 [project.urls]
