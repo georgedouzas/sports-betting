@@ -433,7 +433,7 @@ SCHEMA = [
     ('target__home_team__bookings_points', float),
     ('target__away_team__bookings_points', float),
 ]
-CONNECTIONS_LIMIT = int(variables.get('connections_limit'))
+CONNECTIONS_LIMIT = int(variables.Variable.get('connections_limit'))
 
 
 async def _read_url_content_async(client: aiohttp.ClientSession, url: str) -> str:
@@ -800,6 +800,7 @@ def process_raw_fixtures_data(
     data: pd.DataFrame, processed_training_data: pd.DataFrame
 ) -> pd.DataFrame:
     """Process the raw fixtures data."""
+    data = data.rename(columns={'ï»¿Div': 'Div'})
     data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
     data = data.dropna(axis=0, how='any', subset=['Div', 'HomeTeam', 'AwayTeam'])
     inv_leagues_mapping = {v[0]: k for k, v in LEAGUES_MAPPING.items()}
