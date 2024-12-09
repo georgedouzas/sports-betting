@@ -6,18 +6,39 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.9.2](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.2) - 2024-12-09
+
+<small>[Compare with 0.9.1](https://github.com/georgedouzas/sports-betting/compare/0.9.1...0.9.2)</small>
+
+### Bug Fixes
+
+- Include current date to fixtures ([eff9a0e](https://github.com/georgedouzas/sports-betting/commit/eff9a0ebcb0970aa59dc081c2527eb326efe1c51) by georgedouzas).
+
+### Style
+
+- Sort imports ([a52d821](https://github.com/georgedouzas/sports-betting/commit/a52d821f26c76fea69f538df043da011d2ab11d2) by georgedouzas).
+
+### Chore
+
+- Fix ruff check errors ([6775041](https://github.com/georgedouzas/sports-betting/commit/677504101eaf8f69a4d2f640f378491d8d8a7a4a) by georgedouzas).
+- Update copier template ([9570012](https://github.com/georgedouzas/sports-betting/commit/9570012a892c8d4588f9bc67465f0f50df60878d) by georgedouzas).
+
 ## [0.9.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.1) - 2024-07-01
 
 <small>[Compare with 0.9.0](https://github.com/georgedouzas/sports-betting/compare/0.9.0...0.9.1)</small>
 
 ### Bug Fixes
 
-- Use correct repo to download data ([03f2910](https://github.com/georgedouzas/sports-betting/commit/03f2910f9ec3e0bec73436192b6573bc88f3b312) by georgedouzas).
+- Use correct repo to download data ([f9ce528](https://github.com/georgedouzas/sports-betting/commit/f9ce528903a9af76aa9b2a60ac6847a1379e83f6) by georgedouzas).
 
 ### Docs
 
-- Modify description ([9afda1d](https://github.com/georgedouzas/sports-betting/commit/9afda1d5cc526ff2975c42c1c5e73807b0f34956) by georgedouzas).
-- Remove redundant link ([4d4d37b](https://github.com/georgedouzas/sports-betting/commit/4d4d37b9f4d5ddd46a8bc3cc8a06732038942b00) by georgedouzas).
+- Modify description ([bbb4874](https://github.com/georgedouzas/sports-betting/commit/bbb4874592b70b40fadeedd188763b50a8a0f34e) by georgedouzas).
+- Remove redundant link ([e435047](https://github.com/georgedouzas/sports-betting/commit/e435047206d4915c28109b8f87b30eaf2d72da26) by georgedouzas).
+
+### Chore
+
+- Release 0.9.1 ([58ef3d0](https://github.com/georgedouzas/sports-betting/commit/58ef3d05a5b2be7bd372b7192168499348973981) by georgedouzas).
 
 ## [0.9.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.0) - 2024-07-01
 
