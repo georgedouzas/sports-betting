@@ -367,7 +367,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         data = self._convert_data_types(data)
 
         # Remove past data
-        data = data.loc[data.index >= pd.to_datetime('today')]
+        data = data.loc[data.index >= pd.Timestamp(pd.to_datetime('today').date())]
 
         # Extract odds
         O_fix = data[self.odds_cols_].reset_index(drop=True) if self.odds_type_ is not None else None
