@@ -19,7 +19,7 @@ CV = TimeSeriesSplit(2)
 
 
 @pytest.fixture(autouse=True, scope='session')
-def pandas_terminal_width() -> None:  # noqa: PT004
+def pandas_terminal_width() -> None:
     """Set options to display data."""
     pd.set_option('display.width', 1000)
     pd.set_option('display.max_columns', 1000)

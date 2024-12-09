@@ -7,7 +7,7 @@ from ._dummy import DummySoccerDataLoader
 from ._soccer._data import SoccerDataLoader
 
 __all__: list[str] = [
-    'SoccerDataLoader',
     'DummySoccerDataLoader',
+    'SoccerDataLoader',
     'load_dataloader',
 ]
