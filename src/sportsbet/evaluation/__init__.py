@@ -8,9 +8,9 @@ from ._model_selection import BettorGridSearchCV, backtest
 from ._rules import OddsComparisonBettor
 
 __all__: list[str] = [
+    'BettorGridSearchCV',
     'ClassifierBettor',
     'OddsComparisonBettor',
-    'BettorGridSearchCV',
     'backtest',
     'load_bettor',
     'save_bettor',
