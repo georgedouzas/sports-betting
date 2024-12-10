@@ -887,6 +887,7 @@ def extract_modelling_training_data(modelling_data: pd.DataFrame) -> pd.DataFram
 def extract_modelling_fixtures_data(modelling_data: pd.DataFrame) -> pd.DataFrame:
     """Extract the modelling fixtures data."""
     modelling_fixtures_data = pd.concat([data[n:] for *_, n, data in modelling_data])
+    modelling_fixtures_data = modelling_fixtures_data.sort_values(['date', 'league', 'division'])
     return modelling_fixtures_data
 
 
