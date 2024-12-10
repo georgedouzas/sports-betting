@@ -13,7 +13,6 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from git import Repo
 from prefect_github import GitHubCredentials
-from prefect import variables
 
 DATA_PATH = Path(__file__).parent / 'data' / 'soccer'
 URL = 'https://www.football-data.co.uk'
@@ -433,7 +432,7 @@ SCHEMA = [
     ('target__home_team__bookings_points', float),
     ('target__away_team__bookings_points', float),
 ]
-CONNECTIONS_LIMIT = int(variables.Variable.get('connections_limit'))
+CONNECTIONS_LIMIT = 20
 
 
 async def _read_url_content_async(client: aiohttp.ClientSession, url: str) -> str:
