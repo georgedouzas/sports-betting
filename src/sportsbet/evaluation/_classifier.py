@@ -53,14 +53,14 @@ class ClassifierBettor(MetaEstimatorMixin, _BaseBettor):
         >>> from sklearn.impute import SimpleImputer
         >>> from sklearn.pipeline import make_pipeline
         >>> from sklearn.compose import make_column_transformer
-        >>> from sportsbet.evaluation import ClassifierBettor
+        >>> from sportsbet.evaluation import ClassifierBettor, backtest
         >>> from sportsbet.datasets import SoccerDataLoader
         >>> # Select only backtesting data for the Italian league and years 2020, 2021
         >>> param_grid = {'league': ['Italy'], 'year': [2020, 2021]}
         >>> dataloader = SoccerDataLoader(param_grid)
         >>> # Select the odds of Pinnacle bookmaker
         >>> X, Y, O = dataloader.extract_train_data(
-        ... odds_type='pinnacle',
+        ... odds_type='market_average',
         ... drop_na_thres=1.0
         ... )
         >>> # Create a pipeline to handle categorical features and missing values
@@ -74,8 +74,8 @@ class ClassifierBettor(MetaEstimatorMixin, _BaseBettor):
         ... )
         >>> # Backtest the bettor
         >>> bettor = ClassifierBettor(clf_pipeline)
-        >>> backtest(bettor, X, Y, O)
-        Training Start ... Yield percentage per bet (away_win__full_time_goals)
+        >>> backtest(bettor, X, Y, O).reset_index()
+          Training start ... Yield percentage per bet (under_2.5__full_time_goals)
         ...
     """
 

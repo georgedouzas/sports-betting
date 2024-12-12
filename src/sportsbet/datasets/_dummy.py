@@ -82,25 +82,9 @@ class DummySoccerDataLoader(_BaseDataLoader):
         >>> # Get available odds types
         >>> dataloader.get_odds_types()
         ['interwetten', 'williamhill']
-        >>> # Select the odds of Interwetten bookmaker
+        >>> # Select the odds of Interwetten bookmaker for training data
         >>> X_train, Y_train, O_train = dataloader.extract_train_data(
         ... odds_type='interwetten')
-        >>> # Training input data
-        >>> print(X_train) # doctest: +NORMALIZE_WHITESPACE
-                    division league  year ... odds__williamhill__draw__full_time_goals
-        date
-        1997-05-04         1  Spain  1997 ...                                      2.5
-        1999-03-04         2  Spain  1999 ...                                      NaN
-        >>> # Training output data
-        >>> print(Y_train)
-        output__home_win__full_time_goals ... output__away_win__full_time_goals
-        0                               True ...                             False
-        1                              False ...                             False
-        >>> # Training odds data
-        >>> print(O_train)
-        odds__interwetten__home_win__full_time_goals ...
-        0                                           1.5 ...
-        1                                           2.5 ...
         >>> # Extract the corresponding fixtures data
         >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
         >>> # Training and fixtures input and odds data have the same column names

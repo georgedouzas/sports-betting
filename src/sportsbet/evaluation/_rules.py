@@ -56,7 +56,7 @@ class OddsComparisonBettor(_BaseBettor):
             The backtesting resuts.
 
     Examples:
-        >>> from sportsbet.evaluation import OddsComparisonBettor
+        >>> from sportsbet.evaluation import OddsComparisonBettor, backtest
         >>> from sportsbet.datasets import SoccerDataLoader
         >>> # Select only backtesting data for the Italian and Spanish leagues and years 2019 - 2022
         >>> param_grid = {'league': ['Italy', 'Spain'], 'year': [2019, 2020, 2021, 2022]}
@@ -67,8 +67,8 @@ class OddsComparisonBettor(_BaseBettor):
         ... )
         >>> # Backtest the bettor
         >>> bettor = OddsComparisonBettor(alpha=0.03)
-        >>> backtest(bettor, X, Y, O)
-        Training Start ... Yield percentage per bet (away_win__full_time_goals)
+        >>> backtest(bettor, X, Y, O).reset_index()
+          Training start ... Yield percentage per bet (under_2.5__full_time_goals)
         ...
     """
 
