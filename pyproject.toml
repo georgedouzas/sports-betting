@@ -150,9 +150,8 @@ warn_unused_ignores = true
 show_error_codes = true
 
 [tool.pytest.ini_options]
-python_files = ["test_*.py"]
-addopts = "--cov"
-testpaths = ["tests"]
+addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "-n=auto"]
+testpaths = ["src", "tests"]
 
 [tool.coverage.run]
 branch = true
