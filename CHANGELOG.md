@@ -6,22 +6,40 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.9.3](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.3) - 2024-12-12
+
+<small>[Compare with 0.9.2](https://github.com/georgedouzas/sports-betting/compare/0.9.2...0.9.3)</small>
+
+### Bug Fixes
+
+- Update scikit-learn minimum version ([3e5f1ad](https://github.com/georgedouzas/sports-betting/commit/3e5f1ad363e011b0ce06b26c8374d478efc21879) by georgedouzas).
+
+### Docs
+
+- Fix doctests ([44539df](https://github.com/georgedouzas/sports-betting/commit/44539df838cf6f264872a8c16cd74193d884b1f0) by georgedouzas).
+
+### Chore
+
+- Use correct pytest options ([dd92ce5](https://github.com/georgedouzas/sports-betting/commit/dd92ce5c10abb21e8d31a923517a3f3cef02bd75) by georgedouzas).
+- Update copier template ([3fdf19b](https://github.com/georgedouzas/sports-betting/commit/3fdf19bef632ed352871101768c5ec41d4ad6a48) by georgedouzas).
+
 ## [0.9.2](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.2) - 2024-12-09
 
 <small>[Compare with 0.9.1](https://github.com/georgedouzas/sports-betting/compare/0.9.1...0.9.2)</small>
 
 ### Bug Fixes
 
-- Include current date to fixtures ([eff9a0e](https://github.com/georgedouzas/sports-betting/commit/eff9a0ebcb0970aa59dc081c2527eb326efe1c51) by georgedouzas).
+- Include current date to fixtures ([fc7d2c1](https://github.com/georgedouzas/sports-betting/commit/fc7d2c1a5e673a0bb2b0445cdac5404664847954) by georgedouzas).
 
 ### Style
 
-- Sort imports ([a52d821](https://github.com/georgedouzas/sports-betting/commit/a52d821f26c76fea69f538df043da011d2ab11d2) by georgedouzas).
+- Sort imports ([4edc0f4](https://github.com/georgedouzas/sports-betting/commit/4edc0f413ac8febc705ed781e846551b21f2692c) by georgedouzas).
 
 ### Chore
 
-- Fix ruff check errors ([6775041](https://github.com/georgedouzas/sports-betting/commit/677504101eaf8f69a4d2f640f378491d8d8a7a4a) by georgedouzas).
-- Update copier template ([9570012](https://github.com/georgedouzas/sports-betting/commit/9570012a892c8d4588f9bc67465f0f50df60878d) by georgedouzas).
+- Release 0.9.2 ([ed04c81](https://github.com/georgedouzas/sports-betting/commit/ed04c81a953c18cc17b3d2f4fc687fe204a459da) by georgedouzas).
+- Fix ruff check errors ([3fc21c7](https://github.com/georgedouzas/sports-betting/commit/3fc21c7ff39f152322265cb346b1dff907562a9f) by georgedouzas).
+- Update copier template ([4d052d4](https://github.com/georgedouzas/sports-betting/commit/4d052d474959ac29f7800f9310063f8b6c6402e3) by georgedouzas).
 
 ## [0.9.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.1) - 2024-07-01
 
