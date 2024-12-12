@@ -65,7 +65,7 @@ def formatting(session: nox.Session, file: str) -> None:
     if session.posargs[0] in ['code', 'all']:
         session.run('black', file)
     if session.posargs[0] in ['docstrings', 'all']:
-        session.run('docformatter', '--in-place', '--recursive', '--close-quotes-on-newline', file)
+        session.run('docformatter', file)
 
 
 @nox.session(python=PYTHON_VERSIONS)

@@ -116,6 +116,12 @@ line-length = 120
 extend-exclude = "(tests/fixtures|docs/generated)"
 skip-string-normalization = true
 
+[tool.docformatter]
+in-place = true
+recursive = true
+close-quotes-on-newline = true
+wrap-descriptions = 120
+
 [tool.ruff]
 extend-exclude = ["docs/generated"]
 force-exclude = true
