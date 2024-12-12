@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import warnings
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import ClassVar
@@ -17,7 +16,7 @@ from nptyping import NDArray, Shape, String
 from sklearn.base import BaseEstimator, ClassifierMixin, MultiOutputMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.utils import check_consistent_length, check_scalar
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import _check_feature_names, check_is_fitted
 from typing_extensions import Self
 
 from .. import BoolData, Data
@@ -103,7 +102,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         self.stake_ = float(stake)
 
         # Check features
-        self._check_feature_names(X, reset=True)
+        _check_feature_names(self, X, reset=True)
         self.feature_names_out_ = np.array(
             [col for col in Y.columns if '__'.join(col.split('__')[1:]) in self.betting_markets_],
         )
@@ -243,9 +242,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
                 The positive class probabilities.
         """
         check_is_fitted(self)
-        with warnings.catch_warnings():
-            warnings.simplefilter('error')
-            self._check_feature_names(X, reset=False)
+        _check_feature_names(self, X, reset=False)
         if X.empty:
             return np.empty((0, self.betting_markets_.size), dtype=float)
         Y_proba_pred = self._predict_proba(X)
