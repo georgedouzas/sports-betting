@@ -92,7 +92,7 @@ class SoccerDataLoader(_BaseDataLoader):
         ... odds_type='market_average')
         >>> # Odds data include the selected market average odds
         >>> O_train.columns
-        Index(['odds__market_average__home_win__full_time_goals', ...
+        Index(['odds__market_average__home_win__full_time_goals',...
         >>> # Extract the corresponding fixtures data
         >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
         >>> # Training and fixtures input and odds data have the same column names

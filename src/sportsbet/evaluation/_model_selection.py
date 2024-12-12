@@ -343,7 +343,7 @@ class BettorGridSearchCV(GridSearchCV, _BaseBettor):
             `feature_names_in_` when fit.
 
     Examples:
-        >>> from sportsbet.evaluation import BettorGridSearchCV, OddsComparisonBettor
+        >>> from sportsbet.evaluation import BettorGridSearchCV, OddsComparisonBettor, backtest
         >>> from sportsbet.datasets import SoccerDataLoader
         >>> from sklearn.model_selection import TimeSeriesSplit
         >>> # Select only backtesting data for the Italian and Spanish leagues and years 2019 - 2022
@@ -355,12 +355,12 @@ class BettorGridSearchCV(GridSearchCV, _BaseBettor):
         ... )
         >>> # Backtest the bettor
         >>> bettor = BettorGridSearchCV(
-            estimator=OddsComparisonBettor(),
-            param_grid={'alpha': [0.02, 0.05, 0.1, 0.2, 0.3]},
-            cv=TimeSeriesSplit(2),
+        ... estimator=OddsComparisonBettor(),
+        ... param_grid={'alpha': [0.02, 0.05, 0.1, 0.2, 0.3]},
+        ... cv=TimeSeriesSplit(2),
         ... )
-        >>> backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2))
-        Training Start ... Yield percentage per bet (away_win__full_time_goals)
+        >>> backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2)).reset_index()
+          Training start ... Yield percentage per bet (under_2.5__full_time_goals)
         ...
     """
 
