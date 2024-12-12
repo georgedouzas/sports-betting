@@ -112,9 +112,9 @@ def tests(session: nox.Session) -> None:
     session.run('pdm', 'install', '-dG', 'tests', external=True)
     env = {'COVERAGE_FILE': f'.coverage.{session.python}'}
     if session.posargs:
-        session.run('pytest', '-n', 'auto', '--dist=loadgroup', '-k', *session.posargs, 'tests', env=env)
+        session.run('pytest', '-k', *session.posargs, env=env)
     else:
-        session.run('pytest', '-n', 'auto', '--dist=loadgroup', 'tests', env=env)
+        session.run('pytest', env=env)
     session.run('coverage', 'combine')
     session.run('coverage', 'report')
     session.run('coverage', 'html')
