@@ -1,23 +1,23 @@
 """Page common components."""
 
-from collections.abc import Callable
-
 import reflex as rx
 
+SIDEBAR_OPTIONS = {
+    'spacing': '1',
+    'position': 'fixed',
+    'left': '50px',
+    'top': '50px',
+    'padding_x': '1em',
+    'padding_y': "1.5em",
+    'bg': rx.color('blue', 3),
+    'height': '620px',
+    'width': '20em',
+}
 
-def home(reset_state: Callable) -> rx.Component:
+
+def home() -> rx.Component:
     """Home title."""
-    return rx.link(rx.hstack(rx.icon('home'), rx.text('Home', size='4', weight='bold')), on_click=reset_state)
-
-
-def header() -> rx.Component:
-    """Header of page."""
-    return rx.vstack(
-        rx.heading("Sports Betting", size='9', align='center'),
-        rx.heading("Application", size='4', color_scheme='blue'),
-        spacing='1',
-        align='center',
-    )
+    return rx.text('Sports Betting', size='4', weight='bold')
 
 
 def title(name: str, icon_name: str) -> rx.Component:
@@ -31,12 +31,53 @@ def title(name: str, icon_name: str) -> rx.Component:
     )
 
 
-def selection(items: list[str], value: str, disabled: bool, on_change: Callable) -> rx.Component:
-    """The selection component."""
-    return rx.select(
-        items=items,
-        value=value,
-        disabled=disabled,
-        on_change=on_change,
-        width='50%',
+def select_mode(state: rx.State, content: str) -> rx.Component:
+    """Selection of mode component."""
+    return rx.vstack(
+        rx.text(content, size='1'),
+        rx.hstack(
+            rx.select(
+                items=['Data', 'Modelling'],
+                value=state.mode_category,
+                disabled=state.visibility_level > 1,
+                width='120px',
+                on_change=state.set_mode_category,
+            ),
+            rx.select(
+                ['Create', 'Load'],
+                value=state.mode_type,
+                disabled=state.visibility_level > 1,
+                width='120px',
+                on_change=state.set_mode_type,
+            ),
+        ),
+    )
+
+
+def control_buttons(state: rx.State, disabled: bool) -> rx.Component:
+    """Control buttons of UI."""
+    return rx.vstack(
+        rx.divider(top='600px', position='fixed', width='18em'),
+        rx.hstack(
+            rx.button(
+                'Submit',
+                on_click=state.submit_state,
+                disabled=disabled,
+                loading=state.loading,
+                position='fixed',
+                top='620px',
+                width='70px',
+            ),
+            rx.link(
+                rx.button(
+                    'Reset',
+                    on_click=state.reset_state,
+                    position='fixed',
+                    top='620px',
+                    left='150px',
+                    width='70px',
+                ),
+                href='/',
+            ),
+        ),
     )
