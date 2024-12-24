@@ -3,3 +3,4 @@
 .web
 __pycache__/
 assets/external/
+dataloader.pkl
