@@ -1,6 +1,6 @@
 """Includes all pages."""
 
-from .pages import index
+from . import index
 
 __all__: list[str] = [
     'index',

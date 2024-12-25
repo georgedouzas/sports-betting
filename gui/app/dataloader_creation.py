@@ -11,8 +11,8 @@ from reflex_ag_grid import ag_grid
 
 from sportsbet.datasets import SoccerDataLoader
 
-from ...components.dataloader.creation import main
-from ..index import State
+from .components.dataloader_creation import main
+from .index import State
 
 DATALOADERS = {
     'Soccer': SoccerDataLoader,
@@ -297,6 +297,6 @@ class DataloaderCreationState(State):
 
 
 @rx.page(route="/dataloader/creation")
-def dataloader_creation() -> rx.Component:
+def dataloader_creation_page() -> rx.Component:
     """Main page."""
     return main(DataloaderCreationState)

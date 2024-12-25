@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 import reflex as rx
 
-from ..common import SIDEBAR_OPTIONS, control_buttons, home, select_mode, title
+from .common import SIDEBAR_OPTIONS, control_buttons, home, select_mode, title
 
 
 def checkboxes(row: list[str], state: rx.State) -> rx.Component:
