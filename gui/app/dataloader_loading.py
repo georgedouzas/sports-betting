@@ -1,5 +1,6 @@
 """Index page."""
 
+import asyncio
 from collections.abc import Callable
 from itertools import batched
 from pathlib import Path
@@ -69,7 +70,7 @@ class DataloaderLoadingState(State):
         """Proces a column."""
         return " ".join([" ".join(token.split('_')).title() for token in col.split('__')])
 
-    def submit_state(self: Self) -> None:
+    async def submit_state(self: Self) -> None:
         """Submit handler."""
         self.loading = True
         yield
@@ -78,10 +79,13 @@ class DataloaderLoadingState(State):
             yield
         elif self.visibility_level == 2:
             dataloader = cloudpickle.loads(bytes(self.dataloader_serialized, 'iso8859_16'))
-            X_train, Y_train, O_train = dataloader.extract_train_data(
-                odds_type=dataloader.odds_type_,
-                drop_na_thres=dataloader.drop_na_thres_,
-            )
+            if hasattr(dataloader, 'odds_type_') and hasattr(dataloader, 'drop_na_thres_'):
+                X_train, Y_train, O_train = dataloader.extract_train_data(
+                    odds_type=dataloader.odds_type_,
+                    drop_na_thres=dataloader.drop_na_thres_,
+                )
+            else:
+                X_train, Y_train, O_train = dataloader.extract_train_data()
             X_fix, _, O_fix = dataloader.extract_fixtures_data()
             self.X_train = X_train.reset_index().to_dict('records')
             self.X_train_cols = [ag_grid.column_def(field='date', header_name='Date')] + [
@@ -152,6 +156,15 @@ class DataloaderLoadingState(State):
         self.O_fix = None
         self.X_fix_cols = None
         self.O_fix_cols = None
+
+        # Message
+        self.streamed_message = """You can create or load a dataloader to grab historical
+        and fixtures data. Plus, you can create or load a betting model to test how it performs
+        and find value bets for upcoming games."""
+        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer is available, but
+        more sports will be added soon!"""
+        self.streamed_message_dataloader_loading = """Drag and drop or select a dataloader file to extract
+        the latest training and fixtures data."""
 
 
 def checkboxes(row: list[str], state: rx.State) -> rx.Component:
@@ -403,6 +416,21 @@ def dataloader_loading_page() -> rx.Component:
                         content='No fixtures were found. Try again later.',
                     ),
                 ),
+            ),
+        ),
+        rx.cond(
+            DataloaderLoadingState.visibility_level < 3,
+            rx.box(
+                rx.vstack(
+                    rx.icon('bot-message-square', size=70),
+                    rx.html(DataloaderLoadingState.streamed_message_dataloader_loading),
+                ),
+                position='fixed',
+                left='600px',
+                top='100px',
+                width='500px',
+                background_color=rx.color('gray', 3),
+                padding='30px',
             ),
         ),
     )
