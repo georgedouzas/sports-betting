@@ -3,8 +3,8 @@
 import reflex as rx
 from fastapi.responses import FileResponse
 
-from .pages.dataloader.creation import dataloader_creation
-from .pages.dataloader.loading import dataloader_loading
+from .dataloader_creation import dataloader_creation_page
+from .dataloader_loading import dataloader_loading_page
 
 
 async def dataloader() -> FileResponse:
@@ -14,5 +14,5 @@ async def dataloader() -> FileResponse:
 
 app = rx.App()
 app.api.add_api_route("/dataloader", dataloader)
-app.api.add_api_route("/dataloader/creation", dataloader_creation)
-app.api.add_api_route("/dataloader/loading", dataloader_loading)
+app.api.add_api_route("/dataloader/creation", dataloader_creation_page)
+app.api.add_api_route("/dataloader/loading", dataloader_loading_page)

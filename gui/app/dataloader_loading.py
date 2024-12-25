@@ -10,8 +10,8 @@ import reflex as rx
 
 from sportsbet.datasets import SoccerDataLoader
 
-from ...components.dataloader.loading import dialog, main
-from ..index import State
+from .components.dataloader_loading import main
+from .index import State
 
 DATALOADERS = {
     'Soccer': SoccerDataLoader,
@@ -98,6 +98,6 @@ class DataloaderLoadingState(State):
 
 
 @rx.page(route="/dataloader/loading")
-def dataloader_loading() -> rx.Component:
+def dataloader_loading_page() -> rx.Component:
     """Main page."""
     return main(DataloaderLoadingState)
