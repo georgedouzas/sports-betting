@@ -4,7 +4,7 @@ from typing import Self
 
 import reflex as rx
 
-from .components.common import SIDEBAR_OPTIONS, home, title
+from .components import SIDEBAR_OPTIONS, home, title
 
 
 class State(rx.State):
