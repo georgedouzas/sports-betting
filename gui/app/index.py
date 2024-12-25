@@ -1,5 +1,6 @@
 """Index page."""
 
+import asyncio
 from typing import Self
 
 import reflex as rx
@@ -18,7 +19,16 @@ class State(rx.State):
     mode_category: str = 'Data'
     mode_type: str = 'Create'
 
-    def submit_state(self: Self) -> None:
+    # Message
+    streamed_message: str = """You can create or load a dataloader to grab historical
+    and fixtures data. Plus, you can create or load a betting model to test how it performs
+    and find value bets for upcoming games."""
+    streamed_message_dataloader_creation: str = """Begin by selecting your sport. Currently, only soccer is available, but
+    more sports will be added soon!"""
+    streamed_message_dataloader_loading: str = """Drag and drop or select a dataloader file to extract
+    the latest training and fixtures data."""
+
+    async def submit_state(self: Self) -> None:
         """Submit handler."""
         self.loading = True
         yield
@@ -37,6 +47,15 @@ class State(rx.State):
         # Mode
         self.mode_category = 'Data'
         self.mode_type = 'Create'
+
+        # Message
+        self.streamed_message = """You can create or load a dataloader to grab historical
+        and fixtures data. Plus, you can create or load a betting model to test how it performs
+        and find value bets for upcoming games."""
+        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer is available, but
+        more sports will be added soon!"""
+        self.streamed_message_dataloader_loading = """Drag and drop or select a dataloader file to extract
+        the latest training and fixtures data."""
 
 
 @rx.page(route="/")
@@ -156,5 +175,17 @@ def index() -> rx.Component:
                 ),
             ),
             **SIDEBAR_OPTIONS,
+        ),
+        rx.box(
+            rx.vstack(
+                rx.icon('bot-message-square', size=70),
+                rx.text(State.streamed_message),
+            ),
+            position='fixed',
+            left='600px',
+            top='100px',
+            width='500px',
+            background_color=rx.color('gray', 3),
+            padding='30px',
         ),
     )

@@ -1,5 +1,6 @@
 """Index page."""
 
+import asyncio
 from collections.abc import Callable
 from itertools import batched
 from typing import Any, Self
@@ -189,9 +190,8 @@ class DataloaderCreationState(State):
         """Handle the drop NA threshold selection."""
         self.drop_na_thres = drop_na_thres
 
-    def submit_state(self: Self) -> None:
+    async def submit_state(self: Self) -> None:
         """Submit handler."""
-
         self.loading = True
         yield
         if self.visibility_level == 1:
@@ -207,12 +207,27 @@ class DataloaderCreationState(State):
             self.divisions = [int(division) for division in DEFAULT_PARAM_CHECKED['divisions']]
             self.loading = False
             yield
+            message = """You can choose the leagues, divisions, and years to include in the training data.
+            This selection won’t impact the fixtures data."""
+            self.streamed_message_dataloader_creation = ''
+            for char in message:
+                await asyncio.sleep(0.005)
+                self.streamed_message_dataloader_creation += char
+                yield
         elif self.visibility_level == 3:
             self.update_params()
             self.param_grid = [{k: [v] for k, v in param.items()} for param in self.params]
             self.odds_types = DATALOADERS[self.sport_selection](self.param_grid).get_odds_types()
             self.loading = False
             yield
+            message = """Your training and fixtures data will include tables with odds as entries, and
+            you can choose the type of odds. You can also set a tolerance level for missing values in
+            the training data, which will apply to the fixtures data since it follows the same schema."""
+            self.streamed_message_dataloader_creation = ''
+            for char in message:
+                await asyncio.sleep(0.005)
+                self.streamed_message_dataloader_creation += char
+                yield
         elif self.visibility_level == 4:
             dataloader = DATALOADERS[self.sport_selection](self.param_grid)
             X_train, Y_train, O_train = dataloader.extract_train_data(
@@ -295,6 +310,15 @@ class DataloaderCreationState(State):
         self.O_fix = DEFAULT_STATE_VALS['data']['O_fix']
         self.X_fix_cols = DEFAULT_STATE_VALS['data']['X_fix_cols']
         self.O_fix_cols = DEFAULT_STATE_VALS['data']['O_fix_cols']
+
+        # Message
+        self.streamed_message = """You can create or load a dataloader to grab historical
+        and fixtures data. Plus, you can create or load a betting model to test how it performs
+        and find value bets for upcoming games."""
+        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer is available, but
+        more sports will be added soon!"""
+        self.streamed_message_dataloader_loading = """Drag and drop or select a dataloader file to extract
+        the latest training and fixtures data."""
 
 
 def checkboxes(row: list[str], state: rx.State) -> rx.Component:
@@ -591,6 +615,21 @@ def dataloader_creation_page() -> rx.Component:
                         content='No fixtures were found. Try again later.',
                     ),
                 ),
+            ),
+        ),
+        rx.cond(
+            DataloaderCreationState.visibility_level < 5,
+            rx.box(
+                rx.vstack(
+                    rx.icon('bot-message-square', size=70),
+                    rx.html(DataloaderCreationState.streamed_message_dataloader_creation),
+                ),
+                position='fixed',
+                left='600px',
+                top='100px',
+                width='500px',
+                background_color=rx.color('gray', 3),
+                padding='30px',
             ),
         ),
     )
