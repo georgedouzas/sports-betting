@@ -1,15 +1,16 @@
-"""Index page."""
+"""Dataloader creation page."""
 
 import asyncio
-from collections.abc import Callable
-from itertools import batched
-from typing import Any, Self
+from collections.abc import AsyncGenerator, Callable
+from typing import Any
 
 import cloudpickle
 import nest_asyncio
 import reflex as rx
+from more_itertools import chunked
 from reflex.event import EventSpec
 from reflex_ag_grid import ag_grid
+from typing_extensions import Self
 
 from sportsbet.datasets import SoccerDataLoader
 
@@ -43,44 +44,12 @@ DEFAULT_PARAM_CHECKED = {
     ],
     'divisions': ['1', '2'],
 }
-DEFAULT_STATE_VALS = {
-    'mode': {
-        'category': 'Data',
-        'type': 'Create',
-    },
-    'sport': {
-        'selection': 'Soccer',
-        'all_params': [],
-        'all_leagues': [],
-        'all_years': [],
-        'all_divisions': [],
-        'leagues': [],
-        'years': [],
-        'divisions': [],
-        'params': [],
-    },
-    'parameters': {
-        'checked': {},
-        'default_checked': DEFAULT_PARAM_CHECKED,
-        'odds_types': [],
-        'param_grid': [],
-    },
-    'training_parameters': {
-        'odds_type': 'market_average',
-        'drop_na_thres': [0.0],
-    },
-    'data': {
-        'X_train': None,
-        'Y_train': None,
-        'O_train': None,
-        'X_train_cols': None,
-        'Y_train_cols': None,
-        'O_train_cols': None,
-        'X_fix': None,
-        'O_fix': None,
-        'X_fix_cols': None,
-        'O_fix_cols': None,
-    },
+VISIBILITY_LEVELS = {
+    'sport': 1,
+    'parameters': 2,
+    'training_parameters': 3,
+    'dataloader': 4,
+    'control': 5,
 }
 
 nest_asyncio.apply()
@@ -90,38 +59,38 @@ class DataloaderCreationState(State):
     """The toolbox state."""
 
     # Sport
-    sport_selection: str = DEFAULT_STATE_VALS['sport']['selection']
-    all_params: list[dict[str, Any]] = DEFAULT_STATE_VALS['sport']['all_params']
-    all_leagues: list[list[str]] = DEFAULT_STATE_VALS['sport']['all_leagues']
-    all_years: list[list[str]] = DEFAULT_STATE_VALS['sport']['all_years']
-    all_divisions: list[list[str]] = DEFAULT_STATE_VALS['sport']['all_divisions']
-    leagues: list[str] = DEFAULT_STATE_VALS['sport']['leagues']
-    years: list[str] = DEFAULT_STATE_VALS['sport']['years']
-    divisions: list[str] = DEFAULT_STATE_VALS['sport']['divisions']
-    params: list[dict[str, Any]] = DEFAULT_STATE_VALS['sport']['params']
+    sport_selection: str = 'Soccer'
+    all_params: list[dict[str, Any]] = []  # noqa: RUF012
+    all_leagues: list[list[str]] = []  # noqa: RUF012
+    all_years: list[list[str]] = []  # noqa: RUF012
+    all_divisions: list[list[str]] = []  # noqa: RUF012
+    leagues: list[str] = []  # noqa: RUF012
+    years: list[int] = []  # noqa: RUF012
+    divisions: list[int] = []  # noqa: RUF012
+    params: list[dict[str, Any]] = []  # noqa: RUF012
 
     # Parameters
-    param_checked: dict[str, bool] = DEFAULT_STATE_VALS['parameters']['checked']
-    default_param_checked: dict[str, list[str]] = DEFAULT_STATE_VALS['parameters']['default_checked']
-    odds_types: list[str] = DEFAULT_STATE_VALS['parameters']['odds_types']
-    param_grid: list[dict] = DEFAULT_STATE_VALS['parameters']['param_grid']
+    param_checked: dict[str | int, bool] = {}  # noqa: RUF012
+    default_param_checked: dict[str, list[str]] = DEFAULT_PARAM_CHECKED
+    odds_types: list[str] = []  # noqa: RUF012
+    param_grid: list[dict] = []  # noqa: RUF012
 
     # Training parameters
-    odds_type: str = DEFAULT_STATE_VALS['training_parameters']['odds_type']
-    drop_na_thres: list = DEFAULT_STATE_VALS['training_parameters']['drop_na_thres']
+    odds_type: str = 'market_average'
+    drop_na_thres: list = [0.0]  # noqa: RUF012
 
     # Data
     dataloader_serialized: str | None = None
-    X_train: list | None = DEFAULT_STATE_VALS['data']['X_train']
-    Y_train: list | None = DEFAULT_STATE_VALS['data']['Y_train']
-    O_train: list | None = DEFAULT_STATE_VALS['data']['O_train']
-    X_train_cols: list | None = DEFAULT_STATE_VALS['data']['X_train_cols']
-    Y_train_cols: list | None = DEFAULT_STATE_VALS['data']['Y_train_cols']
-    O_train_cols: list | None = DEFAULT_STATE_VALS['data']['O_train_cols']
-    X_fix: list | None = DEFAULT_STATE_VALS['data']['X_fix']
-    O_fix: list | None = DEFAULT_STATE_VALS['data']['O_fix']
-    X_fix_cols: list | None = DEFAULT_STATE_VALS['data']['X_fix_cols']
-    O_fix_cols: list | None = DEFAULT_STATE_VALS['data']['O_fix_cols']
+    X_train: list | None = None
+    Y_train: list | None = None
+    O_train: list | None = None
+    X_train_cols: list | None = None
+    Y_train_cols: list | None = None
+    O_train_cols: list | None = None
+    X_fix: list | None = None
+    O_fix: list | None = None
+    X_fix_cols: list | None = None
+    O_fix_cols: list | None = None
 
     def set_mode_category(self: Self, mode_category: str) -> None:
         """Set the mode category."""
@@ -190,31 +159,28 @@ class DataloaderCreationState(State):
         """Handle the drop NA threshold selection."""
         self.drop_na_thres = drop_na_thres
 
-    async def submit_state(self: Self) -> None:
+    async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
         yield
-        if self.visibility_level == 1:
-            self.loading = False
-            yield
-        elif self.visibility_level == 2:
+        if self.visibility_level == VISIBILITY_LEVELS['parameters']:
             self.all_params = DATALOADERS[self.sport_selection].get_all_params()
-            self.all_leagues = list(batched(sorted({params['league'] for params in self.all_params}), 6))
-            self.all_years = list(batched(sorted({params['year'] for params in self.all_params}), 5))
-            self.all_divisions = list(batched(sorted({params['division'] for params in self.all_params}), 1))
+            self.all_leagues = list(chunked(sorted({params['league'] for params in self.all_params}), 6))
+            self.all_years = list(chunked(sorted({params['year'] for params in self.all_params}), 5))
+            self.all_divisions = list(chunked(sorted({params['division'] for params in self.all_params}), 1))
             self.leagues = [league.replace('"', '') for league in DEFAULT_PARAM_CHECKED['leagues']]
             self.years = [int(year) for year in DEFAULT_PARAM_CHECKED['years']]
             self.divisions = [int(division) for division in DEFAULT_PARAM_CHECKED['divisions']]
             self.loading = False
             yield
             message = """You can choose the leagues, divisions, and years to include in the training data.
-            This selection won’t impact the fixtures data."""
+            This selection won't impact the fixtures data."""
             self.streamed_message_dataloader_creation = ''
             for char in message:
                 await asyncio.sleep(0.005)
                 self.streamed_message_dataloader_creation += char
                 yield
-        elif self.visibility_level == 3:
+        elif self.visibility_level == VISIBILITY_LEVELS['training_parameters']:
             self.update_params()
             self.param_grid = [{k: [v] for k, v in param.items()} for param in self.params]
             self.odds_types = DATALOADERS[self.sport_selection](self.param_grid).get_odds_types()
@@ -228,11 +194,11 @@ class DataloaderCreationState(State):
                 await asyncio.sleep(0.005)
                 self.streamed_message_dataloader_creation += char
                 yield
-        elif self.visibility_level == 4:
+        elif self.visibility_level == VISIBILITY_LEVELS['dataloader']:
             dataloader = DATALOADERS[self.sport_selection](self.param_grid)
             X_train, Y_train, O_train = dataloader.extract_train_data(
                 odds_type=self.odds_type,
-                drop_na_thres=self.drop_na_thres[0],
+                drop_na_thres=float(self.drop_na_thres[0]),
             )
             X_fix, _, O_fix = dataloader.extract_fixtures_data()
             self.X_train = X_train.reset_index().to_dict('records')
@@ -279,44 +245,44 @@ class DataloaderCreationState(State):
         self.dataloader_serialized = None
 
         # Sport
-        self.sport_selection = DEFAULT_STATE_VALS['sport']['selection']
-        self.all_params = DEFAULT_STATE_VALS['sport']['all_params']
-        self.all_leagues = DEFAULT_STATE_VALS['sport']['all_leagues']
-        self.all_years = DEFAULT_STATE_VALS['sport']['all_years']
-        self.all_divisions = DEFAULT_STATE_VALS['sport']['all_divisions']
-        self.leagues = DEFAULT_STATE_VALS['sport']['leagues']
-        self.years = DEFAULT_STATE_VALS['sport']['years']
-        self.divisions = DEFAULT_STATE_VALS['sport']['divisions']
-        self.params = DEFAULT_STATE_VALS['sport']['params']
+        self.sport_selection = 'Soccer'
+        self.all_params = []
+        self.all_leagues = []
+        self.all_years = []
+        self.all_divisions = []
+        self.leagues = []
+        self.years = []
+        self.divisions = []
+        self.params = []
 
         # Parameters
-        self.param_checked = DEFAULT_STATE_VALS['parameters']['checked']
-        self.default_param_checked = DEFAULT_STATE_VALS['parameters']['default_checked']
-        self.odds_types = DEFAULT_STATE_VALS['parameters']['odds_types']
-        self.param_grid = DEFAULT_STATE_VALS['parameters']['param_grid']
+        self.param_checked = {}
+        self.default_param_checked = DEFAULT_PARAM_CHECKED
+        self.odds_types = []
+        self.param_grid = []
 
         # Training
-        self.odds_type = DEFAULT_STATE_VALS['training_parameters']['odds_type']
-        self.drop_na_thres = DEFAULT_STATE_VALS['training_parameters']['drop_na_thres']
+        self.odds_type = 'market_average'
+        self.drop_na_thres = [0.0]
 
         # Data
-        self.X_train = DEFAULT_STATE_VALS['data']['X_train']
-        self.Y_train = DEFAULT_STATE_VALS['data']['Y_train']
-        self.O_train = DEFAULT_STATE_VALS['data']['O_train']
-        self.X_train_cols = DEFAULT_STATE_VALS['data']['X_train_cols']
-        self.Y_train_cols = DEFAULT_STATE_VALS['data']['Y_train_cols']
-        self.O_train_cols = DEFAULT_STATE_VALS['data']['O_train_cols']
-        self.X_fix = DEFAULT_STATE_VALS['data']['X_fix']
-        self.O_fix = DEFAULT_STATE_VALS['data']['O_fix']
-        self.X_fix_cols = DEFAULT_STATE_VALS['data']['X_fix_cols']
-        self.O_fix_cols = DEFAULT_STATE_VALS['data']['O_fix_cols']
+        self.X_train = None
+        self.Y_train = None
+        self.O_train = None
+        self.X_train_cols = None
+        self.Y_train_cols = None
+        self.O_train_cols = None
+        self.X_fix = None
+        self.O_fix = None
+        self.X_fix_cols = None
+        self.O_fix_cols = None
 
         # Message
         self.streamed_message = """You can create or load a dataloader to grab historical
         and fixtures data. Plus, you can create or load a betting model to test how it performs
         and find value bets for upcoming games."""
-        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer is available, but
-        more sports will be added soon!"""
+        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer
+        is available, but more sports will be added soon!"""
         self.streamed_message_dataloader_loading = """Drag and drop or select a dataloader file to extract
         the latest training and fixtures data."""
 
@@ -324,13 +290,13 @@ class DataloaderCreationState(State):
 def checkboxes(row: list[str], state: rx.State) -> rx.Component:
     """Checkbox of parameter value."""
 
-    def _in_leagues(name: str) -> rx.Var:
+    def _in_leagues(name: rx.Var) -> rx.Var:
         return state.default_param_checked['leagues'].contains(name.to_string())
 
-    def _in_years(name: str) -> rx.Var:
+    def _in_years(name: rx.Var) -> rx.Var:
         return state.default_param_checked['years'].contains(name.to_string())
 
-    def _in_divisions(name: str) -> rx.Var:
+    def _in_divisions(name: rx.Var) -> rx.Var:
         return state.default_param_checked['divisions'].contains(name.to_string())
 
     return rx.vstack(
@@ -339,7 +305,9 @@ def checkboxes(row: list[str], state: rx.State) -> rx.Component:
             lambda name: rx.checkbox(
                 name,
                 default_checked=rx.cond(
-                    _in_leagues(name), True, rx.cond(_in_years(name), True, rx.cond(_in_divisions(name), True, False))
+                    _in_leagues(name),
+                    True,
+                    rx.cond(_in_years(name), True, rx.cond(_in_divisions(name), True, False)),
                 ),
                 checked=state.param_checked[name.to_string()],
                 name=name.to_string(),
@@ -360,7 +328,7 @@ def dialog(name: str, icon_name: str, state: rx.State) -> Callable:
                     rx.tooltip(rx.icon(icon_name), content=name),
                     size='4',
                     variant='outline',
-                    disabled=state.visibility_level > 3,
+                    disabled=state.visibility_level > VISIBILITY_LEVELS['training_parameters'],
                 ),
             ),
             rx.dialog.content(
@@ -397,7 +365,7 @@ def training_parameters_selection(state: rx.State) -> rx.Component:
                 state.odds_types,
                 default_value=state.odds_types[0],
                 on_change=state.handle_odds_type,
-                disabled=state.visibility_level > 4,
+                disabled=state.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 width='100%',
             ),
             style={
@@ -412,7 +380,7 @@ def training_parameters_selection(state: rx.State) -> rx.Component:
                 step=0.01,
                 default_value=0.0,
                 on_change=state.handle_drop_na_thres,
-                disabled=state.visibility_level > 4,
+                disabled=state.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 width='200px',
             ),
             style={
@@ -455,31 +423,31 @@ def dataloader_creation_page() -> rx.Component:
                 rx.select(
                     items=['Soccer'],
                     value='Soccer',
-                    disabled=DataloaderCreationState.visibility_level > 2,
+                    disabled=DataloaderCreationState.visibility_level > VISIBILITY_LEVELS['parameters'],
                     on_change=DataloaderCreationState.set_sport_selection,
                     width='120px',
                 ),
             ),
             # Parameters selection
             rx.cond(
-                DataloaderCreationState.visibility_level > 2,
+                DataloaderCreationState.visibility_level > VISIBILITY_LEVELS['parameters'],
                 title('Parameters', 'proportions'),
             ),
             rx.cond(
-                DataloaderCreationState.visibility_level > 2,
+                DataloaderCreationState.visibility_level > VISIBILITY_LEVELS['parameters'],
                 rx.text('Select parameters', size='1'),
             ),
             rx.cond(
-                DataloaderCreationState.visibility_level > 2,
+                DataloaderCreationState.visibility_level > VISIBILITY_LEVELS['parameters'],
                 parameters_selection(DataloaderCreationState),
             ),
             # Training parameters selection
             rx.cond(
-                DataloaderCreationState.visibility_level > 3,
+                DataloaderCreationState.visibility_level > VISIBILITY_LEVELS['training_parameters'],
                 training_parameters_selection(DataloaderCreationState),
             ),
             rx.cond(
-                DataloaderCreationState.visibility_level > 4,
+                DataloaderCreationState.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 rx.button(
                     'Save',
                     position='fixed',
@@ -490,23 +458,34 @@ def dataloader_creation_page() -> rx.Component:
                 ),
             ),
             # Control
-            control_buttons(DataloaderCreationState, DataloaderCreationState.visibility_level == 5),
+            control_buttons(
+                DataloaderCreationState,
+                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
+            ),
             **SIDEBAR_OPTIONS,
         ),
         rx.vstack(
             rx.cond(
-                DataloaderCreationState.visibility_level == 5,
+                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                 rx.hstack(
                     rx.heading(
-                        'Training data', size='7', position='fixed', left='450px', top='50px', color_scheme='blue'
-                    )
+                        'Training data',
+                        size='7',
+                        position='fixed',
+                        left='450px',
+                        top='50px',
+                        color_scheme='blue',
+                    ),
                 ),
             ),
             rx.hstack(
                 rx.vstack(
-                    rx.cond(DataloaderCreationState.visibility_level == 5, rx.heading('Input')),
                     rx.cond(
-                        DataloaderCreationState.visibility_level == 5,
+                        DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
+                        rx.heading('Input'),
+                    ),
+                    rx.cond(
+                        DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                         ag_grid(
                             id='X_train',
                             row_data=DataloaderCreationState.X_train,
@@ -518,9 +497,12 @@ def dataloader_creation_page() -> rx.Component:
                     ),
                 ),
                 rx.vstack(
-                    rx.cond(DataloaderCreationState.visibility_level == 5, rx.heading('Output')),
                     rx.cond(
-                        DataloaderCreationState.visibility_level == 5,
+                        DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
+                        rx.heading('Output'),
+                    ),
+                    rx.cond(
+                        DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                         ag_grid(
                             id='Y_train',
                             row_data=DataloaderCreationState.Y_train,
@@ -532,9 +514,12 @@ def dataloader_creation_page() -> rx.Component:
                     ),
                 ),
                 rx.vstack(
-                    rx.cond(DataloaderCreationState.visibility_level == 5, rx.heading('Odds')),
                     rx.cond(
-                        DataloaderCreationState.visibility_level == 5,
+                        DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
+                        rx.heading('Odds'),
+                    ),
+                    rx.cond(
+                        DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                         ag_grid(
                             id='O_train',
                             row_data=DataloaderCreationState.O_train,
@@ -552,22 +537,30 @@ def dataloader_creation_page() -> rx.Component:
         ),
         rx.vstack(
             rx.cond(
-                DataloaderCreationState.visibility_level == 5,
+                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                 rx.hstack(
                     rx.heading(
-                        'Fixtures data', size='7', position='fixed', left='450px', top='370px', color_scheme='blue'
-                    )
+                        'Fixtures data',
+                        size='7',
+                        position='fixed',
+                        left='450px',
+                        top='370px',
+                        color_scheme='blue',
+                    ),
                 ),
             ),
             rx.cond(
-                DataloaderCreationState.visibility_level == 5,
+                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                 rx.cond(
                     DataloaderCreationState.X_fix,
                     rx.hstack(
                         rx.vstack(
-                            rx.cond(DataloaderCreationState.visibility_level == 5, rx.heading('Input')),
                             rx.cond(
-                                DataloaderCreationState.visibility_level == 5,
+                                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
+                                rx.heading('Input'),
+                            ),
+                            rx.cond(
+                                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                                 ag_grid(
                                     id='X_fix',
                                     row_data=DataloaderCreationState.X_fix,
@@ -579,9 +572,12 @@ def dataloader_creation_page() -> rx.Component:
                             ),
                         ),
                         rx.vstack(
-                            rx.cond(DataloaderCreationState.visibility_level == 5, rx.heading('Output')),
                             rx.cond(
-                                DataloaderCreationState.visibility_level == 5,
+                                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
+                                rx.heading('Output'),
+                            ),
+                            rx.cond(
+                                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                                 ag_grid(
                                     id='Y_fix',
                                     row_data=[],
@@ -593,9 +589,12 @@ def dataloader_creation_page() -> rx.Component:
                             ),
                         ),
                         rx.vstack(
-                            rx.cond(DataloaderCreationState.visibility_level == 5, rx.heading('Odds')),
                             rx.cond(
-                                DataloaderCreationState.visibility_level == 5,
+                                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
+                                rx.heading('Odds'),
+                            ),
+                            rx.cond(
+                                DataloaderCreationState.visibility_level == VISIBILITY_LEVELS['control'],
                                 ag_grid(
                                     id='O_fix',
                                     row_data=DataloaderCreationState.O_fix,
@@ -618,7 +617,7 @@ def dataloader_creation_page() -> rx.Component:
             ),
         ),
         rx.cond(
-            DataloaderCreationState.visibility_level < 5,
+            DataloaderCreationState.visibility_level < VISIBILITY_LEVELS['control'],
             rx.box(
                 rx.vstack(
                     rx.icon('bot-message-square', size=70),

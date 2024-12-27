@@ -1,16 +1,15 @@
-"""Index page."""
+"""Dataloader loading page."""
 
-import asyncio
-from collections.abc import Callable
-from itertools import batched
+from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
-from typing import Self
 
 import cloudpickle
 import nest_asyncio
 import reflex as rx
+from more_itertools import chunked
 from reflex.event import EventSpec
 from reflex_ag_grid import ag_grid
+from typing_extensions import Self
 
 from sportsbet.datasets import SoccerDataLoader
 
@@ -19,6 +18,10 @@ from .index import State
 
 DATALOADERS = {
     'Soccer': SoccerDataLoader,
+}
+VISIBILITY_LEVELS = {
+    'dataloader': 2,
+    'control': 3,
 }
 
 nest_asyncio.apply()
@@ -30,10 +33,10 @@ class DataloaderLoadingState(State):
     # Data
     dataloader_serialized: str | None = None
     dataloader_filename: str | None = None
-    all_leagues: list[list[str]] = []
-    all_years: list[list[str]] = []
-    all_divisions: list[list[str]] = []
-    param_checked: dict[str, bool] = {}
+    all_leagues: list[list[str]] = []  # noqa: RUF012
+    all_years: list[list[str]] = []  # noqa: RUF012
+    all_divisions: list[list[str]] = []  # noqa: RUF012
+    param_checked: dict[str, bool] = {}  # noqa: RUF012
     odds_type: str | None = None
     drop_na_thres: float | None = None
     X_train: list | None = None
@@ -48,7 +51,7 @@ class DataloaderLoadingState(State):
     O_fix_cols: list | None = None
 
     @rx.event
-    async def handle_upload(self: Self, files: list[rx.UploadFile]) -> None:
+    async def handle_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
         """Handle the upload of files."""
         self.loading = True
         yield
@@ -63,21 +66,18 @@ class DataloaderLoadingState(State):
     def download_dataloader(self: Self) -> EventSpec:
         """Download the dataloader."""
         dataloader = bytes(self.dataloader_serialized, 'iso8859_16')
-        return rx.download(data=dataloader, filename='dataloader.pkl')
+        return rx.download(data=dataloader, filename=self.dataloader_filename)
 
     @staticmethod
     def process_cols(col: str) -> str:
         """Proces a column."""
         return " ".join([" ".join(token.split('_')).title() for token in col.split('__')])
 
-    async def submit_state(self: Self) -> None:
+    async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
         yield
-        if self.visibility_level == 1:
-            self.loading = False
-            yield
-        elif self.visibility_level == 2:
+        if self.visibility_level == VISIBILITY_LEVELS['dataloader']:
             dataloader = cloudpickle.loads(bytes(self.dataloader_serialized, 'iso8859_16'))
             if hasattr(dataloader, 'odds_type_') and hasattr(dataloader, 'drop_na_thres_'):
                 X_train, Y_train, O_train = dataloader.extract_train_data(
@@ -112,9 +112,9 @@ class DataloaderLoadingState(State):
                 else None
             )
             all_params = dataloader.get_all_params()
-            self.all_leagues = list(batched(sorted({params['league'] for params in all_params}), 6))
-            self.all_years = list(batched(sorted({params['year'] for params in all_params}), 5))
-            self.all_divisions = list(batched(sorted({params['division'] for params in all_params}), 1))
+            self.all_leagues = list(chunked(sorted({params['league'] for params in all_params}), 6))
+            self.all_years = list(chunked(sorted({params['year'] for params in all_params}), 5))
+            self.all_divisions = list(chunked(sorted({params['division'] for params in all_params}), 1))
             self.param_checked = {
                 **{f'"{key}"': True for key in {params['league'] for params in dataloader.param_grid_}},
                 **{key: True for key in {params['year'] for params in dataloader.param_grid_}},
@@ -161,8 +161,8 @@ class DataloaderLoadingState(State):
         self.streamed_message = """You can create or load a dataloader to grab historical
         and fixtures data. Plus, you can create or load a betting model to test how it performs
         and find value bets for upcoming games."""
-        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer is available, but
-        more sports will be added soon!"""
+        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer
+        is available, but more sports will be added soon!"""
         self.streamed_message_dataloader_loading = """Drag and drop or select a dataloader file to extract
         the latest training and fixtures data."""
 
@@ -194,7 +194,7 @@ def dialog(name: str, icon_name: str, state: rx.State) -> Callable:
                     rx.tooltip(rx.icon(icon_name), content=name),
                     size='4',
                     variant='outline',
-                    disabled=state.visibility_level > 3,
+                    disabled=state.visibility_level > VISIBILITY_LEVELS['control'],
                 ),
             ),
             rx.dialog.content(
@@ -237,7 +237,7 @@ def dataloader_loading_page() -> rx.Component:
                             'Select File',
                             bg='white',
                             color='rgb(107,99,246)',
-                            border=f'1px solid rgb(107,99,246)',
+                            border='1px solid rgb(107,99,246)',
                             disabled=DataloaderLoadingState.dataloader_serialized.bool(),
                         ),
                         rx.text('Drag and drop', size='2'),
@@ -257,11 +257,11 @@ def dataloader_loading_page() -> rx.Component:
             ),
             # Parameters presentation
             rx.cond(
-                DataloaderLoadingState.visibility_level > 2,
+                DataloaderLoadingState.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 title('Parameters', 'proportions'),
             ),
             rx.cond(
-                DataloaderLoadingState.visibility_level > 2,
+                DataloaderLoadingState.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 rx.hstack(
                     dialog('Leagues', 'earth', DataloaderLoadingState)(DataloaderLoadingState.all_leagues),
                     dialog('Years', 'calendar', DataloaderLoadingState)(DataloaderLoadingState.all_years),
@@ -269,15 +269,15 @@ def dataloader_loading_page() -> rx.Component:
                 ),
             ),
             rx.cond(
-                DataloaderLoadingState.visibility_level > 2,
+                DataloaderLoadingState.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 rx.text(f'Odds type: {DataloaderLoadingState.odds_type}', size='1'),
             ),
             rx.cond(
-                DataloaderLoadingState.visibility_level > 2,
+                DataloaderLoadingState.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 rx.text(f'Drop NA threshold of columns: {DataloaderLoadingState.drop_na_thres}', size='1'),
             ),
             rx.cond(
-                DataloaderLoadingState.visibility_level > 2,
+                DataloaderLoadingState.visibility_level > VISIBILITY_LEVELS['dataloader'],
                 rx.button(
                     'Save',
                     position='fixed',
@@ -290,24 +290,33 @@ def dataloader_loading_page() -> rx.Component:
             # Control
             control_buttons(
                 DataloaderLoadingState,
-                (~DataloaderLoadingState.dataloader_serialized.bool()) | (DataloaderLoadingState.visibility_level > 2),
+                (~DataloaderLoadingState.dataloader_serialized.bool())
+                | (DataloaderLoadingState.visibility_level > VISIBILITY_LEVELS['dataloader']),
             ),
             **SIDEBAR_OPTIONS,
         ),
         rx.vstack(
             rx.cond(
-                DataloaderLoadingState.visibility_level == 3,
+                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                 rx.hstack(
                     rx.heading(
-                        'Training data', size='7', position='fixed', left='450px', top='50px', color_scheme='blue'
-                    )
+                        'Training data',
+                        size='7',
+                        position='fixed',
+                        left='450px',
+                        top='50px',
+                        color_scheme='blue',
+                    ),
                 ),
             ),
             rx.hstack(
                 rx.vstack(
-                    rx.cond(DataloaderLoadingState.visibility_level == 3, rx.heading('Input')),
                     rx.cond(
-                        DataloaderLoadingState.visibility_level == 3,
+                        DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
+                        rx.heading('Input'),
+                    ),
+                    rx.cond(
+                        DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                         ag_grid(
                             id='X_train',
                             row_data=DataloaderLoadingState.X_train,
@@ -319,9 +328,12 @@ def dataloader_loading_page() -> rx.Component:
                     ),
                 ),
                 rx.vstack(
-                    rx.cond(DataloaderLoadingState.visibility_level == 3, rx.heading('Output')),
                     rx.cond(
-                        DataloaderLoadingState.visibility_level == 3,
+                        DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
+                        rx.heading('Output'),
+                    ),
+                    rx.cond(
+                        DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                         ag_grid(
                             id='Y_train',
                             row_data=DataloaderLoadingState.Y_train,
@@ -333,9 +345,12 @@ def dataloader_loading_page() -> rx.Component:
                     ),
                 ),
                 rx.vstack(
-                    rx.cond(DataloaderLoadingState.visibility_level == 3, rx.heading('Odds')),
                     rx.cond(
-                        DataloaderLoadingState.visibility_level == 3,
+                        DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
+                        rx.heading('Odds'),
+                    ),
+                    rx.cond(
+                        DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                         ag_grid(
                             id='O_train',
                             row_data=DataloaderLoadingState.O_train,
@@ -353,22 +368,30 @@ def dataloader_loading_page() -> rx.Component:
         ),
         rx.vstack(
             rx.cond(
-                DataloaderLoadingState.visibility_level == 3,
+                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                 rx.hstack(
                     rx.heading(
-                        'Fixtures data', size='7', position='fixed', left='450px', top='370px', color_scheme='blue'
-                    )
+                        'Fixtures data',
+                        size='7',
+                        position='fixed',
+                        left='450px',
+                        top='370px',
+                        color_scheme='blue',
+                    ),
                 ),
             ),
             rx.cond(
-                DataloaderLoadingState.visibility_level == 3,
+                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                 rx.cond(
                     DataloaderLoadingState.X_fix,
                     rx.hstack(
                         rx.vstack(
-                            rx.cond(DataloaderLoadingState.visibility_level == 3, rx.heading('Input')),
                             rx.cond(
-                                DataloaderLoadingState.visibility_level == 3,
+                                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
+                                rx.heading('Input'),
+                            ),
+                            rx.cond(
+                                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                                 ag_grid(
                                     id='X_fix',
                                     row_data=DataloaderLoadingState.X_fix,
@@ -380,9 +403,12 @@ def dataloader_loading_page() -> rx.Component:
                             ),
                         ),
                         rx.vstack(
-                            rx.cond(DataloaderLoadingState.visibility_level == 3, rx.heading('Output')),
                             rx.cond(
-                                DataloaderLoadingState.visibility_level == 3,
+                                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
+                                rx.heading('Output'),
+                            ),
+                            rx.cond(
+                                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                                 ag_grid(
                                     id='Y_fix',
                                     row_data=[],
@@ -394,9 +420,12 @@ def dataloader_loading_page() -> rx.Component:
                             ),
                         ),
                         rx.vstack(
-                            rx.cond(DataloaderLoadingState.visibility_level == 3, rx.heading('Odds')),
                             rx.cond(
-                                DataloaderLoadingState.visibility_level == 3,
+                                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
+                                rx.heading('Odds'),
+                            ),
+                            rx.cond(
+                                DataloaderLoadingState.visibility_level == VISIBILITY_LEVELS['control'],
                                 ag_grid(
                                     id='O_fix',
                                     row_data=DataloaderLoadingState.O_fix,
@@ -419,7 +448,7 @@ def dataloader_loading_page() -> rx.Component:
             ),
         ),
         rx.cond(
-            DataloaderLoadingState.visibility_level < 3,
+            DataloaderLoadingState.visibility_level < VISIBILITY_LEVELS['control'],
             rx.box(
                 rx.vstack(
                     rx.icon('bot-message-square', size=70),
