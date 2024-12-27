@@ -1,9 +1,9 @@
 """Index page."""
 
-import asyncio
-from typing import Self
+from collections.abc import AsyncGenerator
 
 import reflex as rx
+from typing_extensions import Self
 
 from .components import SIDEBAR_OPTIONS, home, title
 
@@ -23,12 +23,12 @@ class State(rx.State):
     streamed_message: str = """You can create or load a dataloader to grab historical
     and fixtures data. Plus, you can create or load a betting model to test how it performs
     and find value bets for upcoming games."""
-    streamed_message_dataloader_creation: str = """Begin by selecting your sport. Currently, only soccer is available, but
-    more sports will be added soon!"""
+    streamed_message_dataloader_creation: str = """Begin by selecting your sport. Currently, only soccer is
+    available, but more sports will be added soon!"""
     streamed_message_dataloader_loading: str = """Drag and drop or select a dataloader file to extract
     the latest training and fixtures data."""
 
-    async def submit_state(self: Self) -> None:
+    async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
         yield
@@ -52,8 +52,8 @@ class State(rx.State):
         self.streamed_message = """You can create or load a dataloader to grab historical
         and fixtures data. Plus, you can create or load a betting model to test how it performs
         and find value bets for upcoming games."""
-        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer is available, but
-        more sports will be added soon!"""
+        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer
+        is available, but more sports will be added soon!"""
         self.streamed_message_dataloader_loading = """Drag and drop or select a dataloader file to extract
         the latest training and fixtures data."""
 
