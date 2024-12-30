@@ -35,8 +35,6 @@ dependencies = [
     "click>=8.1.3",
     "rich>=13.3.3",
     "aiohttp>=3.8.4",
-    "reflex>=0.6.7",
-    "reflex-ag-grid>=0.0.10",
 ]
 
 [project.urls]
@@ -53,6 +51,12 @@ Funding = "https://github.com/sponsors/georgedouzas"
 sportsbet = "sportsbet.cli:main"
 sportsbet-gui = "sportsbet.gui.main:run"
 
+[project.optional-dependencies]
+gui = [
+    "nest-asyncio>=1.6.0",
+    "reflex>=0.6.7",
+    "reflex-ag-grid>=0.0.10",
+]
 [tool.pdm]
 version = {source = "scm"}
 build = {package-dir = "src", editable-backend = "editables"}
