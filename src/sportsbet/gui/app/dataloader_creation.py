@@ -118,7 +118,7 @@ def training_parameters(state: rx.State) -> rx.Component:
                 rx.select(
                     state.odds_types,
                     default_value=state.odds_types[0],
-                    on_change=state.handle_odds_type,
+                    on_change=state.set_odds_type,
                     disabled=state.visibility_level > VL['dataloader'],
                     width='100%',
                 ),
@@ -133,7 +133,7 @@ def training_parameters(state: rx.State) -> rx.Component:
                     max=1.0,
                     step=0.01,
                     default_value=0.0,
-                    on_change=state.handle_drop_na_thres,
+                    on_change=state.set_drop_na_thres,
                     disabled=state.visibility_level > VL['dataloader'],
                     width='200px',
                 ),
