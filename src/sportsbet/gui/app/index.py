@@ -1,191 +1,46 @@
 """Index page."""
 
-from collections.abc import AsyncGenerator
-
 import reflex as rx
-from typing_extensions import Self
 
-from .components import SIDEBAR_OPTIONS, home, title
-
-
-class State(rx.State):
-    """The toolbox state."""
-
-    # Elements
-    visibility_level: int = 1
-    loading: bool = False
-
-    # Mode
-    mode_category: str = 'Data'
-    mode_type: str = 'Create'
-
-    # Message
-    streamed_message: str = """You can create or load a dataloader to grab historical
-    and fixtures data. Plus, you can create or load a betting model to test how it performs
-    and find value bets for upcoming games."""
-    streamed_message_dataloader_creation: str = """Begin by selecting your sport. Currently, only soccer is
-    available, but more sports will be added soon!"""
-    streamed_message_dataloader_loading: str = """Drag and drop or select a dataloader file to extract
-    the latest training and fixtures data."""
-
-    async def submit_state(self: Self) -> AsyncGenerator:
-        """Submit handler."""
-        self.loading = True
-        yield
-        if self.visibility_level == 1:
-            self.loading = False
-            yield
-        self.visibility_level += 1
-
-    def reset_state(self: Self) -> None:
-        """Reset handler."""
-
-        # Elements visibility
-        self.visibility_level = 1
-        self.loading: bool = False
-
-        # Mode
-        self.mode_category = 'Data'
-        self.mode_type = 'Create'
-
-        # Message
-        self.streamed_message = """You can create or load a dataloader to grab historical
-        and fixtures data. Plus, you can create or load a betting model to test how it performs
-        and find value bets for upcoming games."""
-        self.streamed_message_dataloader_creation = """Begin by selecting your sport. Currently, only soccer
-        is available, but more sports will be added soon!"""
-        self.streamed_message_dataloader_loading = """Drag and drop or select a dataloader file to extract
-        the latest training and fixtures data."""
+from .components import SIDEBAR_OPTIONS, bot, home, mode, submit_reset
+from .states import State
 
 
-@rx.page(route="/")
+@rx.page(route="/", on_load=State.on_load)
 def index() -> rx.Component:
-    """Main page."""
+    """Index page."""
     return rx.container(
         rx.vstack(
             home(),
-            rx.divider(),
-            # Mode selection
-            title('Mode', 'blend'),
-            rx.vstack(
-                rx.cond(
-                    (State.mode_category == 'Data') & (State.mode_type == 'Create'),
-                    rx.text('Create a dataloader', size='1'),
-                ),
-                rx.cond(
-                    (State.mode_category == 'Data') & (State.mode_type == 'Load'),
-                    rx.text('Load a dataloader', size='1'),
-                ),
-                rx.cond(
-                    (State.mode_category == 'Modelling') & (State.mode_type == 'Create'),
-                    rx.text('Create a model', size='1'),
-                ),
-                rx.cond(
-                    (State.mode_category == 'Modelling') & (State.mode_type == 'Load'),
-                    rx.text('Load a model', size='1'),
-                ),
-                rx.hstack(
-                    rx.select(
-                        items=['Data', 'Modelling'],
-                        value=State.mode_category,
-                        disabled=State.visibility_level > 1,
-                        width='120px',
-                        on_change=State.set_mode_category,
-                    ),
-                    rx.select(
-                        ['Create', 'Load'],
-                        value=State.mode_type,
-                        disabled=State.visibility_level > 1,
-                        width='120px',
-                        on_change=State.set_mode_type,
-                    ),
+            rx.cond(
+                (State.mode_category == 'Data') & (State.mode_type == 'Create'),
+                rx.vstack(
+                    mode(State, 'Create a dataloader'),
+                    submit_reset(State, False, '/dataloader/creation'),
                 ),
             ),
-            # Control
-            rx.vstack(
-                rx.divider(top='600px', position='fixed', width='18em'),
-                rx.hstack(
-                    rx.cond(
-                        (State.mode_category == 'Data') & (State.mode_type == 'Create'),
-                        rx.link(
-                            rx.button(
-                                'Submit',
-                                on_click=State.submit_state,
-                                loading=State.loading,
-                                position='fixed',
-                                top='620px',
-                                width='70px',
-                            ),
-                            href='/dataloader/creation',
-                        ),
-                    ),
-                    rx.cond(
-                        (State.mode_category == 'Data') & (State.mode_type == 'Load'),
-                        rx.link(
-                            rx.button(
-                                'Submit',
-                                on_click=State.submit_state,
-                                loading=State.loading,
-                                position='fixed',
-                                top='620px',
-                                width='70px',
-                            ),
-                            href='/dataloader/loading',
-                        ),
-                    ),
-                    rx.cond(
-                        (State.mode_category == 'Modelling') & (State.mode_type == 'Create'),
-                        rx.link(
-                            rx.button(
-                                'Submit',
-                                on_click=State.submit_state,
-                                loading=State.loading,
-                                position='fixed',
-                                top='620px',
-                                width='70px',
-                            ),
-                            href='/model/creation',
-                        ),
-                    ),
-                    rx.cond(
-                        (State.mode_category == 'Modelling') & (State.mode_type == 'Load'),
-                        rx.link(
-                            rx.button(
-                                'Submit',
-                                on_click=State.submit_state,
-                                loading=State.loading,
-                                position='fixed',
-                                top='620px',
-                                width='70px',
-                            ),
-                            href='/model/loading',
-                        ),
-                    ),
-                    rx.link(
-                        rx.button(
-                            'Reset',
-                            on_click=State.reset_state,
-                            position='fixed',
-                            top='620px',
-                            left='150px',
-                            width='70px',
-                        ),
-                        href='/',
-                    ),
+            rx.cond(
+                (State.mode_category == 'Data') & (State.mode_type == 'Load'),
+                rx.vstack(
+                    mode(State, 'Load a dataloader'),
+                    submit_reset(State, False, '/dataloader/loading'),
+                ),
+            ),
+            rx.cond(
+                (State.mode_category == 'Modelling') & (State.mode_type == 'Create'),
+                rx.vstack(
+                    mode(State, 'Create a model'),
+                    submit_reset(State, False, '/model/creation'),
+                ),
+            ),
+            rx.cond(
+                (State.mode_category == 'Modelling') & (State.mode_type == 'Load'),
+                rx.vstack(
+                    mode(State, 'Load a model'),
+                    submit_reset(State, False, '/model/loading'),
                 ),
             ),
             **SIDEBAR_OPTIONS,
         ),
-        rx.box(
-            rx.vstack(
-                rx.icon('bot-message-square', size=70),
-                rx.text(State.streamed_message),
-            ),
-            position='fixed',
-            left='600px',
-            top='100px',
-            width='500px',
-            background_color=rx.color('gray', 3),
-            padding='30px',
-        ),
+        bot(State, 2),
     )
