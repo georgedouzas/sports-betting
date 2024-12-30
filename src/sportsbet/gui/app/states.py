@@ -3,7 +3,7 @@
 import asyncio
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import cloudpickle
 import nest_asyncio
@@ -69,11 +69,11 @@ class State(rx.State):
     mode_type: str = 'Create'
 
     # Message
-    streamed_message = ''
+    streamed_message: str = ''
 
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message: str = """You can create or load a dataloader to grab historical
+        message = """You can create or load a dataloader to grab historical
         and fixtures data. Plus, you can create or load a betting model to test how it performs
         and find value bets for upcoming games."""
         self.streamed_message = ''
@@ -82,6 +82,7 @@ class State(rx.State):
             self.streamed_message += char
             yield
 
+    @rx.event
     async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
@@ -91,6 +92,7 @@ class State(rx.State):
             yield
         self.visibility_level += 1
 
+    @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
 
@@ -106,36 +108,38 @@ class State(rx.State):
         self.streamed_message = ''
 
 
-class DataloaderCreationState(State):
-    """The dataloader creation state."""
+class DataloaderState(State):
+    """The dataloader state."""
 
-    # Sport
-    sport_selection: str = 'Soccer'
-    all_params: list[dict[str, Any]] = []  # noqa: RUF012
     all_leagues: list[list[str]] = []  # noqa: RUF012
     all_years: list[list[str]] = []  # noqa: RUF012
     all_divisions: list[list[str]] = []  # noqa: RUF012
+    param_checked: dict[str | int, bool] = {}  # noqa: RUF012
+    dataloader_filename: str | None = None
+    data_title: str | None = None
+    loading_db: bool = False
+
+    @staticmethod
+    def process_cols(col: str) -> str:
+        """Proces a column."""
+        return " ".join([" ".join(token.split('_')).title() for token in col.split('__')])
+
+
+class DataloaderCreationState(DataloaderState):
+    """The dataloader creation state."""
+
+    sport_selection: str = 'Soccer'
+    all_params: list[dict[str, Any]] = []  # noqa: RUF012
     leagues: list[str] = []  # noqa: RUF012
     years: list[int] = []  # noqa: RUF012
     divisions: list[int] = []  # noqa: RUF012
     params: list[dict[str, Any]] = []  # noqa: RUF012
-
-    # Parameters
-    param_checked: dict[str | int, bool] = {}  # noqa: RUF012
     default_param_checked: dict[str, list[str]] = DEFAULT_PARAM_CHECKED
     odds_types: list[str] = []  # noqa: RUF012
     param_grid: list[dict] = []  # noqa: RUF012
-
-    # Training parameters
     odds_type: str = 'market_average'
     drop_na_thres: list = [0.0]  # noqa: RUF012
-
-    # Data
     dataloader_serialized: str | None = None
-    data: list | None = None
-    data_cols: list | None = None
-    data_title: str | None = None
-    loading_db: bool = False
     X_train: list | None = None
     Y_train: list | None = None
     O_train: list | None = None
@@ -148,10 +152,12 @@ class DataloaderCreationState(State):
     X_fix_cols: list | None = None
     Y_fix_cols: list | None = None
     O_fix_cols: list | None = None
+    data: list | None = None
+    data_cols: list | None = None
 
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message: str = """Begin by selecting your sport. Currently, only soccer is
+        message = """Begin by selecting your sport. Currently, only soccer is
         available, but more sports will be added soon!"""
         self.streamed_message = ''
         for char in message:
@@ -159,73 +165,18 @@ class DataloaderCreationState(State):
             self.streamed_message += char
             yield
 
-    def set_mode_category(self: Self, mode_category: str) -> None:
-        """Set the mode category."""
-        self.mode_category = mode_category
-
-    def set_mode_type(self: Self, mode_type: str) -> None:
-        """Set the mode category."""
-        self.mode_type = mode_type
-
-    def set_sport_selection(self: Self, sport_selection: str) -> None:
-        """Set the sport."""
-        self.sport_selection = sport_selection
-
-    @rx.event
-    def download_dataloader(self: Self) -> EventSpec:
-        """Download the dataloader."""
-        dataloader = bytes(self.dataloader_serialized, 'iso8859_16')
-        return rx.download(data=dataloader, filename='dataloader.pkl')
-
-    @staticmethod
-    def process_cols(col: str) -> str:
-        """Proces a column."""
-        return " ".join([" ".join(token.split('_')).title() for token in col.split('__')])
-
     @staticmethod
     def process_form_data(form_data: dict[str, str]) -> list[str]:
         """Process the form data."""
         return [key.replace('"', '') for key in form_data]
 
-    def update_param_checked(self: Self, name: str | int, checked: bool) -> None:
-        """Update the parameters."""
-        if isinstance(name, str):
-            name = f'"{name}"'
-        self.param_checked[name] = checked
+    @rx.event
+    def download_dataloader(self: Self) -> EventSpec:
+        """Download the dataloader."""
+        dataloader = bytes(cast(str, self.dataloader_serialized), 'iso8859_16')
+        return rx.download(data=dataloader, filename=self.dataloader_filename)
 
-    def update_params(self: Self) -> None:
-        """Update the parameters grid."""
-        self.params = [
-            params
-            for params in self.all_params
-            if params['league'] in self.leagues
-            and params['year'] in self.years
-            and params['division'] in self.divisions
-        ]
-
-    def handle_submit_leagues(self: Self, leagues_form_data: dict) -> None:
-        """Handle the form submit."""
-        self.leagues = self.process_form_data(leagues_form_data)
-        self.update_params()
-
-    def handle_submit_years(self: Self, years_form_data: dict) -> None:
-        """Handle the form submit."""
-        self.years = [int(year) for year in self.process_form_data(years_form_data)]
-        self.update_params()
-
-    def handle_submit_divisions(self: Self, divisions_form_data: dict) -> None:
-        """Handle the form submit."""
-        self.divisions = [int(division) for division in self.process_form_data(divisions_form_data)]
-        self.update_params()
-
-    def handle_odds_type(self, odds_type: str) -> None:
-        """Handle the odds type selection."""
-        self.odds_type = odds_type
-
-    def handle_drop_na_thres(self, drop_na_thres: list) -> None:
-        """Handle the drop NA threshold selection."""
-        self.drop_na_thres = drop_na_thres
-
+    @rx.event
     def switch_displayed_data_category(self: Self) -> Generator:
         """Switch the displayed data category."""
         self.loading_db = True
@@ -243,6 +194,7 @@ class DataloaderCreationState(State):
             self.loading_db = False
             yield
 
+    @rx.event
     def switch_displayed_data_type(self: Self) -> Generator:
         """Switch the displayed data type."""
         self.loading_db = True
@@ -278,11 +230,48 @@ class DataloaderCreationState(State):
             self.loading_db = False
             yield
 
+    @rx.event
+    def update_param_checked(self: Self, name: str | int, checked: bool) -> None:
+        """Update the parameters."""
+        if isinstance(name, str):
+            name = f'"{name}"'
+        self.param_checked[name] = checked
+
+    def update_params(self: Self) -> None:
+        """Update the parameters grid."""
+        self.params = [
+            params
+            for params in self.all_params
+            if params['league'] in self.leagues
+            and params['year'] in self.years
+            and params['division'] in self.divisions
+        ]
+
+    @rx.event
+    def handle_submit_leagues(self: Self, leagues_form_data: dict) -> None:
+        """Handle the form submit."""
+        self.leagues = self.process_form_data(leagues_form_data)
+        self.update_params()
+
+    @rx.event
+    def handle_submit_years(self: Self, years_form_data: dict) -> None:
+        """Handle the form submit."""
+        self.years = [int(year) for year in self.process_form_data(years_form_data)]
+        self.update_params()
+
+    @rx.event
+    def handle_submit_divisions(self: Self, divisions_form_data: dict) -> None:
+        """Handle the form submit."""
+        self.divisions = [int(division) for division in self.process_form_data(divisions_form_data)]
+        self.update_params()
+
+    @rx.event
     async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
         yield
         if self.visibility_level == VISIBILITY_LEVELS_DATALOADER_CREATION['parameters']:
+            self.dataloader_filename = 'dataloader.pkl'
             self.all_params = DATALOADERS[self.sport_selection].get_all_params()
             self.all_leagues = list(chunked(sorted({params['league'] for params in self.all_params}), 6))
             self.all_years = list(chunked(sorted({params['year'] for params in self.all_params}), 5))
@@ -350,6 +339,7 @@ class DataloaderCreationState(State):
             yield
         self.visibility_level += 1
 
+    @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
 
@@ -363,6 +353,7 @@ class DataloaderCreationState(State):
 
         # Data
         self.dataloader_serialized = None
+        self.dataloader_filename = None
 
         # Sport
         self.sport_selection = 'Soccer'
@@ -407,22 +398,12 @@ class DataloaderCreationState(State):
         self.streamed_message = ''
 
 
-class DataloaderLoadingState(State):
-    """The toolbox state."""
+class DataloaderLoadingState(DataloaderState):
+    """The dataloader loading state."""
 
-    # Data
-    dataloader_serialized: str | None = None
-    dataloader_filename: str | None = None
-    data: list | None = None
-    data_cols: list | None = None
-    data_title: str | None = None
-    loading_db: bool = False
-    all_leagues: list[list[str]] = []  # noqa: RUF012
-    all_years: list[list[str]] = []  # noqa: RUF012
-    all_divisions: list[list[str]] = []  # noqa: RUF012
-    param_checked: dict[str, bool] = {}  # noqa: RUF012
     odds_type: str | None = None
     drop_na_thres: float | None = None
+    dataloader_serialized: str | None = None
     X_train: list | None = None
     Y_train: list | None = None
     O_train: list | None = None
@@ -430,13 +411,17 @@ class DataloaderLoadingState(State):
     Y_train_cols: list | None = None
     O_train_cols: list | None = None
     X_fix: list | None = None
+    Y_fix: list | None = None
     O_fix: list | None = None
     X_fix_cols: list | None = None
+    Y_fix_cols: list | None = None
     O_fix_cols: list | None = None
+    data: list | None = None
+    data_cols: list | None = None
 
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message: str = """Drag and drop or select a dataloader file to extract
+        message = """Drag and drop or select a dataloader file to extract
         the latest training and fixtures data."""
         self.streamed_message = ''
         for char in message:
@@ -459,14 +444,10 @@ class DataloaderLoadingState(State):
     @rx.event
     def download_dataloader(self: Self) -> EventSpec:
         """Download the dataloader."""
-        dataloader = bytes(self.dataloader_serialized, 'iso8859_16')
+        dataloader = bytes(cast(str, self.dataloader_serialized), 'iso8859_16')
         return rx.download(data=dataloader, filename=self.dataloader_filename)
 
-    @staticmethod
-    def process_cols(col: str) -> str:
-        """Proces a column."""
-        return " ".join([" ".join(token.split('_')).title() for token in col.split('__')])
-
+    @rx.event
     def switch_displayed_data_category(self: Self) -> Generator:
         """Switch the displayed data category."""
         self.loading_db = True
@@ -484,6 +465,7 @@ class DataloaderLoadingState(State):
             self.loading_db = False
             yield
 
+    @rx.event
     def switch_displayed_data_type(self: Self) -> Generator:
         """Switch the displayed data type."""
         self.loading_db = True
@@ -519,12 +501,13 @@ class DataloaderLoadingState(State):
             self.loading_db = False
             yield
 
+    @rx.event
     async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
         yield
         if self.visibility_level == VISIBILITY_LEVELS_DATALOADER_LOADING['dataloader']:
-            dataloader = cloudpickle.loads(bytes(self.dataloader_serialized, 'iso8859_16'))
+            dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
             if hasattr(dataloader, 'odds_type_') and hasattr(dataloader, 'drop_na_thres_'):
                 X_train, Y_train, O_train = dataloader.extract_train_data(
                     odds_type=dataloader.odds_type_,
@@ -573,6 +556,7 @@ class DataloaderLoadingState(State):
             yield
         self.visibility_level += 1
 
+    @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
 

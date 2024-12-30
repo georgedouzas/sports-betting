@@ -1,5 +1,7 @@
 """Dataloader loading page."""
 
+from typing import cast
+
 import reflex as rx
 
 from .components import SIDEBAR_OPTIONS, bot, data, home, mode, save, submit_reset, title
@@ -113,7 +115,7 @@ def dataloader_loading_page() -> rx.Component:
             parameters(DataloaderLoadingState),
             submit_reset(
                 DataloaderLoadingState,
-                (~DataloaderLoadingState.dataloader_serialized.bool())
+                (~cast(rx.Var, DataloaderLoadingState.dataloader_serialized).bool())
                 | (DataloaderLoadingState.visibility_level > VL['dataloader']),
             ),
             save(DataloaderLoadingState, VL['dataloader']),
