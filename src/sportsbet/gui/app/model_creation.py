@@ -1,0 +1,86 @@
+"""Model creation page."""
+
+from typing import cast
+
+import reflex as rx
+
+from .components import SIDEBAR_OPTIONS, bot, dataloader, home, mode, model_data, submit_reset, title
+from .states import VISIBILITY_LEVELS_MODEL_CREATION as VL
+from .states import ModelState
+
+
+def model(state: rx.State) -> rx.Component:
+    """The model component."""
+    return rx.vstack(
+        title('Model', 'wand'),
+        rx.text('Select a model', size='1'),
+        rx.select(
+            items=['Odds Comparison'],
+            value='Odds Comparison',
+            disabled=state.visibility_level > VL['model'],
+            on_change=state.set_model_selection,
+            width='160px',
+        ),
+        margin_top='10px',
+    )
+
+
+def evaluation(state: rx.State) -> rx.Component:
+    """The evaluation component."""
+
+    return rx.cond(
+        ModelState.visibility_level > VL['dataloader'],
+        rx.vstack(
+            title('Evaluation', 'hand-coins'),
+            rx.text('Evaluate the model', size='1'),
+            rx.select(
+                items=['Backtesting', 'Value bets'],
+                value=state.evaluation_selection,
+                disabled=state.visibility_level > VL['evaluation'],
+                on_change=state.set_evaluation_selection,
+                width='160px',
+            ),
+            margin_top='10px',
+        ),
+    )
+
+
+def save_model(state: rx.State, visibility_level: int) -> rx.Component:
+    """The save component."""
+    return rx.cond(
+        state.visibility_level > visibility_level,
+        rx.button(
+            'Save',
+            position='fixed',
+            top='620px',
+            left='275px',
+            width='70px',
+            on_click=state.download_model,
+        ),
+    )
+
+
+@rx.page(route="/model/creation", on_load=ModelState.on_load)
+def model_creation_page() -> rx.Component:
+    """Main page."""
+    return rx.container(
+        rx.vstack(
+            home(),
+            mode(ModelState, 'Create a model'),
+            model(ModelState),
+            dataloader(ModelState, VL['model']),
+            evaluation(ModelState),
+            submit_reset(
+                ModelState,
+                (
+                    (~cast(rx.Var, ModelState.dataloader_serialized).bool())
+                    & (ModelState.visibility_level == VL['dataloader'])
+                )
+                | (ModelState.visibility_level > VL['evaluation']),
+            ),
+            save_model(ModelState, VL['evaluation']),
+            **SIDEBAR_OPTIONS,
+        ),
+        model_data(ModelState, VL['control']),
+        bot(ModelState, VL['control']),
+    )

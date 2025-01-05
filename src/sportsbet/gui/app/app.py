@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 
 from .dataloader_creation import dataloader_creation_page
 from .dataloader_loading import dataloader_loading_page
+from .model_creation import model_creation_page
 
 
 async def dataloader() -> FileResponse:
@@ -16,3 +17,4 @@ app = rx.App()
 app.api.add_api_route("/dataloader", dataloader)
 app.api.add_api_route("/dataloader/creation", dataloader_creation_page)
 app.api.add_api_route("/dataloader/loading", dataloader_loading_page)
+app.api.add_api_route("/model/creation", model_creation_page)

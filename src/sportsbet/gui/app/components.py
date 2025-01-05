@@ -59,6 +59,39 @@ def mode(state: rx.State, content: str) -> rx.Component:
     )
 
 
+def dataloader(state: rx.State, visibility_level: int) -> rx.Component:
+    """The dataloader component."""
+    return rx.vstack(
+        rx.cond(
+            state.visibility_level > visibility_level,
+            rx.vstack(
+                title('Dataloader', 'database'),
+                rx.upload(
+                    rx.button(
+                        'Select File',
+                        bg='white',
+                        color='rgb(107,99,246)',
+                        border='1px solid rgb(107,99,246)',
+                        disabled=state.dataloader_serialized.bool(),
+                    ),
+                    id='dataloader',
+                    multiple=False,
+                    no_keyboard=True,
+                    no_drag=True,
+                    on_drop=state.handle_upload(rx.upload_files(upload_id='dataloader')),
+                    padding='0px',
+                    border=None,
+                ),
+                margin_top='10px',
+            ),
+        ),
+        rx.cond(
+            state.dataloader_serialized,
+            rx.text(f'Dataloader: {state.dataloader_filename}', size='1'),
+        ),
+    )
+
+
 def submit_reset(state: rx.State, disabled: bool, url: str | None = None) -> rx.Component:
     """Submit and reset buttons of UI."""
     return rx.vstack(
@@ -91,7 +124,7 @@ def submit_reset(state: rx.State, disabled: bool, url: str | None = None) -> rx.
     )
 
 
-def save(state: rx.State, visibility_level: int) -> rx.Component:
+def save_dataloader(state: rx.State, visibility_level: int) -> rx.Component:
     """The save component."""
     return rx.cond(
         state.visibility_level > visibility_level,
@@ -106,7 +139,7 @@ def save(state: rx.State, visibility_level: int) -> rx.Component:
     )
 
 
-def data(state: rx.State, visibility_level: int) -> rx.Component:
+def dataloader_data(state: rx.State, visibility_level: int) -> rx.Component:
     """Data component of UI."""
     return rx.cond(
         state.visibility_level == visibility_level,
@@ -155,6 +188,60 @@ def data(state: rx.State, visibility_level: int) -> rx.Component:
             position='fixed',
             left='400px',
             top='60px',
+        ),
+    )
+
+
+def model_data(state: rx.State, visibility_level: int) -> rx.Component:
+    """Data component of UI."""
+    return rx.cond(
+        state.visibility_level == visibility_level,
+        rx.cond(
+            state.evaluation_selection == 'Backtesting',
+            rx.vstack(
+                rx.heading('Backtesting results'),
+                rx.vstack(
+                    rx.divider(width='900px'),
+                    ag_grid(
+                        id='backtesting',
+                        row_data=state.backtesting_results,
+                        column_defs=state.backtesting_results_cols,
+                        height='225px',
+                        width='900px',
+                        theme='balham',
+                    ),
+                    ag_grid(
+                        id='parameters',
+                        row_data=state.optimal_params,
+                        column_defs=state.optimal_params_cols,
+                        height='225px',
+                        width='900px',
+                        theme='balham',
+                    ),
+                    rx.divider(width='900px'),
+                ),
+                position='fixed',
+                left='400px',
+                top='70px',
+            ),
+            rx.vstack(
+                rx.heading('Value bets'),
+                rx.vstack(
+                    rx.divider(width='900px'),
+                    ag_grid(
+                        id='value_bets',
+                        row_data=state.value_bets,
+                        column_defs=state.value_bets_cols,
+                        height='460px',
+                        width='900px',
+                        theme='balham',
+                    ),
+                    rx.divider(width='900px'),
+                ),
+                position='fixed',
+                left='400px',
+                top='70px',
+            ),
         ),
     )
 
