@@ -4,27 +4,24 @@ from collections.abc import Callable
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, data, home, mode, save, submit_reset, title
+from .components import SIDEBAR_OPTIONS, bot, dataloader_data, home, mode, save_dataloader, submit_reset, title
 from .states import VISIBILITY_LEVELS_DATALOADER_CREATION as VL
 from .states import DataloaderCreationState
 
 
 def sport(state: rx.State) -> rx.Component:
     """The sport component."""
-    return rx.cond(
-        state.visibility_level > 1,
-        rx.vstack(
-            title('Sport', 'medal'),
-            rx.text('Select a sport', size='1'),
-            rx.select(
-                items=['Soccer'],
-                value='Soccer',
-                disabled=state.visibility_level > VL['parameters'],
-                on_change=state.set_sport_selection,
-                width='120px',
-            ),
-            margin_top='10px',
+    return rx.vstack(
+        title('Sport', 'medal'),
+        rx.text('Select a sport', size='1'),
+        rx.select(
+            items=['Soccer'],
+            value='Soccer',
+            disabled=state.visibility_level > VL['sport'],
+            on_change=state.set_sport_selection,
+            width='120px',
         ),
+        margin_top='10px',
     )
 
 
@@ -68,7 +65,7 @@ def parameters(state: rx.State) -> rx.Component:
                     rx.tooltip(rx.icon(icon_name), content=name),
                     size='4',
                     variant='outline',
-                    disabled=state.visibility_level > VL['training_parameters'],
+                    disabled=state.visibility_level > VL['parameters'],
                 ),
             ),
             rx.dialog.content(
@@ -94,7 +91,7 @@ def parameters(state: rx.State) -> rx.Component:
         )
 
     return rx.cond(
-        state.visibility_level > VL['parameters'],
+        state.visibility_level > VL['sport'],
         rx.vstack(
             title('Parameters', 'proportions'),
             rx.text('Select parameters', size='1'),
@@ -111,7 +108,7 @@ def parameters(state: rx.State) -> rx.Component:
 def training_parameters(state: rx.State) -> rx.Component:
     """The training parameters selection component."""
     return rx.cond(
-        DataloaderCreationState.visibility_level > VL['training_parameters'],
+        DataloaderCreationState.visibility_level > VL['parameters'],
         rx.vstack(
             rx.vstack(
                 rx.text('Odds type', size='1'),
@@ -119,7 +116,7 @@ def training_parameters(state: rx.State) -> rx.Component:
                     state.odds_types,
                     default_value=state.odds_types[0],
                     on_change=state.set_odds_type,
-                    disabled=state.visibility_level > VL['dataloader'],
+                    disabled=state.visibility_level > VL['training_parameters'],
                     width='100%',
                 ),
                 style={
@@ -134,7 +131,7 @@ def training_parameters(state: rx.State) -> rx.Component:
                     step=0.01,
                     default_value=0.0,
                     on_change=state.set_drop_na_thres,
-                    disabled=state.visibility_level > VL['dataloader'],
+                    disabled=state.visibility_level > VL['training_parameters'],
                     width='200px',
                 ),
                 style={
@@ -159,9 +156,9 @@ def dataloader_creation_page() -> rx.Component:
                 DataloaderCreationState,
                 DataloaderCreationState.visibility_level == VL['control'],
             ),
-            save(DataloaderCreationState, VL['dataloader']),
+            save_dataloader(DataloaderCreationState, VL['training_parameters']),
             **SIDEBAR_OPTIONS,
         ),
-        data(DataloaderCreationState, VL['control']),
+        dataloader_data(DataloaderCreationState, VL['control']),
         bot(DataloaderCreationState, VL['control']),
     )

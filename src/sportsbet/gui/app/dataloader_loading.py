@@ -4,45 +4,19 @@ from typing import cast
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, data, home, mode, save, submit_reset, title
+from .components import (
+    SIDEBAR_OPTIONS,
+    bot,
+    dataloader,
+    dataloader_data,
+    home,
+    mode,
+    save_dataloader,
+    submit_reset,
+    title,
+)
 from .states import VISIBILITY_LEVELS_DATALOADER_LOADING as VL
 from .states import DataloaderLoadingState
-
-
-def dataloader(state: rx.State) -> rx.Component:
-    """The dataloader component."""
-    return rx.vstack(
-        rx.cond(
-            state.visibility_level > 1,
-            rx.vstack(
-                title('Dataloader', 'database'),
-                rx.upload(
-                    rx.vstack(
-                        rx.button(
-                            'Select File',
-                            bg='white',
-                            color='rgb(107,99,246)',
-                            border='1px solid rgb(107,99,246)',
-                            disabled=state.dataloader_serialized.bool(),
-                        ),
-                        rx.text('Drag and drop', size='2'),
-                    ),
-                    id='dataloader',
-                    multiple=False,
-                    no_keyboard=True,
-                    no_drag=state.dataloader_serialized.bool(),
-                    on_drop=state.handle_upload(rx.upload_files(upload_id='dataloader')),
-                    border='1px dotted blue',
-                    padding='35px',
-                ),
-                margin_top='10px',
-            ),
-        ),
-        rx.cond(
-            state.dataloader_serialized,
-            rx.text(f'Dataloader: {state.dataloader_filename}', size='1'),
-        ),
-    )
 
 
 def parameters(state: rx.State) -> rx.Component:
@@ -111,16 +85,16 @@ def dataloader_loading_page() -> rx.Component:
         rx.vstack(
             home(),
             mode(DataloaderLoadingState, 'Load a dataloader'),
-            dataloader(DataloaderLoadingState),
+            dataloader(DataloaderLoadingState, 1),
             parameters(DataloaderLoadingState),
             submit_reset(
                 DataloaderLoadingState,
                 (~cast(rx.Var, DataloaderLoadingState.dataloader_serialized).bool())
                 | (DataloaderLoadingState.visibility_level > VL['dataloader']),
             ),
-            save(DataloaderLoadingState, VL['dataloader']),
+            save_dataloader(DataloaderLoadingState, VL['dataloader']),
             **SIDEBAR_OPTIONS,
         ),
-        data(DataloaderLoadingState, VL['control']),
+        dataloader_data(DataloaderLoadingState, VL['control']),
         bot(DataloaderLoadingState, VL['control']),
     )
