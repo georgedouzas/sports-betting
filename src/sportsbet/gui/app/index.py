@@ -2,16 +2,16 @@
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, home, mode, submit_reset
+from .components import SIDEBAR_OPTIONS, bot, mode, navbar, submit_reset
 from .states import State
 
 
 @rx.page(route="/", on_load=State.on_load)
 def index() -> rx.Component:
     """Index page."""
-    return rx.container(
+    return rx.box(
+        navbar(),
         rx.vstack(
-            home(),
             rx.cond(
                 (State.mode_category == 'Data') & (State.mode_type == 'Create'),
                 rx.vstack(

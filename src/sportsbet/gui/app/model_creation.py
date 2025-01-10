@@ -4,7 +4,7 @@ from typing import cast
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, dataloader, home, mode, model_data, submit_reset, title
+from .components import SIDEBAR_OPTIONS, bot, dataloader, mode, model_data, navbar, save_model, submit_reset, title
 from .states import VISIBILITY_LEVELS_MODEL_CREATION as VL
 from .states import ModelCreationState
 
@@ -44,27 +44,12 @@ def run(state: rx.State) -> rx.Component:
     )
 
 
-def save_model(state: rx.State, visibility_level: int) -> rx.Component:
-    """The save component."""
-    return rx.cond(
-        state.visibility_level > visibility_level,
-        rx.button(
-            'Save',
-            position='fixed',
-            top='620px',
-            left='275px',
-            width='70px',
-            on_click=state.download_model,
-        ),
-    )
-
-
 @rx.page(route="/model/creation", on_load=ModelCreationState.on_load)
 def model_creation_page() -> rx.Component:
     """Main page."""
-    return rx.container(
+    return rx.box(
+        navbar(),
         rx.vstack(
-            home(),
             mode(ModelCreationState, 'Create a model'),
             model(ModelCreationState),
             dataloader(ModelCreationState, VL['model']),

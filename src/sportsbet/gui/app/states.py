@@ -381,9 +381,16 @@ class DataloaderCreationState(DataloaderState):
             self.divisions = [int(division) for division in DEFAULT_PARAM_CHECKED['divisions']]
             self.loading = False
             yield
-            message = """You can select the leagues, divisions, and years to include
-            in the training data. This choice will not affect the fixtures data, which
-            includes all upcoming matches."""
+            message = """You can configure the dataloader by selecting the type of training data to include. The
+            fixtures data follow the same schema, ensuring consistency for applying machine learning
+            models during training and inference.<br><br>
+
+            <strong>Training data</strong><br>
+            Choose specific leagues, divisions, and years to include.<br><br>
+
+            <strong>Fixtures data</strong><br>
+            The selection of leagues, divisions, and years does not impact the fixtures data, which includes all
+            upcoming matches."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
@@ -396,12 +403,16 @@ class DataloaderCreationState(DataloaderState):
             self.loading = False
             yield
             message = """The training data consists of input, output, and odds, while the fixtures include only
-            input and odds. You can select the type of odds to use.<br><br>
+            input and odds.<br><br>
 
-            Additionally, you can define a tolerance level for missing values in the training data. Columns
-            with missing values exceeding this tolerance will be removed. The fixtures data follows
-            the same schema, ensuring consistency for applying machine learning models
-            during training and inference."""
+            <strong>Training data</strong><br>
+            You can choose the type of odds to use. Additionally, you can set a tolerance
+            level for missing values in the training data. Columns with missing values exceeding
+            this tolerance will be removed.<br><br>
+
+            <strong>Fixtures data</strong><br>
+            The selections made for the training data affect the fixtures data because their schema aligns
+            with the schema of the training data."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
@@ -1026,8 +1037,7 @@ class ModelLoadingState(State):
             else:
                 X_train, Y_train, O_train = dataloader.extract_train_data()
             model = cloudpickle.loads(bytes(cast(str, self.model_serialized), 'iso8859_16'))
-            if not hasattr(model, 'betting_markets_'):
-                model.fit(X_train, Y_train, O_train)
+            model.fit(X_train, Y_train, O_train)
             self.model_serialized = str(cloudpickle.dumps(model), 'iso8859_16')
             self.model_filename = 'model.pkl'
             if self.evaluation_selection == 'Backtesting':

@@ -7,13 +7,30 @@ SIDEBAR_OPTIONS = {
     'spacing': '0',
     'position': 'fixed',
     'left': '50px',
-    'top': '50px',
+    'top': '100px',
     'padding_x': '1em',
     'padding_y': "1.5em",
     'bg': rx.color('blue', 3),
-    'height': '620px',
+    'height': '600px',
     'width': '20em',
 }
+
+
+def navbar() -> rx.Component:
+    """The navigation bar component."""
+    return rx.box(
+        rx.center(
+            rx.link(
+                rx.heading("Sports Betting", size="8", weight="bold", color='black'),
+                href='https://github.com/georgedouzas/sports-betting',
+                underline='none',
+                is_external=True,
+            ),
+            padding_top='5px',
+        ),
+        bg=rx.color('blue', 3),
+        height='60px',
+    )
 
 
 def home() -> rx.Component:
@@ -55,7 +72,6 @@ def mode(state: rx.State, content: str) -> rx.Component:
                 on_change=state.set_mode_type,
             ),
         ),
-        margin_top='10px',
     )
 
 
@@ -128,7 +144,7 @@ def model(state: rx.State, visibility_level: int) -> rx.Component:
 def submit_reset(state: rx.State, disabled: bool, url: str | None = None) -> rx.Component:
     """Submit and reset buttons of UI."""
     return rx.vstack(
-        rx.divider(top='600px', position='fixed', width='18em'),
+        rx.divider(top='630px', position='fixed', width='18em'),
         rx.hstack(
             rx.link(
                 rx.button(
@@ -137,7 +153,7 @@ def submit_reset(state: rx.State, disabled: bool, url: str | None = None) -> rx.
                     disabled=disabled | state.dataloader_error,
                     loading=state.loading,
                     position='fixed',
-                    top='620px',
+                    top='650px',
                     width='70px',
                 ),
                 href=url,
@@ -147,7 +163,7 @@ def submit_reset(state: rx.State, disabled: bool, url: str | None = None) -> rx.
                     'Reset',
                     on_click=state.reset_state,
                     position='fixed',
-                    top='620px',
+                    top='650px',
                     left='150px',
                     width='70px',
                 ),
@@ -164,10 +180,25 @@ def save_dataloader(state: rx.State, visibility_level: int) -> rx.Component:
         rx.button(
             'Save',
             position='fixed',
-            top='620px',
+            top='650px',
             left='275px',
             width='70px',
             on_click=state.download_dataloader,
+        ),
+    )
+
+
+def save_model(state: rx.State, visibility_level: int) -> rx.Component:
+    """The save component."""
+    return rx.cond(
+        state.visibility_level > visibility_level,
+        rx.button(
+            'Save',
+            position='fixed',
+            top='650px',
+            left='275px',
+            width='70px',
+            on_click=state.download_model,
         ),
     )
 
@@ -220,7 +251,7 @@ def dataloader_data(state: rx.State, visibility_level: int) -> rx.Component:
             ),
             position='fixed',
             left='400px',
-            top='60px',
+            top='90px',
         ),
     )
 
@@ -255,7 +286,7 @@ def model_data(state: rx.State, visibility_level: int) -> rx.Component:
                 ),
                 position='fixed',
                 left='400px',
-                top='70px',
+                top='90px',
             ),
             rx.vstack(
                 rx.heading('Value bets'),
@@ -273,7 +304,7 @@ def model_data(state: rx.State, visibility_level: int) -> rx.Component:
                 ),
                 position='fixed',
                 left='400px',
-                top='70px',
+                top='90px',
             ),
         ),
     )

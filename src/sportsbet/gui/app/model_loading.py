@@ -4,7 +4,18 @@ from typing import cast
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, dataloader, home, mode, model, model_data, submit_reset, title
+from .components import (
+    SIDEBAR_OPTIONS,
+    bot,
+    dataloader,
+    mode,
+    model,
+    model_data,
+    navbar,
+    save_model,
+    submit_reset,
+    title,
+)
 from .states import VISIBILITY_LEVELS_MODEL_LOADING as VL
 from .states import ModelLoadingState
 
@@ -28,27 +39,12 @@ def run(state: rx.State) -> rx.Component:
     )
 
 
-def save_model(state: rx.State, visibility_level: int) -> rx.Component:
-    """The save component."""
-    return rx.cond(
-        state.visibility_level > visibility_level,
-        rx.button(
-            'Save',
-            position='fixed',
-            top='620px',
-            left='275px',
-            width='70px',
-            on_click=state.download_model,
-        ),
-    )
-
-
 @rx.page(route="/model/loading", on_load=ModelLoadingState.on_load)
 def model_loading_page() -> rx.Component:
     """Main page."""
     return rx.container(
+        navbar(),
         rx.vstack(
-            home(),
             mode(ModelLoadingState, 'Load a model'),
             dataloader(ModelLoadingState, 1),
             model(ModelLoadingState, 1),
