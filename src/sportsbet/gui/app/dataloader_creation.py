@@ -1,6 +1,7 @@
 """Dataloader creation page."""
 
 from collections.abc import Callable
+from typing import cast
 
 import reflex as rx
 
@@ -100,6 +101,18 @@ def parameters(state: rx.State) -> rx.Component:
                 _dialog('Years', 'calendar', state.all_years, state.handle_submit_years),
                 _dialog('Divisions', 'gauge', state.all_divisions, state.handle_submit_divisions),
             ),
+            rx.cond(
+                ~cast(rx.Var, DataloaderCreationState).leagues.bool(),
+                rx.text('Leagues are empty. Please select at least one.', size='1'),
+            ),
+            rx.cond(
+                ~cast(rx.Var, DataloaderCreationState).years.bool(),
+                rx.text('Years are empty. Please select at least one.', size='1'),
+            ),
+            rx.cond(
+                ~cast(rx.Var, DataloaderCreationState).divisions.bool(),
+                rx.text('Divisions are empty. Please select at least one.', size='1'),
+            ),
             margin_top='10px',
         ),
     )
@@ -154,7 +167,15 @@ def dataloader_creation_page() -> rx.Component:
             training_parameters(DataloaderCreationState),
             submit_reset(
                 DataloaderCreationState,
-                DataloaderCreationState.visibility_level == VL['control'],
+                (DataloaderCreationState.visibility_level == VL['control'])
+                | (
+                    (DataloaderCreationState.visibility_level == VL['parameters'])
+                    & (
+                        (~cast(rx.Var, DataloaderCreationState).leagues.bool())
+                        | (~cast(rx.Var, DataloaderCreationState).years.bool())
+                        | (~cast(rx.Var, DataloaderCreationState).divisions.bool())
+                    )
+                ),
             ),
             save_dataloader(DataloaderCreationState, VL['training_parameters']),
             **SIDEBAR_OPTIONS,

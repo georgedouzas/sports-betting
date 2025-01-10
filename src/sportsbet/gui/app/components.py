@@ -72,13 +72,13 @@ def dataloader(state: rx.State, visibility_level: int) -> rx.Component:
                         bg='white',
                         color='rgb(107,99,246)',
                         border='1px solid rgb(107,99,246)',
-                        disabled=state.dataloader_serialized.bool(),
+                        disabled=state.dataloader_serialized.bool() & ~state.dataloader_error,
                     ),
                     id='dataloader',
                     multiple=False,
                     no_keyboard=True,
                     no_drag=True,
-                    on_drop=state.handle_upload(rx.upload_files(upload_id='dataloader')),
+                    on_drop=state.handle_dataloader_upload(rx.upload_files(upload_id='dataloader')),
                     padding='0px',
                     border=None,
                 ),
@@ -86,8 +86,41 @@ def dataloader(state: rx.State, visibility_level: int) -> rx.Component:
             ),
         ),
         rx.cond(
-            state.dataloader_serialized,
+            state.dataloader_serialized & ~state.dataloader_error,
             rx.text(f'Dataloader: {state.dataloader_filename}', size='1'),
+        ),
+    )
+
+
+def model(state: rx.State, visibility_level: int) -> rx.Component:
+    """The model component."""
+    return rx.vstack(
+        rx.cond(
+            state.visibility_level > visibility_level,
+            rx.vstack(
+                title('Model', 'wand'),
+                rx.upload(
+                    rx.button(
+                        'Select File',
+                        bg='white',
+                        color='rgb(107,99,246)',
+                        border='1px solid rgb(107,99,246)',
+                        disabled=state.model_serialized.bool() & ~state.model_error,
+                    ),
+                    id='model',
+                    multiple=False,
+                    no_keyboard=True,
+                    no_drag=True,
+                    on_drop=state.handle_model_upload(rx.upload_files(upload_id='model')),
+                    padding='0px',
+                    border=None,
+                ),
+                margin_top='10px',
+            ),
+        ),
+        rx.cond(
+            state.model_serialized & ~state.model_error,
+            rx.text(f'Model: {state.model_filename}', size='1'),
         ),
     )
 
@@ -101,7 +134,7 @@ def submit_reset(state: rx.State, disabled: bool, url: str | None = None) -> rx.
                 rx.button(
                     'Submit',
                     on_click=state.submit_state,
-                    disabled=disabled,
+                    disabled=disabled | state.dataloader_error,
                     loading=state.loading,
                     position='fixed',
                     top='620px',
@@ -259,7 +292,7 @@ def bot(state: rx.State, visibility_level: int) -> rx.Component:
             left='600px',
             top='100px',
             width='500px',
-            background_color=rx.color('gray', 3),
+            background_color=rx.color('gray', 2),
             padding='30px',
         ),
     )

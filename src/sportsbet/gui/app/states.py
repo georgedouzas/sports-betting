@@ -13,11 +13,34 @@ import reflex as rx
 from more_itertools import chunked
 from reflex.event import EventSpec
 from reflex_ag_grid import ag_grid
+from sklearn.compose import make_column_transformer
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder
 from typing_extensions import Self
 
-from sportsbet.datasets import SoccerDataLoader
-from sportsbet.evaluation import BettorGridSearchCV, OddsComparisonBettor, backtest
+from sportsbet.datasets import BaseDataLoader, SoccerDataLoader
+from sportsbet.evaluation import BaseBettor, BettorGridSearchCV, ClassifierBettor, OddsComparisonBettor, backtest
 
+BETTING_MARKETS = [
+    [
+        'home_win__full_time_goals',
+        'away_win__full_time_goals',
+        'draw__full_time_goals',
+        'over_2.5__full_time_goals',
+        'under_2.5__full_time_goals',
+    ],
+    ['over_2.5__full_time_goals', 'under_2.5__full_time_goals'],
+    ['draw__full_time_goals', 'over_2.5__full_time_goals'],
+    ['home_win__full_time_goals', 'draw__full_time_goals', 'away_win__full_time_goals'],
+    ['home_win__full_time_goals', 'over_2.5__full_time_goals'],
+    ['home_win__full_time_goals', 'draw__full_time_goals'],
+    ['draw__full_time_goals'],
+]
 DATALOADERS = {
     'Soccer': SoccerDataLoader,
 }
@@ -26,21 +49,42 @@ MODELS = {
         estimator=OddsComparisonBettor(),
         param_grid={
             'alpha': np.linspace(0.0, 0.04, 20),
-            'betting_markets': [
-                [
-                    'home_win__full_time_goals',
-                    'away_win__full_time_goals',
-                    'draw__full_time_goals',
-                    'over_2.5__full_time_goals',
-                    'under_2.5__full_time_goals',
-                ],
-                ['over_2.5__full_time_goals', 'under_2.5__full_time_goals'],
-                ['draw__full_time_goals', 'over_2.5__full_time_goals'],
-                ['home_win__full_time_goals', 'draw__full_time_goals', 'away_win__full_time_goals'],
-                ['home_win__full_time_goals', 'over_2.5__full_time_goals'],
-                ['home_win__full_time_goals', 'draw__full_time_goals'],
-                ['draw__full_time_goals'],
-            ],
+            'betting_markets': BETTING_MARKETS,
+        },
+    ),
+    'Logistic Regression': BettorGridSearchCV(
+        estimator=ClassifierBettor(
+            classifier=make_pipeline(
+                make_column_transformer(
+                    (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
+                    remainder='passthrough',
+                ),
+                SimpleImputer(),
+                MultiOutputClassifier(
+                    LogisticRegression(solver='liblinear', random_state=7, max_iter=int(1e5)),
+                ),
+            ),
+        ),
+        param_grid={
+            'betting_markets': BETTING_MARKETS,
+            'classifier__multioutputclassifier__estimator__C': [0.1, 1.0, 10.0, 50.0],
+        },
+    ),
+    'Gradient Boosting': BettorGridSearchCV(
+        estimator=ClassifierBettor(
+            classifier=make_pipeline(
+                make_column_transformer(
+                    (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
+                    remainder='passthrough',
+                    sparse_threshold=0,
+                ),
+                SimpleImputer(),
+                HistGradientBoostingClassifier(random_state=10),
+            ),
+        ),
+        param_grid={
+            'betting_markets': BETTING_MARKETS,
+            'classifier__histgradientboostingclassifier__max_depth': [5, 10, 20, 50],
         },
     ),
 }
@@ -84,6 +128,12 @@ VISIBILITY_LEVELS_MODEL_CREATION = {
     'evaluation': 4,
     'control': 5,
 }
+VISIBILITY_LEVELS_MODEL_LOADING = {
+    'dataloader_model': 2,
+    'evaluation': 3,
+    'control': 4,
+}
+DELAY = 0.001
 
 
 nest_asyncio.apply()
@@ -91,6 +141,9 @@ nest_asyncio.apply()
 
 class State(rx.State):
     """The index page state."""
+
+    dataloader_error: bool = False
+    model_error: bool = False
 
     # Elements
     visibility_level: int = 1
@@ -110,12 +163,24 @@ class State(rx.State):
 
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message = """You can create or load a dataloader to grab historical
-        and fixtures data. Plus, you can create or load a betting model to test how it performs
-        and find value bets for upcoming games."""
+        message = """You can create or load a dataloader to grab historical and fixtures
+        data. Plus, you can create or load a betting model to test how it performs and find value bets for
+        upcoming games.
+        <br><br>
+        <strong>Data, Create</strong><br>
+        Create a new dataloader<br><br>
+
+        <strong>Data, Load</strong><br>
+        Load an existing dataloader.<br><br>
+
+        <strong>Modelling, Create</strong><br>
+        Create a new beting model.<br><br>
+
+        <strong>Modelling, Load</strong><br>
+        Load an existing betting model."""
         self.streamed_message = ''
         for char in message:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(DELAY)
             self.streamed_message += char
             yield
 
@@ -132,6 +197,9 @@ class State(rx.State):
     @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
+
+        self.dataloader_error = False
+        self.model_error = False
 
         # Elements visibility
         self.visibility_level = 1
@@ -193,7 +261,7 @@ class DataloaderCreationState(DataloaderState):
         available, but more sports will be added soon!"""
         self.streamed_message = ''
         for char in message:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(DELAY)
             self.streamed_message += char
             yield
 
@@ -313,11 +381,12 @@ class DataloaderCreationState(DataloaderState):
             self.divisions = [int(division) for division in DEFAULT_PARAM_CHECKED['divisions']]
             self.loading = False
             yield
-            message = """You can choose the leagues, divisions, and years to include in the training data.
-            This selection won't impact the fixtures data."""
+            message = """You can select the leagues, divisions, and years to include
+            in the training data. This choice will not affect the fixtures data, which
+            includes all upcoming matches."""
             self.streamed_message = ''
             for char in message:
-                await asyncio.sleep(0.005)
+                await asyncio.sleep(DELAY)
                 self.streamed_message += char
                 yield
         elif self.visibility_level == VISIBILITY_LEVELS_DATALOADER_CREATION['parameters']:
@@ -326,12 +395,16 @@ class DataloaderCreationState(DataloaderState):
             self.odds_types = DATALOADERS[self.sport_selection](self.param_grid).get_odds_types()
             self.loading = False
             yield
-            message = """Your training and fixtures data will include tables with odds as entries, and
-            you can choose the type of odds. You can also set a tolerance level for missing values in
-            the training data, which will apply to the fixtures data since it follows the same schema."""
+            message = """The training data consists of input, output, and odds, while the fixtures include only
+            input and odds. You can select the type of odds to use.<br><br>
+
+            Additionally, you can define a tolerance level for missing values in the training data. Columns
+            with missing values exceeding this tolerance will be removed. The fixtures data follows
+            the same schema, ensuring consistency for applying machine learning models
+            during training and inference."""
             self.streamed_message = ''
             for char in message:
-                await asyncio.sleep(0.005)
+                await asyncio.sleep(DELAY)
                 self.streamed_message += char
                 yield
         elif self.visibility_level == VISIBILITY_LEVELS_DATALOADER_CREATION['training_parameters']:
@@ -374,6 +447,9 @@ class DataloaderCreationState(DataloaderState):
     @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
+
+        self.dataloader_error = False
+        self.model_error = False
 
         # Elements visibility
         self.visibility_level = 1
@@ -453,16 +529,15 @@ class DataloaderLoadingState(DataloaderState):
 
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message = """Drag and drop or select a dataloader file to extract
-        the latest training and fixtures data."""
+        message = """Select a dataloader file to extract the latest training and fixtures data."""
         self.streamed_message = ''
         for char in message:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(DELAY)
             self.streamed_message += char
             yield
 
     @rx.event
-    async def handle_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
+    async def handle_dataloader_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
         """Handle the upload of files."""
         self.loading = True
         yield
@@ -472,6 +547,23 @@ class DataloaderLoadingState(DataloaderState):
             self.dataloader_filename = Path(file.filename).name
         self.loading = False
         yield
+        dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
+        if not isinstance(dataloader, BaseDataLoader):
+            self.dataloader_error = True
+            message = """Uploaded file is not a dataloader. Please try again."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
+        else:
+            self.dataloader_error = False
+            message = """Uploaded file is a dataloader. You may proceed to the next step."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
 
     @rx.event
     def download_dataloader(self: Self) -> EventSpec:
@@ -592,6 +684,9 @@ class DataloaderLoadingState(DataloaderState):
     def reset_state(self: Self) -> None:
         """Reset handler."""
 
+        self.dataloader_error = False
+        self.model_error = False
+
         # Elements visibility
         self.visibility_level = 1
         self.loading: bool = False
@@ -628,8 +723,8 @@ class DataloaderLoadingState(DataloaderState):
         self.streamed_message = ''
 
 
-class ModelState(State):
-    """The model state."""
+class ModelCreationState(State):
+    """The model creation state."""
 
     model_selection: str = 'Odds Comparison'
     dataloader_serialized: str | None = None
@@ -646,11 +741,21 @@ class ModelState(State):
 
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message = """Start by choosing a betting model. At the moment, there's only one available.
-        It calculates probabilities based on average odds. More models will be added soon!"""
+        message = """Begin by selecting a betting model. Currently, three options are available.<br><br>
+
+        <strong>Odds Comparison Model</strong><br>
+        Calculates probabilities based on average odds and identifies value bets.<br><br>
+
+        <strong>Logistic Regression Model</strong><br>
+        Fits a logistic regression classifier to the training data with various
+        hyperparameters, managing both categorical and missing values.<br><br>
+
+        <strong>Gradient Boosting Model</strong><br>
+        Fits a gradient boosting classifier to the training data with various
+        hyperparameters, also handling categorical and missing values."""
         self.streamed_message = ''
         for char in message:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(DELAY)
             self.streamed_message += char
             yield
 
@@ -661,7 +766,7 @@ class ModelState(State):
         return rx.download(data=model, filename=self.model_filename)
 
     @rx.event
-    async def handle_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
+    async def handle_dataloader_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
         """Handle the upload of files."""
         self.loading = True
         yield
@@ -671,6 +776,23 @@ class ModelState(State):
             self.dataloader_filename = Path(file.filename).name
         self.loading = False
         yield
+        dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
+        if not isinstance(dataloader, BaseDataLoader):
+            self.dataloader_error = True
+            message = """Uploaded file is not a dataloader. Please try again."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
+        else:
+            self.dataloader_error = False
+            message = """Uploaded file is a dataloader. You may proceed to the next step."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
 
     @rx.event
     async def submit_state(self: Self) -> AsyncGenerator:
@@ -681,20 +803,28 @@ class ModelState(State):
             self.loading = False
             yield
             message = (
-                """Upload a data loader to use with the model for backtesting its performance or finding value bets."""
+                """Upload a dataloader to use with the model for backtesting its performance or finding value bets."""
             )
             self.streamed_message = ''
             for char in message:
-                await asyncio.sleep(0.005)
+                await asyncio.sleep(DELAY)
                 self.streamed_message += char
                 yield
         elif self.visibility_level == VISIBILITY_LEVELS_MODEL_CREATION['dataloader']:
             self.loading = False
             yield
-            message = """Choose whether to backtest the model or predict value bets."""
+            message = """Choose whether to backtest the model or predict value bets.<br><br>
+
+            Backtesting uses 3-fold time ordered cross-validation with a constant betting
+            stake of 50 and an initial cash balance of 10000. After backtesting, the
+            model is fitted to the entire training set.<br><br>
+
+            The model can also predict value bets using the fixtures data. If
+            the model is not already fitted, it will be fitted to the entire
+            training set before making predictions."""
             self.streamed_message = ''
             for char in message:
-                await asyncio.sleep(0.005)
+                await asyncio.sleep(DELAY)
                 self.streamed_message += char
                 yield
         elif self.visibility_level == VISIBILITY_LEVELS_MODEL_CREATION['evaluation']:
@@ -711,7 +841,7 @@ class ModelState(State):
             self.model_serialized = str(cloudpickle.dumps(model), 'iso8859_16')
             self.model_filename = 'model.pkl'
             if self.evaluation_selection == 'Backtesting':
-                backtesting_results = backtest(model, X_train, Y_train, O_train).reset_index()
+                backtesting_results = backtest(model, X_train, Y_train, O_train, cv=TimeSeriesSplit(3)).reset_index()
                 self.backtesting_results = backtesting_results.fillna('NA').to_dict('records')
                 self.backtesting_results_cols = [
                     ag_grid.column_def(field=col, header_name=self.process_cols(col))
@@ -728,7 +858,8 @@ class ModelState(State):
                 X_fix, *_ = dataloader.extract_fixtures_data()
                 value_bets = pd.DataFrame(np.round(1 / model.predict_proba(X_fix), 2), columns=model.betting_markets_)
                 value_bets = pd.concat(
-                    [X_fix.reset_index()[['date', 'league', 'division', 'home_team', 'away_team']], value_bets], axis=1,
+                    [X_fix.reset_index()[['date', 'league', 'division', 'home_team', 'away_team']], value_bets],
+                    axis=1,
                 )
                 self.value_bets = value_bets.fillna('NA').to_dict('records')
                 self.value_bets_cols = [
@@ -742,6 +873,9 @@ class ModelState(State):
     def reset_state(self: Self) -> None:
         """Reset handler."""
 
+        self.dataloader_error = False
+        self.model_error = False
+
         # Elements visibility
         self.visibility_level = 1
         self.loading: bool = False
@@ -752,6 +886,193 @@ class ModelState(State):
 
         # Model
         self.model_selection = 'Odds Comparison'
+
+        # Data
+        self.dataloader_serialized = None
+        self.dataloader_filename = None
+
+        # Evaluation
+        self.model_serialized = None
+        self.model_filename = None
+        self.evaluation_selection = 'Backtesting'
+        self.backtesting_results = None
+        self.backtesting_results_cols = None
+        self.optimal_params = None
+        self.optimal_params_cols = None
+        self.value_bets = None
+        self.value_bets_cols = None
+
+        # Message
+        self.streamed_message = ''
+
+
+class ModelLoadingState(State):
+    """The model loading state."""
+
+    dataloader_serialized: str | None = None
+    dataloader_filename: str | None = None
+    model_serialized: str | None = None
+    model_filename: str | None = None
+    evaluation_selection: str = 'Backtesting'
+    backtesting_results: list | None = None
+    backtesting_results_cols: list | None = None
+    optimal_params: list | None = None
+    optimal_params_cols: list | None = None
+    value_bets: list | None = None
+    value_bets_cols: list | None = None
+
+    async def on_load(self: Self) -> AsyncGenerator:
+        """Event on page load."""
+        message = """Upload a dataloader and a betting model to backtest performance or identify value bets."""
+        self.streamed_message = ''
+        for char in message:
+            await asyncio.sleep(DELAY)
+            self.streamed_message += char
+            yield
+
+    @rx.event
+    def download_model(self: Self) -> EventSpec:
+        """Download the model."""
+        model = bytes(cast(str, self.model_serialized), 'iso8859_16')
+        return rx.download(data=model, filename=self.model_filename)
+
+    @rx.event
+    async def handle_dataloader_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
+        """Handle the upload of dataloader files."""
+        self.loading = True
+        yield
+        for file in files:
+            dataloader = await file.read()
+            self.dataloader_serialized = str(dataloader, 'iso8859_16')
+            self.dataloader_filename = Path(file.filename).name
+        self.loading = False
+        yield
+        dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
+        if not isinstance(dataloader, BaseDataLoader):
+            self.dataloader_error = True
+            message = """Uploaded file is not a dataloader. Please try again."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
+        else:
+            self.dataloader_error = False
+            message = """Uploaded file is a dataloader. You may proceed to the next step."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
+
+    @rx.event
+    async def handle_model_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
+        """Handle the upload of model files."""
+        self.loading = True
+        yield
+        for file in files:
+            model = await file.read()
+            self.model_serialized = str(model, 'iso8859_16')
+            self.model_filename = Path(file.filename).name
+        self.loading = False
+        yield
+        model = cloudpickle.loads(bytes(cast(str, self.model_serialized), 'iso8859_16'))
+        if not isinstance(model, BaseBettor):
+            self.model_error = True
+            message = """Uploaded file is not a betting model. Please try again."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
+        else:
+            self.model_error = False
+            message = """Uploaded file is a betting model. You may proceed to the next step."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
+
+    @rx.event
+    async def submit_state(self: Self) -> AsyncGenerator:
+        """Submit handler."""
+        self.loading = True
+        yield
+        if self.visibility_level == VISIBILITY_LEVELS_MODEL_LOADING['dataloader_model']:
+            self.loading = False
+            yield
+            message = """Choose whether to backtest the model or predict value bets.<br><br>
+
+            Backtesting uses 3-fold time-ordered cross-validation with a constant betting
+            stake of 50 and an initial cash balance of 10000. After backtesting, the
+            model is fitted to the entire training set.<br><br>
+
+            The model can also predict value bets using the fixtures data. If
+            the model is not already fitted, it will be fitted to the entire
+            training set before making predictions."""
+            self.streamed_message = ''
+            for char in message:
+                await asyncio.sleep(DELAY)
+                self.streamed_message += char
+                yield
+        elif self.visibility_level == VISIBILITY_LEVELS_MODEL_LOADING['evaluation']:
+            dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
+            if hasattr(dataloader, 'odds_type_') and hasattr(dataloader, 'drop_na_thres_'):
+                X_train, Y_train, O_train = dataloader.extract_train_data(
+                    odds_type=dataloader.odds_type_,
+                    drop_na_thres=dataloader.drop_na_thres_,
+                )
+            else:
+                X_train, Y_train, O_train = dataloader.extract_train_data()
+            model = cloudpickle.loads(bytes(cast(str, self.model_serialized), 'iso8859_16'))
+            if not hasattr(model, 'betting_markets_'):
+                model.fit(X_train, Y_train, O_train)
+            self.model_serialized = str(cloudpickle.dumps(model), 'iso8859_16')
+            self.model_filename = 'model.pkl'
+            if self.evaluation_selection == 'Backtesting':
+                backtesting_results = backtest(model, X_train, Y_train, O_train, cv=TimeSeriesSplit(3)).reset_index()
+                self.backtesting_results = backtesting_results.fillna('NA').to_dict('records')
+                self.backtesting_results_cols = [
+                    ag_grid.column_def(field=col, header_name=self.process_cols(col))
+                    for col in backtesting_results.columns
+                ]
+                self.optimal_params = [
+                    {'Parameter name': name, 'Optimal value': value} for name, value in model.best_params_.items()
+                ]
+                self.optimal_params_cols = [
+                    ag_grid.column_def(field='Parameter name'),
+                    ag_grid.column_def(field='Optimal value'),
+                ]
+            elif self.evaluation_selection == 'Value bets':
+                X_fix, *_ = dataloader.extract_fixtures_data()
+                value_bets = pd.DataFrame(np.round(1 / model.predict_proba(X_fix), 2), columns=model.betting_markets_)
+                value_bets = pd.concat(
+                    [X_fix.reset_index()[['date', 'league', 'division', 'home_team', 'away_team']], value_bets],
+                    axis=1,
+                )
+                self.value_bets = value_bets.fillna('NA').to_dict('records')
+                self.value_bets_cols = [
+                    ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in value_bets.columns
+                ]
+            self.loading = False
+            yield
+        self.visibility_level += 1
+
+    @rx.event
+    def reset_state(self: Self) -> None:
+        """Reset handler."""
+
+        self.dataloader_error = False
+        self.model_error = False
+
+        # Elements visibility
+        self.visibility_level = 1
+        self.loading: bool = False
+
+        # Mode
+        self.mode_category = 'Data'
+        self.mode_type = 'Create'
 
         # Data
         self.dataloader_serialized = None

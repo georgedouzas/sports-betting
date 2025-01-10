@@ -4,4 +4,5 @@ import reflex as rx
 
 config = rx.Config(
     app_name="app",
+    timeout=1200,
 )
