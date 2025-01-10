@@ -34,20 +34,137 @@
 
 ## Introduction
 
-Python sports betting toolbox.
+The `sports-betting package` is a handy set of tools for creating, testing, and using sports betting models. It comes
+with a Python API, a CLI, and even a GUI to keep things simple:
 
-The `sports-betting` package is a collection of tools that makes it easy to create machine learning models for sports betting and
-evaluate their performance. It is compatible with [scikit-learn].
+![](screenshots/predictions.png)
 
-The main components of `sports-betting` are dataloaders and bettors objects.
+The main components of `sports-betting` are dataloaders and bettors objects:
 
 - Dataloaders download and prepare data suitable for predictive modelling.
 - Bettors provide an easy way to backtest betting strategies and predict the value bets of future events.
 
 ## Quick start
 
-`sports-betting` supports all common sports betting needs i.e. fetching historical and fixtures data as well as backtesting of
-betting strategies and prediction of value bets. Assume we would like to backtest the following scenario and use the bettor object
+### GUI
+
+`sports-betting` comes with a GUI that provides a intuitive way to interact with the library. It supports the following
+functionalitites:
+
+- Easily upload, create, or update dataloaders to handle historical and fixtures data.
+- Develop and test betting models with tools for backtesting and identifying value bets.
+
+To launch the GUI, simply run the command `sportsbet-gui`. Once started, you’ll see the initial screen:
+
+![](screenshots/initial.png)
+
+Explore the functionality with guidance from the built-in bot, which streams helpful messages along the way.
+
+### API
+
+The `sports-betting` package makes it easy to download sports betting data:
+
+```python
+from sportsbet.datasets import SoccerDataLoader
+dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
+X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
+```
+
+`X_train` are the historical/training data and `X_fix` are the test/fixtures data. The historical data can be used to backtest the
+performance of a bettor model:
+
+```python
+from sportsbet.evaluation import ClassifierBettor, backtest
+from sklearn.dummy import DummyClassifier
+bettor = ClassifierBettor(DummyClassifier())
+backtest(bettor, X_train, Y_train, O_train)
+```
+
+We can use the trained bettor model to predict the value bets using the fixtures data:
+
+```python
+bettor.fit(X_train, Y_train)
+bettor.bet(X_fix, O_fix)
+```
+
+## Sports betting in practice
+
+You can think of any sports betting event as a random experiment with unknown probabilities for the various outcomes. Even for the
+most unlikely outcome, for example scoring more than 10 goals in a soccer match, a small probability is still assigned. The
+bookmaker estimates this probability P and offers the corresponding odds O. In theory, if the bookmaker offers the so-called fair
+odds O = 1 / P in the long run, neither the bettor nor the bookmaker would make any money.
+
+The bookmaker's strategy is to adjust the odds in their favor using the over-round of probabilities. In practice, it offers odds
+less than the estimated fair odds. The important point here is that the bookmaker still has to estimate the probabilities of
+outcomes and provide odds that guarantee them long-term profit.
+
+On the other hand, the bettor can also estimate the probabilities and compare them to the odds the bookmaker offers. If the
+estimated probability of an outcome is higher than the implied probability from the provided odds, then the bet is called a value
+bet.
+
+The only long-term betting strategy that makes sense is to select value bets. However, you have to remember that neither the
+bettor nor the bookmaker can access the actual probabilities of outcomes. Therefore, identifying a value bet from the side of the
+bettor is still an estimation. The bettor or the bookmaker might be wrong, or both of them.
+
+Another essential point is that bookmakers can access resources that the typical bettor is rare to access. For instance, they have
+more data, computational power, and teams of experts working on predictive models. You may assume that trying to beat them is
+pointless, but this is not necessarily correct. The bookmakers have multiple factors to consider when they offer their adjusted
+odds. This is the reason there is a considerable variation among the offered odds. The bettor should aim to systematically
+estimate the value bets, backtest their performance, and not create arbitrarily accurate predictive models. This is a realistic
+goal, and `sports-betting` can help by providing appropriate tools.
+
+## Installation
+
+For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
+
+```bash
+pip install sports-betting
+```
+
+If you have Node.js version v22.0.0 or higher, you can optionally install the GUI:
+
+```bash
+pip install sports-betting[gui]
+```
+
+Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
+project as well as the main and development dependencies:
+
+```bash
+git clone https://github.com/georgedouzas/sports-betting.git
+cd sports-betting
+pdm install
+```
+
+## Usage
+
+You can access `sports-betting` through the GUI application, the Python API, or the CLI. However, it’s a good idea to
+get familiar with the Python API since you’ll need it to create configuration files for the CLI or load custom betting
+models into the GUI. `sports-betting` supports all common sports betting needs i.e. fetching historical and fixtures
+data as well as backtesting of betting strategies and prediction of value bets. 
+
+## GUI
+
+Launch the GUI app with the command `sportsbet-gui`.
+
+Here are a few things you can do with the GUI:
+
+- Configure the dataloader:
+
+![](screenshots/parameters.png)
+
+- Create a new betting model:
+
+![](screenshots/betting_model.png)
+
+Run the model to get predictions:
+
+![](screenshots/predictions.png)
+
+### API
+
+Assume we would like to backtest the following scenario and use the bettor object
 to predict value bets:
 
 - Selection of data
@@ -99,82 +216,6 @@ bettor = ClassifierBettor(classifier, betting_markets=betting_markets, stake=sta
 backtesting_results = backtest(bettor, X_train, Y_train, O_train, cv=tscv)
 
 # Get value bets for upcoming betting events
-bettor.fit(X_train, Y_train)
-bettor.bet(X_fix, O_fix)
-```
-
-## Sports betting in practice
-
-You can think of any sports betting event as a random experiment with unknown probabilities for the various outcomes. Even for the
-most unlikely outcome, for example scoring more than 10 goals in a soccer match, a small probability is still assigned. The
-bookmaker estimates this probability P and offers the corresponding odds O. In theory, if the bookmaker offers the so-called fair
-odds O = 1 / P in the long run, neither the bettor nor the bookmaker would make any money.
-
-The bookmaker's strategy is to adjust the odds in their favor using the over-round of probabilities. In practice, it offers odds
-less than the estimated fair odds. The important point here is that the bookmaker still has to estimate the probabilities of
-outcomes and provide odds that guarantee them long-term profit.
-
-On the other hand, the bettor can also estimate the probabilities and compare them to the odds the bookmaker offers. If the
-estimated probability of an outcome is higher than the implied probability from the provided odds, then the bet is called a value
-bet.
-
-The only long-term betting strategy that makes sense is to select value bets. However, you have to remember that neither the
-bettor nor the bookmaker can access the actual probabilities of outcomes. Therefore, identifying a value bet from the side of the
-bettor is still an estimation. The bettor or the bookmaker might be wrong, or both of them.
-
-Another essential point is that bookmakers can access resources that the typical bettor is rare to access. For instance, they have
-more data, computational power, and teams of experts working on predictive models. You may assume that trying to beat them is
-pointless, but this is not necessarily correct. The bookmakers have multiple factors to consider when they offer their adjusted
-odds. This is the reason there is a considerable variation among the offered odds. The bettor should aim to systematically
-estimate the value bets, backtest their performance, and not create arbitrarily accurate predictive models. This is a realistic
-goal, and `sports-betting` can help by providing appropriate tools.
-
-## Installation
-
-For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
-
-```bash
-pip install sports-betting
-```
-
-Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
-project as well as the main and development dependencies:
-
-```bash
-git clone https://github.com/georgedouzas/sports-betting.git
-cd sports-betting
-pdm install
-```
-
-## Usage
-
-You can use the Python API or the CLI to access the full functionality of `sports-betting`. Nevertheless, it is recommended to be
-familiar with the Python API since it is still needed to write configuration files for the CLI.
-
-### API
-
-The `sports-betting` package makes it easy to download sports betting data:
-
-```python
-from sportsbet.datasets import SoccerDataLoader
-dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
-X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
-```
-
-`X_train` are the historical/training data and `X_fix` are the test/fixtures data. The historical data can be used to backtest the
-performance of a bettor model:
-
-```python
-from sportsbet.evaluation import ClassifierBettor, backtest
-from sklearn.dummy import DummyClassifier
-bettor = ClassifierBettor(DummyClassifier())
-backtest(bettor, X_train, Y_train, O_train)
-```
-
-We can use the trained bettor model to predict the value bets using the fixtures data:
-
-```python
 bettor.fit(X_train, Y_train)
 bettor.bet(X_fix, O_fix)
 ```
