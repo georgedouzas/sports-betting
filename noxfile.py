@@ -109,7 +109,7 @@ def tests(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
-    session.run('pdm', 'install', '-dG', 'tests', '-G', 'gui', external=True)
+    session.run('pdm', 'install', '-dG', 'tests', external=True)
     env = {'COVERAGE_FILE': f'.coverage.{session.python}'}
     if session.posargs:
         session.run('pytest', '-k', *session.posargs, env=env)
