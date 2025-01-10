@@ -9,8 +9,8 @@ from .components import (
     bot,
     dataloader,
     dataloader_data,
-    home,
     mode,
+    navbar,
     save_dataloader,
     submit_reset,
     title,
@@ -81,9 +81,9 @@ def parameters(state: rx.State) -> rx.Component:
 @rx.page(route="/dataloader/loading", on_load=DataloaderLoadingState.on_load)
 def dataloader_loading_page() -> rx.Component:
     """Main page."""
-    return rx.container(
+    return rx.box(
+        navbar(),
         rx.vstack(
-            home(),
             mode(DataloaderLoadingState, 'Load a dataloader'),
             dataloader(DataloaderLoadingState, 1),
             parameters(DataloaderLoadingState),

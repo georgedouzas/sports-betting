@@ -5,7 +5,7 @@ from typing import cast
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, dataloader_data, home, mode, save_dataloader, submit_reset, title
+from .components import SIDEBAR_OPTIONS, bot, dataloader_data, mode, navbar, save_dataloader, submit_reset, title
 from .states import VISIBILITY_LEVELS_DATALOADER_CREATION as VL
 from .states import DataloaderCreationState
 
@@ -158,9 +158,9 @@ def training_parameters(state: rx.State) -> rx.Component:
 @rx.page(route="/dataloader/creation", on_load=DataloaderCreationState.on_load)
 def dataloader_creation_page() -> rx.Component:
     """Main page."""
-    return rx.container(
+    return rx.box(
+        navbar(),
         rx.vstack(
-            home(),
             mode(DataloaderCreationState, 'Create a dataloader'),
             sport(DataloaderCreationState),
             parameters(DataloaderCreationState),
