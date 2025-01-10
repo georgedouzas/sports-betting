@@ -10,10 +10,10 @@ from sklearn.utils import check_scalar
 from typing_extensions import Self
 
 from .. import BoolData, Data
-from ._base import _BaseBettor
+from ._base import BaseBettor
 
 
-class OddsComparisonBettor(_BaseBettor):
+class OddsComparisonBettor(BaseBettor):
     """Bettor based on comparison of odds.
 
     It implements the betting strategy as described in the paper

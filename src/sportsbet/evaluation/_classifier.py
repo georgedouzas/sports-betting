@@ -13,10 +13,10 @@ from sklearn.base import BaseEstimator, MetaEstimatorMixin, clone, is_classifier
 from typing_extensions import Self
 
 from .. import BoolData, Data
-from ._base import _BaseBettor
+from ._base import BaseBettor
 
 
-class ClassifierBettor(MetaEstimatorMixin, _BaseBettor):
+class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
     """Bettor based on a Scikit-Learn classifier.
 
     Read more in the [user guide][user-guide].
@@ -114,10 +114,15 @@ class ClassifierBettor(MetaEstimatorMixin, _BaseBettor):
             Y:
                 The positive class probabilities.
         """
-        return np.concatenate(
-            [prob[:, -1].reshape(-1, 1) for prob in self.classifier_.predict_proba(X)],
-            axis=1,
-        )
+        proba = self.classifier_.predict_proba(X)
+        if isinstance(proba, list):
+            proba = np.concatenate(
+                [prob[:, -1].reshape(-1, 1) for prob in proba],
+                axis=1,
+            )
+        elif len(self.classes_) == 1:
+            proba = proba[:, -1]
+        return proba
 
     def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
         """Fit the bettor to the input data and multi-output targets.

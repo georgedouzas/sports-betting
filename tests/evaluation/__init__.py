@@ -8,12 +8,12 @@ from typing_extensions import Self
 
 from sportsbet import Data
 from sportsbet.datasets import DummySoccerDataLoader
-from sportsbet.evaluation._base import _BaseBettor
+from sportsbet.evaluation._base import BaseBettor
 
 X_train, Y_train, O_train = DummySoccerDataLoader().extract_train_data(odds_type='williamhill')
 
 
-class TestBettor(_BaseBettor):
+class TestBettor(BaseBettor):
     """Test bettor class."""
 
     __test__ = False

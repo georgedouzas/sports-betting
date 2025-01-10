@@ -15,12 +15,12 @@ from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
 from .. import FixturesData, Outputs, ParamGrid, Schema, TrainData
-from ._base import _BaseDataLoader
+from ._base import BaseDataLoader
 
 OVER_UNDER = 2.5
 
 
-class DummySoccerDataLoader(_BaseDataLoader):
+class DummySoccerDataLoader(BaseDataLoader):
     """Dataloader for soccer dummy data.
 
     The data are provided only for convenience, since they require

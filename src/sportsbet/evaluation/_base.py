@@ -22,7 +22,7 @@ from typing_extensions import Self
 from .. import BoolData, Data
 
 
-class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
+class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
     """The base class for bettors.
 
     Warning: This class should not be used directly. Use the derive classes
@@ -246,6 +246,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         if X.empty:
             return np.empty((0, self.betting_markets_.size), dtype=float)
         Y_proba_pred = self._predict_proba(X)
+        Y_proba_pred = Y_proba_pred.reshape(Y_proba_pred.shape[0], -1)
         if Y_proba_pred.shape[1] != self.betting_markets_.size:
             error_msg = 'Predicted probabilities and selected betting markets have incompatible shapes.'
             raise TypeError(error_msg)
@@ -343,7 +344,7 @@ class _BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=AB
         return np.sqrt(365) * returns_mean / returns_std
 
 
-def save_bettor(bettor: _BaseBettor, path: str) -> None:
+def save_bettor(bettor: BaseBettor, path: str) -> None:
     """Save the bettor object.
 
     Args:
@@ -361,7 +362,7 @@ def save_bettor(bettor: _BaseBettor, path: str) -> None:
         cloudpickle.dump(bettor, file)
 
 
-def load_bettor(path: str) -> _BaseBettor:
+def load_bettor(path: str) -> BaseBettor:
     """Load the bettor object.
 
     Args:

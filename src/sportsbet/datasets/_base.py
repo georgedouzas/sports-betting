@@ -51,7 +51,7 @@ def _create_names_mapping_table(data_source1: pd.DataFrame, data_source2: pd.Dat
     return names_mapping
 
 
-class _BaseDataLoader(metaclass=ABCMeta):
+class BaseDataLoader(metaclass=ABCMeta):
     """The base class for dataloaders.
 
     Warning: This class should not be used directly. Use the derive classes
@@ -66,7 +66,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def _get_full_param_grid(cls: type[_BaseDataLoader]) -> ParameterGrid:
+    def _get_full_param_grid(cls: type[BaseDataLoader]) -> ParameterGrid:
         return ParameterGrid([])
 
     @abstractmethod
@@ -392,7 +392,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         return self
 
     @classmethod
-    def get_all_params(cls: type[_BaseDataLoader]) -> list[Param]:
+    def get_all_params(cls: type[BaseDataLoader]) -> list[Param]:
         """Get the available parameters.
 
         It can be used to get the allowed names and values for the
@@ -437,7 +437,7 @@ class _BaseDataLoader(metaclass=ABCMeta):
         return sorted({col.split('__')[1] for col in self._cols(data, 'odds') if col not in dropped_all_na_cols})
 
 
-def load_dataloader(path: str) -> _BaseDataLoader:
+def load_dataloader(path: str) -> BaseDataLoader:
     """Load the dataloader object.
 
     Args:
