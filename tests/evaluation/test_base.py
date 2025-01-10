@@ -7,14 +7,14 @@ import pandas as pd
 import pytest
 from sklearn.exceptions import NotFittedError
 
-from sportsbet.evaluation._base import _BaseBettor
+from sportsbet.evaluation._base import BaseBettor
 from tests.evaluation import O_train, TestBettor, X_train, Y_train
 
 
 def test_abstract_class_raise_error():
     """Test abstract method missing implementation."""
 
-    class TestBettor(_BaseBettor):
+    class TestBettor(BaseBettor):
         pass
 
     with pytest.raises(

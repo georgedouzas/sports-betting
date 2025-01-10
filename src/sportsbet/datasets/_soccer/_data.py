@@ -17,7 +17,7 @@ from sklearn.model_selection import ParameterGrid
 from typing_extensions import Self
 
 from ... import FixturesData, ParamGrid, Schema, TrainData
-from .._base import _BaseDataLoader
+from .._base import BaseDataLoader
 from ._utils import OUTPUTS, _read_csv, _read_csvs, _read_urls_content
 
 MODELLING_URL = 'https://github.com/georgedouzas/sports-betting/tree/data/data/soccer/modelling'
@@ -25,7 +25,7 @@ TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/da
 FIXTURES_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/fixtures.csv'
 
 
-class SoccerDataLoader(_BaseDataLoader):
+class SoccerDataLoader(BaseDataLoader):
     """Dataloader for soccer data.
 
     It downloads historical and fixtures data for various

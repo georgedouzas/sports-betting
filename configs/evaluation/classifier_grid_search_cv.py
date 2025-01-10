@@ -7,6 +7,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
+
 from sportsbet.datasets import SoccerDataLoader
 from sportsbet.evaluation import BettorGridSearchCV, ClassifierBettor
 

@@ -21,15 +21,15 @@ from sklearn.utils.validation import check_is_fitted
 from typing_extensions import Self
 
 from .. import BoolData, Data, Indices
-from ._base import _BaseBettor
+from ._base import BaseBettor
 
-TSCV = TimeSeriesSplit()
+TSCV = TimeSeriesSplit(n_splits=3)
 
 
 def _fit_bet(
     train_ind: Indices,
     test_ind: Indices,
-    bettor: _BaseBettor,
+    bettor: BaseBettor,
     X: pd.DataFrame,
     Y: pd.DataFrame,
     O: pd.DataFrame,
@@ -83,7 +83,7 @@ def _fit_bet(
 
 
 def backtest(
-    bettor: _BaseBettor,
+    bettor: BaseBettor,
     X: pd.DataFrame,
     Y: pd.DataFrame,
     O: pd.DataFrame,
@@ -162,7 +162,7 @@ def backtest(
     return results
 
 
-class BettorGridSearchCV(GridSearchCV, _BaseBettor):
+class BettorGridSearchCV(GridSearchCV, BaseBettor):
     """Exhaustive search over specified parameter values for a bettor.
 
     BettorGridSearchCV implements a `fit`, a`predict`, a `predict_proba',
@@ -366,7 +366,7 @@ class BettorGridSearchCV(GridSearchCV, _BaseBettor):
 
     def __init__(
         self: Self,
-        estimator: _BaseBettor,
+        estimator: BaseBettor,
         param_grid: dict | list,
         *,
         scoring: str | Callable | list | tuple | dict[str, Callable] | None = None,
@@ -407,7 +407,7 @@ class BettorGridSearchCV(GridSearchCV, _BaseBettor):
 
     def modify_scorer(self: Self, scorer: Callable) -> Callable:
         def _scorer(
-            estimator: _BaseBettor,
+            estimator: BaseBettor,
             X: pd.DataFrame,
             Y: pd.DataFrame,
             sample_weight: NDArray[Shape['*'], float] | None = None,  # noqa: F722
@@ -419,7 +419,7 @@ class BettorGridSearchCV(GridSearchCV, _BaseBettor):
         return _scorer
 
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None) -> Self:
-        if not isinstance(self.estimator, _BaseBettor):
+        if not isinstance(self.estimator, BaseBettor):
             error_msg = f'`BettorGridSearchCV` requires a bettor as estimator. Instead {type(self.estimator)} is given.'
             raise TypeError(error_msg)
         if not isinstance(self.cv, TimeSeriesSplit):
@@ -440,7 +440,7 @@ class BettorGridSearchCV(GridSearchCV, _BaseBettor):
                     'Invoke the fit method as `object.fit(X, Y, O)`.'
                 )
                 raise TypeError(error_msg)
-            scorers, _ = self._get_scorers(convert_multimetric=False)
+            scorers, _ = self._get_scorers()
             self.scoring: Callable | dict[str, Callable] = (
                 self.modify_scorer(scorers)
                 if not isinstance(scorers, dict)

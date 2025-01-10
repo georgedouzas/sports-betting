@@ -15,8 +15,8 @@ from rich.panel import Panel
 from sklearn.model_selection import TimeSeriesSplit
 
 from .. import ParamGrid
-from ..datasets._base import _BaseDataLoader
-from ..evaluation._base import _BaseBettor
+from ..datasets._base import BaseDataLoader
+from ..evaluation._base import BaseBettor
 
 
 def get_module(config_path: str) -> ModuleType | None:
@@ -42,7 +42,7 @@ def get_module(config_path: str) -> ModuleType | None:
     return None
 
 
-def get_dataloader_cls(mod: ModuleType | None) -> type[_BaseDataLoader] | None:
+def get_dataloader_cls(mod: ModuleType | None) -> type[BaseDataLoader] | None:
     """Get the dataloader class."""
     console = Console()
     if mod is None:
@@ -53,7 +53,7 @@ def get_dataloader_cls(mod: ModuleType | None) -> type[_BaseDataLoader] | None:
         )
         console.print(warning)
         return None
-    elif not issubclass(mod.DATALOADER_CLASS, _BaseDataLoader):
+    elif not issubclass(mod.DATALOADER_CLASS, BaseDataLoader):
         warning = Panel.fit(
             '[bold red]`DATALOADER_CLASS` variable should be a `\'dataloader\'` class.',
         )
@@ -81,7 +81,7 @@ def get_odds_type(mod: ModuleType | None) -> str | None:
     return None
 
 
-def get_bettor(mod: ModuleType | None) -> _BaseBettor | None:
+def get_bettor(mod: ModuleType | None) -> BaseBettor | None:
     """Get the bettor."""
     console = Console()
     if mod is None:
@@ -98,7 +98,7 @@ def get_bettor(mod: ModuleType | None) -> _BaseBettor | None:
         )
         console.print(warning)
         return None
-    elif not isinstance(mod.BETTOR, _BaseBettor):
+    elif not isinstance(mod.BETTOR, BaseBettor):
         warning = Panel.fit(
             '[bold red]`BETTOR` variable should be a `\'bettor\'` object.',
         )

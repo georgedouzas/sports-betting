@@ -1,6 +1,7 @@
 """Example of configuration file for odds comparison bettor."""
 
 from sklearn.model_selection import TimeSeriesSplit
+
 from sportsbet.datasets import SoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor
 
