@@ -157,7 +157,7 @@ warn_unused_ignores = true
 show_error_codes = true
 
 [tool.pytest.ini_options]
-addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "-n=auto"]
+addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "-n=auto", "--ignore=src/sportsbet/gui"]
 testpaths = ["src", "tests"]
 
 [tool.coverage.run]
