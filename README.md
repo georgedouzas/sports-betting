@@ -35,9 +35,10 @@
 ## Introduction
 
 The `sports-betting package` is a handy set of tools for creating, testing, and using sports betting models. It comes
-with a Python API, a CLI, and even a GUI to keep things simple:
+with a Python API, a CLI, and even a GUI built with [Reflex](https://reflex.dev/) to keep things simple:
 
 ![](screenshots/predictions.png)
+![](docs/screenshots/predictions.png)
 
 The main components of `sports-betting` are dataloaders and bettors objects:
 
@@ -57,6 +58,7 @@ functionalitites:
 To launch the GUI, simply run the command `sportsbet-gui`. Once started, you’ll see the initial screen:
 
 ![](screenshots/initial.png)
+![](docs/screenshots/initial.png)
 
 Explore the functionality with guidance from the built-in bot, which streams helpful messages along the way.
 
@@ -153,14 +155,17 @@ Here are a few things you can do with the GUI:
 - Configure the dataloader:
 
 ![](screenshots/parameters.png)
+![](docs/screenshots/parameters.png)
 
 - Create a new betting model:
 
 ![](screenshots/betting_model.png)
+![](docs/screenshots/betting_model.png)
 
 Run the model to get predictions:
 
 ![](screenshots/predictions.png)
+![](docs/screenshots/predictions.png)
 
 ### API
 
