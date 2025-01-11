@@ -34,12 +34,8 @@ BETTING_MARKETS = [
         'over_2.5__full_time_goals',
         'under_2.5__full_time_goals',
     ],
-    ['over_2.5__full_time_goals', 'under_2.5__full_time_goals'],
     ['draw__full_time_goals', 'over_2.5__full_time_goals'],
-    ['home_win__full_time_goals', 'draw__full_time_goals', 'away_win__full_time_goals'],
-    ['home_win__full_time_goals', 'over_2.5__full_time_goals'],
-    ['home_win__full_time_goals', 'draw__full_time_goals'],
-    ['draw__full_time_goals'],
+    ['home_win__full_time_goals', 'away_win__full_time_goals'],
 ]
 DATALOADERS = {
     'Soccer': SoccerDataLoader,
@@ -48,9 +44,10 @@ MODELS = {
     'Odds Comparison': BettorGridSearchCV(
         estimator=OddsComparisonBettor(),
         param_grid={
-            'alpha': np.linspace(0.0, 0.04, 20),
+            'alpha': np.linspace(0.0, 0.05, 20),
             'betting_markets': BETTING_MARKETS,
         },
+        error_score='raise',
     ),
     'Logistic Regression': BettorGridSearchCV(
         estimator=ClassifierBettor(
@@ -58,6 +55,7 @@ MODELS = {
                 make_column_transformer(
                     (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
                     remainder='passthrough',
+                    force_int_remainder_cols=False,
                 ),
                 SimpleImputer(),
                 MultiOutputClassifier(
@@ -67,8 +65,9 @@ MODELS = {
         ),
         param_grid={
             'betting_markets': BETTING_MARKETS,
-            'classifier__multioutputclassifier__estimator__C': [0.1, 1.0, 10.0, 50.0],
+            'classifier__multioutputclassifier__estimator__C': [0.1, 1.0, 50.0],
         },
+        error_score='raise',
     ),
     'Gradient Boosting': BettorGridSearchCV(
         estimator=ClassifierBettor(
@@ -77,30 +76,24 @@ MODELS = {
                     (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
                     remainder='passthrough',
                     sparse_threshold=0,
+                    force_int_remainder_cols=False,
                 ),
                 SimpleImputer(),
-                HistGradientBoostingClassifier(random_state=10),
+                MultiOutputClassifier(HistGradientBoostingClassifier(random_state=10)),
             ),
         ),
         param_grid={
             'betting_markets': BETTING_MARKETS,
-            'classifier__histgradientboostingclassifier__max_depth': [5, 10, 20, 50],
+            'classifier__multioutputclassifier__estimator__max_depth': [3, 5, 8],
         },
+        error_score='raise',
     ),
 }
 DEFAULT_PARAM_CHECKED = {
     'leagues': [
         '"England"',
-        '"Scotland"',
-        '"Germany"',
-        '"Italy"',
         '"Spain"',
         '"France"',
-        '"Netherlands"',
-        '"Belgium"',
-        '"Portugal"',
-        '"Turkey"',
-        '"Greece"',
     ],
     'years': [
         '2020',
@@ -110,7 +103,7 @@ DEFAULT_PARAM_CHECKED = {
         '2024',
         '2025',
     ],
-    'divisions': ['1', '2'],
+    'divisions': ['1'],
 }
 VISIBILITY_LEVELS_DATALOADER_CREATION = {
     'sport': 2,
@@ -830,9 +823,8 @@ class ModelCreationState(State):
             stake of 50 and an initial cash balance of 10000. After backtesting, the
             model is fitted to the entire training set.<br><br>
 
-            The model can also predict value bets using the fixtures data. If
-            the model is not already fitted, it will be fitted to the entire
-            training set before making predictions."""
+            The model can also predict value bets using the fixtures data. The model is fitted
+            to the entire training set before making predictions."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
@@ -1019,9 +1011,8 @@ class ModelLoadingState(State):
             stake of 50 and an initial cash balance of 10000. After backtesting, the
             model is fitted to the entire training set.<br><br>
 
-            The model can also predict value bets using the fixtures data. If
-            the model is not already fitted, it will be fitted to the entire
-            training set before making predictions."""
+            The model can also predict value bets using the fixtures data. The model is
+            fitted to the entire training set before making predictions."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
