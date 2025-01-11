@@ -6,22 +6,60 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.10.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.10.0) - 2025-01-11
+
+<small>[Compare with 0.9.3](https://github.com/georgedouzas/sports-betting/compare/0.9.3...0.10.0)</small>
+
+### Features
+
+- Implement full GUI functionality ([a22261c](https://github.com/georgedouzas/sports-betting/commit/a22261c182e557b4a2e547092bd77927394dd52b) by georgedouzas).
+- Add model creation to GUI ([d8aba8c](https://github.com/georgedouzas/sports-betting/commit/d8aba8c118d2740467c7dc262d1942e872b82a20) by georgedouzas).
+- Create script to run app ([aa558f8](https://github.com/georgedouzas/sports-betting/commit/aa558f8ea119af48d7744fe97cf2506f43f33418) by georgedouzas).
+- Implement bot functionality ([d53153d](https://github.com/georgedouzas/sports-betting/commit/d53153dc252d6f6d8a4d0b833bfb58b3d95973f0) by georgedouzas).
+- Implement data functionality of GUI ([13e53b9](https://github.com/georgedouzas/sports-betting/commit/13e53b95d0bb733e46f0487117b25e1a5cf9f78f) by georgedouzas).
+- Initial GUI implementation ([8950562](https://github.com/georgedouzas/sports-betting/commit/89505623d77cb5a97e499b8885d11342e3a9a249) by georgedouzas).
+
+### Docs
+
+- Update README to include GUI description ([16dc843](https://github.com/georgedouzas/sports-betting/commit/16dc843213f27b172776171246f76cd34f72a6bb) by georgedouzas).
+- Exclude GUI from API documentation ([79cb2ed](https://github.com/georgedouzas/sports-betting/commit/79cb2ed9d121fe1295c09f01891bf15e45210712) by georgedouzas).
+
+### Code Refactoring
+
+- Use common state for dataloader ([83fd195](https://github.com/georgedouzas/sports-betting/commit/83fd195ac62d901f7623548cf76857717a987bd5) by georgedouzas).
+- Implement modules for components and states ([e19e542](https://github.com/georgedouzas/sports-betting/commit/e19e542a46899e882d183a1258b8894a9e7b1709) by georgedouzas).
+- Remove directories ([fa08cfc](https://github.com/georgedouzas/sports-betting/commit/fa08cfc486a8ff59126e5d38397c1afef9813a3f) by georgedouzas).
+- Use simpler structure ([46ddeff](https://github.com/georgedouzas/sports-betting/commit/46ddeff75be3f46ee46a3c8ab3897b7b2bbdc9e4) by georgedouzas).
+- Split dataloader funcionality to multiple pages ([d689e54](https://github.com/georgedouzas/sports-betting/commit/d689e540dd8ed232ccea5e3f23a6089e5a1834b7) by georgedouzas).
+
+### Chore
+
+- Modify default dataloader settings ([fa5d166](https://github.com/georgedouzas/sports-betting/commit/fa5d166554de67563977dab034ef4c054f404991) by georgedouzas).
+- Increase timeout for backtesting functionality ([c45d031](https://github.com/georgedouzas/sports-betting/commit/c45d0319cb3709d8ad184c5b690186ece6f33bdd) by georgedouzas).
+- Ignore gui from testing ([a1676e5](https://github.com/georgedouzas/sports-betting/commit/a1676e519045a445be34098b05749eaa7748d1fe) by georgedouzas).
+- Change base classes to public ([03c6556](https://github.com/georgedouzas/sports-betting/commit/03c655632dbadc15d49df205aaba7c5738379242) by georgedouzas).
+- Make gui dependencies optional ([9b10914](https://github.com/georgedouzas/sports-betting/commit/9b1091419199c637cf346b2dc355f128d11e7b31) by georgedouzas).
+- Clean .web directory ([ffe7a00](https://github.com/georgedouzas/sports-betting/commit/ffe7a00205585c10d9e5e11b0b86a6c7e9d0563d) by georgedouzas).
+- Add reflex-ag-grid dependency ([becf833](https://github.com/georgedouzas/sports-betting/commit/becf83334e0babd5b14cb60c93ec234f2b65281c) by georgedouzas).
+- Renamed GUI app ([9f9f84c](https://github.com/georgedouzas/sports-betting/commit/9f9f84cafb23458457f7e47b9bc260705683b419) by georgedouzas).
+
 ## [0.9.3](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.3) - 2024-12-12
 
 <small>[Compare with 0.9.2](https://github.com/georgedouzas/sports-betting/compare/0.9.2...0.9.3)</small>
 
 ### Bug Fixes
 
-- Update scikit-learn minimum version ([3e5f1ad](https://github.com/georgedouzas/sports-betting/commit/3e5f1ad363e011b0ce06b26c8374d478efc21879) by georgedouzas).
+- Update scikit-learn minimum version ([7b4b6f2](https://github.com/georgedouzas/sports-betting/commit/7b4b6f226a26d64e93a873f2d5437c229cb9f57e) by georgedouzas).
 
 ### Docs
 
-- Fix doctests ([44539df](https://github.com/georgedouzas/sports-betting/commit/44539df838cf6f264872a8c16cd74193d884b1f0) by georgedouzas).
+- Fix doctests ([cbaa5ac](https://github.com/georgedouzas/sports-betting/commit/cbaa5ac34ffe49ae142c83755f81f19441d5bcd1) by georgedouzas).
 
 ### Chore
 
-- Use correct pytest options ([dd92ce5](https://github.com/georgedouzas/sports-betting/commit/dd92ce5c10abb21e8d31a923517a3f3cef02bd75) by georgedouzas).
-- Update copier template ([3fdf19b](https://github.com/georgedouzas/sports-betting/commit/3fdf19bef632ed352871101768c5ec41d4ad6a48) by georgedouzas).
+- Release 0.9.3 ([2d43b44](https://github.com/georgedouzas/sports-betting/commit/2d43b4406d02a20f4905638d6877c506f85c2e62) by georgedouzas).
+- Use correct pytest options ([721591a](https://github.com/georgedouzas/sports-betting/commit/721591a86d3329c716c5429edc41065ff2595a86) by georgedouzas).
+- Update copier template ([9fb983b](https://github.com/georgedouzas/sports-betting/commit/9fb983b8596d7a9267d04c23cc9a44fe368ba0f9) by georgedouzas).
 
 ## [0.9.2](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.2) - 2024-12-09
 
