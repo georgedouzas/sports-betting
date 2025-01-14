@@ -4,7 +4,7 @@ from typing import cast
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, dataloader, mode, model_data, navbar, save_model, submit_reset, title
+from .components import bot, control, dataloader, mode, model_data, navbar, save_model, sidebar, title
 from .states import VISIBILITY_LEVELS_MODEL_CREATION as VL
 from .states import ModelCreationState
 
@@ -49,22 +49,24 @@ def model_creation_page() -> rx.Component:
     """Main page."""
     return rx.box(
         navbar(),
-        rx.vstack(
-            mode(ModelCreationState, 'Create a model'),
-            model(ModelCreationState),
-            dataloader(ModelCreationState, VL['model']),
-            run(ModelCreationState),
-            submit_reset(
-                ModelCreationState,
-                (
-                    (~cast(rx.Var, ModelCreationState.dataloader_serialized).bool())
-                    & (ModelCreationState.visibility_level == VL['dataloader'])
-                )
-                | (ModelCreationState.visibility_level > VL['evaluation']),
+        rx.hstack(
+            sidebar(
+                mode(ModelCreationState, 'Create a model'),
+                model(ModelCreationState),
+                dataloader(ModelCreationState, VL['model']),
+                run(ModelCreationState),
+                control=control(
+                    ModelCreationState,
+                    (
+                        (~cast(rx.Var, ModelCreationState.dataloader_serialized).bool())
+                        & (ModelCreationState.visibility_level == VL['dataloader'])
+                    )
+                    | (ModelCreationState.visibility_level > VL['evaluation']),
+                    save=save_model(ModelCreationState, VL['control']),
+                ),
             ),
-            save_model(ModelCreationState, VL['evaluation']),
-            **SIDEBAR_OPTIONS,
+            model_data(ModelCreationState, VL['control']),
+            bot(ModelCreationState, VL['control']),
+            padding='2%',
         ),
-        model_data(ModelCreationState, VL['control']),
-        bot(ModelCreationState, VL['control']),
     )

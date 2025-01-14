@@ -5,7 +5,7 @@ from typing import cast
 
 import reflex as rx
 
-from .components import SIDEBAR_OPTIONS, bot, dataloader_data, mode, navbar, save_dataloader, submit_reset, title
+from .components import bot, control, dataloader_data, mode, navbar, save_dataloader, sidebar, title
 from .states import VISIBILITY_LEVELS_DATALOADER_CREATION as VL
 from .states import DataloaderCreationState
 
@@ -20,9 +20,7 @@ def sport(state: rx.State) -> rx.Component:
             value='Soccer',
             disabled=state.visibility_level > VL['sport'],
             on_change=state.set_sport_selection,
-            width='120px',
         ),
-        margin_top='10px',
     )
 
 
@@ -113,7 +111,6 @@ def parameters(state: rx.State) -> rx.Component:
                 ~cast(rx.Var, DataloaderCreationState).divisions.bool(),
                 rx.text('Divisions are empty. Please select at least one.', size='1'),
             ),
-            margin_top='10px',
         ),
     )
 
@@ -130,11 +127,7 @@ def training_parameters(state: rx.State) -> rx.Component:
                     default_value=state.odds_types[0],
                     on_change=state.set_odds_type,
                     disabled=state.visibility_level > VL['training_parameters'],
-                    width='100%',
                 ),
-                style={
-                    'margin-top': '5px',
-                },
             ),
             rx.vstack(
                 rx.text(f'Drop NA threshold of columns: {DataloaderCreationState.drop_na_thres}', size='1'),
@@ -145,11 +138,7 @@ def training_parameters(state: rx.State) -> rx.Component:
                     default_value=0.0,
                     on_change=state.set_drop_na_thres,
                     disabled=state.visibility_level > VL['training_parameters'],
-                    width='200px',
                 ),
-                style={
-                    'margin-top': '5px',
-                },
             ),
         ),
     )
@@ -160,26 +149,28 @@ def dataloader_creation_page() -> rx.Component:
     """Main page."""
     return rx.box(
         navbar(),
-        rx.vstack(
-            mode(DataloaderCreationState, 'Create a dataloader'),
-            sport(DataloaderCreationState),
-            parameters(DataloaderCreationState),
-            training_parameters(DataloaderCreationState),
-            submit_reset(
-                DataloaderCreationState,
-                (DataloaderCreationState.visibility_level == VL['control'])
-                | (
-                    (DataloaderCreationState.visibility_level == VL['parameters'])
-                    & (
-                        (~cast(rx.Var, DataloaderCreationState).leagues.bool())
-                        | (~cast(rx.Var, DataloaderCreationState).years.bool())
-                        | (~cast(rx.Var, DataloaderCreationState).divisions.bool())
-                    )
+        rx.hstack(
+            sidebar(
+                mode(DataloaderCreationState, 'Create a dataloader'),
+                sport(DataloaderCreationState),
+                parameters(DataloaderCreationState),
+                training_parameters(DataloaderCreationState),
+                control=control(
+                    DataloaderCreationState,
+                    (DataloaderCreationState.visibility_level == VL['control'])
+                    | (
+                        (DataloaderCreationState.visibility_level == VL['parameters'])
+                        & (
+                            (~cast(rx.Var, DataloaderCreationState).leagues.bool())
+                            | (~cast(rx.Var, DataloaderCreationState).years.bool())
+                            | (~cast(rx.Var, DataloaderCreationState).divisions.bool())
+                        )
+                    ),
+                    save=save_dataloader(DataloaderCreationState, VL['control']),
                 ),
             ),
-            save_dataloader(DataloaderCreationState, VL['training_parameters']),
-            **SIDEBAR_OPTIONS,
+            dataloader_data(DataloaderCreationState, VL['control']),
+            bot(DataloaderCreationState, VL['control']),
+            padding='2%',
         ),
-        dataloader_data(DataloaderCreationState, VL['control']),
-        bot(DataloaderCreationState, VL['control']),
     )

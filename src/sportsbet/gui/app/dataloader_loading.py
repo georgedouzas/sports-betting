@@ -4,17 +4,7 @@ from typing import cast
 
 import reflex as rx
 
-from .components import (
-    SIDEBAR_OPTIONS,
-    bot,
-    dataloader,
-    dataloader_data,
-    mode,
-    navbar,
-    save_dataloader,
-    submit_reset,
-    title,
-)
+from .components import bot, control, dataloader, dataloader_data, mode, navbar, save_dataloader, sidebar, title
 from .states import VISIBILITY_LEVELS_DATALOADER_LOADING as VL
 from .states import DataloaderLoadingState
 
@@ -83,18 +73,21 @@ def dataloader_loading_page() -> rx.Component:
     """Main page."""
     return rx.box(
         navbar(),
-        rx.vstack(
-            mode(DataloaderLoadingState, 'Load a dataloader'),
-            dataloader(DataloaderLoadingState, 1),
-            parameters(DataloaderLoadingState),
-            submit_reset(
-                DataloaderLoadingState,
-                (~cast(rx.Var, DataloaderLoadingState.dataloader_serialized).bool())
-                | (DataloaderLoadingState.visibility_level > VL['dataloader']),
+        rx.hstack(
+            sidebar(
+                mode(DataloaderLoadingState, 'Load a dataloader'),
+                dataloader(DataloaderLoadingState, 1),
+                parameters(DataloaderLoadingState),
+                control=control(
+                    DataloaderLoadingState,
+                    (~cast(rx.Var, DataloaderLoadingState.dataloader_serialized).bool())
+                    | (DataloaderLoadingState.visibility_level > VL['dataloader']),
+                    save=save_dataloader(DataloaderLoadingState, VL['control']),
+                ),
             ),
-            save_dataloader(DataloaderLoadingState, VL['dataloader']),
-            **SIDEBAR_OPTIONS,
+            dataloader_data(DataloaderLoadingState, VL['control']),
+            bot(DataloaderLoadingState, VL['control']),
+            padding='2%',
         ),
-        dataloader_data(DataloaderLoadingState, VL['control']),
-        bot(DataloaderLoadingState, VL['control']),
+        height='1100px',
     )
