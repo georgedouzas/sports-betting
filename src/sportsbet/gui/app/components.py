@@ -3,18 +3,6 @@
 import reflex as rx
 from reflex_ag_grid import ag_grid
 
-SIDEBAR_OPTIONS = {
-    'spacing': '0',
-    'position': 'fixed',
-    'left': '50px',
-    'top': '100px',
-    'padding_x': '1em',
-    'padding_y': "1.5em",
-    'bg': rx.color('blue', 3),
-    'height': '600px',
-    'width': '20em',
-}
-
 
 def navbar() -> rx.Component:
     """The navigation bar component."""
@@ -33,20 +21,11 @@ def navbar() -> rx.Component:
     )
 
 
-def home() -> rx.Component:
-    """Home title."""
-    return rx.vstack(
-        rx.text('Sports Betting', size='4', weight='bold'),
-        rx.divider(width='18em'),
-    )
-
-
 def title(name: str, icon_name: str) -> rx.Component:
     """The title component."""
     return rx.hstack(
         rx.icon(icon_name),
         rx.text(name, size="4"),
-        width="100%",
         color=rx.color("accent", 11),
     )
 
@@ -72,6 +51,20 @@ def mode(state: rx.State, content: str) -> rx.Component:
                 on_change=state.set_mode_type,
             ),
         ),
+    )
+
+
+def sidebar(*components: rx.Component, control: rx.Component) -> rx.Component:
+    """The sidebar component."""
+    return rx.vstack(
+        rx.vstack(*components),
+        control,
+        spacing='2',
+        padding='10px',
+        bg=rx.color('blue', 3),
+        height='600px',
+        width='270px',
+        justify='between',
     )
 
 
@@ -141,65 +134,52 @@ def model(state: rx.State, visibility_level: int) -> rx.Component:
     )
 
 
-def submit_reset(state: rx.State, disabled: bool, url: str | None = None) -> rx.Component:
-    """Submit and reset buttons of UI."""
+def save_dataloader(state: rx.State, visibility_level: int | None = None) -> rx.Component:
+    """The save component."""
+    return rx.button(
+        rx.icon('download'),
+        on_click=state.download_dataloader,
+        disabled=state.visibility_level < visibility_level if visibility_level is not None else True,
+    )
+
+
+def save_model(state: rx.State, visibility_level: int | None = None) -> rx.Component:
+    """The save component."""
+    return rx.button(
+        rx.icon('download'),
+        on_click=state.download_model,
+        disabled=state.visibility_level < visibility_level if visibility_level is not None else True,
+    )
+
+
+def control(state: rx.State, disabled: bool, save: rx.Component, url: str | None = None) -> rx.Component:
+    """The control component."""
     return rx.vstack(
-        rx.divider(top='630px', position='fixed', width='18em'),
+        rx.divider(),
         rx.hstack(
-            rx.link(
-                rx.button(
-                    'Submit',
-                    on_click=state.submit_state,
-                    disabled=disabled | state.dataloader_error,
-                    loading=state.loading,
-                    position='fixed',
-                    top='650px',
-                    width='70px',
+            rx.hstack(
+                rx.link(
+                    rx.button(
+                        rx.icon('check'),
+                        on_click=state.submit_state,
+                        disabled=disabled | state.dataloader_error,
+                        loading=state.loading,
+                    ),
+                    href=url,
                 ),
-                href=url,
-            ),
-            rx.link(
-                rx.button(
-                    'Reset',
-                    on_click=state.reset_state,
-                    position='fixed',
-                    top='650px',
-                    left='150px',
-                    width='70px',
+                rx.link(
+                    rx.button(
+                        rx.icon('x'),
+                        on_click=state.reset_state,
+                    ),
+                    href='/',
                 ),
-                href='/',
             ),
+            save,
+            justify='between',
+            width='100%',
         ),
-    )
-
-
-def save_dataloader(state: rx.State, visibility_level: int) -> rx.Component:
-    """The save component."""
-    return rx.cond(
-        state.visibility_level > visibility_level,
-        rx.button(
-            'Save',
-            position='fixed',
-            top='650px',
-            left='275px',
-            width='70px',
-            on_click=state.download_dataloader,
-        ),
-    )
-
-
-def save_model(state: rx.State, visibility_level: int) -> rx.Component:
-    """The save component."""
-    return rx.cond(
-        state.visibility_level > visibility_level,
-        rx.button(
-            'Save',
-            position='fixed',
-            top='650px',
-            left='275px',
-            width='70px',
-            on_click=state.download_model,
-        ),
+        width='100%',
     )
 
 
@@ -207,51 +187,49 @@ def dataloader_data(state: rx.State, visibility_level: int) -> rx.Component:
     """Data component of UI."""
     return rx.cond(
         state.visibility_level == visibility_level,
-        rx.vstack(
-            rx.heading(state.data_title),
+        rx.box(
             rx.vstack(
-                rx.divider(width='900px'),
+                rx.heading(state.data_title),
                 ag_grid(
                     id='data',
                     row_data=state.data,
                     column_defs=state.data_cols,
-                    height='470px',
-                    width='900px',
                     theme='balham',
+                    width='100%',
+                    height='100%',
                 ),
-                rx.divider(width='900px'),
-            ),
-            rx.hstack(
-                rx.cond(
-                    state.X_fix,
+                rx.hstack(
+                    rx.cond(
+                        state.X_fix,
+                        rx.tooltip(
+                            rx.button(
+                                rx.icon('database'),
+                                on_click=state.switch_displayed_data_category,
+                                variant='surface',
+                                loading=state.loading_db,
+                            ),
+                            content='Switch between training or fixtures data',
+                        ),
+                        rx.tooltip(
+                            rx.button(rx.icon('database'), variant='surface', disabled=True),
+                            content='Fixtures are not currently available',
+                        ),
+                    ),
                     rx.tooltip(
                         rx.button(
-                            rx.icon('database'),
-                            on_click=state.switch_displayed_data_category,
+                            rx.icon('arrow-up-down'),
+                            on_click=state.switch_displayed_data_type,
                             variant='surface',
                             loading=state.loading_db,
                         ),
-                        content='Switch between training or fixtures data',
+                        content='Switch between input, output or odds data',
                     ),
-                    rx.tooltip(
-                        rx.button(rx.icon('database'), variant='surface', disabled=True),
-                        content='Fixtures are not currently available',
-                    ),
+                    width='100%',
+                    justify='end',
                 ),
-                rx.tooltip(
-                    rx.button(
-                        rx.icon('arrow-up-down'),
-                        on_click=state.switch_displayed_data_type,
-                        variant='surface',
-                        loading=state.loading_db,
-                    ),
-                    content='Switch between input, output or odds data',
-                ),
-                margin_top='10px',
+                height='590px',
             ),
-            position='fixed',
-            left='400px',
-            top='90px',
+            width='100%',
         ),
     )
 
@@ -260,52 +238,44 @@ def model_data(state: rx.State, visibility_level: int) -> rx.Component:
     """Data component of UI."""
     return rx.cond(
         state.visibility_level == visibility_level,
-        rx.cond(
-            state.evaluation_selection == 'Backtesting',
-            rx.vstack(
-                rx.heading('Backtesting results'),
+        rx.box(
+            rx.cond(
+                state.evaluation_selection == 'Backtesting',
                 rx.vstack(
-                    rx.divider(width='900px'),
+                    rx.heading('Results'),
                     ag_grid(
                         id='backtesting',
                         row_data=state.backtesting_results,
                         column_defs=state.backtesting_results_cols,
-                        height='225px',
-                        width='900px',
                         theme='balham',
+                        width='100%',
+                        height='100%',
                     ),
+                    rx.heading('Optimal parameters'),
                     ag_grid(
                         id='parameters',
                         row_data=state.optimal_params,
                         column_defs=state.optimal_params_cols,
-                        height='225px',
-                        width='900px',
                         theme='balham',
+                        width='100%',
+                        height='100%',
                     ),
-                    rx.divider(width='900px'),
+                    height='600px',
                 ),
-                position='fixed',
-                left='400px',
-                top='90px',
-            ),
-            rx.vstack(
-                rx.heading('Value bets'),
                 rx.vstack(
-                    rx.divider(width='900px'),
+                    rx.heading('Value bets'),
                     ag_grid(
                         id='value_bets',
                         row_data=state.value_bets,
                         column_defs=state.value_bets_cols,
-                        height='460px',
-                        width='900px',
                         theme='balham',
+                        width='100%',
+                        height='100%',
                     ),
-                    rx.divider(width='900px'),
+                    height='600px',
                 ),
-                position='fixed',
-                left='400px',
-                top='90px',
             ),
+            width='100%',
         ),
     )
 
@@ -319,11 +289,9 @@ def bot(state: rx.State, visibility_level: int) -> rx.Component:
                 rx.icon('bot-message-square', size=70),
                 rx.html(state.streamed_message),
             ),
-            position='fixed',
-            left='600px',
-            top='100px',
-            width='500px',
+            width='100%',
+            height='600px',
             background_color=rx.color('gray', 2),
-            padding='30px',
+            padding='20px',
         ),
     )
