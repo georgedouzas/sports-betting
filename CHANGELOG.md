@@ -6,42 +6,60 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.11.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.0) - 2025-01-14
+
+<small>[Compare with 0.10.0](https://github.com/georgedouzas/sports-betting/compare/0.10.0...0.11.0)</small>
+
+### Features
+
+- Make GUI responsive ([0444f63](https://github.com/georgedouzas/sports-betting/commit/0444f63f992cf5f24217bf0ee66c657bf463a022) by georgedouzas).
+
+### Docs
+
+- Include screenshots and descriptions from updated GUI ([c4cd36f](https://github.com/georgedouzas/sports-betting/commit/c4cd36f69c835eb72988b41cdabea465d308a1b9) by georgedouzas).
+- Fix broken README links ([e333fea](https://github.com/georgedouzas/sports-betting/commit/e333fea228a92d819aa14670eddc3b7ada60e595) by georgedouzas).
+
+### Chore
+
+- Update reflex dependencies ([33c1fa5](https://github.com/georgedouzas/sports-betting/commit/33c1fa5238ff458f89e7857d6ecb923f88771b44) by georgedouzas).
+
 ## [0.10.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.10.0) - 2025-01-11
 
 <small>[Compare with 0.9.3](https://github.com/georgedouzas/sports-betting/compare/0.9.3...0.10.0)</small>
 
 ### Features
 
-- Implement full GUI functionality ([a22261c](https://github.com/georgedouzas/sports-betting/commit/a22261c182e557b4a2e547092bd77927394dd52b) by georgedouzas).
-- Add model creation to GUI ([d8aba8c](https://github.com/georgedouzas/sports-betting/commit/d8aba8c118d2740467c7dc262d1942e872b82a20) by georgedouzas).
-- Create script to run app ([aa558f8](https://github.com/georgedouzas/sports-betting/commit/aa558f8ea119af48d7744fe97cf2506f43f33418) by georgedouzas).
-- Implement bot functionality ([d53153d](https://github.com/georgedouzas/sports-betting/commit/d53153dc252d6f6d8a4d0b833bfb58b3d95973f0) by georgedouzas).
-- Implement data functionality of GUI ([13e53b9](https://github.com/georgedouzas/sports-betting/commit/13e53b95d0bb733e46f0487117b25e1a5cf9f78f) by georgedouzas).
-- Initial GUI implementation ([8950562](https://github.com/georgedouzas/sports-betting/commit/89505623d77cb5a97e499b8885d11342e3a9a249) by georgedouzas).
+- Implement full GUI functionality ([7a910ee](https://github.com/georgedouzas/sports-betting/commit/7a910eebedb8645808a31c82dafc7bf9ee71b0c3) by georgedouzas).
+- Add model creation to GUI ([33dab84](https://github.com/georgedouzas/sports-betting/commit/33dab84cdc733d11b0cf21d046cf1ed5fa050a60) by georgedouzas).
+- Create script to run app ([ababb94](https://github.com/georgedouzas/sports-betting/commit/ababb9498a6186f98b428dfead0e34f4a2b035a3) by georgedouzas).
+- Implement bot functionality ([c03bd2a](https://github.com/georgedouzas/sports-betting/commit/c03bd2ac6c261a4d7b91420c64f652b1e5a6b851) by georgedouzas).
+- Implement data functionality of GUI ([0af3510](https://github.com/georgedouzas/sports-betting/commit/0af3510c577bed4d3e16fcedfa551907d524727c) by georgedouzas).
+- Initial GUI implementation ([6646395](https://github.com/georgedouzas/sports-betting/commit/6646395055c9e7c225a0a80c022e75681eb46bc3) by georgedouzas).
 
 ### Docs
 
-- Update README to include GUI description ([16dc843](https://github.com/georgedouzas/sports-betting/commit/16dc843213f27b172776171246f76cd34f72a6bb) by georgedouzas).
-- Exclude GUI from API documentation ([79cb2ed](https://github.com/georgedouzas/sports-betting/commit/79cb2ed9d121fe1295c09f01891bf15e45210712) by georgedouzas).
+- Update README to include GUI description ([b18b91b](https://github.com/georgedouzas/sports-betting/commit/b18b91bcfd4c41e065e3405d81785af79c228586) by georgedouzas).
+- Exclude GUI from API documentation ([11fa52d](https://github.com/georgedouzas/sports-betting/commit/11fa52d725ab38597caf58d47cdcd27b9d6299e2) by georgedouzas).
 
 ### Code Refactoring
 
-- Use common state for dataloader ([83fd195](https://github.com/georgedouzas/sports-betting/commit/83fd195ac62d901f7623548cf76857717a987bd5) by georgedouzas).
-- Implement modules for components and states ([e19e542](https://github.com/georgedouzas/sports-betting/commit/e19e542a46899e882d183a1258b8894a9e7b1709) by georgedouzas).
-- Remove directories ([fa08cfc](https://github.com/georgedouzas/sports-betting/commit/fa08cfc486a8ff59126e5d38397c1afef9813a3f) by georgedouzas).
-- Use simpler structure ([46ddeff](https://github.com/georgedouzas/sports-betting/commit/46ddeff75be3f46ee46a3c8ab3897b7b2bbdc9e4) by georgedouzas).
-- Split dataloader funcionality to multiple pages ([d689e54](https://github.com/georgedouzas/sports-betting/commit/d689e540dd8ed232ccea5e3f23a6089e5a1834b7) by georgedouzas).
+- Use common state for dataloader ([dcb2ba5](https://github.com/georgedouzas/sports-betting/commit/dcb2ba5b0220390de13283a36b994f4cac2b3eba) by georgedouzas).
+- Implement modules for components and states ([8be2a51](https://github.com/georgedouzas/sports-betting/commit/8be2a514d7cacc74fa26ac52198d5e896e53ccbb) by georgedouzas).
+- Remove directories ([0932445](https://github.com/georgedouzas/sports-betting/commit/0932445fa8611b95ec3f6bf90fb90a23c5497a53) by georgedouzas).
+- Use simpler structure ([e97d499](https://github.com/georgedouzas/sports-betting/commit/e97d499ade0486393730d06315db6507fbd4d18b) by georgedouzas).
+- Split dataloader funcionality to multiple pages ([e87cad5](https://github.com/georgedouzas/sports-betting/commit/e87cad5f2b7f4a50cc412262afec6ab799c651d8) by georgedouzas).
 
 ### Chore
 
-- Modify default dataloader settings ([fa5d166](https://github.com/georgedouzas/sports-betting/commit/fa5d166554de67563977dab034ef4c054f404991) by georgedouzas).
-- Increase timeout for backtesting functionality ([c45d031](https://github.com/georgedouzas/sports-betting/commit/c45d0319cb3709d8ad184c5b690186ece6f33bdd) by georgedouzas).
-- Ignore gui from testing ([a1676e5](https://github.com/georgedouzas/sports-betting/commit/a1676e519045a445be34098b05749eaa7748d1fe) by georgedouzas).
-- Change base classes to public ([03c6556](https://github.com/georgedouzas/sports-betting/commit/03c655632dbadc15d49df205aaba7c5738379242) by georgedouzas).
-- Make gui dependencies optional ([9b10914](https://github.com/georgedouzas/sports-betting/commit/9b1091419199c637cf346b2dc355f128d11e7b31) by georgedouzas).
-- Clean .web directory ([ffe7a00](https://github.com/georgedouzas/sports-betting/commit/ffe7a00205585c10d9e5e11b0b86a6c7e9d0563d) by georgedouzas).
-- Add reflex-ag-grid dependency ([becf833](https://github.com/georgedouzas/sports-betting/commit/becf83334e0babd5b14cb60c93ec234f2b65281c) by georgedouzas).
-- Renamed GUI app ([9f9f84c](https://github.com/georgedouzas/sports-betting/commit/9f9f84cafb23458457f7e47b9bc260705683b419) by georgedouzas).
+- Release 0.10.0 ([a043b41](https://github.com/georgedouzas/sports-betting/commit/a043b4105f6f89b01497e812dcfc3deb124d954a) by georgedouzas).
+- Modify default dataloader settings ([92066ba](https://github.com/georgedouzas/sports-betting/commit/92066ba2252d45ffeb578cfc9933333cb63fb23d) by georgedouzas).
+- Increase timeout for backtesting functionality ([138246e](https://github.com/georgedouzas/sports-betting/commit/138246ec6764ec95154f66cfb7f7f503eeb7ee3d) by georgedouzas).
+- Ignore gui from testing ([fcad0aa](https://github.com/georgedouzas/sports-betting/commit/fcad0aac51c6cf0f838eb1dd62c85b7f32baa34a) by georgedouzas).
+- Change base classes to public ([d646258](https://github.com/georgedouzas/sports-betting/commit/d646258f1716d4c01c1588722e8773d0c2f5ff2a) by georgedouzas).
+- Make gui dependencies optional ([c53bf7c](https://github.com/georgedouzas/sports-betting/commit/c53bf7cbe3f439d60c144941cac6dc8b645b6566) by georgedouzas).
+- Clean .web directory ([40159d8](https://github.com/georgedouzas/sports-betting/commit/40159d873a00f2ae97c6cd5815ea0b1421b463c5) by georgedouzas).
+- Add reflex-ag-grid dependency ([6c1017b](https://github.com/georgedouzas/sports-betting/commit/6c1017b1efb9f9115cf4aeb359e59a47375d4584) by georgedouzas).
+- Renamed GUI app ([c33d575](https://github.com/georgedouzas/sports-betting/commit/c33d57558a6dc051a9205add2d485dd9c9665137) by georgedouzas).
 
 ## [0.9.3](https://github.com/georgedouzas/sports-betting/releases/tag/0.9.3) - 2024-12-12
 
