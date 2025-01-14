@@ -162,10 +162,10 @@ Here are a few things you can do with the GUI:
 ![](screenshots/betting_model.png)
 ![](docs/screenshots/betting_model.png)
 
-Run the model to get predictions:
+- Run the model to get either backtesting results or value bets:
 
-![](screenshots/predictions.png)
-![](docs/screenshots/predictions.png)
+![](screenshots/backtesting.png)
+![](docs/screenshots/backtesting.png)
 
 ### API
 
