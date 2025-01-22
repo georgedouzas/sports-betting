@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from ._base import BaseDataLoader, load_dataloader
-from ._dummy import DummySoccerDataLoader
 from ._soccer._data import SoccerDataLoader
+from ._soccer._dummy import DummySoccerDataLoader
 
 __all__: list[str] = [
     'BaseDataLoader',
