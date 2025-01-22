@@ -5,26 +5,65 @@
 
 from __future__ import annotations
 
+import asyncio
+import io
 import warnings
 from functools import lru_cache
-from json import loads
-from typing import ClassVar, Self
 
-import numpy as np
-import pandas as pd
-from bs4 import BeautifulSoup
-from sklearn.model_selection import ParameterGrid
+import aiohttp
+import polars as pl
+from typing_extensions import Self
 
-from ... import FixturesData, ParamGrid, Schema, TrainData
-from .._base import BaseDataLoader
-from ._utils import OUTPUTS, _read_csv, _read_csvs, _read_urls_content
+from ... import FixturesData, TrainData
+from ._base import BaseSoccerDataLoader
 
 MODELLING_URL = 'https://github.com/georgedouzas/sports-betting/tree/data/data/soccer/modelling'
 TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/{league}_{division}_{year}.csv'
 FIXTURES_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/fixtures.csv'
 
 
-class SoccerDataLoader(BaseDataLoader):
+CONNECTIONS_LIMIT = 20
+
+
+async def _read_url_content_async(client: aiohttp.ClientSession, url: str) -> str:
+    """Read asynchronously the URL content."""
+    async with client.get(url) as response:
+        with io.StringIO(await response.text(encoding='ISO-8859-1')) as text_io:
+            return text_io.getvalue()
+
+
+async def _read_urls_content_async(urls: list[str]) -> list[str]:
+    """Read asynchronously the URLs content."""
+    async with aiohttp.ClientSession(
+        raise_for_status=True,
+        connector=aiohttp.TCPConnector(limit=CONNECTIONS_LIMIT),
+    ) as client:
+        futures = [_read_url_content_async(client, url) for url in urls]
+        return await asyncio.gather(*futures)
+
+
+def _read_urls_content(urls: list[str]) -> list[str]:
+    """Read the URLs content."""
+    return asyncio.run(_read_urls_content_async(urls))
+
+
+def _read_csvs(urls: list[str]) -> list[pl.DataFrame]:
+    """Read the CSVs."""
+    urls_content = _read_urls_content(urls)
+    csvs = []
+    for content in urls_content:
+        names = pl.read_csv(io.StringIO(content), nrows=0, encoding='ISO-8859-1').columns.to_list()
+        csv = pl.read_csv(io.StringIO(content), names=names, skiprows=1, encoding='ISO-8859-1', on_bad_lines='skip')
+        csvs.append(csv)
+    return csvs
+
+
+def _read_csv(url: str) -> pl.DataFrame:
+    """Read the CSV."""
+    return _read_csvs([url])[0]
+
+
+class SoccerDataLoader(BaseSoccerDataLoader):
     """Dataloader for soccer data.
 
     It downloads historical and fixtures data for various
@@ -45,7 +84,7 @@ class SoccerDataLoader(BaseDataLoader):
             The checked value of parameters grid. It includes all possible parameters if
             `param_grid` is `None`.
 
-        dropped_na_cols_ (pd.Index):
+        dropped_na_cols_ (pl.Index):
             The columns with missing values that are dropped.
 
         drop_na_thres_(float):
@@ -54,16 +93,16 @@ class SoccerDataLoader(BaseDataLoader):
         odds_type_ (str | None):
             The checked value of `odds_type`.
 
-        input_cols_ (pd.Index):
+        input_cols_ (pl.Index):
             The columns of `X_train` and `X_fix`.
 
-        output_cols_ (pd.Index):
+        output_cols_ (pl.Index):
             The columns of `Y_train` and `Y_fix`.
 
-        odds_cols_ (pd.Index):
+        odds_cols_ (pl.Index):
             The columns of `O_train` and `O_fix`.
 
-        target_cols_ (pd.Index):
+        target_cols_ (pl.Index):
             The columns used for the extraction of output and odds columns.
 
         train_data_ (TrainData):
@@ -76,7 +115,7 @@ class SoccerDataLoader(BaseDataLoader):
 
     Examples:
         >>> from sportsbet.datasets import SoccerDataLoader
-        >>> import pandas as pd
+        >>> import pandas as pl
         >>> # Get all available parameters to select the training data
         >>> SoccerDataLoader.get_all_params()
         [{'division': 1, 'league': 'Argentina', ...
@@ -95,115 +134,38 @@ class SoccerDataLoader(BaseDataLoader):
         >>> # Extract the corresponding fixtures data
         >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
         >>> # Training and fixtures input and odds data have the same column names
-        >>> pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
-        >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
+        >>> pl.testing.assert_index_equal(X_train.columns, X_fix.columns)
+        >>> pl.testing.assert_index_equal(O_train.columns, O_fix.columns)
         >>> # Fixtures data have always no output
         >>> Y_fix is None
         True
     """
 
-    SCHEMA: ClassVar[Schema] = [
-        ('date', np.datetime64),
-        ('league', object),
-        ('division', np.int64),
-        ('year', np.int64),
-        ('home_team', object),
-        ('away_team', object),
-        ('odds__market_maximum__home_win__full_time_goals', float),
-        ('odds__market_maximum__draw__full_time_goals', float),
-        ('odds__market_maximum__away_win__full_time_goals', float),
-        ('odds__market_maximum__over_2.5__full_time_goals', float),
-        ('odds__market_maximum__under_2.5__full_time_goals', float),
-        ('odds__market_average__home_win__full_time_goals', float),
-        ('odds__market_average__draw__full_time_goals', float),
-        ('odds__market_average__away_win__full_time_goals', float),
-        ('odds__market_average__over_2.5__full_time_goals', float),
-        ('odds__market_average__under_2.5__full_time_goals', float),
-        ('home__points__avg', float),
-        ('home__adj_points__avg', float),
-        ('home__goals_for__avg', float),
-        ('home__goals_against__avg', float),
-        ('home__adj_goals_for__avg', float),
-        ('home__adj_goals_against__avg', float),
-        ('home__points__latest_avg', float),
-        ('home__adj_points__latest_avg', float),
-        ('home__goals_for__latest_avg', float),
-        ('home__goals_against__latest_avg', float),
-        ('home__adj_goals_for__latest_avg', float),
-        ('home__adj_goals_against__latest_avg', float),
-        ('away__points__avg', float),
-        ('away__adj_points__avg', float),
-        ('away__goals_for__avg', float),
-        ('away__goals_against__avg', float),
-        ('away__adj_goals_for__avg', float),
-        ('away__adj_goals_against__avg', float),
-        ('away__points__latest_avg', float),
-        ('away__adj_points__latest_avg', float),
-        ('away__goals_for__latest_avg', float),
-        ('away__goals_against__latest_avg', float),
-        ('away__adj_goals_for__latest_avg', float),
-        ('away__adj_goals_against__latest_avg', float),
-        ('target__home_team__full_time_goals', float),
-        ('target__away_team__full_time_goals', float),
-        ('target__home_team__shots', float),
-        ('target__away_team__shots', float),
-        ('target__home_team__shots_on_target', float),
-        ('target__away_team__shots_on_target', float),
-        ('target__home_team__corners', float),
-        ('target__away_team__corners', float),
-        ('target__home_team__fouls_committed', float),
-        ('target__away_team__fouls_committed', float),
-        ('target__home_team__yellow_cards', float),
-        ('target__away_team__yellow_cards', float),
-        ('target__home_team__red_cards', float),
-        ('target__away_team__red_cards', float),
-    ]
-    OUTPUTS = OUTPUTS
+    def _get_stats_data(self: Self) -> pl.DataFrame:
+        return pl.DataFrame()
 
-    def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
-        super().__init__(param_grid)
-
-    @classmethod
-    @lru_cache
-    def _get_full_param_grid(cls: type[SoccerDataLoader]) -> ParameterGrid:
-        bsObj = BeautifulSoup(_read_urls_content([MODELLING_URL])[0], features='html.parser')
-        element = bsObj.find('script', {'data-target': 'react-app.embeddedData'})
-        param_grid = []
-        for item in loads(element.text)['payload']['tree']['items']:
-            if 'fixtures.csv' not in item['path']:
-                league, division, year = item['name'].replace('.csv', '').split('_')
-                param_grid.append(
-                    {
-                        'league': [league.title() if league.lower() != 'usa' else 'USA'],
-                        'division': [int(division)],
-                        'year': [int(year)],
-                    },
-                )
-        return ParameterGrid(param_grid)
+    def _get_odds_data(self: Self) -> pl.DataFrame:
+        return pl.DataFrame()
 
     @lru_cache  # noqa: B019
-    def _get_data(self: Self) -> pd.DataFrame:
+    def _get_data(self: Self) -> pl.DataFrame:
         urls = [TRAINING_URL.format(**params) for params in self.param_grid_]
-        training_data = pd.concat(_read_csvs(urls))
+        training_data = pl.concat(_read_csvs(urls))
         training_data['fixtures'] = False
         fixtures_data = _read_csv(FIXTURES_URL)
         fixtures_data['fixtures'] = True
-        data = (pd.concat([training_data, fixtures_data]) if not fixtures_data.empty else training_data).reset_index(
+        data = (pl.concat([training_data, fixtures_data]) if not fixtures_data.empty else training_data).reset_index(
             drop=True,
         )
         try:
-            data['date'] = pd.to_datetime(data['date'], format='%d/%m/%Y')
+            data['date'] = pl.to_datetime(data['date'], format='%d/%m/%Y')
         except ValueError:
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', category=UserWarning)
-                data['date'] = pd.to_datetime(data['date'], infer_datetime_format=True)
+                data['date'] = pl.to_datetime(data['date'], infer_datetime_format=True)
         return data
 
-    def extract_train_data(
-        self: Self,
-        drop_na_thres: float = 0.0,
-        odds_type: str | None = None,
-    ) -> TrainData:
+    def extract_train_data(self: Self) -> TrainData:
         """Extract the training data.
 
         Read more in the [user guide][dataloader].
@@ -240,7 +202,7 @@ class SoccerDataLoader(BaseDataLoader):
                 Each of the components represent the training input data `X`, the
                 multi-output targets `Y` and the corresponding odds `O`, respectively.
         """
-        return super().extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
+        return super().extract_train_data()
 
     def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.
