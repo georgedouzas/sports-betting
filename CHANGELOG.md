@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Modify to pass checks ([777eb90](https://github.com/georgedouzas/sports-betting/commit/777eb90e9ee8f7b705b35917e4287edda7ea3364) by georgedouzas).
 
+### Chore
+
+- Clean .states directory ([ca2e8dc](https://github.com/georgedouzas/sports-betting/commit/ca2e8dc7df3e7653bf2123e9314bdcf87128af49) by georgedouzas).
+- Release 0.11.1 ([bb0853e](https://github.com/georgedouzas/sports-betting/commit/bb0853e924ba769e95b57871cc6cb3bba914c0cc) by georgedouzas).
+
 ## [0.11.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.0) - 2025-01-14
 
 <small>[Compare with 0.10.0](https://github.com/georgedouzas/sports-betting/compare/0.10.0...0.11.0)</small>
