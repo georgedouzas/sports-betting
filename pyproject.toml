@@ -63,7 +63,7 @@ build = {package-dir = "src", editable-backend = "editables"}
 
 [tool.pdm.scripts]
 clean = {shell = """rm -rf .mypy_cache .pytest_cache tests/.pytest_cache build dist \
-htmlcov pip-wheel-metadata site __pycache__ docs/generated .nox .ruff_cache pdm.lock src/sportsbet/gui/.web \
+htmlcov pip-wheel-metadata site __pycache__ docs/generated .nox .ruff_cache pdm.lock src/sportsbet/gui/.web src/sportsbet/gui/.states  \
 && find . -type d -name __pycache__ | xargs rm -rf \
 && find . -name '*.rej'  -delete \
 && find . -name '.coverage*'  -delete"""}
