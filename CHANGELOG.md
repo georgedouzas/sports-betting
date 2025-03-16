@@ -6,22 +6,30 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.11.2](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.2) - 2025-03-16
+
+<small>[Compare with 0.11.1](https://github.com/georgedouzas/sports-betting/compare/0.11.1...0.11.2)</small>
+
+### Chore
+
+- Release 0.11.1 ([7484d10](https://github.com/georgedouzas/sports-betting/commit/7484d10b1e3d7f441f857d584798e9469c573fab) by georgedouzas).
+- Clean .states directory ([057c218](https://github.com/georgedouzas/sports-betting/commit/057c218efa5e50a77b20972a4aba6652296b77f2) by georgedouzas).
+
 ## [0.11.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.1) - 2025-03-16
 
 <small>[Compare with 0.11.0](https://github.com/georgedouzas/sports-betting/compare/0.11.0...0.11.1)</small>
 
 ### Bug Fixes
 
-- Downgrade reflex version to 0.7.0 ([a8e187f](https://github.com/georgedouzas/sports-betting/commit/a8e187f8338c5aab0d3df602ae90156afc3af9c7) by georgedouzas).
+- Downgrade reflex version to 0.7.0 ([6f077a9](https://github.com/georgedouzas/sports-betting/commit/6f077a951c46952240d732fbd0488dfe799de621) by georgedouzas).
 
 ### Code Refactoring
 
-- Modify to pass checks ([777eb90](https://github.com/georgedouzas/sports-betting/commit/777eb90e9ee8f7b705b35917e4287edda7ea3364) by georgedouzas).
+- Modify to pass checks ([b9b69aa](https://github.com/georgedouzas/sports-betting/commit/b9b69aa2c281e179c5c02b63b1f6673f1882314a) by georgedouzas).
 
 ### Chore
 
-- Clean .states directory ([ca2e8dc](https://github.com/georgedouzas/sports-betting/commit/ca2e8dc7df3e7653bf2123e9314bdcf87128af49) by georgedouzas).
-- Release 0.11.1 ([bb0853e](https://github.com/georgedouzas/sports-betting/commit/bb0853e924ba769e95b57871cc6cb3bba914c0cc) by georgedouzas).
+- Release 0.11.1 ([94194dc](https://github.com/georgedouzas/sports-betting/commit/94194dc1ac29c2eb88f2030be95f8e663e75ff15) by georgedouzas).
 
 ## [0.11.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.0) - 2025-01-14
 
