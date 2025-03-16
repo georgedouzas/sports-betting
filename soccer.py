@@ -507,7 +507,7 @@ def _convert_data_types(data: pd.DataFrame) -> pd.DataFrame:
             if data_type is float or data_type is np.int64:
                 data_converted_cols = data_converted_cols.infer_objects(
                     copy=False
-                ).replace('-', np.nan)
+                ).replace(('-','`'), np.nan)
                 data_converted_cols = data_converted_cols.infer_objects().fillna(
                     -1 if data_type is np.int64 else np.nan,
                 )
