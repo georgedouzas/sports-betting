@@ -675,8 +675,8 @@ class DataloaderLoadingState(DataloaderState):
             self.all_divisions = list(chunked(sorted({params['division'] for params in all_params}), 1))
             self.param_checked = {
                 **{f'"{key}"': True for key in {params['league'] for params in dataloader.param_grid_}},
-                **{key: True for key in {params['year'] for params in dataloader.param_grid_}},
-                **{key: True for key in {params['division'] for params in dataloader.param_grid_}},
+                **dict.fromkeys({params['year'] for params in dataloader.param_grid_}, True),
+                **dict.fromkeys({params['division'] for params in dataloader.param_grid_}, True),
             }
             self.odds_type = dataloader.odds_type_
             self.drop_na_thres = dataloader.drop_na_thres_
