@@ -6,22 +6,35 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.11.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.1) - 2025-03-16
+
+<small>[Compare with 0.11.0](https://github.com/georgedouzas/sports-betting/compare/0.11.0...0.11.1)</small>
+
+### Bug Fixes
+
+- Downgrade reflex version to 0.7.0 ([a8e187f](https://github.com/georgedouzas/sports-betting/commit/a8e187f8338c5aab0d3df602ae90156afc3af9c7) by georgedouzas).
+
+### Code Refactoring
+
+- Modify to pass checks ([777eb90](https://github.com/georgedouzas/sports-betting/commit/777eb90e9ee8f7b705b35917e4287edda7ea3364) by georgedouzas).
+
 ## [0.11.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.0) - 2025-01-14
 
 <small>[Compare with 0.10.0](https://github.com/georgedouzas/sports-betting/compare/0.10.0...0.11.0)</small>
 
 ### Features
 
-- Make GUI responsive ([1d0e000](https://github.com/georgedouzas/sports-betting/commit/1d0e000fa990c467271a2b185055a10cf04922b5) by georgedouzas).
+- Make GUI responsive ([9d17c35](https://github.com/georgedouzas/sports-betting/commit/9d17c3517699a4d75e10132b8017484040e5df8b) by georgedouzas).
 
 ### Docs
 
-- Include screenshots and descriptions from updated GUI ([e655696](https://github.com/georgedouzas/sports-betting/commit/e6556960d7f8041f07254b1224dccdb30896cef6) by georgedouzas).
+- Include screenshots and descriptions from updated GUI ([bc7ef79](https://github.com/georgedouzas/sports-betting/commit/bc7ef79616cf8ff8886996b419ee6cf73a657760) by georgedouzas).
 - Fix broken README links ([12589f0](https://github.com/georgedouzas/sports-betting/commit/12589f0db6b88215c12cd14e30974eb7aff19db0) by georgedouzas).
 
 ### Chore
 
-- Update reflex dependencies ([d9823a2](https://github.com/georgedouzas/sports-betting/commit/d9823a21d75f3e16ee0177012d260a1bcd3a1244) by georgedouzas).
+- Release 0.11.0 ([9211a91](https://github.com/georgedouzas/sports-betting/commit/9211a917c4c8fafa8ecd16e07230b13fb7f1e5d3) by georgedouzas).
+- Update reflex dependencies ([87ba394](https://github.com/georgedouzas/sports-betting/commit/87ba394f786a660434088316666601cd8ccb8b56) by georgedouzas).
 
 ## [0.10.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.10.0) - 2025-01-11
 
