@@ -128,6 +128,7 @@ in-place = true
 recursive = true
 close-quotes-on-newline = true
 wrap-descriptions = 120
+wrap-summaries = 120
 
 [tool.ruff]
 extend-exclude = ["docs/generated"]
