@@ -1,21 +1,18 @@
 """Test the main commands."""
 
-import pytest
-
 from sportsbet.cli import main
 
 
-def test_main(capsys):
+def test_main(cli_runner):
     """Test main command."""
-    with pytest.raises(SystemExit):
-        main([])
-    captured = capsys.readouterr()
-    assert 'CLI for sports-betting' in captured.out
+    result = cli_runner.invoke(main, [])
+    exit_code = 2
+    assert result.exit_code == exit_code, result.output
+    assert 'CLI for sports-betting' in result.output
 
 
-def test_main_help(capsys):
+def test_main_help(cli_runner):
     """Test main help command."""
-    with pytest.raises(SystemExit):
-        main(['--help'])
-    captured = capsys.readouterr()
-    assert 'CLI for sports-betting' in captured.out
+    result = cli_runner.invoke(main, ['--help'])
+    assert result.exit_code == 0, result.output
+    assert 'CLI for sports-betting' in result.output

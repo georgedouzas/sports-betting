@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from click.testing import CliRunner
 
 CONFIG = """
 from sklearn.model_selection import TimeSeriesSplit
@@ -31,3 +32,9 @@ def cli_config_path(tmp_path: Path) -> Path:
     with Path.open(tmp_path / 'config.py', 'wt') as config_file:
         config_file.write(CONFIG)
     return tmp_path / 'config.py'
+
+
+@pytest.fixture
+def cli_runner() -> CliRunner:
+    """CLI runner for tests."""
+    return CliRunner()
