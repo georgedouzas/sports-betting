@@ -5,39 +5,56 @@ import pytest
 from sportsbet.cli import main
 
 
-def test_bettor(capsys):
+def test_bettor(cli_runner):
     """Test bettor command."""
-    with pytest.raises(SystemExit):
-        main(['bettor'])
-    captured = capsys.readouterr()
-    assert 'Backtest a bettor and predict the value bets.' in captured.out
+    result = cli_runner.invoke(main, ['bettor'])
+    exit_code = 2
+    assert result.exit_code == exit_code, result.output
+    assert 'Backtest a bettor and predict the value bets.' in result.output
 
 
-def test_bettor_help(capsys):
+def test_bettor_help(cli_runner):
     """Test bettor help command."""
-    with pytest.raises(SystemExit):
-        main(['bettor', '--help'])
-    captured = capsys.readouterr()
-    assert 'Backtest a bettor and predict the value bets.' in captured.out
+    result = cli_runner.invoke(main, ['bettor', '--help'])
+    assert result.exit_code == 0, result.output
+    assert 'Backtest a bettor and predict the value bets.' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_bettor_backtest(capsys, cli_config_path):
+def test_bettor_backtest(cli_runner, cli_config_path):
     """Test bettor backtest command."""
-    with pytest.raises(SystemExit):
-        main(['bettor', 'backtest', '-c', cli_config_path, '-d', cli_config_path.parent])
-    captured = capsys.readouterr()
+    result = cli_runner.invoke(
+        main,
+        [
+            'bettor',
+            'backtest',
+            '-c',
+            cli_config_path,
+            '-d',
+            str(cli_config_path.parent),
+        ],
+    )
     data_path = cli_config_path.parent / 'sports-betting-data'
-    assert 'Backtesting results' in captured.out
+    assert result.exit_code == 0, result.output
+    assert 'Backtesting results' in result.output
     assert (data_path / 'backtesting_results.csv').exists()
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_bettor_bet(capsys, cli_config_path):
+def test_bettor_bet(cli_runner, cli_config_path):
     """Test bettor bet command."""
-    with pytest.raises(SystemExit):
-        main(['bettor', 'bet', '-c', cli_config_path, '-d', cli_config_path.parent])
-    captured = capsys.readouterr()
+    result = cli_runner.invoke(
+        main,
+        [
+            'bettor',
+            'bet',
+            '-c',
+            cli_config_path,
+            '-d',
+            str(cli_config_path.parent),
+        ],
+    )
     data_path = cli_config_path.parent / 'sports-betting-data'
-    assert 'Value bets' in captured.out
+    assert result.exit_code == 0, result.output
+    assert 'Value bets' in result.output
     assert (data_path / 'value_bets.csv').exists()
