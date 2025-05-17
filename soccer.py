@@ -507,7 +507,7 @@ def _convert_data_types(data: pd.DataFrame) -> pd.DataFrame:
             if data_type is float or data_type is np.int64:
                 data_converted_cols = data_converted_cols.infer_objects(
                     copy=False
-                ).replace(('-','`'), np.nan)
+                ).replace(('-', '`', 'x'), np.nan)
                 data_converted_cols = data_converted_cols.infer_objects().fillna(
                     -1 if data_type is np.int64 else np.nan,
                 )
@@ -731,7 +731,7 @@ def extract_raw_training_urls() -> list[tuple[str, str, str]]:
     retry_delay_seconds=5,
 )
 def download_raw_training_data(
-    training_urls: list[tuple[str, str, str]]
+    training_urls: list[tuple[str, str, str]],
 ) -> list[tuple[str, int, int, pd.DataFrame]]:
     """Download the raw training data."""
     data = _read_csvs([url for *_, url in training_urls])
@@ -756,7 +756,7 @@ def download_raw_fixtures_data() -> pd.DataFrame:
 
 @task(description='Process the raw training data', tags=['raw', 'training', 'process'])
 def process_raw_training_data(
-    data: list[tuple[str, int, int, pd.DataFrame]]
+    data: list[tuple[str, int, int, pd.DataFrame]],
 ) -> list[tuple[str, int, int, pd.DataFrame]]:
     """Process the raw training data."""
     processed_data = []
@@ -887,7 +887,9 @@ def extract_modelling_training_data(modelling_data: pd.DataFrame) -> pd.DataFram
 def extract_modelling_fixtures_data(modelling_data: pd.DataFrame) -> pd.DataFrame:
     """Extract the modelling fixtures data."""
     modelling_fixtures_data = pd.concat([data[n:] for *_, n, data in modelling_data])
-    modelling_fixtures_data = modelling_fixtures_data.sort_values(['date', 'league', 'division'])
+    modelling_fixtures_data = modelling_fixtures_data.sort_values(
+        ['date', 'league', 'division']
+    )
     return modelling_fixtures_data
 
 
@@ -896,7 +898,7 @@ def extract_modelling_fixtures_data(modelling_data: pd.DataFrame) -> pd.DataFram
     tags=['processed', 'training', 'save'],
 )
 def save_processed_training_data(
-    data: list[tuple[str, int, int, pd.DataFrame]]
+    data: list[tuple[str, int, int, pd.DataFrame]],
 ) -> None:
     """Save the processed training data."""
     (DATA_PATH / 'processed').mkdir(parents=True, exist_ok=True)
@@ -909,7 +911,7 @@ def save_processed_training_data(
     tags=['modelling', 'training', 'save'],
 )
 def save_modelling_training_data(
-    data: list[tuple[str, int, int, pd.DataFrame]]
+    data: list[tuple[str, int, int, pd.DataFrame]],
 ) -> None:
     """Save the modelling training data."""
     (DATA_PATH / 'modelling').mkdir(parents=True, exist_ok=True)
