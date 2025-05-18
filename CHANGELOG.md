@@ -6,14 +6,31 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.11.3](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.3) - 2025-05-18
+
+<small>[Compare with 0.11.2](https://github.com/georgedouzas/sports-betting/compare/0.11.2...0.11.3)</small>
+
+### Bug Fixes
+
+- Remove redundant file ([6f670e4](https://github.com/georgedouzas/sports-betting/commit/6f670e461ad218c6023da267ec454cb7a11f890c) by georgedouzas).
+
+### Tests
+
+- Add CLI runner ([ec315c8](https://github.com/georgedouzas/sports-betting/commit/ec315c8339e1ae01079d6054e0a0b54e6351c56e) by georgedouzas).
+
+### Chore
+
+- Update copier template ([32579b1](https://github.com/georgedouzas/sports-betting/commit/32579b196a917e6a2d89ccb5f79ea263670713ec) by georgedouzas).
+
 ## [0.11.2](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.2) - 2025-03-16
 
 <small>[Compare with 0.11.1](https://github.com/georgedouzas/sports-betting/compare/0.11.1...0.11.2)</small>
 
 ### Chore
 
-- Release 0.11.1 ([7484d10](https://github.com/georgedouzas/sports-betting/commit/7484d10b1e3d7f441f857d584798e9469c573fab) by georgedouzas).
-- Clean .states directory ([057c218](https://github.com/georgedouzas/sports-betting/commit/057c218efa5e50a77b20972a4aba6652296b77f2) by georgedouzas).
+- Release 0.11.2 ([a03a4f9](https://github.com/georgedouzas/sports-betting/commit/a03a4f9844dff3faebc2862011a22f3afb28a355) by georgedouzas).
+- Release 0.11.1 ([b62c6a9](https://github.com/georgedouzas/sports-betting/commit/b62c6a98c96f44145960206175c2b51bf777d86e) by georgedouzas).
+- Clean .states directory ([9af162a](https://github.com/georgedouzas/sports-betting/commit/9af162aef03ed4cb943be30932446324d6a58b40) by georgedouzas).
 
 ## [0.11.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.1) - 2025-03-16
 
