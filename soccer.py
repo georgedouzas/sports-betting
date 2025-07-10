@@ -483,6 +483,14 @@ def _preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
             col for col in data.columns if 'Unnamed' in col or col in REMOVED_COLS
         ],
     ).rename(columns=COLS_MAPPING)
+    for col in data.columns:
+        if 'closing' in col:
+            non_closing_col = col.replace('_closing', '')
+            if non_closing_col not in data.columns or np.all(
+                data[non_closing_col].isna()
+            ):
+                data[non_closing_col] = data[col].copy()
+    data = data.drop(columns=[col for col in data.columns if 'closing' in col])
     schema_cols = [col for col, _ in SCHEMA]
     data = data.merge(pd.DataFrame(columns=schema_cols), how='outer')
     data = data[schema_cols]
