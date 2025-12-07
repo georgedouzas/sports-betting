@@ -15,15 +15,15 @@ the project for more details. You can run any of the following commands and subc
 ### Formatting
 
 - `pdm formatting all` or `pdm formatting`: Format both the code and docstrings.
-    - `pdm formatting code`: Format only the code.
-    - `pdm formatting docstrings`: Format only the docstrings.
+  - `pdm formatting code`: Format only the code.
+  - `pdm formatting docstrings`: Format only the docstrings.
 
 ### Checks
 
 - `pdm checks all` or `pdm checks`: Run all checks.
-    - `pdm checks quality`: Check only code quality.
-    - `pdm checks types`: Check only type annotations.
-    - `pdm checks dependencies`: Check only for vulnerabilities in dependencies.
+  - `pdm checks quality`: Check only code quality.
+  - `pdm checks types`: Check only type annotations.
+  - `pdm checks dependencies`: Check only for vulnerabilities in dependencies.
 
 ### Tests
 
@@ -64,7 +64,7 @@ style](https://gist.github.com/stephenparish/9941e89d80e2bc58a153#format-of-the-
 
 ### Example
 
-```
+```text
 feat(directive): A new feature of code
 
 A description of the new feature.
@@ -82,13 +82,13 @@ Related to PR namespace/other-project#15: https://github.com/namespace/other-pro
 - Subject must have proper casing, i.e. uppercase for first letter if it makes sense.
 - Subject must have no dot at the end and no punctuation.
 - Type can be:
-    - `feat`: New feature implementation.
-    - `fix`: Bug fix.
-    - `docs`: Documentation changes.
-    - `style`: Code style or format changes.
-    - `refactor`: Changes that are not features or bug fixes.
-    - `tests`: Test additions or corrections.
-    - `chore`: Maintenance code changes.
+  - `feat`: New feature implementation.
+  - `fix`: Bug fix.
+  - `docs`: Documentation changes.
+  - `style`: Code style or format changes.
+  - `refactor`: Changes that are not features or bug fixes.
+  - `tests`: Test additions or corrections.
+  - `chore`: Maintenance code changes.
 
 ## Pull Request guidelines
 
