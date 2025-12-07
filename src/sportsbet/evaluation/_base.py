@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Self
 
 import cloudpickle
 import numpy as np
@@ -17,7 +17,6 @@ from sklearn.base import BaseEstimator, ClassifierMixin, MultiOutputMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.utils import check_consistent_length, check_scalar
 from sklearn.utils.validation import _check_feature_names, check_is_fitted
-from typing_extensions import Self
 
 from .. import BoolData, Data
 

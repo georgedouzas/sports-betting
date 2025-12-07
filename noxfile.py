@@ -10,7 +10,7 @@ import nox
 
 os.environ.update({'PDM_IGNORE_SAVED_PYTHON': '1'})
 
-PYTHON_VERSIONS: list[str] = ['3.10', '3.11', '3.12']
+PYTHON_VERSIONS: list[str] = ['3.11', '3.12']
 FILES: list[str] = ['src', 'tests', 'docs', 'noxfile.py']
 CHANGELOG_ARGS: dict[str, Any] = {
     'repository': '.',

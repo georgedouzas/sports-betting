@@ -5,14 +5,13 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Self
 
 import cloudpickle
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from sklearn.utils import check_scalar
-from typing_extensions import Self
 
 from .. import FixturesData, Outputs, Param, ParamGrid, Schema, TrainData
 

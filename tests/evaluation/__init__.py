@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Self
+
 import numpy as np
 import pandas as pd
-from typing_extensions import Self
 
 from sportsbet import Data
 from sportsbet.datasets import DummySoccerDataLoader

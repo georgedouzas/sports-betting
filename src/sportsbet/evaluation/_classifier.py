@@ -5,12 +5,11 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, MetaEstimatorMixin, clone, is_classifier
-from typing_extensions import Self
 
 from .. import BoolData, Data
 from ._base import BaseBettor

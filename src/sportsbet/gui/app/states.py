@@ -3,7 +3,7 @@
 import asyncio
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Self, cast
 
 import cloudpickle
 import nest_asyncio
@@ -21,7 +21,6 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
-from typing_extensions import Self
 
 from sportsbet.datasets import BaseDataLoader, SoccerDataLoader
 from sportsbet.evaluation import BaseBettor, BettorGridSearchCV, ClassifierBettor, OddsComparisonBettor, backtest
