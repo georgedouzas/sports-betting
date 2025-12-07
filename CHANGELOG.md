@@ -12,15 +12,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Features
 
-- Modify supported Python versions ([55770d3](https://github.com/georgedouzas/sports-betting/commit/55770d38a286fbe8af4d24012fc8c6c2f530143a) by georgedouzas).
+- Modify supported Python versions ([73fff83](https://github.com/georgedouzas/sports-betting/commit/73fff83bb4a6f5d6ecd2cdcccebef0c0dfbc4eb4) by georgedouzas).
 
 ### Docs
 
-- Fix list indentation ([0208b40](https://github.com/georgedouzas/sports-betting/commit/0208b405f5a6c56e554d08188e7ad72a3a5d98ad) by georgedouzas).
+- Fix list indentation ([d8b8aed](https://github.com/georgedouzas/sports-betting/commit/d8b8aed5a8ffcd4a3764322d2ddc613476b3dd96) by georgedouzas).
 
 ### Chore
 
-- Fix type errors ([cc08ca9](https://github.com/georgedouzas/sports-betting/commit/cc08ca9e6f25899e74078943ed7ba41b881f3031) by georgedouzas).
+- Change distribution name ([730c794](https://github.com/georgedouzas/sports-betting/commit/730c794bfdf7f0bc1863d30f88256211f6597d86) by georgedouzas).
+- Release 0.12.0 ([5226c64](https://github.com/georgedouzas/sports-betting/commit/5226c64977d99cdd704b9e02e6ef328f6e01f458) by georgedouzas).
+- Fix type errors ([82ff5f4](https://github.com/georgedouzas/sports-betting/commit/82ff5f41b05b9f765a9678e51bd5b7076e23b7c7) by georgedouzas).
 
 ## [0.11.3](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.3) - 2025-05-18
 
