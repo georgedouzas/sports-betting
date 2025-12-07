@@ -121,13 +121,13 @@ goal, and `sports-betting` can help by providing appropriate tools.
 For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
 
 ```bash
-pip install sports-betting
+pip install sports_betting
 ```
 
 If you have Node.js version v22.0.0 or higher, you can optionally install the GUI:
 
 ```bash
-pip install sports-betting[gui]
+pip install sports_betting[gui]
 ```
 
 Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
