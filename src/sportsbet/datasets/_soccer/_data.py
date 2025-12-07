@@ -8,13 +8,12 @@ from __future__ import annotations
 import warnings
 from functools import lru_cache
 from json import loads
-from typing import ClassVar
+from typing import ClassVar, Self
 
 import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
 from sklearn.model_selection import ParameterGrid
-from typing_extensions import Self
 
 from ... import FixturesData, ParamGrid, Schema, TrainData
 from .._base import BaseDataLoader

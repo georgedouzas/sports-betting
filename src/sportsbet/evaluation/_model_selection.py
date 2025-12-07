@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from copy import deepcopy
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,6 @@ from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.utils import check_consistent_length
 from sklearn.utils.validation import check_is_fitted
-from typing_extensions import Self
 
 from .. import BoolData, Data, Indices
 from ._base import BaseBettor

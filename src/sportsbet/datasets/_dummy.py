@@ -6,13 +6,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import ClassVar
+from typing import ClassVar, Self
 
 import numpy as np
 import pandas as pd
 import pytz
 from sklearn.model_selection import ParameterGrid
-from typing_extensions import Self
 
 from .. import FixturesData, Outputs, ParamGrid, Schema, TrainData
 from ._base import BaseDataLoader

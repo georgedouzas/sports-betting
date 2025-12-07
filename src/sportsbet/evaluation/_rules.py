@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
+from typing import Self
+
 import pandas as pd
 from sklearn.utils import check_scalar
-from typing_extensions import Self
 
 from .. import BoolData, Data
 from ._base import BaseBettor
