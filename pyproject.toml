@@ -3,7 +3,7 @@ requires = ["pdm-pep517"]
 build-backend = "pdm.pep517.api"
 
 [project]
-name = "sports-betting"
+name = "sports_betting"
 description = "Python sports betting toolbox."
 authors = [{name = "Georgios Douzas", email = "gdouzas@icloud.com"}]
 license = "MIT"
