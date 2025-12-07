@@ -10,7 +10,7 @@ import click
 def run() -> None:
     """Run the GUI application."""
     null = subprocess.DEVNULL
-    node_call = subprocess.run(['node', '--version'], stdout=null, stderr=null, check=False)  # noqa: S603, S607
+    node_call = subprocess.run(['node', '--version'], stdout=null, stderr=null, check=False)  # noqa: S607
     if node_call.returncode == 0:
         reflex_path = Path(sys.executable).parent / 'reflex'
         subprocess.run([reflex_path, 'run'], cwd=f'{Path(__file__).parent}', check=True)  # noqa: S603

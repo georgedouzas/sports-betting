@@ -128,7 +128,7 @@ def changelog(session: nox.Session) -> None:
         session: The nox session.
     """
     session.run('pdm', 'install', '-dG', 'changelog', '--no-default', external=True)
-    from git_changelog.cli import build_and_render
+    from git_changelog.cli import build_and_render  # noqa: PLC0415
 
     build_and_render(**CHANGELOG_ARGS)
 
@@ -141,7 +141,7 @@ def release(session: nox.Session) -> None:
         session: The nox session.
     """
     session.run('pdm', 'install', '-dG', 'changelog', '-dG', 'release', '--no-default', external=True)
-    from git_changelog.cli import build_and_render
+    from git_changelog.cli import build_and_render  # noqa: PLC0415
 
     changelog, _ = build_and_render(**CHANGELOG_ARGS)
     if changelog.versions_list[0].tag:
