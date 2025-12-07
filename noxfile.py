@@ -167,5 +167,5 @@ def release(session: nox.Session) -> None:
     session.run('git', 'push', '--tags', external=True)
 
     # Build and upload artifacts
-    session.run('pdm', 'build', external=True)
+    session.run('pdm', 'build', '--no-sdist', external=True)
     session.run('twine', 'upload', '--skip-existing', 'dist/*')
