@@ -6,20 +6,38 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.12.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.12.0) - 2025-12-07
+
+<small>[Compare with 0.11.3](https://github.com/georgedouzas/sports-betting/compare/0.11.3...0.12.0)</small>
+
+### Features
+
+- Modify supported Python versions ([55770d3](https://github.com/georgedouzas/sports-betting/commit/55770d38a286fbe8af4d24012fc8c6c2f530143a) by georgedouzas).
+
+### Docs
+
+- Fix list indentation ([0208b40](https://github.com/georgedouzas/sports-betting/commit/0208b405f5a6c56e554d08188e7ad72a3a5d98ad) by georgedouzas).
+
+### Chore
+
+- Change distribution name ([7ae9649](https://github.com/georgedouzas/sports-betting/commit/7ae96498acb9b02f63941479c20a0f7d223519a8) by georgedouzas).
+- Fix type errors ([cc08ca9](https://github.com/georgedouzas/sports-betting/commit/cc08ca9e6f25899e74078943ed7ba41b881f3031) by georgedouzas).
+
 ## [0.11.3](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.3) - 2025-05-18
 
 <small>[Compare with 0.11.2](https://github.com/georgedouzas/sports-betting/compare/0.11.2...0.11.3)</small>
 
 ### Bug Fixes
 
-- Remove redundant file ([6f670e4](https://github.com/georgedouzas/sports-betting/commit/6f670e461ad218c6023da267ec454cb7a11f890c) by georgedouzas).
+- Remove redundant file ([f24cc63](https://github.com/georgedouzas/sports-betting/commit/f24cc63f715dfad1f391e9bfc27a6f5782ce8b37) by georgedouzas).
 
 ### Tests
 
-- Add CLI runner ([ec315c8](https://github.com/georgedouzas/sports-betting/commit/ec315c8339e1ae01079d6054e0a0b54e6351c56e) by georgedouzas).
+- Add CLI runner ([2cff9a6](https://github.com/georgedouzas/sports-betting/commit/2cff9a6146805ed54f996aaffe984b274805c531) by georgedouzas).
 
 ### Chore
 
+- Release 0.11.3 ([5b0af64](https://github.com/georgedouzas/sports-betting/commit/5b0af642880580b305a39a708e65f7b409003c9a) by georgedouzas).
 - Update copier template ([32579b1](https://github.com/georgedouzas/sports-betting/commit/32579b196a917e6a2d89ccb5f79ea263670713ec) by georgedouzas).
 
 ## [0.11.2](https://github.com/georgedouzas/sports-betting/releases/tag/0.11.2) - 2025-03-16
