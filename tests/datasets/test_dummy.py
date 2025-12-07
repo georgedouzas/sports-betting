@@ -139,7 +139,7 @@ def test_odds_type_raise_type_error():
     dataloader = DummySoccerDataLoader()
     with pytest.raises(
         TypeError,
-        match='Parameter `odds_type` should be a prefix of available odds columns. Got `5` instead.',
+        match=re.escape('Parameter `odds_type` should be a prefix of available odds columns. Got `5` instead.'),
     ):
         dataloader.extract_train_data(odds_type=cast(str, 5))
 
@@ -149,7 +149,7 @@ def test_odds_type_raise_value_error():
     dataloader = DummySoccerDataLoader()
     with pytest.raises(
         ValueError,
-        match='Parameter `odds_type` should be a prefix of available odds columns. Got `pinnacle` instead.',
+        match=re.escape('Parameter `odds_type` should be a prefix of available odds columns. Got `pinnacle` instead.'),
     ):
         dataloader.extract_train_data(odds_type='pinnacle')
 
@@ -570,6 +570,6 @@ def test_extract_fixtures_data_raise_error():
     dataloader = DummySoccerDataLoader()
     with pytest.raises(
         AttributeError,
-        match='Extract the training data before extracting the fixtures data.',
+        match=re.escape('Extract the training data before extracting the fixtures data.'),
     ):
         dataloader.extract_fixtures_data()

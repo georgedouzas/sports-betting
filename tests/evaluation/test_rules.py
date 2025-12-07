@@ -1,5 +1,7 @@
 """Test the OddsComparisonBettor class."""
 
+import re
+
 import numpy as np
 import pytest
 
@@ -26,7 +28,7 @@ def test_fit_raise_value_error_no_odds():
     bettor = OddsComparisonBettor()
     with pytest.raises(
         ValueError,
-        match='Input data do not include any odds columns.',
+        match=re.escape('Input data do not include any odds columns.'),
     ):
         bettor.fit(X, Y_train)
 

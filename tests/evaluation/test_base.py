@@ -55,7 +55,7 @@ def test_fit_input_data_type_error(X):
     bettor = TestBettor()
     with pytest.raises(
         TypeError,
-        match='Input data `X` should be pandas dataframe with a date index.',
+        match=re.escape('Input data `X` should be pandas dataframe with a date index.'),
     ):
         bettor.fit(X, Y_train)
 
@@ -66,7 +66,7 @@ def test_fit_output_data_type_error(Y):
     bettor = TestBettor()
     with pytest.raises(
         TypeError,
-        match='Output data `Y` should be pandas dataframe.',
+        match=re.escape('Output data `Y` should be pandas dataframe.'),
     ):
         bettor.fit(X_train, Y)
 
@@ -88,7 +88,7 @@ def test_fit_output_data_cols_prefixes_value_error():
     bettor = TestBettor()
     with pytest.raises(
         ValueError,
-        match='Prefixes of output data column names should be equal to `output`.',
+        match=re.escape('Prefixes of output data column names should be equal to `output`.'),
     ):
         bettor.fit(X_train, Y)
 
@@ -100,7 +100,7 @@ def test_fit_odds_data_type_error(O):
     bettor.fit(X_train, Y_train)
     with pytest.raises(
         TypeError,
-        match='Odds data `O` should be pandas dataframe.',
+        match=re.escape('Odds data `O` should be pandas dataframe.'),
     ):
         bettor.bet(X_train, O)
 
@@ -126,7 +126,7 @@ def test_fit_odds_data_cols_prefixes_value_error():
     bettor.fit(X_train, Y_train)
     with pytest.raises(
         ValueError,
-        match='Prefixes of odds data column names should be equal to `odds`.',
+        match=re.escape('Prefixes of odds data column names should be equal to `odds`.'),
     ):
         bettor.bet(X_train, O)
 
@@ -140,7 +140,7 @@ def test_fit_betting_markets_raise_type_error(betting_markets):
     bettor = TestBettor(betting_markets=betting_markets)
     with pytest.raises(
         TypeError,
-        match='Parameter `betting_markets` should be a list of betting market names.',
+        match=re.escape('Parameter `betting_markets` should be a list of betting market names.'),
     ):
         bettor.fit(X_train, Y_train)
 
@@ -154,7 +154,7 @@ def test_fit_betting_markets_raise_value_error(betting_markets):
     bettor = TestBettor(betting_markets=betting_markets)
     with pytest.raises(
         ValueError,
-        match='Parameter `betting_markets` does not contain valid names.',
+        match=re.escape('Parameter `betting_markets` does not contain valid names.'),
     ):
         bettor.fit(X_train, Y_train)
 

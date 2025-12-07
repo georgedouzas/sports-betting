@@ -1,5 +1,6 @@
 """Test the backtest function and GridSearchCV class."""
 
+import re
 from datetime import datetime
 from typing import cast
 
@@ -19,7 +20,7 @@ def test_backtest_params_cv_raise_error(cv):
     bettor = TestBettor()
     with pytest.raises(
         TypeError,
-        match='Parameter `cv` should be a TimeSeriesSplit cross-validator object.',
+        match=re.escape('Parameter `cv` should be a TimeSeriesSplit cross-validator object.'),
     ):
         backtest(bettor, X_train, Y_train, O_train, cv=cv)
 
@@ -27,14 +28,14 @@ def test_backtest_params_cv_raise_error(cv):
 def test_backtest_params_non_df_raise_value_error():
     """Test raising an error on the wrong backtest input data."""
     bettor = TestBettor()
-    with pytest.raises(TypeError, match='Input data `X` should be pandas dataframe with a date index.'):
+    with pytest.raises(TypeError, match=re.escape('Input data `X` should be pandas dataframe with a date index.')):
         backtest(bettor, cast(pd.DataFrame, X_train.to_numpy()), Y_train, O_train)
 
 
 def test_backtest_params_no_date_raise_value_error():
     """Test raising an error on the wrong backtest input data."""
     bettor = TestBettor()
-    with pytest.raises(TypeError, match='Input data `X` should be pandas dataframe with a date index.'):
+    with pytest.raises(TypeError, match=re.escape('Input data `X` should be pandas dataframe with a date index.')):
         backtest(bettor, pd.DataFrame(X_train.values), Y_train, O_train)
 
 
@@ -118,7 +119,7 @@ def test_bgscv_fit_raise_type_error_wrong_cross_validator(cv):
     bgscv = BettorGridSearchCV(OddsComparisonBettor(), {}, cv=cv)
     with pytest.raises(
         TypeError,
-        match='Parameter `cv` should be a TimeSeriesSplit cross-validator object.',
+        match=re.escape('Parameter `cv` should be a TimeSeriesSplit cross-validator object.'),
     ):
         bgscv.fit(X_train, Y_train, O_train)
 
