@@ -9,11 +9,23 @@
 [mypy]: <http://mypy-lang.org>
 [mkdocs badge]: <https://img.shields.io/badge/docs-mkdocs%20material-blue.svg?style=flat>
 [mkdocs]: <https://squidfunk.github.io/mkdocs-material>
+[safety badge]: <https://img.shields.io/badge/safety-checked-green>
+[safety]: <https://github.com/pyupio/safety>
+[bandit badge]: <https://img.shields.io/badge/security-bandit-yellow>
+[bandit]: <https://github.com/PyCQA/bandit>
+[pytest badge]: <https://img.shields.io/badge/tests-pytest-blue>
+[pytest]: <https://github.com/pytest-dev/pytest>
+[coverage badge]: <https://img.shields.io/badge/coverage-pytest--cov-blue>
+[coverage]: <https://github.com/nedbat/coveragepy>
+[interrogate badge]: <https://img.shields.io/badge/docstring-interrogate-blue>
+[interrogate]: <https://github.com/econchick/interrogate>
+[pre-commit badge]: <https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit>
+[pre-commit]: <https://github.com/pre-commit/pre-commit>
+[nox badge]: <https://img.shields.io/badge/%F0%9F%A6%8A-Nox-D85E00.svg>
+[nox]: <https://github.com/wntrblm/nox>
 [version badge]: <https://img.shields.io/pypi/v/sports-betting.svg>
 [pythonversion badge]: <https://img.shields.io/pypi/pyversions/sports-betting.svg>
 [downloads badge]: <https://img.shields.io/pypi/dd/sports-betting>
-[gitter]: <https://gitter.im/sports-betting/community>
-[gitter badge]: <https://badges.gitter.im/join%20chat.svg>
 [discussions]: <https://github.com/georgedouzas/sports-betting/discussions>
 [discussions badge]: <https://img.shields.io/github/discussions/georgedouzas/sports-betting>
 [ci]: <https://github.com/georgedouzas/sports-betting/actions?query=workflow>
@@ -28,9 +40,12 @@
 | Category          | Tools    |
 | ------------------| -------- |
 | **Development**   | [![black][black badge]][black] [![ruff][ruff badge]][ruff] [![mypy][mypy badge]][mypy] [![docformatter][docformatter badge]][docformatter] |
+| **Testing**       | [![pytest][pytest badge]][pytest] [![coverage][coverage badge]][coverage] [![interrogate][interrogate badge]][interrogate] |
+| **Security**      | [![safety][safety badge]][safety] [![bandit][bandit badge]][bandit] |
+| **Automation**    | [![nox][nox badge]][nox] [![pre-commit][pre-commit badge]][pre-commit] |
 | **Package**       | ![version][version badge] ![pythonversion][pythonversion badge] ![downloads][downloads badge] |
 | **Documentation** | [![mkdocs][mkdocs badge]][mkdocs]|
-| **Communication** | [![gitter][gitter badge]][gitter] [![discussions][discussions badge]][discussions] |
+| **Communication** | [![discussions][discussions badge]][discussions] |
 
 ## Introduction
 

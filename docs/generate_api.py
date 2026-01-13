@@ -1,7 +1,5 @@
 """Generate the API pages and navigation."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import mkdocs_gen_files

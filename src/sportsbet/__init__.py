@@ -7,8 +7,6 @@ submodules:
 - [`evaluation`][sportsbet.evaluation]: Provides the classes to create and evaluate sports betting predictive models.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from typing import Any
 
