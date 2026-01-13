@@ -1,8 +1,7 @@
 """Development tasks."""
 
-from __future__ import annotations
-
 import os
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +9,7 @@ import nox
 
 os.environ.update({'PDM_IGNORE_SAVED_PYTHON': '1'})
 
-PYTHON_VERSIONS: list[str] = ['3.11', '3.12']
+PYTHON_VERSIONS: list[str] = ['3.11', '3.12', '3.13']
 FILES: list[str] = ['src', 'tests', 'docs', 'noxfile.py']
 CHANGELOG_ARGS: dict[str, Any] = {
     'repository': '.',
@@ -24,7 +23,7 @@ CHANGELOG_ARGS: dict[str, Any] = {
 }
 
 
-def check_cli(session: nox.Session, args: list[str]) -> None:
+def check_cli(session: nox.Session, args: list[str]) -> str:
     """Check the CLI arguments.
 
     Arguments:
@@ -33,10 +32,45 @@ def check_cli(session: nox.Session, args: list[str]) -> None:
     """
     available_args = ', '.join([f'`{arg}`' for arg in args])
     msg = f'Available subcommands are one of {available_args}.'
-    if not session.posargs:
-        session.skip(f'{msg} No subbcommand was provided')
-    elif len(session.posargs) > 1 or session.posargs[0] not in args:
-        session.skip(f'{msg} Instead `{" ".join(session.posargs)}` was given')
+    session_args = list(session.posargs)
+    if not session_args:
+        session_args = ['all']
+    elif len(session_args) > 1 or session_args[0] not in args:
+        session.skip(f'{msg} Instead `{" ".join(session_args)}` was given')
+    return session_args[0]
+
+
+@nox.session
+def clean(session: nox.Session) -> None:
+    """Clean build artifacts and cache files.
+
+    Arguments:
+        session: The nox session.
+    """
+    paths = [
+        '.mypy_cache',
+        '.pytest_cache',
+        'tests/.pytest_cache',
+        'build',
+        'dist',
+        'htmlcov',
+        'pip-wheel-metadata',
+        'site',
+        '__pycache__',
+        'docs/generated',
+        '.nox',
+        '.ruff_cache',
+    ]
+    for path in paths:
+        shutil.rmtree(path, ignore_errors=True)
+    for cache_path in Path().rglob('__pycache__'):
+        shutil.rmtree(cache_path, ignore_errors=True)
+    for file in Path().rglob('*.rej'):
+        if file.exists():
+            file.unlink()
+    for file in Path().rglob('.coverage*'):
+        if file.exists():
+            file.unlink()
 
 
 @nox.session
@@ -46,9 +80,9 @@ def docs(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
-    check_cli(session, ['serve', 'build'])
+    arg = check_cli(session, ['serve', 'build'])
     session.run('pdm', 'install', '-dG', 'docs', external=True)
-    session.run('mkdocs', session.posargs[0])
+    session.run('mkdocs', arg)
 
 
 @nox.session
@@ -60,11 +94,11 @@ def formatting(session: nox.Session, file: str) -> None:
         session: The nox session.
         file: The file to be formatted.
     """
-    check_cli(session, ['all', 'code', 'docstrings'])
+    arg = check_cli(session, ['all', 'code', 'docstrings'])
     session.run('pdm', 'install', '-dG', 'formatting', '--no-default', external=True)
-    if session.posargs[0] in ['code', 'all']:
+    if arg in ['code', 'all']:
         session.run('black', file)
-    if session.posargs[0] in ['docstrings', 'all']:
+    if arg in ['docstrings', 'all']:
         session.run('docformatter', file)
 
 
@@ -77,13 +111,17 @@ def checks(session: nox.Session, file: str) -> None:
         session: The nox session.
         file: The file to be checked.
     """
-    check_cli(session, ['all', 'quality', 'dependencies', 'types'])
+    arg = check_cli(session, ['all', 'quality', 'dependencies', 'types', 'security', 'docs'])
     session.run('pdm', 'install', '-dG', 'checks', '--no-default', external=True)
-    if session.posargs[0] in ['quality', 'all']:
+    if arg in ['quality', 'all']:
         session.run('ruff', 'check', file)
-    if session.posargs[0] in ['types', 'all']:
+    if arg in ['types', 'all']:
         session.run('mypy', file)
-    if session.posargs[0] in ['dependencies', 'all']:
+    if arg in ['security', 'all']:
+        session.run('bandit', '-r', file)
+    if arg in ['docs', 'all'] and file == 'src':
+        session.run('interrogate', file)
+    if arg in ['dependencies', 'all']:
         requirements_path = (Path(session.create_tmp()) / 'requirements.txt').as_posix()
         args_groups = [['--prod']] + [['-dG', group] for group in ['tests', 'docs', 'maintenance']]
         requirements_types = zip(FILES, args_groups, strict=True)
@@ -169,3 +207,4 @@ def release(session: nox.Session) -> None:
     # Build and upload artifacts
     session.run('pdm', 'build', '--no-sdist', external=True)
     session.run('twine', 'upload', '--skip-existing', 'dist/*')
+

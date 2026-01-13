@@ -29,7 +29,8 @@ jobs:
         python-version: |
             3.11
             3.12
-
+            3.13
+            
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v4.3
       with:
@@ -69,7 +70,8 @@ jobs:
         python-version: |
             3.11
             3.12
-
+            3.13
+            
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v4.3
       with:
@@ -88,7 +90,7 @@ jobs:
 
     strategy:
       matrix:
-          python-version: ['3.11', '3.12']
+          python-version: ['3.11', '3.12', '3.13']
 
     steps:
     - name: Checkout

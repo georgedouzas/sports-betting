@@ -8,7 +8,7 @@ description = "Python sports betting toolbox."
 authors = [{name = "Georgios Douzas", email = "gdouzas@icloud.com"}]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.11, <3.13"
+requires-python = ">=3.11, <3.14"
 keywords = []
 dynamic = ["version"]
 classifiers = [
@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Documentation",
     "Topic :: Software Development",
     "Topic :: Utilities",
@@ -44,7 +45,6 @@ Changelog = "https://georgedouzas.github.io/sports-betting/changelog"
 Repository = "https://github.com/georgedouzas/sports-betting"
 Issues = "https://github.com/georgedouzas/sports-betting/issues"
 Discussions = "https://github.com/georgedouzas/sports-betting/discussions"
-Gitter = "https://gitter.im/sports-betting/community"
 Funding = "https://github.com/sponsors/georgedouzas"
 
 [project.scripts]
@@ -103,7 +103,10 @@ checks = [
     "mypy[install-types]>=1.10.1",
     "types-markdown>=3.6.0.20240316",
     "types-toml>=0.10.8.20240310",
-    "types-pytz"
+    "types-pytz",
+    "bandit>=1.7.5",
+    "mypy>=1.10.1",
+    "interrogate>=1.7.0",
 ]
 tests = [
     "pytest>=8.2.2",

@@ -28,6 +28,7 @@ jobs:
         python-version: |
             3.11
             3.12
+            3.13
             
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v4.3
@@ -68,6 +69,7 @@ jobs:
         python-version: |
             3.11
             3.12
+            3.13
             
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v4.3
