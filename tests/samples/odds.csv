@@ -1,0 +1,14 @@
+event_status,event_time,date,league,division,season,home_team,away_team,away_win,home_win,provider
+preplay,120,2024-08-16,England,1,2025,Man United,Fulham,2.05,1.70,bet365
+preplay,0,2024-08-16,England,1,2025,Man United,Fulham,2.10,1.68,bet365
+inplay,20,2024-08-16,England,1,2025,Man United,Fulham,1.92,1.60,bet365
+inplay,50,2024-08-16,England,1,2025,Man United,Fulham,1.55,1.42,bet365
+postplay,0,2024-08-16,England,1,2025,Man United,Fulham,,,bet365
+preplay,10,2025-05-25,England,1,2025,Wolves,Brentford,1.95,2.55,bet365
+preplay,0,2025-05-25,England,1,2025,Wolves,Brentford,1.98,2.60,bet365
+inplay,15,2025-05-25,England,1,2025,Wolves,Brentford,2.15,2.85,bet365
+inplay,60,2025-05-25,England,1,2025,Wolves,Brentford,1.62,3.05,bet365
+postplay,0,2025-05-25,England,1,2025,Wolves,Brentford,,,bet365
+preplay,0,2025-05-25,England,1,2025,Liverpool,Crystal Palace,1.72,1.48,bet365
+inplay,30,2025-05-25,England,1,2025,Liverpool,Crystal Palace,2.35,1.95,bet365
+postplay,0,2025-05-25,England,1,2025,Liverpool,Crystal Palace,,,bet365

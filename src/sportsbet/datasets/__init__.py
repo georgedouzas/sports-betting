@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from ._base import BaseDataLoader, load_dataloader
-from ._soccer._data import SoccerDataLoader
-from ._soccer._dummy import DummySoccerDataLoader
+from ._base._dataloader import BaseDataLoader
+from ._base._schema import (
+    BaseOddsSchema,
+    BaseStatsSchema,
+    optional_col,
+    required_col,
+)
 
 __all__: list[str] = [
     'BaseDataLoader',
-    'DummySoccerDataLoader',
-    'SoccerDataLoader',
-    'load_dataloader',
+    'BaseOddsSchema',
+    'BaseStatsSchema',
+    'optional_col',
+    'required_col',
 ]
