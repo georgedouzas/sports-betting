@@ -9,13 +9,13 @@ import asyncio
 import io
 import warnings
 from functools import lru_cache
+from typing import ClassVar, Self
 
 import aiohttp
-import polars as pl
-from typing_extensions import Self
+import pandas as pd
 
-from ... import FixturesData, TrainData
-from ._base import BaseSoccerDataLoader
+from ... import FixturesData, OutputsMapping, TrainData
+from .._base._dataloader import BaseDataLoader
 
 MODELLING_URL = 'https://github.com/georgedouzas/sports-betting/tree/data/data/soccer/modelling'
 TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/{league}_{division}_{year}.csv'
@@ -47,23 +47,23 @@ def _read_urls_content(urls: list[str]) -> list[str]:
     return asyncio.run(_read_urls_content_async(urls))
 
 
-def _read_csvs(urls: list[str]) -> list[pl.DataFrame]:
+def _read_csvs(urls: list[str]) -> list[pd.DataFrame]:
     """Read the CSVs."""
     urls_content = _read_urls_content(urls)
     csvs = []
     for content in urls_content:
-        names = pl.read_csv(io.StringIO(content), nrows=0, encoding='ISO-8859-1').columns.to_list()
-        csv = pl.read_csv(io.StringIO(content), names=names, skiprows=1, encoding='ISO-8859-1', on_bad_lines='skip')
+        names = pd.read_csv(io.StringIO(content), nrows=0, encoding='ISO-8859-1').columns.to_list()
+        csv = pd.read_csv(io.StringIO(content), names=names, skiprows=1, encoding='ISO-8859-1', on_bad_lines='skip')
         csvs.append(csv)
     return csvs
 
 
-def _read_csv(url: str) -> pl.DataFrame:
+def _read_csv(url: str) -> pd.DataFrame:
     """Read the CSV."""
     return _read_csvs([url])[0]
 
 
-class SoccerDataLoader(BaseSoccerDataLoader):
+class SoccerDataLoader(BaseDataLoader):
     """Dataloader for soccer data.
 
     It downloads historical and fixtures data for various
@@ -84,7 +84,7 @@ class SoccerDataLoader(BaseSoccerDataLoader):
             The checked value of parameters grid. It includes all possible parameters if
             `param_grid` is `None`.
 
-        dropped_na_cols_ (pl.Index):
+        dropped_na_cols_ (pd.Index):
             The columns with missing values that are dropped.
 
         drop_na_thres_(float):
@@ -93,29 +93,29 @@ class SoccerDataLoader(BaseSoccerDataLoader):
         odds_type_ (str | None):
             The checked value of `odds_type`.
 
-        input_cols_ (pl.Index):
+        input_cols_ (pd.Index):
             The columns of `X_train` and `X_fix`.
 
-        output_cols_ (pl.Index):
+        output_cols_ (pd.Index):
             The columns of `Y_train` and `Y_fix`.
 
-        odds_cols_ (pl.Index):
+        odds_cols_ (pd.Index):
             The columns of `O_train` and `O_fix`.
 
-        target_cols_ (pl.Index):
+        target_cols_ (pd.Index):
             The columns used for the extraction of output and odds columns.
 
         train_data_ (TrainData):
-            The tuple (X, Y, O) that represents the training data as extracted from
+            The tupde (X, Y, O) that represents the training data as extracted from
             the method `extract_train_data`.
 
         fixtures_data_ (FixturesData):
-            The tuple (X, Y, O) that represents the fixtures data as extracted from
+            The tupde (X, Y, O) that represents the fixtures data as extracted from
             the method `extract_fixtures_data`.
 
-    Examples:
+    Exampdes:
         >>> from sportsbet.datasets import SoccerDataLoader
-        >>> import pandas as pl
+        >>> import pandas as pd
         >>> # Get all available parameters to select the training data
         >>> SoccerDataLoader.get_all_params()
         [{'division': 1, 'league': 'Argentina', ...
@@ -134,35 +134,102 @@ class SoccerDataLoader(BaseSoccerDataLoader):
         >>> # Extract the corresponding fixtures data
         >>> X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
         >>> # Training and fixtures input and odds data have the same column names
-        >>> pl.testing.assert_index_equal(X_train.columns, X_fix.columns)
-        >>> pl.testing.assert_index_equal(O_train.columns, O_fix.columns)
+        >>> pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
+        >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
         >>> # Fixtures data have always no output
         >>> Y_fix is None
         True
     """
 
-    def _get_stats_data(self: Self) -> pl.DataFrame:
-        return pl.DataFrame()
+    OVER_UNDER_SCORES: ClassVar[dict[str, float]] = {
+        '2.5': 2.5,
+        '3.5': 3.5,
+        '4.5': 4.5,
+        '5.5': 5.5,
+        '6.5': 6.5,
+        '7.5': 7.5,
+        '8.5': 8.5,
+        '9.5': 9.5,
+    }
 
-    def _get_odds_data(self: Self) -> pl.DataFrame:
-        return pl.DataFrame()
+    @property
+    def _outputs_mapping(self: Self) -> OutputsMapping:
+        return {
+            ('home_team_goals', 'away_team_goals'): {
+                'home_win': lambda data: data['home_team_goals'] > data['away_team_goals'],
+                'away_win': lambda data: data['away_team_goals'] > data['home_team_goals'],
+                'draw': lambda data: data['home_team_goals'] == data['away_team_goals'],
+                'over_2.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['2.5'],
+                'under_2.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['2.5'],
+                'over_3.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['3.5'],
+                'under_3.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['3.5'],
+                'over_4.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['4.5'],
+                'under_4.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['4.5'],
+                'over_5.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['5.5'],
+                'under_5.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['5.5'],
+                'over_6.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['6.5'],
+                'under_6.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['6.5'],
+                'over_7.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['7.5'],
+                'under_7.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['7.5'],
+                'over_8.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['8.5'],
+                'under_8.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['8.5'],
+                'over_9.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                > self.OVER_UNDER_SCORES['9.5'],
+                'under_9.5': lambda data: data['home_team_goals'] + data['away_team_goals']
+                < self.OVER_UNDER_SCORES['9.5'],
+            },
+        }
+
+    @property
+    def _required_cols(self: Self) -> list[str]:
+        return ['league', 'division', 'year', 'home_team', 'away_team']
+
+    @property
+    def _stages(self: Self) -> list[str]:
+        return [
+            '0 min',
+            *[f'{minute!s} min' for minute in range(1, 46)],
+            'half_time',
+            *[f'{minute!s} min' for minute in range(45, 90)],
+            'full_time',
+        ]
+
+    def _get_stats_data(self: Self) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def _get_odds_data(self: Self) -> pd.DataFrame:
+        return pd.DataFrame()
 
     @lru_cache  # noqa: B019
-    def _get_data(self: Self) -> pl.DataFrame:
+    def _get_data(self: Self) -> pd.DataFrame:
         urls = [TRAINING_URL.format(**params) for params in self.param_grid_]
-        training_data = pl.concat(_read_csvs(urls))
+        training_data = pd.concat(_read_csvs(urls))
         training_data['fixtures'] = False
         fixtures_data = _read_csv(FIXTURES_URL)
         fixtures_data['fixtures'] = True
-        data = (pl.concat([training_data, fixtures_data]) if not fixtures_data.empty else training_data).reset_index(
+        data = (pd.concat([training_data, fixtures_data]) if not fixtures_data.empty else training_data).reset_index(
             drop=True,
         )
         try:
-            data['date'] = pl.to_datetime(data['date'], format='%d/%m/%Y')
+            data['date'] = pd.to_datetime(data['date'], format='%d/%m/%Y')
         except ValueError:
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', category=UserWarning)
-                data['date'] = pl.to_datetime(data['date'], infer_datetime_format=True)
+                data['date'] = pd.to_datetime(data['date'], infer_datetime_format=True)
         return data
 
     def extract_train_data(self: Self) -> TrainData:

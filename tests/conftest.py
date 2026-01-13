@@ -1,10 +1,19 @@
 """Configuration for the pytest test suite."""
 
+from importlib.resources import files
 from pathlib import Path
+from typing import Annotated
 
 import pandas as pd
 import pytest
 from click.testing import CliRunner
+
+from sportsbet.datasets import (
+    BaseOddsSchema,
+    BaseStatsSchema,
+    optional_col,
+    required_col,
+)
 
 CONFIG = """
 from sklearn.model_selection import TimeSeriesSplit
@@ -35,6 +44,61 @@ def cli_config_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def cli_runner() -> CliRunner:
-    """CLI runner for tests."""
-    return CliRunner()
+def stats() -> pd.DataFrame:
+    """Load statistics data."""
+    stats_file = files('tests') / 'samples' / 'stats.csv'
+    data = pd.read_csv(stats_file, parse_dates=['date'])
+    data['event_time'] = pd.to_timedelta(data['event_time'], unit='m')
+    data['date'] = pd.to_datetime(data['date'], utc=True)
+    return data
+
+
+@pytest.fixture
+def odds() -> pd.DataFrame:
+    """Load odds data."""
+    odds_file = files('tests') / 'samples' / 'odds.csv'
+    data = pd.read_csv(odds_file, parse_dates=['date'])
+    data['event_time'] = pd.to_timedelta(data['event_time'], unit='m')
+    data['date'] = pd.to_datetime(data['date'], utc=True)
+    return data
+
+
+@pytest.fixture
+def stats_schema() -> BaseStatsSchema:
+    """Load statistics schema."""
+
+    class StatsSchema(BaseStatsSchema):
+        """Statistics schema."""
+
+        date: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = required_col()
+        league: str = required_col()
+        division: int = required_col()
+        season: int = required_col()
+        home_team: str = required_col()
+        away_team: str = required_col()
+        home_goals: int = optional_col(['inplay'], False)
+        away_goals: int = optional_col(['inplay'], False)
+        home_latest_streak: int = optional_col(['preplay'], True)
+        away_latest_streak: int = optional_col(['preplay'], True)
+
+    return StatsSchema
+
+
+@pytest.fixture
+def odds_schema() -> BaseOddsSchema:
+    """Load odds schema."""
+
+    class OddsSchema(BaseOddsSchema):
+        """Odds schema."""
+
+        date: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = required_col()
+        league: str = required_col()
+        division: int = required_col()
+        season: int = required_col()
+        home_team: str = required_col()
+        away_team: str = required_col()
+        provider: str = optional_col(['preplay'], True)
+        home_win: float = optional_col(['preplay', 'inplay'], False)
+        away_win: float = optional_col(['preplay', 'inplay'], False)
+
+    return OddsSchema

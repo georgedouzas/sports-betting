@@ -1,0 +1,18 @@
+event_status,event_time,date,league,division,season,home_team,away_team,home_goals,away_goals,home_latest_streak,away_latest_streak
+preplay,60,2024-08-16,England,1,2025,Man United,Fulham,0,0,2,-1
+preplay,0,2024-08-16,England,1,2025,Man United,Fulham,0,0,2,-1
+inplay,30,2024-08-16,England,1,2025,Man United,Fulham,0,0,2,-1
+inplay,60,2024-08-16,England,1,2025,Man United,Fulham,1,0,2,-1
+inplay,90,2024-08-16,England,1,2025,Man United,Fulham,1,0,2,-1
+postplay,0,2024-08-16,England,1,2025,Man United,Fulham,1,0,3,-2
+preplay,60,2025-05-25,England,1,2025,Wolves,Brentford,0,0,-2,3
+preplay,0,2025-05-25,England,1,2025,Wolves,Brentford,0,0,-2,3
+inplay,30,2025-05-25,England,1,2025,Wolves,Brentford,0,0,-2,3
+inplay,60,2025-05-25,England,1,2025,Wolves,Brentford,1,1,-2,3
+inplay,90,2025-05-25,England,1,2025,Wolves,Brentford,1,1,-2,3
+postplay,0,2025-05-25,England,1,2025,Wolves,Brentford,1,1,0,0
+preplay,60,2025-05-25,England,1,2025,Liverpool,Crystal Palace,0,0,4,1
+preplay,0,2025-05-25,England,1,2025,Liverpool,Crystal Palace,0,0,4,1
+inplay,30,2025-05-25,England,1,2025,Liverpool,Crystal Palace,1,0,4,1
+inplay,90,2025-05-25,England,1,2025,Liverpool,Crystal Palace,1,1,4,1
+postplay,0,2025-05-25,England,1,2025,Liverpool,Crystal Palace,1,1,0,0
