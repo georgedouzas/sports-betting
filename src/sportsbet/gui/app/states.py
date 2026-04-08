@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any, Self, cast
 
 import cloudpickle
-import nest_asyncio
 import numpy as np
 import pandas as pd
 import reflex as rx
@@ -126,9 +125,6 @@ VISIBILITY_LEVELS_MODEL_LOADING = {
     'control': 4,
 }
 DELAY = 0.001
-
-
-nest_asyncio.apply()
 
 
 class State(rx.State):
@@ -560,13 +556,79 @@ class DataloaderLoadingState(DataloaderState):
                 self.streamed_message += char
                 yield
         else:
-            self.dataloader_error = False
-            message = """Uploaded file is a dataloader. You may proceed to the next step."""
+            message = """Dataloader file uploaded successfully."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
                 self.streamed_message += char
                 yield
+
+    @rx.event
+    async def submit_state(self: Self) -> AsyncGenerator:
+        """Submit handler."""
+        self.loading = True
+        yield
+        if self.visibility_level == VISIBILITY_LEVELS_DATALOADER_LOADING['dataloader']:
+            dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
+            X_train, Y_train, O_train = dataloader.extract_train_data(
+                odds_type=dataloader.odds_type_,
+                drop_na_thres=dataloader.drop_na_thres_,
+            )
+            X_fix, _, O_fix = dataloader.extract_fixtures_data()
+            self.odds_type = dataloader.odds_type_
+            self.drop_na_thres = dataloader.drop_na_thres_
+            self.all_leagues = list(
+                chunked(
+                    sorted({params['league'] for params in dataloader.param_grid_}),
+                    6,
+                ),
+            )
+            self.all_years = list(
+                chunked(
+                    sorted({str(params['year']) for params in dataloader.param_grid_}),
+                    5,
+                ),
+            )
+            self.all_divisions = list(
+                chunked(
+                    sorted({str(params['division']) for params in dataloader.param_grid_}),
+                    1,
+                ),
+            )
+            self.param_checked = {
+                **{f'"{params["league"]}"': True for params in dataloader.param_grid_},
+                **{str(params['year']): True for params in dataloader.param_grid_},
+                **{str(params['division']): True for params in dataloader.param_grid_},
+            }
+            self.data = self.X_train = X_train.reset_index().fillna('NA').to_dict('records')
+            self.data_cols = self.X_train_cols = [ag_grid.column_def(field='date', header_name='Date')] + [
+                ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in X_train.columns
+            ]
+            self.data_title = 'Training input data'
+            self.Y_train = Y_train.fillna('NA').to_dict('records')
+            self.Y_train_cols = [
+                ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in Y_train.columns
+            ]
+            self.O_train = O_train.fillna('NA').to_dict('records') if O_train is not None else None
+            self.O_train_cols = (
+                [ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in O_train.columns]
+                if O_train is not None
+                else None
+            )
+            self.X_fix = X_fix.reset_index().fillna('NA').to_dict('records')
+            self.X_fix_cols = [ag_grid.column_def(field='date', header_name='Date')] + [
+                ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in X_fix.columns
+            ]
+            self.O_fix = O_fix.fillna('NA').to_dict('records') if O_fix is not None else None
+            self.O_fix_cols = (
+                [ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in O_fix.columns]
+                if O_fix is not None
+                else None
+            )
+            self.dataloader_serialized = str(cloudpickle.dumps(dataloader), 'iso8859_16')
+            self.loading = False
+            yield
+        self.visibility_level += 1
 
     @rx.event
     def download_dataloader(self: Self) -> EventSpec:
@@ -629,61 +691,6 @@ class DataloaderLoadingState(DataloaderState):
             yield
 
     @rx.event
-    async def submit_state(self: Self) -> AsyncGenerator:
-        """Submit handler."""
-        self.loading = True
-        yield
-        if self.visibility_level == VISIBILITY_LEVELS_DATALOADER_LOADING['dataloader']:
-            dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
-            if hasattr(dataloader, 'odds_type_') and hasattr(dataloader, 'drop_na_thres_'):
-                X_train, Y_train, O_train = dataloader.extract_train_data(
-                    odds_type=dataloader.odds_type_,
-                    drop_na_thres=dataloader.drop_na_thres_,
-                )
-            else:
-                X_train, Y_train, O_train = dataloader.extract_train_data()
-            X_fix, _, O_fix = dataloader.extract_fixtures_data()
-            self.data = self.X_train = X_train.reset_index().fillna('NA').to_dict('records')
-            self.data_cols = self.X_train_cols = [ag_grid.column_def(field='date', header_name='Date')] + [
-                ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in X_train.columns
-            ]
-            self.data_title = 'Training input data'
-            self.Y_train = Y_train.fillna('NA').to_dict('records')
-            self.Y_train_cols = [
-                ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in Y_train.columns
-            ]
-            self.O_train = O_train.fillna('NA').to_dict('records') if O_train is not None else None
-            self.O_train_cols = (
-                [ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in O_train.columns]
-                if O_train is not None
-                else None
-            )
-            self.X_fix = X_fix.reset_index().fillna('NA').to_dict('records')
-            self.X_fix_cols = [ag_grid.column_def(field='date', header_name='Date')] + [
-                ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in X_fix.columns
-            ]
-            self.O_fix = O_fix.fillna('NA').to_dict('records') if O_fix is not None else None
-            self.O_fix_cols = (
-                [ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in O_fix.columns]
-                if O_fix is not None
-                else None
-            )
-            all_params = dataloader.get_all_params()
-            self.all_leagues = list(chunked(sorted({params['league'] for params in all_params}), 6))
-            self.all_years = list(chunked(sorted({params['year'] for params in all_params}), 5))
-            self.all_divisions = list(chunked(sorted({params['division'] for params in all_params}), 1))
-            self.param_checked = {
-                **{f'"{key}"': True for key in {params['league'] for params in dataloader.param_grid_}},
-                **dict.fromkeys({params['year'] for params in dataloader.param_grid_}, True),
-                **dict.fromkeys({params['division'] for params in dataloader.param_grid_}, True),
-            }
-            self.odds_type = dataloader.odds_type_
-            self.drop_na_thres = dataloader.drop_na_thres_
-            self.loading = False
-            yield
-        self.visibility_level += 1
-
-    @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
 
@@ -696,21 +703,25 @@ class DataloaderLoadingState(DataloaderState):
 
         # Mode
         self.mode_category = 'Data'
-        self.mode_type = 'Create'
+        self.mode_type = 'Load'
 
         # Data
         self.dataloader_serialized = None
         self.dataloader_filename = None
+
+        # Parameters
+        self.param_checked = {}
+        self.all_leagues = []
+        self.all_years = []
+        self.all_divisions = []
+        self.odds_type = None
+        self.drop_na_thres = None
+
+        # Data
         self.data = None
         self.data_cols = None
         self.data_title = None
         self.loading_db = False
-        self.all_leagues = []
-        self.all_years = []
-        self.all_divisions = []
-        self.param_checked = {}
-        self.odds_type = None
-        self.drop_na_thres = None
         self.X_train = None
         self.Y_train = None
         self.O_train = None
@@ -718,22 +729,25 @@ class DataloaderLoadingState(DataloaderState):
         self.Y_train_cols = None
         self.O_train_cols = None
         self.X_fix = None
+        self.Y_fix = None
         self.O_fix = None
         self.X_fix_cols = None
+        self.Y_fix_cols = None
         self.O_fix_cols = None
 
         # Message
         self.streamed_message = ''
 
 
-class ModelCreationState(State):
-    """The model creation state."""
+class ModelState(State):
+    """The model state."""
 
-    model_selection: str = 'Odds Comparison'
     dataloader_serialized: str | None = None
     dataloader_filename: str | None = None
+    dataloader_error: bool = False
     model_serialized: str | None = None
     model_filename: str | None = None
+    model_error: bool = False
     evaluation_selection: str = 'Backtesting'
     backtesting_results: list | None = None
     backtesting_results_cols: list | None = None
@@ -742,31 +756,20 @@ class ModelCreationState(State):
     value_bets: list | None = None
     value_bets_cols: list | None = None
 
+
+class ModelCreationState(ModelState):
+    """The model creation state."""
+
+    model_selection: str = 'Odds Comparison'
+
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message = """Begin by selecting a betting model. Currently, three options are available.<br><br>
-
-        <strong>Odds Comparison Model</strong><br>
-        Calculates probabilities based on average odds and identifies value bets.<br><br>
-
-        <strong>Logistic Regression Model</strong><br>
-        Fits a logistic regression classifier to the training data with various
-        hyperparameters, managing both categorical and missing values.<br><br>
-
-        <strong>Gradient Boosting Model</strong><br>
-        Fits a gradient boosting classifier to the training data with various
-        hyperparameters, also handling categorical and missing values."""
+        message = """Select a betting model. Currently, three models are available."""
         self.streamed_message = ''
         for char in message:
             await asyncio.sleep(DELAY)
             self.streamed_message += char
             yield
-
-    @rx.event
-    def download_model(self: Self) -> EventSpec:
-        """Download the model."""
-        model = bytes(cast(str, self.model_serialized), 'iso8859_16')
-        return rx.download(data=model, filename=self.model_filename)
 
     @rx.event
     async def handle_dataloader_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
@@ -789,8 +792,7 @@ class ModelCreationState(State):
                 self.streamed_message += char
                 yield
         else:
-            self.dataloader_error = False
-            message = """Uploaded file is a dataloader. You may proceed to the next step."""
+            message = """Dataloader file uploaded successfully."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
@@ -798,75 +800,54 @@ class ModelCreationState(State):
                 yield
 
     @rx.event
+    def download_model(self: Self) -> EventSpec:
+        """Download the model."""
+        model = bytes(cast(str, self.model_serialized), 'iso8859_16')
+        return rx.download(data=model, filename=self.model_filename)
+
+    @rx.event
     async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
         yield
-        if self.visibility_level == VISIBILITY_LEVELS_MODEL_CREATION['model']:
-            self.loading = False
-            yield
-            message = (
-                """Upload a dataloader to use with the model for backtesting its performance or finding value bets."""
-            )
-            self.streamed_message = ''
-            for char in message:
-                await asyncio.sleep(DELAY)
-                self.streamed_message += char
-                yield
-        elif self.visibility_level == VISIBILITY_LEVELS_MODEL_CREATION['dataloader']:
-            self.loading = False
-            yield
-            message = """Choose whether to backtest the model or predict value bets.<br><br>
-
-            Backtesting uses 3-fold time ordered cross-validation with a constant betting
-            stake of 50 and an initial cash balance of 10000. After backtesting, the
-            model is fitted to the entire training set.<br><br>
-
-            The model can also predict value bets using the fixtures data. The model is fitted
-            to the entire training set before making predictions."""
-            self.streamed_message = ''
-            for char in message:
-                await asyncio.sleep(DELAY)
-                self.streamed_message += char
-                yield
-        elif self.visibility_level == VISIBILITY_LEVELS_MODEL_CREATION['evaluation']:
-            dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
-            if hasattr(dataloader, 'odds_type_') and hasattr(dataloader, 'drop_na_thres_'):
-                X_train, Y_train, O_train = dataloader.extract_train_data(
-                    odds_type=dataloader.odds_type_,
-                    drop_na_thres=dataloader.drop_na_thres_,
-                )
-            else:
-                X_train, Y_train, O_train = dataloader.extract_train_data()
-            model = MODELS[self.model_selection]
-            model.fit(X_train, Y_train, O_train)
-            self.model_serialized = str(cloudpickle.dumps(model), 'iso8859_16')
+        if self.visibility_level == VISIBILITY_LEVELS_MODEL_CREATION['evaluation']:
             self.model_filename = 'model.pkl'
+            dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
+            X_train, Y_train, O_train = dataloader.extract_train_data(
+                odds_type=dataloader.odds_type_,
+                drop_na_thres=dataloader.drop_na_thres_,
+            )
+            model = MODELS[self.model_selection]
             if self.evaluation_selection == 'Backtesting':
-                backtesting_results = backtest(model, X_train, Y_train, O_train, cv=TimeSeriesSplit(3)).reset_index()
-                self.backtesting_results = backtesting_results.fillna('NA').to_dict('records')
-                self.backtesting_results_cols = [
-                    ag_grid.column_def(field=col, header_name=self.process_cols(col))
-                    for col in backtesting_results.columns
-                ]
-                self.optimal_params = [
-                    {'Parameter name': name, 'Optimal value': value} for name, value in model.best_params_.items()
-                ]
-                self.optimal_params_cols = [
-                    ag_grid.column_def(field='Parameter name'),
-                    ag_grid.column_def(field='Optimal value'),
-                ]
-            elif self.evaluation_selection == 'Value bets':
-                X_fix, *_ = dataloader.extract_fixtures_data()
-                value_bets = pd.DataFrame(np.round(1 / model.predict_proba(X_fix), 2), columns=model.betting_markets_)
-                value_bets = pd.concat(
-                    [X_fix.reset_index()[['date', 'league', 'division', 'home_team', 'away_team']], value_bets],
-                    axis=1,
+                results = backtest(
+                    model,
+                    X_train,
+                    Y_train,
+                    O_train,
+                    cv=TimeSeriesSplit(3),
+                    n_jobs=1,
                 )
-                self.value_bets = value_bets.fillna('NA').to_dict('records')
+                self.backtesting_results = results.round(2).reset_index().to_dict('records')
+                self.backtesting_results_cols = [
+                    ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in results.reset_index().columns
+                ]
+                self.optimal_params = pd.DataFrame(model.cv_results_).nsmallest(3, 'rank_test_score')[['params', 'mean_test_score']].round(2).to_dict('records')
+                self.optimal_params_cols = [
+                    ag_grid.column_def(field='params', header_name='Parameters'),
+                    ag_grid.column_def(field='mean_test_score', header_name='Mean Test Score'),
+                ]
+            else:
+                model.fit(X_train, Y_train, O_train)
+                X_fix, _, O_fix = dataloader.extract_fixtures_data()
+                value_bets_data = model.bet(X_fix, O_fix)
+                value_bets = X_fix.reset_index()
+                for i, market in enumerate(model.betting_markets_):
+                    value_bets[market] = value_bets_data[:, i]
+                self.value_bets = value_bets.to_dict('records')
                 self.value_bets_cols = [
                     ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in value_bets.columns
                 ]
+            self.model_serialized = str(cloudpickle.dumps(model), 'iso8859_16')
             self.loading = False
             yield
         self.visibility_level += 1
@@ -883,19 +864,15 @@ class ModelCreationState(State):
         self.loading: bool = False
 
         # Mode
-        self.mode_category = 'Data'
+        self.mode_category = 'Modelling'
         self.mode_type = 'Create'
-
-        # Model
-        self.model_selection = 'Odds Comparison'
 
         # Data
         self.dataloader_serialized = None
         self.dataloader_filename = None
-
-        # Evaluation
         self.model_serialized = None
         self.model_filename = None
+        self.model_selection = 'Odds Comparison'
         self.evaluation_selection = 'Backtesting'
         self.backtesting_results = None
         self.backtesting_results_cols = None
@@ -908,24 +885,12 @@ class ModelCreationState(State):
         self.streamed_message = ''
 
 
-class ModelLoadingState(State):
+class ModelLoadingState(ModelState):
     """The model loading state."""
-
-    dataloader_serialized: str | None = None
-    dataloader_filename: str | None = None
-    model_serialized: str | None = None
-    model_filename: str | None = None
-    evaluation_selection: str = 'Backtesting'
-    backtesting_results: list | None = None
-    backtesting_results_cols: list | None = None
-    optimal_params: list | None = None
-    optimal_params_cols: list | None = None
-    value_bets: list | None = None
-    value_bets_cols: list | None = None
 
     async def on_load(self: Self) -> AsyncGenerator:
         """Event on page load."""
-        message = """Upload a dataloader and a betting model to backtest performance or identify value bets."""
+        message = """Select a dataloader and a model file to run the evaluation."""
         self.streamed_message = ''
         for char in message:
             await asyncio.sleep(DELAY)
@@ -933,14 +898,8 @@ class ModelLoadingState(State):
             yield
 
     @rx.event
-    def download_model(self: Self) -> EventSpec:
-        """Download the model."""
-        model = bytes(cast(str, self.model_serialized), 'iso8859_16')
-        return rx.download(data=model, filename=self.model_filename)
-
-    @rx.event
     async def handle_dataloader_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
-        """Handle the upload of dataloader files."""
+        """Handle the upload of files."""
         self.loading = True
         yield
         for file in files:
@@ -959,8 +918,7 @@ class ModelLoadingState(State):
                 self.streamed_message += char
                 yield
         else:
-            self.dataloader_error = False
-            message = """Uploaded file is a dataloader. You may proceed to the next step."""
+            message = """Dataloader file uploaded successfully."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
@@ -969,7 +927,7 @@ class ModelLoadingState(State):
 
     @rx.event
     async def handle_model_upload(self: Self, files: list[rx.UploadFile]) -> AsyncGenerator:
-        """Handle the upload of model files."""
+        """Handle the upload of files."""
         self.loading = True
         yield
         for file in files:
@@ -981,15 +939,14 @@ class ModelLoadingState(State):
         model = cloudpickle.loads(bytes(cast(str, self.model_serialized), 'iso8859_16'))
         if not isinstance(model, BaseBettor):
             self.model_error = True
-            message = """Uploaded file is not a betting model. Please try again."""
+            message = """Uploaded file is not a model. Please try again."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
                 self.streamed_message += char
                 yield
         else:
-            self.model_error = False
-            message = """Uploaded file is a betting model. You may proceed to the next step."""
+            message = """Model file uploaded successfully."""
             self.streamed_message = ''
             for char in message:
                 await asyncio.sleep(DELAY)
@@ -997,64 +954,54 @@ class ModelLoadingState(State):
                 yield
 
     @rx.event
+    def download_model(self: Self) -> EventSpec:
+        """Download the model."""
+        model = bytes(cast(str, self.model_serialized), 'iso8859_16')
+        return rx.download(data=model, filename=self.model_filename)
+
+    @rx.event
     async def submit_state(self: Self) -> AsyncGenerator:
         """Submit handler."""
         self.loading = True
         yield
-        if self.visibility_level == VISIBILITY_LEVELS_MODEL_LOADING['dataloader_model']:
-            self.loading = False
-            yield
-            message = """Choose whether to backtest the model or predict value bets.<br><br>
-
-            Backtesting uses 3-fold time-ordered cross-validation with a constant betting
-            stake of 50 and an initial cash balance of 10000. After backtesting, the
-            model is fitted to the entire training set.<br><br>
-
-            The model can also predict value bets using the fixtures data. The model is
-            fitted to the entire training set before making predictions."""
-            self.streamed_message = ''
-            for char in message:
-                await asyncio.sleep(DELAY)
-                self.streamed_message += char
-                yield
-        elif self.visibility_level == VISIBILITY_LEVELS_MODEL_LOADING['evaluation']:
+        if self.visibility_level == VISIBILITY_LEVELS_MODEL_LOADING['evaluation']:
             dataloader = cloudpickle.loads(bytes(cast(str, self.dataloader_serialized), 'iso8859_16'))
-            if hasattr(dataloader, 'odds_type_') and hasattr(dataloader, 'drop_na_thres_'):
-                X_train, Y_train, O_train = dataloader.extract_train_data(
-                    odds_type=dataloader.odds_type_,
-                    drop_na_thres=dataloader.drop_na_thres_,
-                )
-            else:
-                X_train, Y_train, O_train = dataloader.extract_train_data()
             model = cloudpickle.loads(bytes(cast(str, self.model_serialized), 'iso8859_16'))
-            model.fit(X_train, Y_train, O_train)
-            self.model_serialized = str(cloudpickle.dumps(model), 'iso8859_16')
-            self.model_filename = 'model.pkl'
+            X_train, Y_train, O_train = dataloader.extract_train_data(
+                odds_type=dataloader.odds_type_,
+                drop_na_thres=dataloader.drop_na_thres_,
+            )
             if self.evaluation_selection == 'Backtesting':
-                backtesting_results = backtest(model, X_train, Y_train, O_train, cv=TimeSeriesSplit(3)).reset_index()
-                self.backtesting_results = backtesting_results.fillna('NA').to_dict('records')
-                self.backtesting_results_cols = [
-                    ag_grid.column_def(field=col, header_name=self.process_cols(col))
-                    for col in backtesting_results.columns
-                ]
-                self.optimal_params = [
-                    {'Parameter name': name, 'Optimal value': value} for name, value in model.best_params_.items()
-                ]
-                self.optimal_params_cols = [
-                    ag_grid.column_def(field='Parameter name'),
-                    ag_grid.column_def(field='Optimal value'),
-                ]
-            elif self.evaluation_selection == 'Value bets':
-                X_fix, *_ = dataloader.extract_fixtures_data()
-                value_bets = pd.DataFrame(np.round(1 / model.predict_proba(X_fix), 2), columns=model.betting_markets_)
-                value_bets = pd.concat(
-                    [X_fix.reset_index()[['date', 'league', 'division', 'home_team', 'away_team']], value_bets],
-                    axis=1,
+                results = backtest(
+                    model,
+                    X_train,
+                    Y_train,
+                    O_train,
+                    cv=TimeSeriesSplit(3),
+                    n_jobs=1,
                 )
-                self.value_bets = value_bets.fillna('NA').to_dict('records')
+                self.backtesting_results = results.round(2).reset_index().to_dict('records')
+                self.backtesting_results_cols = [
+                    ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in results.reset_index().columns
+                ]
+                if hasattr(model, 'cv_results_'):
+                    self.optimal_params = pd.DataFrame(model.cv_results_).nsmallest(3, 'rank_test_score')[['params', 'mean_test_score']].round(2).to_dict('records')
+                    self.optimal_params_cols = [
+                        ag_grid.column_def(field='params', header_name='Parameters'),
+                        ag_grid.column_def(field='mean_test_score', header_name='Mean Test Score'),
+                    ]
+            else:
+                model.fit(X_train, Y_train, O_train)
+                X_fix, _, O_fix = dataloader.extract_fixtures_data()
+                value_bets_data = model.bet(X_fix, O_fix)
+                value_bets = X_fix.reset_index()
+                for i, market in enumerate(model.betting_markets_):
+                    value_bets[market] = value_bets_data[:, i]
+                self.value_bets = value_bets.to_dict('records')
                 self.value_bets_cols = [
                     ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in value_bets.columns
                 ]
+            self.model_serialized = str(cloudpickle.dumps(model), 'iso8859_16')
             self.loading = False
             yield
         self.visibility_level += 1
@@ -1071,14 +1018,12 @@ class ModelLoadingState(State):
         self.loading: bool = False
 
         # Mode
-        self.mode_category = 'Data'
-        self.mode_type = 'Create'
+        self.mode_category = 'Modelling'
+        self.mode_type = 'Load'
 
         # Data
         self.dataloader_serialized = None
         self.dataloader_filename = None
-
-        # Evaluation
         self.model_serialized = None
         self.model_filename = None
         self.evaluation_selection = 'Backtesting'

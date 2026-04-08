@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+from concurrent.futures import ThreadPoolExecutor
 
 import aiohttp
 import pandas as pd
@@ -86,9 +87,22 @@ async def _read_urls_content_async(urls: list[str]) -> list[str]:
         return await asyncio.gather(*futures)
 
 
+def _run_async_in_thread(coro: asyncio.coroutines) -> list[str]:
+    """Run an async coroutine in a new thread with its own event loop."""
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(asyncio.run, coro)
+        return future.result()
+
+
 def _read_urls_content(urls: list[str]) -> list[str]:
     """Read the URLs content."""
-    return asyncio.run(_read_urls_content_async(urls))
+    try:
+        asyncio.get_running_loop()
+        # If we're inside a running event loop, run in a separate thread
+        return _run_async_in_thread(_read_urls_content_async(urls))
+    except RuntimeError:
+        # No running event loop, safe to use asyncio.run()
+        return asyncio.run(_read_urls_content_async(urls))
 
 
 def _read_csvs(urls: list[str]) -> list[pd.DataFrame]:
