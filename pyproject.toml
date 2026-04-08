@@ -52,7 +52,6 @@ sportsbet-gui = "sportsbet.gui.main:run"
 
 [project.optional-dependencies]
 gui = [
-    "nest-asyncio>=1.6.0",
     "reflex==0.7.0",
     "reflex-ag-grid>=0.0.10",
 ]
