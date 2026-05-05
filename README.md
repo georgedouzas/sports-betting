@@ -299,3 +299,4 @@ Get the value bets and save them as CSV file:
 ```bash
 sportsbet bettor bet -c config.py -d /path/to/directory
 ```
+- [CyMetica-42 Arena](https://cymetica.com/arena) - AI prediction market with sports betting mechanics. Parlays, bot props, Blue vs Red team competitions, live CLOB orderbook, on-chain settlement. [Agent Card](https://cymetica.com/.well-known/agent-card.json) | [MCP Server](https://cymetica.com/.well-known/mcp.json)
