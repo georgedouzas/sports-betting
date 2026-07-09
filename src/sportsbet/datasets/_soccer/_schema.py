@@ -11,9 +11,7 @@ import pandas as pd
 
 from .._base._schema import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
-# Statuses at which in-match features/markets are meaningful.
 IN_MATCH = ['inplay', 'postplay']
-# Statuses at which odds markets trade.
 TRADING = ['preplay', 'inplay']
 
 
