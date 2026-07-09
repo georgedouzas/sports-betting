@@ -15,20 +15,20 @@ def test_get_all_params():
 
 def test_get_odds_types():
     """Test the discovery of odds types offline."""
-    assert DummySoccerDataLoader().get_odds_types() == ['bet365', 'market_average', 'market_maximum']
+    assert DummySoccerDataLoader().get_odds_types() == ['market_average', 'market_maximum']
 
 
 def test_extract_train_data_grammar_and_alignment():
     """Test training extraction returns aligned, grammar-following X, Y, O."""
     loader = DummySoccerDataLoader(param_grid={'league': ['England']})
-    X, Y, O = loader.extract_train_data(odds_type='bet365')
+    X, Y, O = loader.extract_train_data(odds_type='market_average')
     assert isinstance(X.index, pd.DatetimeIndex)
     assert X.index.equals(Y.index)
     assert X.index.equals(O.index)
     # Market-shaped targets at the postplay moment
     assert 'home_win__postplay__0min' in Y.columns
     # Odds carry the single selected provider prefix
-    assert {col.split('__')[0] for col in O.columns} == {'bet365'}
+    assert {col.split('__')[0] for col in O.columns} == {'market_average'}
     # Fixed identity features keep bare names
     assert {'league', 'home_team', 'away_team'}.issubset(X.columns)
 
@@ -43,7 +43,7 @@ def test_extract_train_data_invalid_odds_type():
 def test_extract_train_data_unsupervised():
     """Test unsupervised extraction returns Y as None."""
     loader = DummySoccerDataLoader(param_grid={'league': ['England']})
-    X, Y, O = loader.extract_train_data(odds_type='bet365', learning_type='unsupervised')
+    X, Y, O = loader.extract_train_data(odds_type='market_average', learning_type='unsupervised')
     assert Y is None
     assert X.index.equals(O.index)
 
@@ -52,7 +52,7 @@ def test_extract_train_data_inplay_no_leakage():
     """Test an in-play target excludes post-target snapshots."""
     loader = DummySoccerDataLoader(param_grid={'league': ['England']})
     X, Y, _ = loader.extract_train_data(
-        odds_type='bet365',
+        odds_type='market_average',
         target_event_status='inplay',
         target_event_time=pd.Timedelta('60min'),
     )
@@ -63,7 +63,7 @@ def test_extract_train_data_inplay_no_leakage():
 def test_extract_fixtures_data_matches_training_columns():
     """Test fixtures data reproduces the training columns and carries no targets."""
     loader = DummySoccerDataLoader(param_grid={'league': ['England']})
-    X_train, _, O_train = loader.extract_train_data(odds_type='bet365')
+    X_train, _, O_train = loader.extract_train_data(odds_type='market_average')
     X_fix, Y_fix, O_fix = loader.extract_fixtures_data()
     assert Y_fix is None
     assert len(X_fix) >= 1  # the Arsenal vs Chelsea fixture
@@ -74,7 +74,7 @@ def test_extract_fixtures_data_matches_training_columns():
 def test_drop_na_thres_applies_to_training_and_fixtures():
     """Test drop_na_thres drops sparse columns consistently for training and fixtures."""
     loader = DummySoccerDataLoader(param_grid={'league': ['England']})
-    X_train, _, _ = loader.extract_train_data(odds_type='bet365', drop_na_thres=1.0)
+    X_train, _, _ = loader.extract_train_data(odds_type='market_average', drop_na_thres=1.0)
     X_fix, _, _ = loader.extract_fixtures_data()
     pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
 
@@ -82,7 +82,7 @@ def test_drop_na_thres_applies_to_training_and_fixtures():
 def test_save_reload_reproduces_fixtures_columns(tmp_path):
     """Test a saved and reloaded loader reproduces identical fixtures columns (FR-015)."""
     loader = DummySoccerDataLoader(param_grid={'league': ['England']})
-    loader.extract_train_data(odds_type='bet365')
+    loader.extract_train_data(odds_type='market_average')
     X_fix, _, O_fix = loader.extract_fixtures_data()
     path = str(tmp_path / 'loader.pkl')
     loader.save(path)

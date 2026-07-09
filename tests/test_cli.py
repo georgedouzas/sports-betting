@@ -21,7 +21,7 @@ def test_cli_training_matches_api(cli_runner, cli_config_path):
     X_cli = pd.read_csv(data_path / 'X_train.csv', index_col=0)
 
     loader = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain']})
-    X_api, _, _ = loader.extract_train_data(odds_type='bet365', target_event_status='postplay')
+    X_api, _, _ = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
 
     assert list(X_cli.columns) == list(X_api.columns)
     assert len(X_cli) == len(X_api)
@@ -39,7 +39,7 @@ def test_cli_backtest_matches_api(cli_runner, cli_config_path):
     cli_results = pd.read_csv(data_path / 'backtesting_results.csv')
 
     loader = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain']})
-    X, Y, O = loader.extract_train_data(odds_type='bet365', target_event_status='postplay')
+    X, Y, O = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
     api_results = backtest(OddsComparisonBettor(alpha=0.03), X, Y, O, cv=TimeSeriesSplit(2))
 
     assert len(cli_results) == len(api_results)
