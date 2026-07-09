@@ -96,7 +96,7 @@ class BaseDataLoader:
         ]
         X = X[keep]
         cols = pd.DataFrame(X.columns.tolist(), columns=['col', 'event_status', 'event_time'])
-        cols = cols.groupby(['col', 'event_status'], group_keys=False)[['col', 'event_status', 'event_time']].apply(
+        cols = cols.groupby(['col'], group_keys=False)[['col', 'event_status', 'event_time']].apply(
             lambda group: group.iloc[:1] if self.stats_schema.col_metadata(group.iloc[0]['col'])['fixed'] else group,
         )
         X = X[list(cols.itertuples(index=False, name=None))]
@@ -119,7 +119,7 @@ class BaseDataLoader:
         ]
         O = O[keep]
         cols = pd.DataFrame(O.columns.tolist(), columns=['col', 'event_status', 'event_time', 'provider'])
-        cols = cols.groupby(['col', 'event_status', 'provider'], group_keys=False)[
+        cols = cols.groupby(['col', 'provider'], group_keys=False)[
             ['col', 'event_status', 'event_time', 'provider']
         ].apply(
             lambda group: group.iloc[:1] if self.odds_schema.col_metadata(group.iloc[0]['col'])['fixed'] else group,

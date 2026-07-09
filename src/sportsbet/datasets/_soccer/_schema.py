@@ -1,59 +1,62 @@
-"""Concrete soccer statistics and odds schemas."""
+"""Builders for soccer statistics and odds schemas derived from the snapshot data."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 import pandas as pd
 
 from .._base._schema import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
-IN_MATCH = ['inplay', 'postplay']
-TRADING = ['preplay', 'inplay']
+_IDENTITY_FIELDS = {
+    'date': Annotated[pd.DatetimeTZDtype, 'ns', 'utc'],
+    'league': str,
+    'division': int,
+    'year': int,
+    'home_team': str,
+    'away_team': str,
+}
 
 
-class SoccerStatsSchema(BaseStatsSchema):
-    """Statistics schema for soccer snapshots."""
-
-    date: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = required_col()
-    league: str = required_col()
-    division: int = required_col()
-    year: int = required_col()
-    home_team: str = required_col()
-    away_team: str = required_col()
-    # In-match observations
-    home_goals: int = optional_col(IN_MATCH, fixed=False)
-    away_goals: int = optional_col(IN_MATCH, fixed=False)
-    # Pre-match, time-invariant features
-    home_latest_streak: int = optional_col(['preplay'], fixed=True)
-    away_latest_streak: int = optional_col(['preplay'], fixed=True)
-    # Target-source market outcomes (derived from goals at each snapshot)
-    home_win: int = optional_col(IN_MATCH, fixed=False)
-    draw: int = optional_col(IN_MATCH, fixed=False)
-    away_win: int = optional_col(IN_MATCH, fixed=False)
-    over_2_5: int = optional_col(IN_MATCH, fixed=False, alias='over_2.5')
-    under_2_5: int = optional_col(IN_MATCH, fixed=False, alias='under_2.5')
-    over_3_5: int = optional_col(IN_MATCH, fixed=False, alias='over_3.5')
-    under_3_5: int = optional_col(IN_MATCH, fixed=False, alias='under_3.5')
+def _field_name(col: str) -> str:
+    """Turn a column name into a valid Python identifier (``over_2.5`` -> ``over_2_5``)."""
+    return col.replace('.', '_')
 
 
-class SoccerOddsSchema(BaseOddsSchema):
-    """Odds schema for soccer snapshots."""
+def _value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, dict]:
+    """Build the annotations and fields for the value columns from their metadata."""
+    annotations: dict = {}
+    namespace: dict = {}
+    for col, meta in metadata.items():
+        field = _field_name(col)
+        annotations[field] = meta['type']
+        alias = col if field != col else None
+        namespace[field] = optional_col(meta['include'], fixed=meta['fixed'], alias=alias)
+    return annotations, namespace
 
-    date: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = required_col()
-    league: str = required_col()
-    division: int = required_col()
-    year: int = required_col()
-    home_team: str = required_col()
-    away_team: str = required_col()
-    provider: str = optional_col(['preplay'], fixed=True)
-    home_win: float = optional_col(TRADING, fixed=False)
-    draw: float = optional_col(TRADING, fixed=False)
-    away_win: float = optional_col(TRADING, fixed=False)
-    over_2_5: float = optional_col(TRADING, fixed=False, alias='over_2.5')
-    under_2_5: float = optional_col(TRADING, fixed=False, alias='under_2.5')
-    over_3_5: float = optional_col(TRADING, fixed=False, alias='over_3.5')
-    under_3_5: float = optional_col(TRADING, fixed=False, alias='under_3.5')
+
+def build_stats_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseStatsSchema]:
+    """Build a statistics schema from the derived value-column metadata."""
+    annotations: dict = dict(_IDENTITY_FIELDS)
+    namespace: dict = {col: required_col() for col in _IDENTITY_FIELDS}
+    value_annotations, value_namespace = _value_namespace(metadata)
+    annotations.update(value_annotations)
+    namespace.update(value_namespace)
+    namespace['__annotations__'] = annotations
+    return type('SoccerStatsSchema', (BaseStatsSchema,), namespace)
+
+
+def build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSchema]:
+    """Build an odds schema from the derived market-column metadata."""
+    annotations: dict = dict(_IDENTITY_FIELDS)
+    namespace: dict = {col: required_col() for col in _IDENTITY_FIELDS}
+    annotations['provider'] = str
+    namespace['provider'] = optional_col(['preplay'], fixed=True)
+    value_annotations, value_namespace = _value_namespace(metadata)
+    annotations.update(value_annotations)
+    namespace.update(value_namespace)
+    namespace['__annotations__'] = annotations
+    return type('SoccerOddsSchema', (BaseOddsSchema,), namespace)
