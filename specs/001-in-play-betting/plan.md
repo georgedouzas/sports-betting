@@ -70,7 +70,7 @@ Evaluated against `.specify/memory/constitution.md` v1.0.0:
   for extraction, schema rejection, and bettor migration; coverage must not regress
   (SC-006).
 - **IV. Automated Quality Gates** — PASS. No new tooling exceptions requested; changes go
-  through black/docformatter/ruff/interrogate/bandit/safety.
+  through black/docformatter/ruff/interrogate/bandit/pip-audit.
 - **V. Documentation as a First-Class Artifact** — PASS. User guide (`dataloader.md`,
   `bettor.md`) and examples currently describe the OLD design and MUST be updated as part
   of this feature; CHANGELOG entry required.

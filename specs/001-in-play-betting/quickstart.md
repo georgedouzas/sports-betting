@@ -16,7 +16,7 @@ pdm install -G :all          # or: uv sync
 
 ```bash
 pdm run formatting     # black, docformatter
-pdm run checks         # ruff, mypy, interrogate, bandit, safety
+pdm run checks         # ruff, mypy, interrogate, bandit, pip-audit
 pdm run tests          # pytest: branch coverage, doctest-modules, randomized
 ```
 
