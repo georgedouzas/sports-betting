@@ -53,29 +53,22 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         >>> from sklearn.pipeline import make_pipeline
         >>> from sklearn.compose import make_column_transformer
         >>> from sportsbet.evaluation import ClassifierBettor, backtest
-        >>> from sportsbet.datasets import SoccerDataLoader
-        >>> # Select only backtesting data for the Italian league and years 2020, 2021
-        >>> param_grid = {'league': ['Italy'], 'year': [2020, 2021]}
-        >>> dataloader = SoccerDataLoader(param_grid)
-        >>> # Select the odds of Pinnacle bookmaker
-        >>> X, Y, O = dataloader.extract_train_data(
-        ... odds_type='market_average',
-        ... drop_na_thres=1.0
-        ... )
+        >>> from sportsbet.datasets import DummySoccerDataLoader
+        >>> dataloader = DummySoccerDataLoader()
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='bet365')
         >>> # Create a pipeline to handle categorical features and missing values
         >>> clf_pipeline = make_pipeline(
-        ... make_column_transformer(
-        ... (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
-        ... remainder='passthrough'
-        ... ),
-        ... SimpleImputer(),
-        ... DecisionTreeClassifier(random_state=0)
+        ...     make_column_transformer(
+        ...         (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
+        ...         remainder='passthrough',
+        ...     ),
+        ...     SimpleImputer(),
+        ...     DecisionTreeClassifier(random_state=0),
         ... )
-        >>> # Backtest the bettor
         >>> bettor = ClassifierBettor(clf_pipeline)
-        >>> backtest(bettor, X, Y, O).reset_index()
-          Training start ... Yield percentage per bet (under_2.5__full_time_goals)
-        ...
+        >>> results = backtest(bettor, X, Y, O)
+        >>> 'Number of bets' in results.columns
+        True
     """
 
     _required_parameters: ClassVar = ['classifier']
@@ -91,7 +84,7 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         self.classifier = classifier
 
     def _check_classifier(self: Self) -> Self:
-        if not is_classifier(self.classifier):
+        if not isinstance(self.classifier, BaseEstimator) or not is_classifier(self.classifier):
             error_msg = f'`ClassifierBettor` requires a classifier. Instead {type(self.classifier)} is given.'
             raise TypeError(error_msg)
         self.classifier_: Any = clone(self.classifier)

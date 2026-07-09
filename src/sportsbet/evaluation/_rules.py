@@ -11,7 +11,7 @@ import pandas as pd
 from sklearn.utils import check_scalar
 
 from .. import BoolData, Data
-from ._base import BaseBettor
+from ._base import BaseBettor, is_odds_column, latest_odds_column, market_base
 
 
 class OddsComparisonBettor(BaseBettor):
@@ -58,20 +58,16 @@ class OddsComparisonBettor(BaseBettor):
 
     Examples:
         >>> from sportsbet.evaluation import OddsComparisonBettor, backtest
-        >>> from sportsbet.datasets import SoccerDataLoader
-        >>> # Select only backtesting data for the Italian and Spanish leagues and years 2019 - 2022
-        >>> param_grid = {'league': ['Italy', 'Spain'], 'year': [2019, 2020, 2021, 2022]}
-        >>> dataloader = SoccerDataLoader(param_grid)
-        >>> # Select the market maximum odds
-        >>> X, Y, O = dataloader.extract_train_data(
-        ... odds_type='market_maximum',
-        ... )
-        >>> # Backtest the bettor
+        >>> from sportsbet.datasets import DummySoccerDataLoader
+        >>> dataloader = DummySoccerDataLoader()
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='bet365')
         >>> bettor = OddsComparisonBettor(alpha=0.03)
-        >>> backtest(bettor, X, Y, O).reset_index()
-          Training start ... Yield percentage per bet (under_2.5__full_time_goals)
-        ...
+        >>> results = backtest(bettor, X, Y, O)
+        >>> 'Number of bets' in results.columns
+        True
     """
+
+    _append_odds = True
 
     def __init__(
         self: Self,
@@ -86,7 +82,8 @@ class OddsComparisonBettor(BaseBettor):
         self.alpha = alpha
 
     def _check_odds_types(self: Self, X: pd.DataFrame) -> Self:
-        available_odds_types = {col.split('__')[1] for col in X.columns if col.startswith('odds__')}
+        # Odds columns follow `{provider}__{market}__{status}__{time}` (four grammar tokens).
+        available_odds_types = {col.split('__', maxsplit=1)[0] for col in X.columns if is_odds_column(col)}
         if not available_odds_types:
             error_msg = 'Input data do not include any odds columns.'
             raise ValueError(error_msg)
@@ -111,7 +108,7 @@ class OddsComparisonBettor(BaseBettor):
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame) -> Self:
         self._check_odds_types(X)
         self.alpha_ = check_scalar(self.alpha, 'alpha', target_type=float, min_val=0.0, max_val=1.0)
-        self.output_keys_ = ['__'.join(col.split('__')[1:]) for col in Y.columns]
+        self.output_keys_ = [market_base(col) for col in Y.columns]
         return self
 
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
@@ -126,12 +123,13 @@ class OddsComparisonBettor(BaseBettor):
                 The positive class probabilities.
         """
         proba_cont = []
+        columns = list(X.columns)
         for key in self.output_keys_:
-            odds_cols = []
-            for odds_type in self.odds_types_:
-                odds_col = f'odds__{odds_type}__{key}'
-                if odds_col in X.columns:
-                    odds_cols.append(odds_col)
+            odds_cols = [
+                col
+                for odds_type in self.odds_types_
+                if (col := latest_odds_column(columns, key, provider=odds_type)) is not None
+            ]
             proba_cont.append(1 / X[odds_cols].mean(axis=1))
         proba = (pd.concat(proba_cont, axis=1) - self.alpha_).fillna(0.0).to_numpy()
         proba[proba < 0] = 0.0
