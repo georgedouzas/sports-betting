@@ -83,7 +83,8 @@ subtle regressions are otherwise invisible.
 
 Code MUST pass the full automated gate before merge: `black` and `docformatter`
 formatting, `ruff` linting (the configured rule set, line length 120),
-`interrogate` docstring coverage, and the `bandit` + `safety` security checks.
+`interrogate` docstring coverage, the `bandit` security check, and the
+`pip-audit` dependency audit.
 These gates run via `pre-commit` locally and `nox` in CI. Failures MUST be fixed
 at the source; disabling a rule inline requires a justifying comment and is the
 exception, not the workaround.
