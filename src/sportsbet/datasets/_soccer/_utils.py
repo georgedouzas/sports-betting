@@ -79,6 +79,7 @@ def derive_metadata(data: pd.DataFrame, value_cols: list[str]) -> dict[str, dict
     Returns:
         Mapping of column to `{'type', 'include', 'fixed'}`.
     """
+
     def _is_constant(values: pd.Series) -> bool:
         non_null = values.dropna()
         return non_null.empty or bool(non_null.min() == non_null.max())
