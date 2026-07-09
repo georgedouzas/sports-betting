@@ -15,7 +15,7 @@ from rich.panel import Panel
 from sklearn.model_selection import TimeSeriesSplit
 
 from .. import ParamGrid
-from ..datasets._base import BaseDataLoader
+from ..datasets._soccer._dataloader import SoccerDataLoader
 from ..evaluation._base import BaseBettor
 
 
@@ -42,7 +42,7 @@ def get_module(config_path: str) -> ModuleType | None:
     return None
 
 
-def get_dataloader_cls(mod: ModuleType | None) -> type[BaseDataLoader] | None:
+def get_dataloader_cls(mod: ModuleType | None) -> type[SoccerDataLoader] | None:
     """Get the dataloader class."""
     console = Console()
     if mod is None:
@@ -53,7 +53,7 @@ def get_dataloader_cls(mod: ModuleType | None) -> type[BaseDataLoader] | None:
         )
         console.print(warning)
         return None
-    elif not issubclass(mod.DATALOADER_CLASS, BaseDataLoader):
+    elif not issubclass(mod.DATALOADER_CLASS, SoccerDataLoader):
         warning = Panel.fit(
             '[bold red]`DATALOADER_CLASS` variable should be a `\'dataloader\'` class.',
         )
@@ -78,6 +78,20 @@ def get_drop_na_thres(mod: ModuleType | None) -> float:
 def get_odds_type(mod: ModuleType | None) -> str | None:
     if mod is not None and hasattr(mod, 'ODDS_TYPE'):
         return mod.ODDS_TYPE
+    return None
+
+
+def get_target_event_status(mod: ModuleType | None) -> str | None:
+    """Get the target event status (`preplay`/`inplay`/`postplay`)."""
+    if mod is not None and hasattr(mod, 'TARGET_EVENT_STATUS'):
+        return mod.TARGET_EVENT_STATUS
+    return None
+
+
+def get_target_event_time(mod: ModuleType | None) -> pd.Timedelta | None:
+    """Get the target in-play event time; ignored unless the status is `inplay`."""
+    if mod is not None and hasattr(mod, 'TARGET_EVENT_TIME') and mod.TARGET_EVENT_TIME is not None:
+        return pd.Timedelta(mod.TARGET_EVENT_TIME)
     return None
 
 

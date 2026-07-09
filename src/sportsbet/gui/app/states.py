@@ -26,15 +26,9 @@ from sportsbet.datasets import BaseDataLoader, SoccerDataLoader
 from sportsbet.evaluation import BaseBettor, BettorGridSearchCV, ClassifierBettor, OddsComparisonBettor, backtest
 
 BETTING_MARKETS = [
-    [
-        'home_win__full_time_goals',
-        'away_win__full_time_goals',
-        'draw__full_time_goals',
-        'over_2.5__full_time_goals',
-        'under_2.5__full_time_goals',
-    ],
-    ['draw__full_time_goals', 'over_2.5__full_time_goals'],
-    ['home_win__full_time_goals', 'away_win__full_time_goals'],
+    ['home_win', 'away_win', 'draw', 'over_2.5', 'under_2.5'],
+    ['draw', 'over_2.5'],
+    ['home_win', 'away_win'],
 ]
 DATALOADERS = {
     'Soccer': SoccerDataLoader,
@@ -189,7 +183,6 @@ class State(rx.State):
     @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
-
         self.dataloader_error = False
         self.model_error = False
 
@@ -231,6 +224,8 @@ class DataloaderCreationState(DataloaderState):
     param_grid: list[dict] = []  # noqa: RUF012
     odds_type: str = 'market_average'
     drop_na_thres: list = [0.0]  # noqa: RUF012
+    target_event_status: str = 'postplay'
+    target_event_time: list = [0]  # noqa: RUF012
     dataloader_serialized: str | None = None
     X_train: list | None = None
     Y_train: list | None = None
@@ -415,8 +410,13 @@ class DataloaderCreationState(DataloaderState):
             X_train, Y_train, O_train = dataloader.extract_train_data(
                 odds_type=self.odds_type,
                 drop_na_thres=float(self.drop_na_thres[0]),
+                target_event_status=self.target_event_status,
+                target_event_time=(
+                    pd.Timedelta(minutes=self.target_event_time[0]) if self.target_event_status == 'inplay' else None
+                ),
             )
             X_fix, _, O_fix = dataloader.extract_fixtures_data()
+            Y_train = cast('pd.DataFrame', Y_train)  # supervised extraction always returns targets
             self.data = self.X_train = X_train.reset_index().fillna('NA').to_dict('records')
             self.data_cols = self.X_train_cols = [ag_grid.column_def(field='date', header_name='Date')] + [
                 ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in X_train.columns
@@ -450,7 +450,6 @@ class DataloaderCreationState(DataloaderState):
     @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
-
         self.dataloader_error = False
         self.model_error = False
 
@@ -486,6 +485,8 @@ class DataloaderCreationState(DataloaderState):
         # Training
         self.odds_type = 'market_average'
         self.drop_na_thres = [0.0]
+        self.target_event_status = 'postplay'
+        self.target_event_time = [0]
 
         # Data
         self.data = None
@@ -639,10 +640,13 @@ class DataloaderLoadingState(DataloaderState):
                 X_train, Y_train, O_train = dataloader.extract_train_data(
                     odds_type=dataloader.odds_type_,
                     drop_na_thres=dataloader.drop_na_thres_,
+                    target_event_status=getattr(dataloader, 'target_event_status_', None),
+                    target_event_time=getattr(dataloader, 'target_event_time_', None),
                 )
             else:
                 X_train, Y_train, O_train = dataloader.extract_train_data()
             X_fix, _, O_fix = dataloader.extract_fixtures_data()
+            Y_train = cast('pd.DataFrame', Y_train)  # supervised extraction always returns targets
             self.data = self.X_train = X_train.reset_index().fillna('NA').to_dict('records')
             self.data_cols = self.X_train_cols = [ag_grid.column_def(field='date', header_name='Date')] + [
                 ag_grid.column_def(field=col, header_name=self.process_cols(col)) for col in X_train.columns
@@ -686,7 +690,6 @@ class DataloaderLoadingState(DataloaderState):
     @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
-
         self.dataloader_error = False
         self.model_error = False
 
@@ -835,6 +838,8 @@ class ModelCreationState(State):
                 X_train, Y_train, O_train = dataloader.extract_train_data(
                     odds_type=dataloader.odds_type_,
                     drop_na_thres=dataloader.drop_na_thres_,
+                    target_event_status=getattr(dataloader, 'target_event_status_', None),
+                    target_event_time=getattr(dataloader, 'target_event_time_', None),
                 )
             else:
                 X_train, Y_train, O_train = dataloader.extract_train_data()
@@ -874,7 +879,6 @@ class ModelCreationState(State):
     @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
-
         self.dataloader_error = False
         self.model_error = False
 
@@ -1023,6 +1027,8 @@ class ModelLoadingState(State):
                 X_train, Y_train, O_train = dataloader.extract_train_data(
                     odds_type=dataloader.odds_type_,
                     drop_na_thres=dataloader.drop_na_thres_,
+                    target_event_status=getattr(dataloader, 'target_event_status_', None),
+                    target_event_time=getattr(dataloader, 'target_event_time_', None),
                 )
             else:
                 X_train, Y_train, O_train = dataloader.extract_train_data()
@@ -1062,7 +1068,6 @@ class ModelLoadingState(State):
     @rx.event
     def reset_state(self: Self) -> None:
         """Reset handler."""
-
         self.dataloader_error = False
         self.model_error = False
 

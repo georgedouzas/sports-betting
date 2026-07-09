@@ -14,7 +14,6 @@ def parameters(state: rx.State) -> rx.Component:
 
     def _checkboxes(row: list[str], state: rx.State) -> rx.Component:
         """Checkbox of parameter value."""
-
         return rx.vstack(
             rx.foreach(
                 row,

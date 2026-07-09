@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import click
 import pandas as pd
@@ -13,7 +14,16 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ._options import get_config_path_option, get_data_path_option
-from ._utils import get_dataloader_cls, get_drop_na_thres, get_module, get_odds_type, get_param_grid, print_console
+from ._utils import (
+    get_dataloader_cls,
+    get_drop_na_thres,
+    get_module,
+    get_odds_type,
+    get_param_grid,
+    get_target_event_status,
+    get_target_event_time,
+    print_console,
+)
 
 
 @click.group()
@@ -62,16 +72,23 @@ def training(config_path: str, data_path: str) -> None:
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
     dataloader = dataloader_cls(param_grid)
-    X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
+    X_train, Y_train, O_train = dataloader.extract_train_data(
+        drop_na_thres=drop_na_thres,
+        odds_type=odds_type,
+        target_event_status=get_target_event_status(mod),
+        target_event_time=get_target_event_time(mod),
+    )
+    Y_train = cast('pd.DataFrame', Y_train)  # supervised extraction always returns targets
+    has_odds = O_train is not None and not O_train.empty
     print_console(
-        [X_train, Y_train] + ([O_train] if O_train is not None else []),
-        ['Training input data', 'Training output data'] + (['Training odds data'] if O_train is not None else []),
+        [X_train, Y_train] + ([O_train] if has_odds else []),
+        ['Training input data', 'Training output data'] + (['Training odds data'] if has_odds else []),
     )
     if data_path is not None:
         (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
         X_train.to_csv(Path(data_path) / 'sports-betting-data' / 'X_train.csv')
         Y_train.to_csv(Path(data_path) / 'sports-betting-data' / 'Y_train.csv')
-        if O_train is not None:
+        if has_odds:
             O_train.to_csv(Path(data_path) / 'sports-betting-data' / 'O_train.csv')
 
 
@@ -89,7 +106,12 @@ def fixtures(config_path: str, data_path: str) -> None:
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
     dataloader = dataloader_cls(param_grid)
-    dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
+    dataloader.extract_train_data(
+        drop_na_thres=drop_na_thres,
+        odds_type=odds_type,
+        target_event_status=get_target_event_status(mod),
+        target_event_time=get_target_event_time(mod),
+    )
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
     if not X_fix.empty:
         print_console([X_fix], ['Fixtures input data'])
