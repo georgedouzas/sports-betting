@@ -70,7 +70,7 @@ We also use the offline dummy training and fixtures data, so everything runs wit
 ```python
 from sportsbet.datasets import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='bet365')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
@@ -114,9 +114,7 @@ assert Y_train.columns.tolist() == [
     'draw__postplay__0min',
     'away_win__postplay__0min',
     'over_2.5__postplay__0min',
-    'over_3.5__postplay__0min',
-    'under_2.5__postplay__0min',
-    'under_3.5__postplay__0min'
+    'under_2.5__postplay__0min'
 ]
 ```
 
