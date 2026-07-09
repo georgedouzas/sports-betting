@@ -53,7 +53,7 @@ def test_stats_schema_fails_on_extra_column_due_to_strict(stats, stats_schema):
     """Test statistics schema fails on extra column due to strict mode."""
     stats_wrong = stats.copy()
     stats_wrong['unexpected'] = 123
-    with pytest.raises(pa.errors.SchemaError):
+    with pytest.raises((pa.errors.SchemaError, pa.errors.SchemaErrors)):
         stats_schema.validate(stats_wrong)
 
 
@@ -112,7 +112,7 @@ def test_odds_schema_fails_on_extra_column_due_to_strict(odds, odds_schema):
     """Test statistics schema fails on extra column due to strict mode."""
     odds_wrong = odds.copy()
     odds_wrong['unexpected'] = 123
-    with pytest.raises(pa.errors.SchemaError):
+    with pytest.raises((pa.errors.SchemaError, pa.errors.SchemaErrors)):
         odds_schema.validate(odds_wrong)
 
 

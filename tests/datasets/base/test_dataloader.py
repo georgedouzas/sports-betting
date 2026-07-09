@@ -83,7 +83,7 @@ def test_extract_train_data_fails_on_invalid_event_status(stats, odds, stats_sch
     """Test extract_train_data fails on invalid event status."""
     targets = ['home_goals', 'away_goals']
     dataloader = BaseDataLoader(stats, odds, stats_schema, odds_schema, targets)
-    with pytest.raises(ValueError, match="Invalid learning type"):
+    with pytest.raises(ValueError, match="Invalid target event status"):
         dataloader.extract_train_data(target_event_status='invalid')
 
 
@@ -111,22 +111,83 @@ def test_extract_train_data_fails_on_non_timedelta_event_time(stats, odds, stats
         dataloader.extract_train_data(target_event_time='10min')
 
 
-def test_extract_train_data_returns_x_y_o(stats, odds, stats_schema, odds_schema):
-    """Test extract_train_data returns X, Y, O with correct structure."""
+def test_extract_train_data_returns_aligned_x_y_o(stats, odds, stats_schema, odds_schema):
+    """Test supervised extraction returns aligned X, Y, O following the naming grammar (T007)."""
     targets = ['home_goals', 'away_goals']
     dataloader = BaseDataLoader(stats, odds, stats_schema, odds_schema, targets)
     X, Y, O = dataloader.extract_train_data()
-    
-    # Check return types
+
+    # Return types: supervised always returns a three-tuple of frames
     assert isinstance(X, pd.DataFrame)
     assert isinstance(Y, pd.DataFrame)
-    assert O is None
-    
-    # Check Y contains only target columns
-    assert list(Y.columns) == targets
-    
-    # Check X has wide format with event columns
-    assert any('__' in col for col in X.columns if col not in stats_schema.snapshot_cols())
-    
-    # Check both have same number of rows
-    assert len(X) == len(Y)
+    assert isinstance(O, pd.DataFrame)
+
+    # X/Y/O share the same date index and rows
+    assert isinstance(X.index, pd.DatetimeIndex)
+    assert X.index.equals(Y.index)
+    assert X.index.equals(O.index)
+    assert len(X) == len(Y) == len(O)
+
+    # Fixed features keep bare names; time-varying features are suffixed by the grammar
+    assert {'league', 'home_team', 'away_team', 'home_latest_streak'}.issubset(X.columns)
+    assert 'home_goals__inplay__30min' in X.columns
+
+    # Y targets are evaluated at the postplay target moment
+    assert list(Y.columns) == ['home_goals__postplay__0min', 'away_goals__postplay__0min']
+
+    # Odds follow the provider-prefixed grammar
+    assert all(col.startswith('bet365__') for col in O.columns)
+
+
+def test_extract_train_data_inplay_target_excludes_later_snapshots(stats, odds, stats_schema, odds_schema):
+    """Test an in-play 60 minute target leaks no post-target information (T008)."""
+    targets = ['home_goals', 'away_goals']
+    dataloader = BaseDataLoader(stats, odds, stats_schema, odds_schema, targets)
+    X, Y, _ = dataloader.extract_train_data(
+        target_event_status='inplay',
+        target_event_time=pd.Timedelta('60min'),
+    )
+    # Features only include snapshots strictly before 60 minutes
+    assert 'home_goals__inplay__30min' in X.columns
+    assert all('60min' not in col and '90min' not in col for col in X.columns)
+    # Y is evaluated at the 60 minute mark
+    assert list(Y.columns) == ['home_goals__inplay__60min', 'away_goals__inplay__60min']
+
+
+def test_extract_train_data_unsupervised_returns_x_none_o(stats, odds, stats_schema, odds_schema):
+    """Test unsupervised extraction returns a uniform (X, None, O) three-tuple (T009)."""
+    targets = ['home_goals', 'away_goals']
+    dataloader = BaseDataLoader(stats, odds, stats_schema, odds_schema, targets)
+    X, Y, O = dataloader.extract_train_data(learning_type='unsupervised')
+    assert isinstance(X, pd.DataFrame)
+    assert Y is None
+    assert isinstance(O, pd.DataFrame)
+    assert X.index.equals(O.index)
+
+
+@pytest.mark.parametrize('learning_type', ['reinforcement', 'semi-supervised', 'other'])
+def test_extract_train_data_rejects_unknown_learning_type(learning_type, stats, odds, stats_schema, odds_schema):
+    """Test unknown learning types (including reinforcement) are rejected (T009)."""
+    targets = ['home_goals', 'away_goals']
+    dataloader = BaseDataLoader(stats, odds, stats_schema, odds_schema, targets)
+    with pytest.raises(ValueError, match='Invalid learning type'):
+        dataloader.extract_train_data(learning_type=learning_type)
+
+
+def test_extract_fixtures_data_before_train_data_fails(stats, odds, stats_schema, odds_schema):
+    """Test extract_fixtures_data requires a prior extract_train_data call (T012)."""
+    targets = ['home_goals', 'away_goals']
+    dataloader = BaseDataLoader(stats, odds, stats_schema, odds_schema, targets)
+    with pytest.raises(ValueError, match='extract_train_data'):
+        dataloader.extract_fixtures_data()
+
+
+def test_extract_fixtures_data_matches_train_columns(stats, odds, stats_schema, odds_schema):
+    """Test fixtures data reproduces the training column layout with Y None (T012)."""
+    targets = ['home_goals', 'away_goals']
+    dataloader = BaseDataLoader(stats, odds, stats_schema, odds_schema, targets)
+    X_train, _, O_train = dataloader.extract_train_data()
+    X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
+    assert Y_fix is None
+    pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
+    pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
