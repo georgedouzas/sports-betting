@@ -98,7 +98,7 @@ def test_fit_odds_data_cols_names_value_error():
 
 def test_fit_odds_data_providers_value_error():
     """Test raising an error when odds columns mix providers."""
-    renamed = O_train.columns[0].replace('bet365', 'market_average', 1)
+    renamed = O_train.columns[0].replace('market_average', 'other', 1)
     O = O_train.rename(columns={O_train.columns[0]: renamed})
     bettor = TestBettor()
     bettor.fit(X_train, Y_train)

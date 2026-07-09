@@ -1,41 +1,23 @@
 """Tests for the soccer dataloader (network mocked)."""
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import SoccerDataLoader
+from sportsbet.datasets import DummySoccerDataLoader, SoccerDataLoader
 
-# A small wide football-data-style frame: two historical matches and one fixture.
-_RAW = pd.DataFrame(
-    {
-        'date': pd.to_datetime(['2024-08-16', '2024-08-17', '2025-09-01'], utc=True),
-        'league': ['England', 'England', 'England'],
-        'division': [1, 1, 1],
-        'year': [2025, 2025, 2025],
-        'home_team': ['Man United', 'Arsenal', 'Chelsea'],
-        'away_team': ['Fulham', 'Liverpool', 'Everton'],
-        'FTHG': [1.0, 2.0, np.nan],
-        'FTAG': [0.0, 2.0, np.nan],
-        'B365H': [1.70, 2.10, 1.90],
-        'B365D': [3.40, 3.30, 3.50],
-        'B365A': [4.20, 3.10, 3.80],
-        'B365>2.5': [1.90, 1.80, 1.95],
-        'B365<2.5': [1.95, 2.00, 1.90],
-        'AvgH': [1.68, 2.05, 1.88],
-        'AvgD': [3.35, 3.25, 3.45],
-        'AvgA': [4.10, 3.05, 3.75],
-        'Avg>2.5': [1.88, 1.78, 1.93],
-        'Avg<2.5': [1.93, 1.98, 1.88],
-        'fixtures': [False, False, True],
-    },
-)
+PROVIDERS = ['market_average', 'market_maximum']
 
 
 @pytest.fixture
-def loader(monkeypatch):
-    """A SoccerDataLoader whose network download is replaced by the wide fixture frame."""
-    monkeypatch.setattr(SoccerDataLoader, '_raw_data', lambda self: _RAW.copy())
+def long_snapshots():
+    """A long ``(stats, odds)`` sample reused from the offline dummy data."""
+    return DummySoccerDataLoader(param_grid={'league': ['England']})._snapshots()
+
+
+@pytest.fixture
+def loader(monkeypatch, long_snapshots):
+    """A SoccerDataLoader whose network download is replaced by the long sample."""
+    monkeypatch.setattr(SoccerDataLoader, '_snapshots', lambda self: long_snapshots)
     return SoccerDataLoader(param_grid={'league': ['England']})
 
 
@@ -46,27 +28,27 @@ def test_get_all_params_offline():
     assert all({'league', 'division', 'year'} == set(param) for param in params)
 
 
-def test_get_odds_types(loader):
-    """Test odds type discovery."""
-    assert loader.get_odds_types() == ['bet365', 'market_average', 'market_maximum']
+def test_get_odds_types_derived_from_data(loader):
+    """Test odds types are derived from the odds ``provider`` column."""
+    assert loader.get_odds_types() == PROVIDERS
 
 
-def test_extract_train_data_maps_feed_to_snapshots(loader):
-    """Test the wide feed maps to moment-aware X, Y, O with market targets."""
-    X, Y, O = loader.extract_train_data(odds_type='bet365')
-    # Historical (non-fixture) matches resolve at postplay
-    n_historical = int((~_RAW['fixtures']).sum())
-    assert len(X) == len(Y) == len(O) == n_historical
+def test_extract_train_data_maps_snapshots(loader):
+    """Test the long snapshots map to aligned, moment-aware X, Y, O with market targets."""
+    X, Y, O = loader.extract_train_data(odds_type='market_average')
+    assert len(X) == len(Y) == len(O)
     assert X.index.equals(Y.index)
     assert X.index.equals(O.index)
     assert 'home_win__postplay__0min' in Y.columns
-    assert {col.split('__')[0] for col in O.columns} == {'bet365'}
+    assert {col.split('__')[0] for col in O.columns} == {'market_average'}
+    # Derived, time-invariant pre-match features flow through as bare columns.
+    assert {'home_points_avg', 'away_points_avg'}.issubset(X.columns)
 
 
 def test_extract_train_data_odds_type_selects_provider(loader):
     """Test odds_type selects a single provider's odds."""
-    _, _, O = loader.extract_train_data(odds_type='market_average')
-    assert {col.split('__')[0] for col in O.columns} == {'market_average'}
+    _, _, O = loader.extract_train_data(odds_type='market_maximum')
+    assert {col.split('__')[0] for col in O.columns} == {'market_maximum'}
 
 
 def test_extract_train_data_no_odds(loader):
@@ -76,26 +58,96 @@ def test_extract_train_data_no_odds(loader):
 
 
 def test_extract_train_data_invalid_odds_type(loader):
-    """Test an invalid odds type is rejected."""
+    """Test an invalid odds type is rejected against the derived providers."""
     with pytest.raises(ValueError, match='Invalid odds type'):
-        loader.extract_train_data(odds_type='williamhill')
+        loader.extract_train_data(odds_type='bet365')
 
 
-def test_extract_train_data_inplay_target_has_no_data(loader):
-    """Test an in-play target against the pre/post-only feed raises (no in-play data)."""
-    with pytest.raises(ValueError, match='No resolvable events'):
-        loader.extract_train_data(
-            odds_type='bet365',
-            target_event_status='inplay',
-            target_event_time=pd.Timedelta('60min'),
-        )
+def test_extract_train_data_inplay_target(loader):
+    """Test an in-play target resolves outcomes at the requested minute."""
+    _, Y, _ = loader.extract_train_data(
+        odds_type='market_average',
+        target_event_status='inplay',
+        target_event_time=pd.Timedelta('60min'),
+    )
+    assert 'home_win__inplay__60min' in Y.columns
+
+
+def test_validate_snapshots_rejects_missing_columns(monkeypatch, long_snapshots):
+    """Test the loader rejects snapshots missing required identity columns."""
+    stats, odds = long_snapshots
+    bad = (stats.drop(columns=['home_team']), odds)
+    monkeypatch.setattr(SoccerDataLoader, '_snapshots', lambda self: bad)
+    with pytest.raises(ValueError, match='missing the required columns'):
+        SoccerDataLoader().extract_train_data(odds_type='market_average')
 
 
 def test_extract_fixtures_data_matches_columns(loader):
-    """Test fixtures reproduce training columns and carry the upcoming match."""
-    X_train, _, O_train = loader.extract_train_data(odds_type='bet365')
+    """Test fixtures reproduce the training columns and carry the upcoming match."""
+    X_train, _, O_train = loader.extract_train_data(odds_type='market_average')
     X_fix, Y_fix, O_fix = loader.extract_fixtures_data()
     assert Y_fix is None
-    assert list(zip(X_fix['home_team'], X_fix['away_team'], strict=True)) == [('Chelsea', 'Everton')]
+    assert list(zip(X_fix['home_team'], X_fix['away_team'], strict=True)) == [('Arsenal', 'Chelsea')]
     pd.testing.assert_index_equal(X_train.columns, X_fix.columns)
     pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
+
+
+def test_from_snapshots_consumes_long_data(long_snapshots):
+    """Test canonical long snapshots are consumed without downloading."""
+    stats, odds = long_snapshots
+    loader = SoccerDataLoader.from_snapshots(stats, odds)
+    assert loader.get_odds_types() == PROVIDERS
+    _, Y, O = loader.extract_train_data(odds_type='market_average')
+    assert 'home_win__postplay__0min' in Y.columns
+    assert {col.split('__')[0] for col in O.columns} == {'market_average'}
+
+
+def test_from_dataframe_single_moment_splits_stats_and_odds():
+    """Test a user's wide single-moment frame is split into long stats/odds at that moment."""
+    wide = pd.DataFrame(
+        [
+            {
+                'date': '2025-09-01',
+                'league': 'England',
+                'division': 1,
+                'year': 2025,
+                'home_team': 'Arsenal',
+                'away_team': 'Chelsea',
+                'home_points_avg': 2.0,
+                'away_points_avg': 1.7,
+                'market_average__home_win': 1.8,
+                'market_average__draw': 3.4,
+                'market_maximum__home_win': 1.9,
+                'market_maximum__draw': 3.5,
+            },
+        ],
+    )
+    loader = SoccerDataLoader.from_dataframe(wide, event_status='preplay', event_time=pd.Timedelta('0min'))
+    stats, odds = loader._snapshots()
+    assert (stats['event_status'] == 'preplay').all()
+    assert not [col for col in stats.columns if '__' in col]
+    assert set(odds['provider']) == set(PROVIDERS)
+    assert set(odds.loc[odds['provider'] == 'market_average', 'home_win']) == {1.8}
+    assert loader.get_odds_types() == PROVIDERS
+
+
+def test_from_csv_single_moment(tmp_path):
+    """Test a user's wide single-moment CSV is consumed without downloading."""
+    wide = pd.DataFrame(
+        [
+            {
+                'date': '2025-09-01',
+                'league': 'England',
+                'division': 1,
+                'year': 2025,
+                'home_team': 'Arsenal',
+                'away_team': 'Chelsea',
+                'market_average__home_win': 1.8,
+                'market_maximum__home_win': 1.9,
+            },
+        ],
+    )
+    path = tmp_path / 'matches.csv'
+    wide.to_csv(path, index=False)
+    loader = SoccerDataLoader.from_csv(str(path), event_status='preplay', event_time=pd.Timedelta('0min'))
+    assert loader.get_odds_types() == PROVIDERS

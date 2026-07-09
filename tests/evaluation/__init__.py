@@ -12,7 +12,7 @@ from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation._base import BaseBettor
 
 _loader = DummySoccerDataLoader()
-X_train, Y_train, O_train = _loader.extract_train_data(odds_type='bet365')
+X_train, Y_train, O_train = _loader.extract_train_data(odds_type='market_average')
 X_fix, _, O_fix = _loader.extract_fixtures_data()
 
 

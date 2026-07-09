@@ -22,7 +22,7 @@ from sportsbet.evaluation import OddsComparisonBettor
 DATALOADER_CLASS = DummySoccerDataLoader
 PARAM_GRID = {'league': ['England', 'Spain']}
 DROP_NA_THRES = 0.0
-ODDS_TYPE = 'bet365'
+ODDS_TYPE = 'market_average'
 TARGET_EVENT_STATUS = 'postplay'
 TARGET_EVENT_TIME = None
 BETTOR = OddsComparisonBettor(alpha=0.03)

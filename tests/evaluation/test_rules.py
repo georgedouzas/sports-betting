@@ -8,7 +8,7 @@ from sportsbet.evaluation import OddsComparisonBettor
 from tests.evaluation import O_fix, O_train, X_fix, X_train, Y_train
 
 
-@pytest.mark.parametrize('odds_types', ['bet365', ('bet365',), ['bet365', None]])
+@pytest.mark.parametrize('odds_types', ['market_average', ('market_average',), ['market_average', None]])
 def test_fit_raise_type_error_odds_types(odds_types):
     """Test raising a type error on odds types."""
     bettor = OddsComparisonBettor(odds_types=odds_types)
@@ -50,13 +50,13 @@ def test_fit_raise_value_error_alpha(alpha):
 def test_fit_check_odds_types_default():
     """Test the default odds types resolve to the single provider present in the odds."""
     bettor = OddsComparisonBettor().fit(X_train, Y_train, O_train)
-    assert bettor.odds_types_ == ['bet365']
+    assert bettor.odds_types_ == ['market_average']
 
 
 def test_fit_check_odds_types_explicit():
     """Test an explicit valid odds type is accepted."""
-    bettor = OddsComparisonBettor(odds_types=['bet365']).fit(X_train, Y_train, O_train)
-    assert bettor.odds_types_ == ['bet365']
+    bettor = OddsComparisonBettor(odds_types=['market_average']).fit(X_train, Y_train, O_train)
+    assert bettor.odds_types_ == ['market_average']
 
 
 def test_bet_parses_new_grammar():
