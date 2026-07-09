@@ -160,6 +160,11 @@ exclude = ["tests/fixtures/", "docs/examples/", "docs/generated/"]
 warn_unused_ignores = true
 show_error_codes = true
 
+[tool.bandit]
+# B101: asserts are used in tests and for invariant/type narrowing.
+# B404/B603/B607: the GUI launcher runs `node`/`reflex` with fixed, trusted arguments.
+skips = ["B101", "B404", "B603", "B607"]
+
 [tool.pytest.ini_options]
 addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "--ignore=src/sportsbet/gui"]
 testpaths = ["src", "tests"]
