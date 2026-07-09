@@ -83,12 +83,12 @@ Once the dataloader is initialized, the training and fixtures data can be extrac
 The extracted `X`, `Y` and `O` matrices are wide tables whose columns encode the moment they refer to. There are four kinds of
 columns, all using a fixed double-underscore (`__`) delimiter, with event times rendered as whole minutes (`{n}min`):
 
-- **Fixed (time-invariant) features and identity**: a bare name, e.g. `league`, `home_team`, `home_latest_streak`.
+- **Fixed (time-invariant) features and identity**: a bare name, e.g. `league`, `home_team`, `home_points_avg`.
 - **Time-varying features**: `{col}__{event_status}__{event_time}`, e.g. `home_goals__inplay__30min`.
-- **Odds**: `{provider}__{market}__{event_status}__{event_time}`, e.g. `bet365__home_win__preplay__0min`.
+- **Odds**: `{provider}__{market}__{event_status}__{event_time}`, e.g. `market_average__home_win__preplay__0min`.
 - **Targets (`Y`)**: `{market}__{target_event_status}__{target_event_time}`, e.g. `home_win__postplay__0min`.
 
-The supported betting markets are `home_win`, `draw`, `away_win`, `over_2.5`, `under_2.5`, `over_3.5` and `under_3.5`.
+The supported betting markets are `home_win`, `draw`, `away_win`, `over_2.5` and `under_2.5`.
 
 ## Training data
 
@@ -115,15 +115,15 @@ that have many missing values, therefore their presence does not enhance the pre
 If we set `drop_na_thres=0.0` then all columns are kept:
 
 ```python
-X_train, *_ = dataloader.extract_train_data(drop_na_thres=0.0, odds_type='bet365')
-assert len(X_train.columns) == 34
+X_train, *_ = dataloader.extract_train_data(drop_na_thres=0.0, odds_type='market_average')
+assert len(X_train.columns) == 28
 ```
 
 The sample data have no missing feature values, so raising the threshold to `1.0` keeps the same columns here:
 
 ```python
-X_train, *_ = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='bet365')
-assert len(X_train.columns) == 34
+X_train, *_ = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='market_average')
+assert len(X_train.columns) == 28
 ```
 
 ### The `odds_type` parameter
@@ -132,7 +132,7 @@ Parameter `odds_type` selects the provider that will be used for the odds' matri
 from the method `get_odds_types`:
 
 ```python
-assert dataloader.get_odds_types() == ['bet365', 'market_average', 'market_maximum']
+assert dataloader.get_odds_types() == ['market_average', 'market_maximum']
 ```
 
 When `odds_type` is not provided, its default value is `None` and `O_train` has no columns:
@@ -157,15 +157,13 @@ a feature:
 
 ```python
 import pandas as pd
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='bet365')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 assert Y_train.columns.tolist() == [
     'home_win__postplay__0min',
     'draw__postplay__0min',
     'away_win__postplay__0min',
     'over_2.5__postplay__0min',
-    'over_3.5__postplay__0min',
-    'under_2.5__postplay__0min',
-    'under_3.5__postplay__0min'
+    'under_2.5__postplay__0min'
 ]
 ```
 
@@ -174,7 +172,7 @@ strictly before the target moment are used as features, so the target moment can
 
 ```python
 X_inplay, Y_inplay, O_inplay = dataloader.extract_train_data(
-    odds_type='bet365',
+    odds_type='market_average',
     target_event_status='inplay',
     target_event_time=pd.Timedelta('60min'),
 )
@@ -183,9 +181,7 @@ assert Y_inplay.columns.tolist() == [
     'draw__inplay__60min',
     'away_win__inplay__60min',
     'over_2.5__inplay__60min',
-    'over_3.5__inplay__60min',
-    'under_2.5__inplay__60min',
-    'under_3.5__inplay__60min'
+    'under_2.5__inplay__60min'
 ]
 # Only the 30-minute in-play snapshot is available as a feature, not 60/90.
 assert 'home_goals__inplay__30min' in X_inplay.columns.tolist()
@@ -197,7 +193,7 @@ assert 'home_goals__inplay__60min' not in X_inplay.columns.tolist()
 Passing `learning_type='unsupervised'` returns only features and odds; the targets `Y_train` are `None`:
 
 ```python
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='bet365', learning_type='unsupervised')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', learning_type='unsupervised')
 assert Y_train is None
 ```
 
@@ -209,7 +205,7 @@ Once the training data are extracted, it is straightforward to extract the corre
 ```python
 from sportsbet.datasets import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='bet365')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
@@ -244,7 +240,7 @@ As an example we use the following data:
 ```python
 from sportsbet.datasets import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='bet365')
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
@@ -254,7 +250,7 @@ A detailed description of the above tuples of data is provided below.
 
 `X_train` is the first component of the training data tuple. `X_train` is a [pandas DataFrame] that contains information known
 before the target moment: the identity of the match (fixed columns) and any moment-aware feature snapshots that precede the
-target. For the default `postplay` target, this includes the pre-match streaks and every in-play snapshot:
+target. For the default `postplay` target, this includes the pre-match points averages and every in-play snapshot:
 
 ```python
 assert X_train.columns.tolist() == [
@@ -266,7 +262,7 @@ assert X_train.columns.tolist() == [
     'away_goals__inplay__30min',
     'away_goals__inplay__60min',
     'away_goals__inplay__90min',
-    'away_latest_streak',
+    'away_points_avg',
     'away_win__inplay__30min',
     'away_win__inplay__60min',
     'away_win__inplay__90min',
@@ -276,22 +272,16 @@ assert X_train.columns.tolist() == [
     'home_goals__inplay__30min',
     'home_goals__inplay__60min',
     'home_goals__inplay__90min',
-    'home_latest_streak',
+    'home_points_avg',
     'home_win__inplay__30min',
     'home_win__inplay__60min',
     'home_win__inplay__90min',
     'over_2.5__inplay__30min',
     'over_2.5__inplay__60min',
     'over_2.5__inplay__90min',
-    'over_3.5__inplay__30min',
-    'over_3.5__inplay__60min',
-    'over_3.5__inplay__90min',
     'under_2.5__inplay__30min',
     'under_2.5__inplay__60min',
-    'under_2.5__inplay__90min',
-    'under_3.5__inplay__30min',
-    'under_3.5__inplay__60min',
-    'under_3.5__inplay__90min'
+    'under_2.5__inplay__90min'
 ]
 ```
 
@@ -314,9 +304,7 @@ assert Y_train.columns.tolist() == [
     'draw__postplay__0min',
     'away_win__postplay__0min',
     'over_2.5__postplay__0min',
-    'over_3.5__postplay__0min',
-    'under_2.5__postplay__0min',
-    'under_3.5__postplay__0min'
+    'under_2.5__postplay__0min'
 ]
 ```
 
@@ -337,34 +325,26 @@ The entries of `Y_train` show whether an outcome of a betting event is `True` or
 
 ```python
 assert O_train.columns.tolist() == [
-    'bet365__away_win__inplay__30min',
-    'bet365__away_win__inplay__60min',
-    'bet365__away_win__inplay__90min',
-    'bet365__away_win__preplay__0min',
-    'bet365__draw__inplay__30min',
-    'bet365__draw__inplay__60min',
-    'bet365__draw__inplay__90min',
-    'bet365__draw__preplay__0min',
-    'bet365__home_win__inplay__30min',
-    'bet365__home_win__inplay__60min',
-    'bet365__home_win__inplay__90min',
-    'bet365__home_win__preplay__0min',
-    'bet365__over_2.5__inplay__30min',
-    'bet365__over_2.5__inplay__60min',
-    'bet365__over_2.5__inplay__90min',
-    'bet365__over_2.5__preplay__0min',
-    'bet365__over_3.5__inplay__30min',
-    'bet365__over_3.5__inplay__60min',
-    'bet365__over_3.5__inplay__90min',
-    'bet365__over_3.5__preplay__0min',
-    'bet365__under_2.5__inplay__30min',
-    'bet365__under_2.5__inplay__60min',
-    'bet365__under_2.5__inplay__90min',
-    'bet365__under_2.5__preplay__0min',
-    'bet365__under_3.5__inplay__30min',
-    'bet365__under_3.5__inplay__60min',
-    'bet365__under_3.5__inplay__90min',
-    'bet365__under_3.5__preplay__0min'
+    'market_average__away_win__inplay__30min',
+    'market_average__away_win__inplay__60min',
+    'market_average__away_win__inplay__90min',
+    'market_average__away_win__preplay__0min',
+    'market_average__draw__inplay__30min',
+    'market_average__draw__inplay__60min',
+    'market_average__draw__inplay__90min',
+    'market_average__draw__preplay__0min',
+    'market_average__home_win__inplay__30min',
+    'market_average__home_win__inplay__60min',
+    'market_average__home_win__inplay__90min',
+    'market_average__home_win__preplay__0min',
+    'market_average__over_2.5__inplay__30min',
+    'market_average__over_2.5__inplay__60min',
+    'market_average__over_2.5__inplay__90min',
+    'market_average__over_2.5__preplay__0min',
+    'market_average__under_2.5__inplay__30min',
+    'market_average__under_2.5__inplay__60min',
+    'market_average__under_2.5__inplay__90min',
+    'market_average__under_2.5__preplay__0min'
 ]
 ```
 
@@ -417,7 +397,7 @@ import tempfile
 from pathlib import Path
 from sportsbet.datasets import DummySoccerDataLoader, load_dataloader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-dataloader.extract_train_data(odds_type='bet365')
+dataloader.extract_train_data(odds_type='market_average')
 path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')
 dataloader.save(path)
 reloaded = load_dataloader(path)
