@@ -10,9 +10,10 @@ from typing import ClassVar, Self
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from .. import ParamGrid
-from ._soccer._dataloader import SoccerDataLoader
-from ._soccer._utils import IDENTITY_COLS, market_outcomes
+from ... import ParamGrid
+from .._base._dataloader import BaseDataLoader
+from .._base._schema import IDENTITY_COLS
+from ._utils import market_outcomes
 
 _MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
 _PROVIDERS = ['market_average', 'market_maximum']
@@ -139,13 +140,13 @@ def _timeline(match: dict) -> list[tuple[str, int, int, int]]:
     ]
 
 
-class DummySoccerDataLoader(SoccerDataLoader):
+class DummySoccerDataLoader(BaseDataLoader):
     """Dataloader for offline soccer sample data.
 
     The data are bundled in-play sample snapshots that require no downloading, so
     they familiarize the user with the dataloader interface and drive the
     documentation examples and doctests offline. It shares the interface of
-    [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader].
+    [`BaseDataLoader`][sportsbet.datasets.BaseDataLoader].
 
     Args:
         param_grid:
@@ -169,10 +170,6 @@ class DummySoccerDataLoader(SoccerDataLoader):
     @classmethod
     def _all_params(cls: type[Self]) -> list[dict]:
         return list(ParameterGrid(cls._PARAM_GRID))
-
-    def get_odds_types(self: Self) -> list[str]:
-        """Return the available odds types (providers) of the sample data."""
-        return list(_PROVIDERS)
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         selected_leagues = {params['league'] for params in self._selected_params() if 'league' in params}
