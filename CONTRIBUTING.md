@@ -24,6 +24,8 @@ the project for more details. You can run any of the following commands and subc
   - `pdm checks quality`: Check only code quality.
   - `pdm checks types`: Check only type annotations.
   - `pdm checks dependencies`: Check only for vulnerabilities in dependencies.
+  - `pdm checks security`: Run only security checks with bandit.
+  - `pdm checks docs`: Check only docstring coverage with interrogate.
 
 ### Tests
 

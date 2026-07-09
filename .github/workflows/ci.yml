@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
 
@@ -20,18 +19,18 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4.2.2
+      uses: actions/checkout@v4
 
     - name: Install Python versions
-      uses: actions/setup-python@v5.4.0
+      uses: actions/setup-python@v5
       with:
         python-version: |
             3.11
             3.12
             3.13
-            
+
     - name: Set up PDM
-      uses: pdm-project/setup-pdm@v4.3
+      uses: pdm-project/setup-pdm@v4
       with:
         cache: true
         cache-dependency-path: pyproject.toml
@@ -48,6 +47,12 @@ jobs:
     - name: Check vulnerabilities in dependencies
       run: pdm checks dependencies
 
+    - name: Check security issues
+      run: pdm checks security
+
+    - name: Check docstring coverage
+      run: pdm checks docs
+
   tests:
 
     strategy:
@@ -61,18 +66,18 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4.2.2
+      uses: actions/checkout@v4
 
     - name: Install Python versions
-      uses: actions/setup-python@v5.4.0
+      uses: actions/setup-python@v5
       with:
         python-version: |
             3.11
             3.12
             3.13
-            
+
     - name: Set up PDM
-      uses: pdm-project/setup-pdm@v4.3
+      uses: pdm-project/setup-pdm@v4
       with:
         cache: true
         cache-dependency-path: pyproject.toml
@@ -82,3 +87,29 @@ jobs:
 
     - name: Run the test suite
       run: pdm tests
+
+  doc:
+
+    if: ${{ github.ref != 'refs/heads/main' }}
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up PDM
+      uses: pdm-project/setup-pdm@v4
+      with:
+        cache: true
+        cache-dependency-path: pyproject.toml
+
+    - name: Install dependencies
+      run: pdm install -dG maintenance -dG docs
+
+    - name: Build documentation with Python ${{ matrix.python-version }}
+      run: pdm docs build

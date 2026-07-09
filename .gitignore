@@ -1,22 +1,43 @@
-.idea/
+# Python
 __pycache__/
 *.py[cod]
+
+# Virtual environments
+.venv/
+__pypackages__/
+
+# Build artifacts
+build/
 dist/
 *.egg-info/
-build/
-htmlcov/
-.coverage*
 pip-wheel-metadata/
+
+# Testing and coverage
 .pytest_cache/
+.coverage*
+coverage.xml
+htmlcov/
+
+# Type checking and linting
 .mypy_cache/
+.ruff_cache/
+
+# Task runner
+.nox/
+
+# Package managers
+pdm.lock
+uv.lock
+.pdm-python
+.pdm.toml
+
+# Documentation
 site/
 docs/generated/
-pdm.lock
-pdm.toml
-.pdm-python
-__pypackages__/
-.venv/
-.nox
-.ruff_cache
-.vscode
+
+# IDE and editors
+.idea/
+.vscode/
+
+# OS
 .DS_Store
