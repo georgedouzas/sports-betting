@@ -38,7 +38,6 @@ def parameters(state: rx.State) -> rx.Component:
 
     def _checkboxes(row: list[str], state: rx.State) -> rx.Component:
         """Checkbox of parameter value."""
-
         return rx.vstack(
             rx.foreach(
                 row,
@@ -137,6 +136,26 @@ def training_parameters(state: rx.State) -> rx.Component:
                     step=0.01,
                     default_value=0.0,
                     on_change=state.set_drop_na_thres,
+                    disabled=state.visibility_level > VL['training_parameters'],
+                ),
+            ),
+            rx.vstack(
+                rx.text('Target event status', size='1'),
+                rx.select(
+                    ['preplay', 'inplay', 'postplay'],
+                    default_value='postplay',
+                    on_change=state.set_target_event_status,
+                    disabled=state.visibility_level > VL['training_parameters'],
+                ),
+            ),
+            rx.vstack(
+                rx.text(f'Target in-play time (minutes): {DataloaderCreationState.target_event_time}', size='1'),
+                rx.slider(
+                    min=0,
+                    max=90,
+                    step=1,
+                    default_value=0,
+                    on_change=state.set_target_event_time,
                     disabled=state.visibility_level > VL['training_parameters'],
                 ),
             ),

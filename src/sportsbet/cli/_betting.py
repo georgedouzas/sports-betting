@@ -23,6 +23,8 @@ from ._utils import (
     get_n_jobs,
     get_odds_type,
     get_param_grid,
+    get_target_event_status,
+    get_target_event_time,
     get_verbose,
     print_console,
 )
@@ -47,11 +49,16 @@ def backtest(config_path: str, data_path: str) -> None:
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
     dataloader = dataloader_cls(param_grid)
-    X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
+    X_train, Y_train, O_train = dataloader.extract_train_data(
+        drop_na_thres=drop_na_thres,
+        odds_type=odds_type,
+        target_event_status=get_target_event_status(mod),
+        target_event_time=get_target_event_time(mod),
+    )
     bettor = get_bettor(mod)
     if bettor is None:
         return
-    if O_train is None:
+    if O_train is None or O_train.empty:
         console = Console()
         warning = Panel.fit(
             '[bold red]Dataloader does not support odds data. Backtesting of bettor is not possible.',
@@ -87,26 +94,31 @@ def bet(config_path: str, data_path: str) -> None:
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
     dataloader = dataloader_cls(param_grid)
-    X_train, Y_train, _ = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
+    X_train, Y_train, O_train = dataloader.extract_train_data(
+        drop_na_thres=drop_na_thres,
+        odds_type=odds_type,
+        target_event_status=get_target_event_status(mod),
+        target_event_time=get_target_event_time(mod),
+    )
     bettor = get_bettor(mod)
     if bettor is None:
         return
-    X_train, Y_train, _ = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
-    if O_fix is None or (X_fix.empty and O_fix is not None and O_fix.empty):
+    if X_fix.empty or O_fix is None or O_fix.empty:
         console = Console()
         warning = Panel.fit(
             '[bold red]Fixtures data were empty.',
         )
         console.print(warning)
         return
-    bettor.fit(X_train, Y_train)
-    value_bets = bettor.bet(X_fix, O_fix)
+    bettor.fit(X_train, Y_train, O_train)
+    value_bets = pd.DataFrame(
+        bettor.bet(X_fix, O_fix),
+        columns=list(bettor.betting_markets_),
+        index=X_fix.index,
+    )
     if mod is not None:
         print_console([value_bets], ['Value bets'])
         if data_path is not None:
             (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
-            columns = [col.split('__')[2] for col in O_fix.columns]
-            pd.DataFrame(value_bets, columns=columns).to_csv(
-                Path(data_path) / 'sports-betting-data' / 'value_bets.csv',
-            )
+            value_bets.to_csv(Path(data_path) / 'sports-betting-data' / 'value_bets.csv')

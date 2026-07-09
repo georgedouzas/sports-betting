@@ -15,8 +15,7 @@ from ._data import dataloader
 def main() -> None:
     """CLI for sports-betting.
 
-    This command is executed when you type `sportsbet` or `python -m
-    sportsbet`.
+    This command is executed when you type `sportsbet` or `python -m sportsbet`.
     """
     return
 
