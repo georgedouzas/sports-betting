@@ -1,4 +1,4 @@
-"""Implements the dataloader class."""
+"""Implements the base dataloader class shared by all dataloaders."""
 
 from __future__ import annotations
 
@@ -10,11 +10,23 @@ import cloudpickle
 import pandas as pd
 from sklearn.utils import check_scalar
 
-from ._schema import BaseOddsSchema, BaseStatsSchema
+from ... import FixturesData, ParamGrid, TrainData
+from ._schema import (
+    EVENT_COLS,
+    IDENTITY_COLS,
+    BaseOddsSchema,
+    BaseStatsSchema,
+    build_odds_schema,
+    build_stats_schema,
+    derive_metadata,
+    odds_columns,
+    parse_odds_column,
+)
 
 DELIMITER = '__'
 LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
+PARAM_COLS = ['league', 'division', 'year']
 
 
 def format_event_time(event_time: pd.Timedelta) -> str:
@@ -49,26 +61,288 @@ def odds_market(odds_col: str) -> str:
 
 
 class BaseDataLoader:
-    """The base class for dataloaders."""
+    """The base class for dataloaders.
 
-    def __init__(
-        self: Self,
+    A dataloader reads long event-snapshot `stats` and `odds` data, validates it,
+    derives the available providers, markets and per-column metadata from the data
+    itself, and extracts moment-aware training and fixtures data. Concrete
+    dataloaders only need to provide their data source by implementing
+    [`_snapshots`][sportsbet.datasets.BaseDataLoader] and, when they download data,
+    [`_all_params`][sportsbet.datasets.BaseDataLoader].
+
+    Args:
+        param_grid:
+            Selects the data to include. Keys are parameters like `'league'`,
+            `'division'` or `'year'` and values are sequences of allowed values,
+            mirroring scikit-learn's `ParameterGrid`. The default `None` selects
+            all available parameters.
+
+    Attributes:
+        param_grid_ (list[dict]):
+            The league/division/year combinations of the loaded data.
+
+        drop_na_thres_ (float):
+            The checked value of `drop_na_thres`.
+
+        odds_type_ (str | None):
+            The checked value of `odds_type`.
+
+        input_cols_ (pd.Index):
+            The columns of `X` for training and fixtures data.
+
+        output_cols_ (pd.Index | None):
+            The columns of `Y` for training data.
+
+        odds_cols_ (pd.Index):
+            The columns of `O` for training and fixtures data.
+    """
+
+    def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
+        self.param_grid = param_grid
+        self._provided_snapshots: tuple[pd.DataFrame, pd.DataFrame] | None = None
+        self._downloaded: tuple[pd.DataFrame, pd.DataFrame] | None = None
+        self._feed = True
+
+    @classmethod
+    def _from_components(
+        cls: type[Self],
         stats: pd.DataFrame,
         odds: pd.DataFrame,
         stats_schema: type[BaseStatsSchema],
         odds_schema: type[BaseOddsSchema],
         targets: list[str],
-    ) -> None:
-        self.stats = stats
-        self.odds = odds
-        self.stats_schema = stats_schema
-        self.odds_schema = odds_schema
-        self.targets = targets
+    ) -> Self:
+        """Build a loader directly from ready snapshots and schemas (the extraction engine)."""
+        loader = cls()
+        loader.stats = stats
+        loader.odds = odds
+        loader.stats_schema = stats_schema
+        loader.odds_schema = odds_schema
+        loader.targets = targets
+        loader._feed = False
+        return loader
+
+    # -- Data source hooks (implemented by concrete dataloaders) --------------------------------
+
+    def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Return the long `stats`/`odds` snapshots (provided, or from the source)."""
+        if self._provided_snapshots is not None:
+            return self._provided_snapshots
+        msg = f'{type(self).__name__} does not implement a data source.'
+        raise NotImplementedError(msg)
+
+    @classmethod
+    def _all_params(cls: type[Self]) -> list[dict]:
+        """Return the available `league`/`division`/`year` combinations of the source."""
+        msg = f'{cls.__name__} does not implement parameter discovery.'
+        raise NotImplementedError(msg)
+
+    # -- Construction from user data -------------------------------------------------------------
+
+    @classmethod
+    def from_snapshots(
+        cls: type[Self],
+        stats: pd.DataFrame,
+        odds: pd.DataFrame,
+        *,
+        param_grid: ParamGrid | None = None,
+    ) -> Self:
+        """Build a loader from canonical long `stats` and `odds` snapshots.
+
+        Use this when the data already follows the exported long format, i.e. one
+        row per match and moment with explicit `event_status`/`event_time` columns
+        (`stats` carrying the values, `odds` carrying `{provider}` and the markets).
+        No moment is assumed — every row states its own.
+
+        Args:
+            stats:
+                Long statistics snapshots.
+            odds:
+                Long odds snapshots.
+            param_grid:
+                Optional selection, mirroring the constructor.
+
+        Returns:
+            A loader that reads the provided snapshots instead of downloading them.
+        """
+        loader = cls(param_grid=param_grid)
+        loader._provided_snapshots = (stats, odds)
+        return loader
+
+    @classmethod
+    def from_dataframe(
+        cls: type[Self],
+        data: pd.DataFrame,
+        *,
+        event_status: str,
+        event_time: pd.Timedelta,
+        param_grid: ParamGrid | None = None,
+    ) -> Self:
+        """Build a loader from a user's wide match table taken at a single moment.
+
+        Every row of `data` is treated as a snapshot at the caller-declared
+        `event_status`/`event_time` — no moment is assumed. `data` must carry the
+        identity columns (`date`, `league`, `division`, `year`, `home_team`,
+        `away_team`), any number of value columns (goals, market outcomes,
+        features), and `{provider}__{market}` odds columns. For several moments,
+        provide long snapshots directly or call this per moment.
+
+        Args:
+            data:
+                One row per match at a single moment.
+            event_status:
+                The status the rows represent, e.g. `'preplay'` or `'postplay'`.
+            event_time:
+                The time into the match the rows represent.
+            param_grid:
+                Optional selection, mirroring the constructor.
+
+        Returns:
+            A loader that reads the provided data instead of downloading it.
+        """
+        loader = cls(param_grid=param_grid)
+        loader._provided_snapshots = cls._wide_to_snapshots(data, event_status, event_time)
+        return loader
+
+    @classmethod
+    def from_csv(
+        cls: type[Self],
+        path: str,
+        *,
+        event_status: str,
+        event_time: pd.Timedelta,
+        param_grid: ParamGrid | None = None,
+    ) -> Self:
+        """Build a loader from a CSV of a user's wide match table at a single moment.
+
+        See [`from_dataframe`][sportsbet.datasets.BaseDataLoader.from_dataframe].
+        """
+        return cls.from_dataframe(
+            pd.read_csv(path),
+            event_status=event_status,
+            event_time=event_time,
+            param_grid=param_grid,
+        )
+
+    @staticmethod
+    def _wide_to_snapshots(
+        data: pd.DataFrame,
+        event_status: str,
+        event_time: pd.Timedelta,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Split a wide single-moment frame into long `stats`/`odds` snapshots."""
+        odds_cols = odds_columns(list(data.columns))
+        stats = data.drop(columns=odds_cols).assign(event_status=event_status, event_time=event_time)
+        by_provider: dict[str, dict[str, str]] = {}
+        for col in odds_cols:
+            provider, market = parse_odds_column(col)
+            by_provider.setdefault(provider, {})[market] = col
+        records = []
+        for _, row in data.iterrows():
+            identity = {col: row[col] for col in IDENTITY_COLS}
+            for provider, markets in by_provider.items():
+                record = {**identity, 'event_status': event_status, 'event_time': event_time, 'provider': provider}
+                record.update({market: row[col] for market, col in markets.items()})
+                records.append(record)
+        return stats, pd.DataFrame(records)
+
+    # -- Parameter discovery ---------------------------------------------------------------------
+
+    @classmethod
+    def get_all_params(cls: type[Self]) -> list[dict]:
+        """Return every available parameter combination the source actually provides."""
+        return cls._all_params()
+
+    def _selected_params(self: Self) -> list[dict]:
+        """Filter the available combinations by `param_grid` (no invalid combinations are fabricated)."""
+        params = self._all_params()
+        if self.param_grid is None:
+            return params
+        grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
+        return [
+            combination
+            for combination in params
+            if any(all(combination[key] in values for key, values in grid.items()) for grid in grids)
+        ]
+
+    # -- Snapshot preparation --------------------------------------------------------------------
+
+    @staticmethod
+    def _concat(frames: list[pd.DataFrame]) -> pd.DataFrame:
+        """Concatenate feed frames, skipping empty ones so their dtypes do not leak.
+
+        An empty CSV (e.g. `fixtures.csv` when nothing is upcoming) reads back as all-object columns, which would
+        otherwise coerce the identity dtypes of the real data.
+        """
+        non_empty = [frame for frame in frames if not frame.empty]
+        return pd.concat(non_empty, ignore_index=True) if non_empty else frames[0].copy()
+
+    @staticmethod
+    def _finalize(data: pd.DataFrame) -> pd.DataFrame:
+        """Normalize the `date` and `event_time` dtypes of a snapshot frame."""
+        data = data.reset_index(drop=True)
+        if data.empty:
+            return data
+        data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
+        if not pd.api.types.is_timedelta64_dtype(data['event_time']):
+            data['event_time'] = pd.to_timedelta(data['event_time'], unit='m')
+        data['event_time'] = data['event_time'].astype('timedelta64[ns]')
+        return data
+
+    def _validate_snapshots(self: Self, stats: pd.DataFrame, odds: pd.DataFrame) -> None:
+        """Validate that the snapshots carry the required identity and event columns."""
+        for name, frame in [('stats', stats), ('odds', odds)]:
+            missing = [col for col in EVENT_COLS + IDENTITY_COLS if col not in frame.columns]
+            if missing:
+                msg = f'The {name} data is missing the required columns: {missing}.'
+                raise ValueError(msg)
+        if 'provider' not in odds.columns:
+            msg = 'The odds data is missing the `provider` column.'
+            raise ValueError(msg)
+
+    def get_odds_types(self: Self) -> list[str]:
+        """Return the available odds types (providers) derived from the data."""
+        _, odds = self._snapshots()
+        return sorted(odds['provider'].dropna().unique().tolist())
+
+    def _prepare(self: Self, odds_type: str | None) -> None:
+        """Read and validate the snapshots, derive their metadata and build the inputs."""
+        stats, odds = self._snapshots()
+        stats = self._finalize(stats)
+        odds = self._finalize(odds)
+        self._validate_snapshots(stats, odds)
+        providers = sorted(odds['provider'].dropna().unique().tolist())
+        if odds_type is not None and odds_type not in providers:
+            msg = f'Invalid odds type. It should be one of {providers}. Got {odds_type} instead.'
+            raise ValueError(msg)
+        stats_value_cols = [col for col in stats.columns if col not in EVENT_COLS + IDENTITY_COLS]
+        odds_value_cols = [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]
+        stats_metadata = derive_metadata(stats, stats_value_cols)
+        odds_metadata = derive_metadata(odds, odds_value_cols)
+
+        odds = odds[odds['provider'] == odds_type] if odds_type is not None else odds.iloc[0:0]
+        self.stats = build_stats_schema(stats_metadata).validate(stats)
+        self.odds = build_odds_schema(odds_metadata).validate(odds)
+        self.stats_schema = build_stats_schema(stats_metadata)
+        self.odds_schema = build_odds_schema(odds_metadata)
+        self.targets = odds_value_cols
+        self.odds_type_ = odds_type
+        self.param_grid_ = stats[PARAM_COLS].drop_duplicates().to_dict('records')
+
+    def _apply_drop_na(self: Self, X: pd.DataFrame, drop_na_thres: float) -> pd.DataFrame:
+        """Drop feature columns whose missingness exceeds `drop_na_thres`."""
+        if not X.empty:
+            keep = X.columns[X.isna().mean() <= (1.0 - drop_na_thres)]
+            X = X[keep]
+        self.input_cols_ = X.columns
+        self.drop_na_thres_ = drop_na_thres
+        return X
+
+    # -- Extraction engine -----------------------------------------------------------------------
 
     def _identity_cols(self: Self) -> list[str]:
         """Snapshot columns that identify a match (all snapshot cols but the event ones)."""
-        event_cols = ['event_status', 'event_time']
-        return [col for col in self.stats_schema.snapshot_cols() if col not in event_cols]
+        return [col for col in self.stats_schema.snapshot_cols() if col not in EVENT_COLS]
 
     def _feature_mask(
         self: Self,
@@ -85,10 +359,9 @@ class BaseDataLoader:
 
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
         """Pivot long snapshots into wide, moment-aware feature columns."""
-        event_cols = ['event_status', 'event_time']
         index_cols = self._identity_cols()
         feature_cols = [col for col in stats.columns if col not in self.stats_schema.snapshot_cols()]
-        X = stats.pivot_table(values=feature_cols, index=index_cols, columns=event_cols, aggfunc='first')
+        X = stats.pivot_table(values=feature_cols, index=index_cols, columns=EVENT_COLS, aggfunc='first')
         keep = [
             (col, event_status, event_time)
             for col, event_status, event_time in X.columns
@@ -108,10 +381,9 @@ class BaseDataLoader:
 
     def _pivot_odds(self: Self, odds: pd.DataFrame) -> pd.DataFrame:
         """Pivot long odds snapshots into wide, per-provider odds columns."""
-        event_cols = ['event_status', 'event_time']
         index_cols = self._identity_cols()
         odds_cols = [col for col in odds.columns if col not in self.odds_schema.snapshot_cols() and col != 'provider']
-        O = odds.pivot_table(values=odds_cols, index=index_cols, columns=[*event_cols, 'provider'], aggfunc='first')
+        O = odds.pivot_table(values=odds_cols, index=index_cols, columns=[*EVENT_COLS, 'provider'], aggfunc='first')
         keep = [
             (col, event_status, event_time, provider)
             for col, event_status, event_time, provider in O.columns
@@ -195,47 +467,46 @@ class BaseDataLoader:
     def extract_train_data(
         self: Self,
         *,
+        drop_na_thres: float = 0.0,
+        odds_type: str | None = None,
         learning_type: str | None = None,
         target_event_status: str | None = None,
         target_event_time: pd.Timedelta | None = None,
-    ) -> tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame]:
-        """Extract the training data.
+    ) -> TrainData:
+        """Extract the moment-aware training data.
 
         Read more in the [user guide][dataloader].
 
-        It returns historical data that can be used to create a betting
-        strategy based on heuristics or machine learning models.
+        It returns historical data that can be used to create a betting strategy
+        based on heuristics or machine learning models. The method prepares data
+        for the prediction target defined by `target_event_status` and
+        `target_event_time`. All information before the target becomes features
+        (X), the target-moment outcomes become labels (Y), and the corresponding
+        betting odds become O.
 
-        The method prepares data for the prediction target defined by
-        `event_status` and `event_time`. For example, to predict outcomes
-        at 60 minutes in-play, set `event_status='inplay'` and
-        `event_time=pd.Timedelta('60min')`. All information before 60 minutes
-        will be used as features (X), and the 60-minute outcomes as labels (Y).
-
-        Features (X) include all information available before the target
-        time point, while targets (Y) represent outcomes at the target point.
-        Odds (O) correspond to the betting markets for the target outcomes.
-
-        Parameters:
+        Args:
+            drop_na_thres:
+                Threshold in `[0.0, 1.0]` controlling how aggressively feature
+                columns with missing values are dropped. `0.0` keeps all columns.
+            odds_type:
+                One of `get_odds_types()`. `None` returns no odds.
             learning_type:
-                The type of learning task:
-                    - 'supervised' (default): `Y` holds the target outcomes
-                    - 'unsupervised': `Y` is `None` (features and odds only)
+                `'supervised'` (default): `Y` holds the target outcomes.
+                `'unsupervised'`: `Y` is `None` (features and odds only).
             target_event_status:
-                Status of the target outcomes to predict:
-                    - 'inplay': Target outcomes during the match
-                    - 'postplay' (default): Target final outcomes after the match
+                `'inplay'` or `'postplay'` (default `'postplay'`).
             target_event_time:
-                Time point of the target outcomes (e.g., pd.Timedelta('60min')
-                for 60 minutes in-play). All data strictly before this time
-                becomes features. Defaults to 0 minutes.
+                In-play target time (e.g. `pd.Timedelta('60min')`). Defaults to 0.
 
         Returns:
             (X, Y, O):
-                Input features `X`, target outcomes `Y`, and corresponding odds
-                `O`. For `learning_type='unsupervised'`, `Y` is `None`. The three
-                components share the same date index and rows.
+                Moment-aware features `X`, target outcomes `Y` and odds `O`. For
+                `learning_type='unsupervised'`, `Y` is `None`. The three components
+                share the same date index and rows.
         """
+        if self._feed:
+            self._prepare(odds_type)
+
         self.stats_schema.validate(self.stats)
         self.odds_schema.validate(self.odds)
         if self.stats_schema.snapshot_cols() != self.odds_schema.snapshot_cols():
@@ -275,7 +546,7 @@ class BaseDataLoader:
             target_event_status,
             target_event_time,
         )
-        self.input_cols_ = X.columns
+        X = self._apply_drop_na(X, drop_na_thres)
         self.odds_cols_ = O.columns
         if learning_type == 'unsupervised':
             self.output_cols_ = None
@@ -292,28 +563,20 @@ class BaseDataLoader:
         self.output_cols_ = Y.columns
         return X, Y, O
 
-    def extract_fixtures_data(self: Self) -> tuple[pd.DataFrame, None, pd.DataFrame]:
+    def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.
 
         Read more in the [user guide][dataloader].
 
-        It returns fixtures data that can be used to make predictions for
-        upcoming matches based on a betting strategy.
-
-        Before calling the `extract_fixtures_data` method for the first time,
-        the `extract_train_data` method should be called, in order to fix the
-        columns of the input and odds data.
-
-        The data contain information about the matches known before the target
-        moment, i.e. the training data `X` and the odds data `O`. The
-        multi-output targets `Y` is always equal to `None` and is only included
-        for consistency with the method `extract_train_data`.
+        It returns fixtures data that can be used to make predictions for upcoming
+        matches. Before calling this method, `extract_train_data` must have been
+        called to fix the columns of the input and odds data. The multi-output
+        targets `Y` are always `None` and only included for consistency.
 
         Returns:
             (X, None, O):
-                Each component represents the fixtures input data `X`, the
-                multi-output targets `Y` equal to `None`, and the corresponding
-                odds `O`, respectively.
+                The fixtures input data `X`, `Y` equal to `None`, and the
+                corresponding odds `O`, matching the training columns.
         """
         if not hasattr(self, 'input_cols_'):
             msg = 'The `extract_train_data` method should be called before `extract_fixtures_data`.'

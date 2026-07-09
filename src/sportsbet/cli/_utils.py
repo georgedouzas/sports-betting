@@ -15,7 +15,7 @@ from rich.panel import Panel
 from sklearn.model_selection import TimeSeriesSplit
 
 from .. import ParamGrid
-from ..datasets._soccer._dataloader import SoccerDataLoader
+from ..datasets import BaseDataLoader
 from ..evaluation._base import BaseBettor
 
 
@@ -42,7 +42,7 @@ def get_module(config_path: str) -> ModuleType | None:
     return None
 
 
-def get_dataloader_cls(mod: ModuleType | None) -> type[SoccerDataLoader] | None:
+def get_dataloader_cls(mod: ModuleType | None) -> type[BaseDataLoader] | None:
     """Get the dataloader class."""
     console = Console()
     if mod is None:
@@ -53,7 +53,7 @@ def get_dataloader_cls(mod: ModuleType | None) -> type[SoccerDataLoader] | None:
         )
         console.print(warning)
         return None
-    elif not issubclass(mod.DATALOADER_CLASS, SoccerDataLoader):
+    elif not issubclass(mod.DATALOADER_CLASS, BaseDataLoader):
         warning = Panel.fit(
             '[bold red]`DATALOADER_CLASS` variable should be a `\'dataloader\'` class.',
         )
