@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import asyncio
 import io
-import warnings
-from functools import lru_cache
 from typing import ClassVar, Self
 
 import aiohttp
@@ -17,21 +15,21 @@ from sklearn.model_selection import ParameterGrid
 
 from ... import FixturesData, ParamGrid, TrainData
 from .._base._dataloader import BaseDataLoader
-from ._schema import SoccerOddsSchema, SoccerStatsSchema
-from ._utils import MARKETS, market_outcomes
+from ._schema import build_odds_schema, build_stats_schema
+from ._utils import (
+    EVENT_COLS,
+    IDENTITY_COLS,
+    derive_metadata,
+    odds_columns,
+    parse_odds_column,
+)
 
-TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/{league}_{division}_{year}.csv'
-FIXTURES_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/fixtures.csv'
+_BASE_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling'
+STATS_URL = _BASE_URL + '/stats/{league}_{division}_{year}.csv'
+ODDS_URL = _BASE_URL + '/odds/{league}_{division}_{year}.csv'
+STATS_FIXTURES_URL = _BASE_URL + '/stats/fixtures.csv'
+ODDS_FIXTURES_URL = _BASE_URL + '/odds/fixtures.csv'
 CONNECTIONS_LIMIT = 20
-IDENTITY_COLS = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
-PROVIDERS: dict[str, str] = {'bet365': 'B365', 'market_average': 'Avg', 'market_maximum': 'Max'}
-FEED_MARKETS: dict[str, str] = {
-    'home_win': 'H',
-    'draw': 'D',
-    'away_win': 'A',
-    'over_2.5': '>2.5',
-    'under_2.5': '<2.5',
-}
 
 
 async def _read_url_content_async(client: aiohttp.ClientSession, url: str) -> str:
@@ -72,13 +70,12 @@ def _read_csvs(urls: list[str]) -> list[pd.DataFrame]:
 class SoccerDataLoader(BaseDataLoader):
     """Dataloader for soccer data.
 
-    It downloads historical and fixtures data for various leagues, years and
-    divisions, maps them onto the event-snapshot model, and extracts moment-aware
-    training and fixtures data. The real feed provides `preplay` and `postplay`
-    snapshots only; an in-play target against it resolves no matches and raises a
-    `ValueError` until an in-play source exists (the offline
-    [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader] carries
-    in-play sample snapshots to exercise that path).
+    It downloads long event-snapshot `stats` and `odds` data for the selected
+    leagues, years and divisions, reads and validates it, derives the available
+    providers, markets and per-column metadata from the data itself, and extracts
+    moment-aware training and fixtures data. Nothing about the feed is hardcoded:
+    the moments come from the stored `event_status`/`event_time`, and each column's
+    role is derived from where it actually carries values.
 
     Read more in the [user guide][user-guide].
 
@@ -109,8 +106,6 @@ class SoccerDataLoader(BaseDataLoader):
             The columns of `O` for training and fixtures data.
     """
 
-    _fixtures_flag = 'fixtures'
-
     # Selectable parameters for the real feed.
     ALL_PARAMS: ClassVar[ParamGrid] = {
         'league': ['England', 'Scotland', 'Germany', 'Italy', 'Spain', 'France', 'Netherlands', 'Greece'],
@@ -120,6 +115,115 @@ class SoccerDataLoader(BaseDataLoader):
 
     def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
         self.param_grid = param_grid
+        self._provided_snapshots: tuple[pd.DataFrame, pd.DataFrame] | None = None
+        self._downloaded: tuple[pd.DataFrame, pd.DataFrame] | None = None
+
+    @classmethod
+    def from_dataframe(
+        cls: type[Self],
+        data: pd.DataFrame,
+        *,
+        event_status: str,
+        event_time: pd.Timedelta,
+        param_grid: ParamGrid | None = None,
+    ) -> Self:
+        """Build a loader from a user's wide match table taken at a single moment.
+
+        Every row of `data` is treated as a snapshot at the caller-declared
+        `event_status`/`event_time` — no moment is assumed. `data` must carry the
+        identity columns (`date`, `league`, `division`, `year`, `home_team`,
+        `away_team`), any number of value columns (goals, market outcomes,
+        features), and `{provider}__{market}` odds columns. For several moments,
+        provide long snapshots directly or call this per moment.
+
+        Args:
+            data:
+                One row per match at a single moment.
+            event_status:
+                The status the rows represent, e.g. `'preplay'` or `'postplay'`.
+            event_time:
+                The time into the match the rows represent.
+            param_grid:
+                Optional selection, mirroring the constructor.
+
+        Returns:
+            A loader that reads the provided data instead of downloading it.
+        """
+        loader = cls(param_grid)
+        loader._provided_snapshots = cls._wide_to_snapshots(data, event_status, event_time)
+        return loader
+
+    @classmethod
+    def from_csv(
+        cls: type[Self],
+        path: str,
+        *,
+        event_status: str,
+        event_time: pd.Timedelta,
+        param_grid: ParamGrid | None = None,
+    ) -> Self:
+        """Build a loader from a CSV of a user's wide match table at a single moment.
+
+        See [`from_dataframe`][sportsbet.datasets.SoccerDataLoader.from_dataframe].
+        """
+        return cls.from_dataframe(
+            pd.read_csv(path),
+            event_status=event_status,
+            event_time=event_time,
+            param_grid=param_grid,
+        )
+
+    @classmethod
+    def from_snapshots(
+        cls: type[Self],
+        stats: pd.DataFrame,
+        odds: pd.DataFrame,
+        *,
+        param_grid: ParamGrid | None = None,
+    ) -> Self:
+        """Build a loader from canonical long `stats` and `odds` snapshots.
+
+        Use this when the data already follows the exported long format, i.e. one
+        row per match and moment with explicit `event_status`/`event_time` columns
+        (`stats` carrying the values, `odds` carrying `{provider}` and the markets).
+        No moment is assumed — every row states its own.
+
+        Args:
+            stats:
+                Long statistics snapshots.
+            odds:
+                Long odds snapshots.
+            param_grid:
+                Optional selection, mirroring the constructor.
+
+        Returns:
+            A loader that reads the provided snapshots instead of downloading them.
+        """
+        loader = cls(param_grid)
+        loader._provided_snapshots = (stats, odds)
+        return loader
+
+    @staticmethod
+    def _wide_to_snapshots(
+        data: pd.DataFrame,
+        event_status: str,
+        event_time: pd.Timedelta,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Split a wide single-moment frame into long `stats`/`odds` snapshots."""
+        odds_cols = odds_columns(list(data.columns))
+        stats = data.drop(columns=odds_cols).assign(event_status=event_status, event_time=event_time)
+        by_provider: dict[str, dict[str, str]] = {}
+        for col in odds_cols:
+            provider, market = parse_odds_column(col)
+            by_provider.setdefault(provider, {})[market] = col
+        records = []
+        for _, row in data.iterrows():
+            identity = {col: row[col] for col in IDENTITY_COLS}
+            for provider, markets in by_provider.items():
+                record = {**identity, 'event_status': event_status, 'event_time': event_time, 'provider': provider}
+                record.update({market: row[col] for market, col in markets.items()})
+                records.append(record)
+        return stats, pd.DataFrame(records)
 
     @classmethod
     def _param_grid_all(cls: type[Self]) -> ParamGrid:
@@ -131,94 +235,80 @@ class SoccerDataLoader(BaseDataLoader):
         """Return all selectable parameter combinations, without downloading data."""
         return list(ParameterGrid(cls._param_grid_all()))
 
-    def get_odds_types(self: Self) -> list[str]:
-        """Return the available odds types (providers)."""
-        return list(PROVIDERS)
+    def _resolved_grid(self: Self) -> ParamGrid:
+        """Merge the selected `param_grid` over the full grid, defaulting omitted dimensions to all."""
+        grid = dict(self._param_grid_all())
+        if self.param_grid is not None:
+            grid.update(self.param_grid)
+        return grid
 
     def _selected_params(self: Self) -> list[dict]:
         """Resolve the parameter combinations selected by `param_grid`."""
-        grid = self._param_grid_all() if self.param_grid is None else self.param_grid
-        return list(ParameterGrid(grid))
-
-    @lru_cache  # noqa: B019
-    def _raw_data(self: Self) -> pd.DataFrame:
-        """Download the wide football-data rows plus a `fixtures` flag column."""
-        urls = [TRAINING_URL.format(**params) for params in self._selected_params()]
-        training_data = pd.concat(_read_csvs(urls), ignore_index=True) if urls else pd.DataFrame()
-        training_data[self._fixtures_flag] = False
-        fixtures_data = _read_csvs([FIXTURES_URL])[0]
-        fixtures_data[self._fixtures_flag] = True
-        data = pd.concat([training_data, fixtures_data], ignore_index=True)
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning)
-            data['date'] = pd.to_datetime(data['date'], dayfirst=True)
-        return data
+        return list(ParameterGrid(self._resolved_grid()))
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Map the wide source rows onto long `stats`/`odds` snapshot frames."""
-        raw = self._raw_data()
-        stats_records: list[dict] = []
-        odds_records: list[dict] = []
-        for _, row in raw.iterrows():
-            identity = {col: row[col] for col in IDENTITY_COLS}
-            is_fixture = bool(row[self._fixtures_flag])
-            base_stats = {**identity, 'home_latest_streak': 0, 'away_latest_streak': 0}
-            preplay = {
-                **base_stats,
-                'event_status': 'preplay',
-                'event_time': pd.Timedelta(0),
-                'home_goals': 0,
-                'away_goals': 0,
-                **dict.fromkeys(MARKETS, 0),
-            }
-            stats_records.append(preplay)
-            if not is_fixture:
-                home_goals, away_goals = int(row['FTHG']), int(row['FTAG'])
-                markets = market_outcomes(pd.Series([home_goals]), pd.Series([away_goals])).iloc[0].to_dict()
-                stats_records.append(
-                    {
-                        **base_stats,
-                        'event_status': 'postplay',
-                        'event_time': pd.Timedelta(0),
-                        'home_goals': home_goals,
-                        'away_goals': away_goals,
-                        **markets,
-                    },
-                )
-            for provider, prefix in PROVIDERS.items():
-                odds = {**identity, 'event_status': 'preplay', 'event_time': pd.Timedelta(0), 'provider': provider}
-                for market, suffix in FEED_MARKETS.items():
-                    col = f'{prefix}{suffix}'
-                    odds[market] = float(row[col]) if col in row.index and pd.notna(row[col]) else None
-                for market in MARKETS:
-                    odds.setdefault(market, None)
-                odds_records.append(odds)
-        return self._finalize(pd.DataFrame(stats_records)), self._finalize(pd.DataFrame(odds_records))
+        """Return the long `stats`/`odds` snapshots (downloaded once, or user-provided)."""
+        if self._provided_snapshots is not None:
+            return self._provided_snapshots
+        if self._downloaded is None:
+            stats_urls = [STATS_URL.format(**params) for params in self._selected_params()]
+            odds_urls = [ODDS_URL.format(**params) for params in self._selected_params()]
+            stats = pd.concat(_read_csvs([*stats_urls, STATS_FIXTURES_URL]), ignore_index=True)
+            odds = pd.concat(_read_csvs([*odds_urls, ODDS_FIXTURES_URL]), ignore_index=True)
+            self._downloaded = (stats, odds)
+        return self._downloaded
 
     @staticmethod
     def _finalize(data: pd.DataFrame) -> pd.DataFrame:
-        """Apply shared dtype normalization to a snapshot frame."""
-        if not data.empty:
-            # Pin nanosecond resolution: newer pandas infers ``us`` from strings.
-            data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
-        return data.reset_index(drop=True)
+        """Normalize the `date` and `event_time` dtypes of a snapshot frame."""
+        data = data.reset_index(drop=True)
+        if data.empty:
+            return data
+        data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
+        if not pd.api.types.is_timedelta64_dtype(data['event_time']):
+            data['event_time'] = pd.to_timedelta(data['event_time'], unit='m')
+        data['event_time'] = data['event_time'].astype('timedelta64[ns]')
+        return data
+
+    def _validate_snapshots(self: Self, stats: pd.DataFrame, odds: pd.DataFrame) -> None:
+        """Validate that the snapshots carry the required identity and event columns."""
+        for name, frame in [('stats', stats), ('odds', odds)]:
+            missing = [col for col in EVENT_COLS + IDENTITY_COLS if col not in frame.columns]
+            if missing:
+                msg = f'The {name} data is missing the required columns: {missing}.'
+                raise ValueError(msg)
+        if 'provider' not in odds.columns:
+            msg = 'The odds data is missing the `provider` column.'
+            raise ValueError(msg)
+
+    def get_odds_types(self: Self) -> list[str]:
+        """Return the available odds types (providers) derived from the data."""
+        _, odds = self._snapshots()
+        return sorted(odds['provider'].dropna().unique().tolist())
 
     def _prepare(self: Self, odds_type: str | None) -> None:
-        """Populate the base-loader inputs from the selected snapshots and odds type."""
+        """Read and validate the snapshots, derive their metadata and build the base inputs."""
         stats, odds = self._snapshots()
-        if odds_type is not None and odds_type not in self.get_odds_types():
-            msg = f'Invalid odds type. It should be one of {self.get_odds_types()}. Got {odds_type} instead.'
+        stats = self._finalize(stats)
+        odds = self._finalize(odds)
+        self._validate_snapshots(stats, odds)
+        providers = sorted(odds['provider'].dropna().unique().tolist())
+        if odds_type is not None and odds_type not in providers:
+            msg = f'Invalid odds type. It should be one of {providers}. Got {odds_type} instead.'
             raise ValueError(msg)
+        stats_value_cols = [col for col in stats.columns if col not in EVENT_COLS + IDENTITY_COLS]
+        odds_value_cols = [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]
+        stats_metadata = derive_metadata(stats, stats_value_cols)
+        odds_metadata = derive_metadata(odds, odds_value_cols)
+
         odds = odds[odds['provider'] == odds_type] if odds_type is not None else odds.iloc[0:0]
-        # Markets absent from the feed arrive as all-null object columns; make them float.
-        odds = odds.astype(dict.fromkeys(MARKETS, float))
-        self.stats = SoccerStatsSchema.validate(stats)
-        self.odds = SoccerOddsSchema.validate(odds)
-        self.stats_schema = SoccerStatsSchema
-        self.odds_schema = SoccerOddsSchema
-        self.targets = MARKETS
+        self.stats = build_stats_schema(stats_metadata).validate(stats)
+        self.odds = build_odds_schema(odds_metadata).validate(odds)
+        self.stats_schema = build_stats_schema(stats_metadata)
+        self.odds_schema = build_odds_schema(odds_metadata)
+        self.targets = odds_value_cols
         self.odds_type_ = odds_type
-        self.param_grid_ = ParameterGrid(self._param_grid_all() if self.param_grid is None else self.param_grid)
+        self.param_grid_ = ParameterGrid(self._resolved_grid())
 
     def _apply_drop_na(self: Self, X: pd.DataFrame, drop_na_thres: float) -> pd.DataFrame:
         """Drop feature columns whose missingness exceeds `drop_na_thres`."""

@@ -11,7 +11,6 @@ from ._base._schema import (
 )
 from ._dummy import DummySoccerDataLoader
 from ._soccer._dataloader import SoccerDataLoader
-from ._soccer._schema import SoccerOddsSchema, SoccerStatsSchema
 
 __all__: list[str] = [
     'BaseDataLoader',
@@ -19,8 +18,6 @@ __all__: list[str] = [
     'BaseStatsSchema',
     'DummySoccerDataLoader',
     'SoccerDataLoader',
-    'SoccerOddsSchema',
-    'SoccerStatsSchema',
     'load_dataloader',
     'optional_col',
     'required_col',

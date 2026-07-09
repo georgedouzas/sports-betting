@@ -5,126 +5,128 @@
 
 from __future__ import annotations
 
-from typing import Self
+from typing import ClassVar, Self
 
 import pandas as pd
 
 from .. import ParamGrid
-from ._soccer._dataloader import IDENTITY_COLS, PROVIDERS, SoccerDataLoader
-from ._soccer._utils import MARKETS, market_outcomes
+from ._soccer._dataloader import SoccerDataLoader
+from ._soccer._utils import IDENTITY_COLS, market_outcomes
 
-MATCHES: list[dict] = [
+# The markets, providers and pre-match features carried by the sample data.
+_MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
+_PROVIDERS = ['market_average', 'market_maximum']
+_FEATURES = ['home_points_avg', 'away_points_avg']
+
+# One entry per sample match: identity, pre-match feature values, the full-time
+# score and whether it is an upcoming fixture. In-play snapshots are generated
+# from the score by `_timeline`.
+_MATCHES: list[dict] = [
     {
         'date': '2024-08-16',
         'league': 'England',
-        'home_team': 'Man United',
-        'away_team': 'Fulham',
-        'home_streak': 2,
-        'away_streak': -1,
+        'home': 'Man United',
+        'away': 'Fulham',
+        'home_points_avg': 2.1,
+        'away_points_avg': 1.2,
         'score': (1, 0),
         'fixture': False,
     },
     {
         'date': '2024-08-24',
         'league': 'England',
-        'home_team': 'Newcastle',
-        'away_team': 'Tottenham',
-        'home_streak': 1,
-        'away_streak': 2,
-        'score': (2, 1),
+        'home': 'Newcastle',
+        'away': 'Tottenham',
+        'home_points_avg': 1.5,
+        'away_points_avg': 1.8,
+        'score': (1, 2),
         'fixture': False,
     },
     {
         'date': '2024-09-01',
         'league': 'England',
-        'home_team': 'Brighton',
-        'away_team': 'Everton',
-        'home_streak': 0,
-        'away_streak': -3,
+        'home': 'Brighton',
+        'away': 'Everton',
+        'home_points_avg': 1.3,
+        'away_points_avg': 0.9,
         'score': (0, 0),
         'fixture': False,
     },
     {
         'date': '2024-09-14',
         'league': 'England',
-        'home_team': 'Chelsea',
-        'away_team': 'West Ham',
-        'home_streak': 3,
-        'away_streak': 1,
+        'home': 'Chelsea',
+        'away': 'West Ham',
+        'home_points_avg': 1.9,
+        'away_points_avg': 1.4,
         'score': (3, 1),
         'fixture': False,
     },
     {
         'date': '2024-10-05',
         'league': 'England',
-        'home_team': 'Liverpool',
-        'away_team': 'Crystal Palace',
-        'home_streak': 4,
-        'away_streak': 1,
+        'home': 'Liverpool',
+        'away': 'Crystal Palace',
+        'home_points_avg': 2.4,
+        'away_points_avg': 1.1,
         'score': (2, 1),
         'fixture': False,
     },
     {
         'date': '2024-11-02',
         'league': 'England',
-        'home_team': 'Aston Villa',
-        'away_team': 'Wolves',
-        'home_streak': -1,
-        'away_streak': 2,
+        'home': 'Aston Villa',
+        'away': 'Wolves',
+        'home_points_avg': 1.6,
+        'away_points_avg': 1.0,
         'score': (1, 1),
         'fixture': False,
     },
     {
         'date': '2025-01-18',
         'league': 'England',
-        'home_team': 'Man City',
-        'away_team': 'Brentford',
-        'home_streak': 5,
-        'away_streak': -2,
+        'home': 'Man City',
+        'away': 'Brentford',
+        'home_points_avg': 2.6,
+        'away_points_avg': 1.3,
         'score': (4, 0),
         'fixture': False,
     },
     {
         'date': '2025-03-08',
         'league': 'England',
-        'home_team': 'Nottingham',
-        'away_team': 'Bournemouth',
-        'home_streak': 2,
-        'away_streak': 2,
+        'home': 'Nottingham',
+        'away': 'Bournemouth',
+        'home_points_avg': 1.4,
+        'away_points_avg': 1.5,
         'score': (2, 2),
         'fixture': False,
     },
     {
         'date': '2025-05-25',
         'league': 'Spain',
-        'home_team': 'Barcelona',
-        'away_team': 'Real Madrid',
-        'home_streak': 3,
-        'away_streak': 3,
+        'home': 'Barcelona',
+        'away': 'Real Madrid',
+        'home_points_avg': 2.3,
+        'away_points_avg': 2.2,
         'score': (3, 2),
         'fixture': False,
     },
     {
         'date': '2025-09-01',
         'league': 'England',
-        'home_team': 'Arsenal',
-        'away_team': 'Chelsea',
-        'home_streak': 1,
-        'away_streak': -2,
+        'home': 'Arsenal',
+        'away': 'Chelsea',
+        'home_points_avg': 2.0,
+        'away_points_avg': 1.7,
         'score': None,
         'fixture': True,
     },
 ]
-BASE_ODDS: dict[str, float] = {
-    'home_win': 1.80,
-    'draw': 3.40,
-    'away_win': 4.20,
-    'over_2.5': 1.90,
-    'under_2.5': 1.95,
-    'over_3.5': 3.10,
-    'under_3.5': 1.35,
-}
-PROVIDER_FACTOR: dict[str, float] = {'bet365': 1.00, 'market_average': 0.98, 'market_maximum': 1.06}
+
+# Base pre-match decimal odds per market and a per-provider multiplier.
+_BASE_ODDS = {'home_win': 1.80, 'draw': 3.40, 'away_win': 4.20, 'over_2.5': 1.90, 'under_2.5': 1.95}
+_PROVIDER_FACTOR = {'market_average': 0.98, 'market_maximum': 1.06}
 
 
 def _timeline(match: dict) -> list[tuple[str, int, int, int]]:
@@ -158,7 +160,7 @@ class DummySoccerDataLoader(SoccerDataLoader):
         >>> from sportsbet.datasets import DummySoccerDataLoader
         >>> import pandas as pd
         >>> loader = DummySoccerDataLoader(param_grid={'league': ['England']})
-        >>> X_train, Y_train, O_train = loader.extract_train_data(odds_type='bet365')
+        >>> X_train, Y_train, O_train = loader.extract_train_data(odds_type='market_average')
         >>> X_fix, Y_fix, O_fix = loader.extract_fixtures_data()
         >>> Y_fix is None
         True
@@ -166,19 +168,21 @@ class DummySoccerDataLoader(SoccerDataLoader):
         >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
     """
 
+    _PARAM_GRID: ClassVar[ParamGrid] = {'league': ['England', 'Spain'], 'division': [1], 'year': [2025]}
+
     @classmethod
     def _param_grid_all(cls: type[Self]) -> ParamGrid:
-        return {
-            'league': ['England', 'Spain'],
-            'division': [1],
-            'year': [2025],
-        }
+        return cls._PARAM_GRID
+
+    def get_odds_types(self: Self) -> list[str]:
+        """Return the available odds types (providers) of the sample data."""
+        return list(_PROVIDERS)
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         selected_leagues = {params['league'] for params in self._selected_params() if 'league' in params}
         stats_records: list[dict] = []
         odds_records: list[dict] = []
-        for match in MATCHES:
+        for match in _MATCHES:
             if selected_leagues and match['league'] not in selected_leagues:
                 continue
             identity = {
@@ -186,11 +190,16 @@ class DummySoccerDataLoader(SoccerDataLoader):
                 'league': match['league'],
                 'division': 1,
                 'year': 2025,
-                'home_team': match['home_team'],
-                'away_team': match['away_team'],
+                'home_team': match['home'],
+                'away_team': match['away'],
             }
             for status, minutes, home_goals, away_goals in _timeline(match):
-                markets = market_outcomes(pd.Series([home_goals]), pd.Series([away_goals])).iloc[0].to_dict()
+                markets = market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), _MARKETS).iloc[0].to_dict()
+                features = (
+                    {'home_points_avg': match['home_points_avg'], 'away_points_avg': match['away_points_avg']}
+                    if status == 'preplay'
+                    else dict.fromkeys(_FEATURES)
+                )
                 stats_records.append(
                     {
                         **identity,
@@ -198,35 +207,25 @@ class DummySoccerDataLoader(SoccerDataLoader):
                         'event_time': pd.Timedelta(minutes=minutes),
                         'home_goals': home_goals,
                         'away_goals': away_goals,
-                        'home_latest_streak': match['home_streak'],
-                        'away_latest_streak': match['away_streak'],
                         **markets,
+                        **features,
                     },
                 )
                 if status == 'postplay':
                     continue
-                for provider in PROVIDERS:
-                    factor = PROVIDER_FACTOR[provider] * (1 + 0.004 * minutes)
+                for provider in _PROVIDERS:
+                    factor = _PROVIDER_FACTOR[provider] * (1 + 0.004 * minutes)
                     odds_records.append(
                         {
                             **identity,
                             'event_status': status,
                             'event_time': pd.Timedelta(minutes=minutes),
                             'provider': provider,
-                            **{market: round(base * factor, 2) for market, base in BASE_ODDS.items()},
+                            **{market: round(base * factor, 2) for market, base in _BASE_ODDS.items()},
                         },
                     )
         stats = pd.DataFrame(stats_records)[
-            [
-                'event_status',
-                'event_time',
-                *IDENTITY_COLS,
-                'home_goals',
-                'away_goals',
-                'home_latest_streak',
-                'away_latest_streak',
-                *MARKETS,
-            ]
+            ['event_status', 'event_time', *IDENTITY_COLS, 'home_goals', 'away_goals', *_MARKETS, *_FEATURES]
         ]
-        odds = pd.DataFrame(odds_records)[['event_status', 'event_time', *IDENTITY_COLS, 'provider', *MARKETS]]
-        return self._finalize(stats), self._finalize(odds)
+        odds = pd.DataFrame(odds_records)[['event_status', 'event_time', *IDENTITY_COLS, 'provider', *_MARKETS]]
+        return stats, odds
