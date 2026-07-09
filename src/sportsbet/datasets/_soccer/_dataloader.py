@@ -237,14 +237,26 @@ class SoccerDataLoader(BaseDataLoader):
 
     def _resolved_grid(self: Self) -> ParamGrid:
         """Merge the selected `param_grid` over the full grid, defaulting omitted dimensions to all."""
-        grid = dict(self._param_grid_all())
-        if self.param_grid is not None:
-            grid.update(self.param_grid)
-        return grid
+        full = self._param_grid_all()
+        if self.param_grid is None:
+            return full
+        if isinstance(self.param_grid, dict) and isinstance(full, dict):
+            return {**full, **self.param_grid}
+        return self.param_grid
 
     def _selected_params(self: Self) -> list[dict]:
         """Resolve the parameter combinations selected by `param_grid`."""
         return list(ParameterGrid(self._resolved_grid()))
+
+    @staticmethod
+    def _concat(frames: list[pd.DataFrame]) -> pd.DataFrame:
+        """Concatenate feed frames, skipping empty ones so their dtypes do not leak.
+
+        An empty CSV (e.g. `fixtures.csv` when nothing is upcoming) reads back as all-object columns, which would
+        otherwise coerce the identity dtypes of the real data.
+        """
+        non_empty = [frame for frame in frames if not frame.empty]
+        return pd.concat(non_empty, ignore_index=True) if non_empty else frames[0].copy()
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the long `stats`/`odds` snapshots (downloaded once, or user-provided)."""
@@ -253,8 +265,8 @@ class SoccerDataLoader(BaseDataLoader):
         if self._downloaded is None:
             stats_urls = [STATS_URL.format(**params) for params in self._selected_params()]
             odds_urls = [ODDS_URL.format(**params) for params in self._selected_params()]
-            stats = pd.concat(_read_csvs([*stats_urls, STATS_FIXTURES_URL]), ignore_index=True)
-            odds = pd.concat(_read_csvs([*odds_urls, ODDS_FIXTURES_URL]), ignore_index=True)
+            stats = self._concat(_read_csvs([*stats_urls, STATS_FIXTURES_URL]))
+            odds = self._concat(_read_csvs([*odds_urls, ODDS_FIXTURES_URL]))
             self._downloaded = (stats, odds)
         return self._downloaded
 
