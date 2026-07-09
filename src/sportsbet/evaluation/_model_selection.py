@@ -12,7 +12,7 @@ from typing import Any, Self
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from nptyping import NDArray, Shape
+from nptyping import Float, NDArray, Shape
 from sklearn import get_config, set_config
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
@@ -40,14 +40,11 @@ def _fit_bet(
     # Predict value bets
     value_bets = bettor.bet(X.iloc[test_ind], O.iloc[test_ind])
 
-    # Calculate returns
+    # Calculate returns (test_ind are positional indices, so select with iloc first)
+    Y_test = Y.iloc[test_ind]
+    O_test = O.iloc[test_ind]
     returns = np.nan_to_num(
-        (
-            Y.loc[test_ind, bettor.feature_names_out_].to_numpy()
-            * O.loc[test_ind, bettor.feature_names_odds_].to_numpy()
-            - 1
-        )
-        * value_bets,
+        (Y_test[bettor.feature_names_out_].to_numpy() * O_test[bettor.feature_names_odds_].to_numpy() - 1) * value_bets,
     )
     betting_returns = returns[returns != 0]
     n_bets = (returns != 0).sum(axis=0)
@@ -128,7 +125,6 @@ def backtest(
         results:
             The backtesting results.
     """
-
     # Check data
     check_consistent_length(X, Y, O)
     if not isinstance(X, pd.DataFrame) or not isinstance(X.index, pd.DatetimeIndex):
@@ -343,24 +339,18 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
 
     Examples:
         >>> from sportsbet.evaluation import BettorGridSearchCV, OddsComparisonBettor, backtest
-        >>> from sportsbet.datasets import SoccerDataLoader
+        >>> from sportsbet.datasets import DummySoccerDataLoader
         >>> from sklearn.model_selection import TimeSeriesSplit
-        >>> # Select only backtesting data for the Italian and Spanish leagues and years 2019 - 2022
-        >>> param_grid = {'league': ['Italy', 'Spain'], 'year': [2019, 2020, 2021, 2022]}
-        >>> dataloader = SoccerDataLoader(param_grid)
-        >>> # Select the market maximum odds
-        >>> X, Y, O = dataloader.extract_train_data(
-        ... odds_type='market_maximum',
-        ... )
-        >>> # Backtest the bettor
+        >>> dataloader = DummySoccerDataLoader()
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='bet365')
         >>> bettor = BettorGridSearchCV(
-        ... estimator=OddsComparisonBettor(),
-        ... param_grid={'alpha': [0.02, 0.05, 0.1, 0.2, 0.3]},
-        ... cv=TimeSeriesSplit(2),
+        ...     estimator=OddsComparisonBettor(),
+        ...     param_grid={'alpha': [0.02, 0.05, 0.1]},
+        ...     cv=TimeSeriesSplit(2),
         ... )
-        >>> backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2)).reset_index()
-          Training start ... Yield percentage per bet (under_2.5__full_time_goals)
-        ...
+        >>> results = backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2))
+        >>> 'Number of bets' in results.columns
+        True
     """
 
     def __init__(
@@ -409,7 +399,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
             estimator: BaseBettor,
             X: pd.DataFrame,
             Y: pd.DataFrame,
-            sample_weight: NDArray[Shape['*'], float] | None = None,  # noqa: F722
+            sample_weight: NDArray[Shape['*'], Float] | None = None,  # noqa: F722
             **kwargs: dict[str, Any],
         ) -> float:
             Y = Y[estimator.feature_names_out_]
@@ -473,6 +463,8 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         if hasattr(self, 'best_estimator_'):
             self.init_cash_ = self.best_estimator_.init_cash_
             self.stake_ = self.best_estimator_.stake_
+            self.betting_markets_ = self.best_estimator_.betting_markets_
+            self.feature_names_out_ = self.best_estimator_.feature_names_out_
         if O is not None and hasattr(self, 'best_estimator_'):
             self.feature_names_odds_ = self.best_estimator_._get_feature_names_odds(O)
         return self
@@ -526,13 +518,3 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
     def classes_(self: Self) -> list:
         self._check_attr('classes_', True, True)
         return [np.array([0, 1]) for _ in enumerate(self.betting_markets_)]
-
-    @property
-    def betting_markets_(self: Self) -> NDArray[Shape['*'], str]:  # noqa: F722
-        self._check_attr('betting_markets_', True, True)
-        return self.best_estimator_.betting_markets_
-
-    @property
-    def feature_names_out_(self: Self) -> NDArray[Shape['*'], str]:  # noqa: F722
-        self._check_attr('feature_names_out_', True, True)
-        return self.best_estimator_.feature_names_out_

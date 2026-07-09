@@ -19,6 +19,50 @@ from sklearn.utils import check_consistent_length, check_scalar
 from sklearn.utils.validation import _check_feature_names, check_is_fitted
 
 from .. import BoolData, Data
+from ..datasets._base._dataloader import parse_event_time
+
+# Ordering of event statuses, used to pick the latest odds snapshot for a market.
+_STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
+# Number of ``__``-delimited tokens in an odds column: provider, market, status, time.
+_N_ODDS_TOKENS = 4
+
+
+def market_base(market: str) -> str:
+    """Return the base market name (drop the ``__status__time`` suffix)."""
+    return market.split('__', maxsplit=1)[0]
+
+
+def is_odds_column(col: str) -> bool:
+    """Return whether a column follows the four-token odds grammar."""
+    return len(col.split('__')) == _N_ODDS_TOKENS
+
+
+def latest_odds_column(columns: list[str], base: str, provider: str | None = None) -> str | None:
+    """Return the odds column for a market base at the latest snapshot.
+
+    Args:
+        columns:
+            Candidate odds column names (`{provider}__{base}__{status}__{time}`).
+        base:
+            The market base to match (e.g. `home_win`).
+        provider:
+            If given, only match this provider.
+
+    Returns:
+        The matching column at the latest ``(status, time)``, or `None`.
+    """
+    best: str | None = None
+    best_key: tuple[int, pd.Timedelta] | None = None
+    for col in columns:
+        if not is_odds_column(col):
+            continue
+        col_provider, col_base, status, time = col.split('__')
+        if col_base != base or (provider is not None and col_provider != provider):
+            continue
+        key = (_STATUS_RANK.get(status, -1), parse_event_time(time))
+        if best_key is None or key > best_key:
+            best_key, best = key, col
+    return best
 
 
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
@@ -29,10 +73,11 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
     """
 
     TOL = 1e-6
+    # Mutually-exclusive markets, identified by their base name (e.g. ``home_win``).
     COMPLEMENTARY_EVENTS: ClassVar = [
-        ['home_win__full_time_goals', 'draw__full_time_goals', 'away_win__full_time_goals'],
-        ['over_2.5__full_time_goals', 'under_2.5__full_time_goals'],
-        ['over_3.5__full_time_goals', 'under_3.5__full_time_goals'],
+        ['home_win', 'draw', 'away_win'],
+        ['over_2.5', 'under_2.5'],
+        ['over_3.5', 'under_3.5'],
     ]
 
     _append_odds = False
@@ -48,9 +93,17 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         self.stake = stake
 
     def _get_feature_names_odds(self: Self, O: pd.DataFrame) -> NDArray[Shape['*'], String]:  # noqa: F722
-        return np.array(
-            [col for col in O.columns if '__'.join(col.split('__')[2:]) in self.betting_markets_],
-        )
+        # One odds column per selected market base, at the latest snapshot, ordered to match
+        # `betting_markets_` so positional alignment with `Y` holds.
+        columns = list(O.columns)
+        odds_cols = [latest_odds_column(columns, base) for base in self.betting_markets_]
+        return np.array([col for col in odds_cols if col is not None])
+
+    def _append_odds_data(self: Self, X: pd.DataFrame, O: pd.DataFrame | None) -> pd.DataFrame:
+        """Merge `O` into `X` for bettors that model odds directly (e.g. odds comparison)."""
+        if self._append_odds and O is not None:
+            return pd.concat([X, O], axis=1)
+        return X
 
     def _check(
         self: Self,
@@ -60,15 +113,16 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Y_betting_markets: list[str],
     ) -> None:
 
-        # Betting markets
+        # Betting markets are identified by their base name (e.g. `home_win`)
+        Y_bases = list(dict.fromkeys(Y_betting_markets))
         if self.betting_markets is None:
-            self.betting_markets_ = np.array([col.replace('output__', '') for col in Y.columns])
+            self.betting_markets_ = np.array(Y_bases)
         elif not isinstance(self.betting_markets, list) or (
             isinstance(self.betting_markets, list) and not self.betting_markets
         ):
             error_msg = 'Parameter `betting_markets` should be a list of betting market names.'
             raise TypeError(error_msg)
-        elif isinstance(self.betting_markets, list) and not set(self.betting_markets).issubset(Y_betting_markets):
+        elif isinstance(self.betting_markets, list) and not set(self.betting_markets).issubset(Y_bases):
             error_msg = 'Parameter `betting_markets` does not contain valid names.'
             raise ValueError(error_msg)
         else:
@@ -100,11 +154,10 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         )
         self.stake_ = float(stake)
 
-        # Check features
+        # Check features. Map each selected market base to its single target column.
         _check_feature_names(self, X, reset=True)
-        self.feature_names_out_ = np.array(
-            [col for col in Y.columns if '__'.join(col.split('__')[1:]) in self.betting_markets_],
-        )
+        base_to_target = {market_base(col): col for col in Y.columns}
+        self.feature_names_out_ = np.array([base_to_target[base] for base in self.betting_markets_])
         if O is not None:
             self.feature_names_odds_ = self._get_feature_names_odds(O)
 
@@ -134,19 +187,15 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             error_msg = 'Output data `Y` should be pandas dataframe.'
             raise TypeError(error_msg)
 
-        # Check Y columns
+        # Check Y columns follow the target grammar `{betting_market}__{event_status}__{event_time}`
         Y_cols = [col.split('__') for col in Y.columns]
         error_msg = (
             "Output data column names should follow a naming "
-            "convention of the form `f'output__{betting_market_prefix}__{betting_market_target}'`"
+            "convention of the form `f'{betting_market}__{event_status}__{event_time}'`"
         )
         if {len(tokens) for tokens in Y_cols} != {3}:
             raise ValueError(error_msg)
-        Y_prefix, *Y_betting_markets_tokens = zip(*Y_cols, strict=True)
-        Y_betting_markets = ['__'.join(tokens) for tokens in zip(*Y_betting_markets_tokens, strict=True)]
-        if set(Y_prefix) != {'output'}:
-            error_msg = 'Prefixes of output data column names should be equal to `output`.'
-            raise ValueError(error_msg)
+        Y_betting_markets = [market_base(col) for col in Y.columns]
 
         return X, Y, Y_betting_markets
 
@@ -167,22 +216,19 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             error_msg = 'Odds data `O` should be pandas dataframe.'
             raise TypeError(error_msg)
 
-        # Check O columns
+        # Check O columns follow `{provider}__{betting_market}__{event_status}__{event_time}`
         O_cols = [col.split('__') for col in O.columns]
         error_msg = (
             "Odds data column names should follow a naming "
-            "convention of the form `f'odds__{bookmaker}__{betting_market_prefix}__{betting_market_target}'`"
+            "convention of the form `f'{provider}__{betting_market}__{event_status}__{event_time}'`"
         )
         if {len(tokens) for tokens in O_cols} != {4}:
             raise ValueError(error_msg)
-        O_prefix, O_bookmakers, *O_betting_markets_tokens = zip(*O_cols, strict=True)
-        if set(O_prefix) != {'odds'}:
-            error_msg = 'Prefixes of odds data column names should be equal to `odds`.'
+        O_providers = [tokens[0] for tokens in O_cols]
+        if len(set(O_providers)) != 1:
+            error_msg = 'Providers of odds data column names should be unique.'
             raise ValueError(error_msg)
-        if len(set(O_bookmakers)) != 1:
-            error_msg = 'Bookmakers of odds data column names should be unique.'
-            raise ValueError(error_msg)
-        O_betting_markets = ['__'.join(tokens) for tokens in zip(*O_betting_markets_tokens, strict=True)]
+        O_betting_markets = [tokens[1] for tokens in O_cols]
 
         return X, O, O_betting_markets
 
@@ -223,11 +269,12 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         X, Y, Y_betting_markets = self._validate_X_Y(X, Y)
         if O is not None:
             X, O, O_betting_markets = self._validate_X_O(X, O)
-            if Y_betting_markets != O_betting_markets:
+            if set(Y_betting_markets) != set(O_betting_markets):
                 error_msg = 'Output and odds data column names are not compatible.'
                 raise ValueError(error_msg)
-        self._check(X, Y, O, Y_betting_markets)
-        return self._fit(X, Y[self.feature_names_out_], O[self.feature_names_odds_] if O is not None else None)
+        X_fit = self._append_odds_data(X, O)
+        self._check(X_fit, Y, O, Y_betting_markets)
+        return self._fit(X_fit, Y[self.feature_names_out_], O[self.feature_names_odds_] if O is not None else None)
 
     def predict_proba(self: Self, X: pd.DataFrame) -> Data:
         """Predict class probabilities for multi-output targets.
@@ -281,7 +328,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             B:
                 The value bets.
         """
-        Y_proba_pred = self.predict_proba(X)
+        Y_proba_pred = self.predict_proba(self._append_odds_data(X, O))
         X, O, O_betting_markets = self._validate_X_O(X, O)
         if not set(O_betting_markets).issuperset(self.betting_markets_):
             error_msg = 'Odds data do not include selected betting markets.'
@@ -290,7 +337,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         B_pred = Y_proba_pred * O > 1
         B_pred_selected = []
         for events in self.COMPLEMENTARY_EVENTS:
-            events_indices = np.where([market in events for market in self.betting_markets_])[0]
+            events_indices = np.where(np.isin(self.betting_markets_, events))[0]
             if events_indices.size > 0:
                 estimated_returns = np.nan_to_num(
                     (O.iloc[:, events_indices] * Y_proba_pred[:, events_indices] - 1).to_numpy(),
@@ -322,7 +369,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         check_is_fitted(self)
         X, Y, Y_betting_markets = self._validate_X_Y(X, Y)
         X, O, O_betting_markets = self._validate_X_O(X, O)
-        if Y_betting_markets != O_betting_markets:
+        if set(Y_betting_markets) != set(O_betting_markets):
             error_msg = 'Output and odds data column names are not compatible.'
             raise ValueError(error_msg)
         Y = Y[self.feature_names_out_]

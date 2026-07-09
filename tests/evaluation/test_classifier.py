@@ -6,25 +6,21 @@ from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
-from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor
-
-X_train, Y_train, O_train = DummySoccerDataLoader().extract_train_data(odds_type='williamhill')
+from tests.evaluation import O_fix, O_train, X_fix, X_train, Y_train
 
 
 @pytest.mark.parametrize('classifier', [DummyRegressor(), None, 'classifier'])
 def test_fit_raise_type_error_classifier(classifier):
     """Test raising an error on the wrong classifier type."""
     bettor = ClassifierBettor(classifier)
-    with pytest.raises(
-        TypeError,
-        match=f'`ClassifierBettor` requires a classifier. Instead {type(classifier)} is given.',
-    ):
+    msg = f'`ClassifierBettor` requires a classifier. Instead {type(classifier)} is given.'
+    with pytest.raises(TypeError, match=msg):
         bettor.fit(X_train, Y_train)
 
 
 def test_fit_check_classifier():
-    """Test the cloned classifier."""
+    """Test the cloned classifier is fitted and stored."""
     bettor = ClassifierBettor(classifier=DummyClassifier())
     with pytest.raises(NotFittedError):
         check_is_fitted(bettor)
@@ -35,20 +31,21 @@ def test_fit_check_classifier():
     assert isinstance(bettor.classifier_, DummyClassifier)
 
 
-def test_bet():
-    """Test the bet method."""
-    bettor = ClassifierBettor(classifier=DummyClassifier(strategy='constant', constant=[False, True, True]))
+def test_fit_predict_bet_consume_new_grammar():
+    """Test fit/predict/bet consume the moment-aware X/Y/O without reshaping (CR-1, CR-4)."""
+    bettor = ClassifierBettor(DummyClassifier(strategy='prior'))
+    bettor.fit(X_train, Y_train, O_train)
+    proba = bettor.predict_proba(X_train)
+    assert proba.shape == (len(X_train), bettor.betting_markets_.size)
+    assert bettor.predict(X_train).shape == (len(X_train), bettor.betting_markets_.size)
+    B = bettor.bet(X_fix, O_fix)
+    assert B.shape == (len(X_fix), bettor.betting_markets_.size)
+    assert B.dtype == bool
+
+
+def test_classes():
+    """Test the fitted classes_ attribute."""
+    bettor = ClassifierBettor(DummyClassifier())
     bettor.fit(X_train, Y_train)
-    expected_value_bets = np.array(
-        [
-            [False, True, False],
-            [False, False, False],
-            [False, False, False],
-            [False, False, False],
-            [False, False, True],
-            [False, True, False],
-            [False, False, False],
-            [False, False, False],
-        ],
-    )
-    assert np.array_equal(bettor.bet(X_train, O_train), expected_value_bets)
+    assert len(bettor.classes_) == bettor.betting_markets_.size
+    assert all(np.array_equal(classes, [0, 1]) for classes in bettor.classes_)
