@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## Unreleased
+
+### Features
+
+- Add in-play (live) betting support. Data is now modelled as long-format event
+  snapshots (`event_status` × `event_time`) validated by `pandera` schemas, and
+  `extract_train_data` extracts moment-aware `X`/`Y`/`O` for any target moment
+  (pre-match or in-play) via `target_event_status`/`target_event_time`, with no
+  post-target information leaking into the features.
+- `extract_train_data` returns a uniform three-tuple `(X, Y, O)` for both
+  supervised and unsupervised modes (`Y` is `None` when unsupervised).
+- Restore the public API: `SoccerDataLoader`, `DummySoccerDataLoader`,
+  `load_dataloader`, and the base/soccer `pandera` schemas.
+
+### Changed
+
+- Adopt a single flattened column-naming grammar shared by extraction and
+  bettors: fixed features keep bare names, time-varying features are
+  `{col}__{status}__{time}`, and odds are `{provider}__{col}__{status}__{time}`.
+- Bettors (`ClassifierBettor`, `OddsComparisonBettor`, `BettorGridSearchCV`,
+  `backtest`) consume the moment-aware `X`/`Y`/`O` and reconcile markets by base
+  name, using the latest available odds per market.
+- Reinforcement learning is removed from `extract_train_data` and specified as a
+  separate future method; `learning_type` accepts `supervised`/`unsupervised`.
+- The CLI and GUI expose the target moment (`TARGET_EVENT_STATUS` /
+  `TARGET_EVENT_TIME`).
+
 ## [0.12.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.12.1) - 2025-12-07
 
 <small>[Compare with 0.12.0](https://github.com/georgedouzas/sports-betting/compare/0.12.0...0.12.1)</small>
