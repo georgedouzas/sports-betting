@@ -118,7 +118,7 @@ def checks(session: nox.Session, file: str) -> None:
     if arg in ['types', 'all']:
         session.run('mypy', file)
     if arg in ['security', 'all']:
-        session.run('bandit', '-r', file)
+        session.run('bandit', '-c', 'pyproject.toml', '-r', file)
     if arg in ['docs', 'all'] and file == 'src':
         session.run('interrogate', file)
     if arg in ['dependencies', 'all']:
@@ -207,4 +207,3 @@ def release(session: nox.Session) -> None:
     # Build and upload artifacts
     session.run('pdm', 'build', '--no-sdist', external=True)
     session.run('twine', 'upload', '--skip-existing', 'dist/*')
-
