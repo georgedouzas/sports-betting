@@ -16,8 +16,8 @@ from nptyping import Bool, Float, Int, NDArray, Shape
 
 Param = dict[str, Any]
 ParamGrid = dict[str, list[Any]] | list[dict[str, list[Any]]]
-TrainData = tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame | None]
-FixturesData = tuple[pd.DataFrame, None, pd.DataFrame | None]
+TrainData = tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame]
+FixturesData = tuple[pd.DataFrame, None, pd.DataFrame]
 Data = NDArray[Shape['*, *'], Float]
 BoolData = NDArray[Shape['*, *'], Bool]
 Indices = NDArray[Shape['*, *'], Int]

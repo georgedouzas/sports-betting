@@ -20,9 +20,11 @@ from sklearn.model_selection import TimeSeriesSplit
 from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor
 DATALOADER_CLASS = DummySoccerDataLoader
-PARAM_GRID = {'league': ['England', 'Greece']}
-DROP_NA_THRES = 0.8
-ODDS_TYPE = 'interwetten'
+PARAM_GRID = {'league': ['England', 'Spain']}
+DROP_NA_THRES = 0.0
+ODDS_TYPE = 'bet365'
+TARGET_EVENT_STATUS = 'postplay'
+TARGET_EVENT_TIME = None
 BETTOR = OddsComparisonBettor(alpha=0.03)
 CV = TimeSeriesSplit(2)
 """
@@ -33,6 +35,12 @@ def pandas_terminal_width() -> None:
     """Set options to display data."""
     pd.set_option('display.width', 1000)
     pd.set_option('display.max_columns', 1000)
+
+
+@pytest.fixture
+def cli_runner() -> CliRunner:
+    """Create a Click CLI runner."""
+    return CliRunner()
 
 
 @pytest.fixture
@@ -48,8 +56,8 @@ def stats() -> pd.DataFrame:
     """Load statistics data."""
     stats_file = files('tests') / 'samples' / 'stats.csv'
     data = pd.read_csv(stats_file, parse_dates=['date'])
-    data['event_time'] = pd.to_timedelta(data['event_time'], unit='m')
-    data['date'] = pd.to_datetime(data['date'], utc=True)
+    data['event_time'] = pd.to_timedelta(data['event_time'], unit='m').astype('timedelta64[ns]')
+    data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
     return data
 
 
@@ -58,8 +66,8 @@ def odds() -> pd.DataFrame:
     """Load odds data."""
     odds_file = files('tests') / 'samples' / 'odds.csv'
     data = pd.read_csv(odds_file, parse_dates=['date'])
-    data['event_time'] = pd.to_timedelta(data['event_time'], unit='m')
-    data['date'] = pd.to_datetime(data['date'], utc=True)
+    data['event_time'] = pd.to_timedelta(data['event_time'], unit='m').astype('timedelta64[ns]')
+    data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
     return data
 
 
