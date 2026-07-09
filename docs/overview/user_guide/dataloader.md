@@ -56,11 +56,11 @@ Similarly, for [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]:
 
 ```python
 from sportsbet.datasets import SoccerDataLoader
-assert SoccerDataLoader.get_all_params()[:3] == [
-    {'division': 1, 'league': 'England', 'year': 2018},
-    {'division': 1, 'league': 'England', 'year': 2019},
-    {'division': 1, 'league': 'England', 'year': 2020}
-]
+params = SoccerDataLoader.get_all_params()
+# The available combinations are discovered from the feed, so only the
+# league/division/year that actually exist are ever offered.
+assert {'division': 1, 'league': 'England', 'year': 2024} in params
+assert all({'league', 'division', 'year'} == set(combination) for combination in params)
 ```
 
 ### Selection of parameters

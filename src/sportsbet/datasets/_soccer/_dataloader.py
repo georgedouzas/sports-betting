@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import io
-from typing import ClassVar, Self
+from typing import Self
 
 import aiohttp
 import pandas as pd
-from sklearn.model_selection import ParameterGrid
 
 from ... import FixturesData, ParamGrid, TrainData
 from .._base._dataloader import BaseDataLoader
@@ -24,11 +23,12 @@ from ._utils import (
     parse_odds_column,
 )
 
-_BASE_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling'
-STATS_URL = _BASE_URL + '/stats/{league}_{division}_{year}.csv'
-ODDS_URL = _BASE_URL + '/odds/{league}_{division}_{year}.csv'
-STATS_FIXTURES_URL = _BASE_URL + '/stats/fixtures.csv'
-ODDS_FIXTURES_URL = _BASE_URL + '/odds/fixtures.csv'
+BASE_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling'
+STATS_URL = BASE_URL + '/stats/{league}_{division}_{year}.csv'
+ODDS_URL = BASE_URL + '/odds/{league}_{division}_{year}.csv'
+STATS_FIXTURES_URL = BASE_URL + '/stats/fixtures.csv'
+ODDS_FIXTURES_URL = BASE_URL + '/odds/fixtures.csv'
+PARAMS_URL = BASE_URL + '/params.csv'
 CONNECTIONS_LIMIT = 20
 
 
@@ -105,13 +105,6 @@ class SoccerDataLoader(BaseDataLoader):
         odds_cols_ (pd.Index):
             The columns of `O` for training and fixtures data.
     """
-
-    # Selectable parameters for the real feed.
-    ALL_PARAMS: ClassVar[ParamGrid] = {
-        'league': ['England', 'Scotland', 'Germany', 'Italy', 'Spain', 'France', 'Netherlands', 'Greece'],
-        'division': [1, 2],
-        'year': list(range(2018, 2026)),
-    }
 
     def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
         self.param_grid = param_grid
@@ -226,27 +219,28 @@ class SoccerDataLoader(BaseDataLoader):
         return stats, pd.DataFrame(records)
 
     @classmethod
-    def _param_grid_all(cls: type[Self]) -> ParamGrid:
-        """Return the full selectable parameter grid for the source."""
-        return cls.ALL_PARAMS
+    def _all_params(cls: type[Self]) -> list[dict]:
+        """Return the available `league`/`division`/`year` combinations from the feed manifest."""
+        manifest = _read_csvs([PARAMS_URL])[0]
+        manifest = manifest[['league', 'division', 'year']].astype({'division': int, 'year': int})
+        return manifest.to_dict('records')
 
     @classmethod
     def get_all_params(cls: type[Self]) -> list[dict]:
-        """Return all selectable parameter combinations, without downloading data."""
-        return list(ParameterGrid(cls._param_grid_all()))
-
-    def _resolved_grid(self: Self) -> ParamGrid:
-        """Merge the selected `param_grid` over the full grid, defaulting omitted dimensions to all."""
-        full = self._param_grid_all()
-        if self.param_grid is None:
-            return full
-        if isinstance(self.param_grid, dict) and isinstance(full, dict):
-            return {**full, **self.param_grid}
-        return self.param_grid
+        """Return every available parameter combination the feed actually provides."""
+        return cls._all_params()
 
     def _selected_params(self: Self) -> list[dict]:
-        """Resolve the parameter combinations selected by `param_grid`."""
-        return list(ParameterGrid(self._resolved_grid()))
+        """Filter the available combinations by `param_grid` (no invalid combinations are fabricated)."""
+        params = self._all_params()
+        if self.param_grid is None:
+            return params
+        grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
+        return [
+            combination
+            for combination in params
+            if any(all(combination[key] in values for key, values in grid.items()) for grid in grids)
+        ]
 
     @staticmethod
     def _concat(frames: list[pd.DataFrame]) -> pd.DataFrame:
@@ -320,7 +314,7 @@ class SoccerDataLoader(BaseDataLoader):
         self.odds_schema = build_odds_schema(odds_metadata)
         self.targets = odds_value_cols
         self.odds_type_ = odds_type
-        self.param_grid_ = ParameterGrid(self._resolved_grid())
+        self.param_grid_ = stats[['league', 'division', 'year']].drop_duplicates().to_dict('records')
 
     def _apply_drop_na(self: Self, X: pd.DataFrame, drop_na_thres: float) -> pd.DataFrame:
         """Drop feature columns whose missingness exceeds `drop_na_thres`."""

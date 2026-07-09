@@ -11,7 +11,7 @@ import pandas as pd
 
 from .._base._schema import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
-_IDENTITY_FIELDS = {
+IDENTITY_FIELDS = {
     'date': Annotated[pd.DatetimeTZDtype, 'ns', 'utc'],
     'league': str,
     'division': int,
@@ -40,8 +40,8 @@ def _value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, dict]:
 
 def build_stats_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseStatsSchema]:
     """Build a statistics schema from the derived value-column metadata."""
-    annotations: dict = dict(_IDENTITY_FIELDS)
-    namespace: dict = {col: required_col() for col in _IDENTITY_FIELDS}
+    annotations: dict = dict(IDENTITY_FIELDS)
+    namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
     value_annotations, value_namespace = _value_namespace(metadata)
     annotations.update(value_annotations)
     namespace.update(value_namespace)
@@ -51,8 +51,8 @@ def build_stats_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseStatsSch
 
 def build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSchema]:
     """Build an odds schema from the derived market-column metadata."""
-    annotations: dict = dict(_IDENTITY_FIELDS)
-    namespace: dict = {col: required_col() for col in _IDENTITY_FIELDS}
+    annotations: dict = dict(IDENTITY_FIELDS)
+    namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
     annotations['provider'] = str
     namespace['provider'] = optional_col(['preplay'], fixed=True)
     value_annotations, value_namespace = _value_namespace(metadata)

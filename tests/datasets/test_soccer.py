@@ -21,11 +21,34 @@ def loader(monkeypatch, long_snapshots):
     return SoccerDataLoader(param_grid={'league': ['England']})
 
 
-def test_get_all_params_offline():
-    """Test parameter discovery requires no download."""
+def test_get_all_params_reads_manifest(monkeypatch):
+    """Test parameter discovery reads the feed manifest and fabricates no invalid combos."""
+    manifest = pd.DataFrame(
+        {
+            'league': ['England', 'England', 'Netherlands'],
+            'division': [1, 2, 1],
+            'year': [2024, 2024, 2024],
+        },
+    )
+    monkeypatch.setattr('sportsbet.datasets._soccer._dataloader._read_csvs', lambda urls: [manifest])
     params = SoccerDataLoader.get_all_params()
-    assert {'league': 'England', 'division': 1, 'year': 2018} in params
-    assert all({'league', 'division', 'year'} == set(param) for param in params)
+    assert {'league': 'England', 'division': 2, 'year': 2024} in params
+    # Netherlands has no division 2, so it is never offered.
+    assert {'league': 'Netherlands', 'division': 2, 'year': 2024} not in params
+
+
+def test_selected_params_filters_without_fabricating(monkeypatch):
+    """Test a partial param_grid filters the available combos instead of a cartesian product."""
+    manifest = pd.DataFrame(
+        {
+            'league': ['England', 'England', 'Netherlands'],
+            'division': [1, 2, 1],
+            'year': [2024, 2024, 2024],
+        },
+    )
+    monkeypatch.setattr('sportsbet.datasets._soccer._dataloader._read_csvs', lambda urls: [manifest])
+    selected = SoccerDataLoader(param_grid={'league': ['Netherlands']})._selected_params()
+    assert selected == [{'league': 'Netherlands', 'division': 1, 'year': 2024}]
 
 
 def test_get_odds_types_derived_from_data(loader):

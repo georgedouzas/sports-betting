@@ -9,13 +9,9 @@ from typing import Any
 
 import pandas as pd
 
-# Columns that identify a match snapshot.
 IDENTITY_COLS = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
-# Event columns that place a snapshot in time.
 EVENT_COLS = ['event_status', 'event_time']
-# Full-time goal columns from which market outcomes can be derived.
 GOAL_COLS = ['home_goals', 'away_goals']
-# The possible event statuses, ordered.
 STATUSES = ['preplay', 'inplay', 'postplay']
 
 
