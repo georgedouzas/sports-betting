@@ -8,19 +8,15 @@ from __future__ import annotations
 from typing import ClassVar, Self
 
 import pandas as pd
+from sklearn.model_selection import ParameterGrid
 
 from .. import ParamGrid
 from ._soccer._dataloader import SoccerDataLoader
 from ._soccer._utils import IDENTITY_COLS, market_outcomes
 
-# The markets, providers and pre-match features carried by the sample data.
 _MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
 _PROVIDERS = ['market_average', 'market_maximum']
 _FEATURES = ['home_points_avg', 'away_points_avg']
-
-# One entry per sample match: identity, pre-match feature values, the full-time
-# score and whether it is an upcoming fixture. In-play snapshots are generated
-# from the score by `_timeline`.
 _MATCHES: list[dict] = [
     {
         'date': '2024-08-16',
@@ -171,8 +167,8 @@ class DummySoccerDataLoader(SoccerDataLoader):
     _PARAM_GRID: ClassVar[ParamGrid] = {'league': ['England', 'Spain'], 'division': [1], 'year': [2025]}
 
     @classmethod
-    def _param_grid_all(cls: type[Self]) -> ParamGrid:
-        return cls._PARAM_GRID
+    def _all_params(cls: type[Self]) -> list[dict]:
+        return list(ParameterGrid(cls._PARAM_GRID))
 
     def get_odds_types(self: Self) -> list[str]:
         """Return the available odds types (providers) of the sample data."""
