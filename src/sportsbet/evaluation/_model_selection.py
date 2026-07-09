@@ -342,7 +342,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         >>> from sportsbet.datasets import DummySoccerDataLoader
         >>> from sklearn.model_selection import TimeSeriesSplit
         >>> dataloader = DummySoccerDataLoader()
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='bet365')
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = BettorGridSearchCV(
         ...     estimator=OddsComparisonBettor(),
         ...     param_grid={'alpha': [0.02, 0.05, 0.1]},

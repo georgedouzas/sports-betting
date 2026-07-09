@@ -60,7 +60,7 @@ class OddsComparisonBettor(BaseBettor):
         >>> from sportsbet.evaluation import OddsComparisonBettor, backtest
         >>> from sportsbet.datasets import DummySoccerDataLoader
         >>> dataloader = DummySoccerDataLoader()
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='bet365')
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = OddsComparisonBettor(alpha=0.03)
         >>> results = backtest(bettor, X, Y, O)
         >>> 'Number of bets' in results.columns
