@@ -9,6 +9,7 @@ import nox
 
 os.environ.update({'PDM_IGNORE_SAVED_PYTHON': '1'})
 
+
 PYTHON_VERSIONS: list[str] = ['3.11', '3.12', '3.13']
 FILES: list[str] = ['src', 'tests', 'docs', 'noxfile.py']
 CHANGELOG_ARGS: dict[str, Any] = {
@@ -60,6 +61,8 @@ def clean(session: nox.Session) -> None:
         'docs/generated',
         '.nox',
         '.ruff_cache',
+        'coverage.xml',
+        'pdm.lock',
     ]
     for path in paths:
         shutil.rmtree(path, ignore_errors=True)
@@ -137,7 +140,7 @@ def checks(session: nox.Session, file: str) -> None:
             requirements_path,
         ]
         session.run(*(args + dict(requirements_types)[file]), external=True)
-        session.run('safety', 'check', '-r', requirements_path)
+        session.run('pip-audit', '-r', requirements_path)
 
 
 @nox.session(python=PYTHON_VERSIONS)
@@ -156,6 +159,7 @@ def tests(session: nox.Session) -> None:
     session.run('coverage', 'combine')
     session.run('coverage', 'report')
     session.run('coverage', 'html')
+    session.run('coverage', 'xml')
 
 
 @nox.session
