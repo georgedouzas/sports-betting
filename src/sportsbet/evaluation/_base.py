@@ -21,10 +21,8 @@ from sklearn.utils.validation import _check_feature_names, check_is_fitted
 from .. import BoolData, Data
 from ..datasets._base._dataloader import parse_event_time
 
-# Ordering of event statuses, used to pick the latest odds snapshot for a market.
-_STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
-# Number of ``__``-delimited tokens in an odds column: provider, market, status, time.
-_N_ODDS_TOKENS = 4
+STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
+N_ODDS_TOKENS = 4
 
 
 def market_base(market: str) -> str:
@@ -34,7 +32,7 @@ def market_base(market: str) -> str:
 
 def is_odds_column(col: str) -> bool:
     """Return whether a column follows the four-token odds grammar."""
-    return len(col.split('__')) == _N_ODDS_TOKENS
+    return len(col.split('__')) == N_ODDS_TOKENS
 
 
 def latest_odds_column(columns: list[str], base: str, provider: str | None = None) -> str | None:
@@ -59,7 +57,7 @@ def latest_odds_column(columns: list[str], base: str, provider: str | None = Non
         col_provider, col_base, status, time = col.split('__')
         if col_base != base or (provider is not None and col_provider != provider):
             continue
-        key = (_STATUS_RANK.get(status, -1), parse_event_time(time))
+        key = (STATUS_RANK.get(status, -1), parse_event_time(time))
         if best_key is None or key > best_key:
             best_key, best = key, col
     return best

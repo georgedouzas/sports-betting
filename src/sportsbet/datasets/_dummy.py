@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, Self
+from typing import Self
 
 import pandas as pd
 
@@ -13,9 +13,7 @@ from .. import ParamGrid
 from ._soccer._dataloader import IDENTITY_COLS, PROVIDERS, SoccerDataLoader
 from ._soccer._utils import MARKETS, market_outcomes
 
-# One entry per sample match: identity, pre-match streaks, the full-time score, and whether
-# it is an upcoming fixture. In-play snapshots are generated from the score by `_timeline`.
-_MATCHES: list[dict] = [
+MATCHES: list[dict] = [
     {
         'date': '2024-08-16',
         'league': 'England',
@@ -117,9 +115,7 @@ _MATCHES: list[dict] = [
         'fixture': True,
     },
 ]
-
-# Base pre-match decimal odds per market and per-provider multiplier.
-_BASE_ODDS: dict[str, float] = {
+BASE_ODDS: dict[str, float] = {
     'home_win': 1.80,
     'draw': 3.40,
     'away_win': 4.20,
@@ -128,7 +124,7 @@ _BASE_ODDS: dict[str, float] = {
     'over_3.5': 3.10,
     'under_3.5': 1.35,
 }
-_PROVIDER_FACTOR: dict[str, float] = {'bet365': 1.00, 'market_average': 0.98, 'market_maximum': 1.06}
+PROVIDER_FACTOR: dict[str, float] = {'bet365': 1.00, 'market_average': 0.98, 'market_maximum': 1.06}
 
 
 def _timeline(match: dict) -> list[tuple[str, int, int, int]]:
@@ -170,21 +166,19 @@ class DummySoccerDataLoader(SoccerDataLoader):
         >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
     """
 
-    _PARAM_GRID: ClassVar[ParamGrid] = {
-        'league': ['England', 'Spain'],
-        'division': [1],
-        'year': [2025],
-    }
-
     @classmethod
     def _param_grid_all(cls: type[Self]) -> ParamGrid:
-        return cls._PARAM_GRID
+        return {
+            'league': ['England', 'Spain'],
+            'division': [1],
+            'year': [2025],
+        }
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         selected_leagues = {params['league'] for params in self._selected_params() if 'league' in params}
         stats_records: list[dict] = []
         odds_records: list[dict] = []
-        for match in _MATCHES:
+        for match in MATCHES:
             if selected_leagues and match['league'] not in selected_leagues:
                 continue
             identity = {
@@ -212,14 +206,14 @@ class DummySoccerDataLoader(SoccerDataLoader):
                 if status == 'postplay':
                     continue
                 for provider in PROVIDERS:
-                    factor = _PROVIDER_FACTOR[provider] * (1 + 0.004 * minutes)
+                    factor = PROVIDER_FACTOR[provider] * (1 + 0.004 * minutes)
                     odds_records.append(
                         {
                             **identity,
                             'event_status': status,
                             'event_time': pd.Timedelta(minutes=minutes),
                             'provider': provider,
-                            **{market: round(base * factor, 2) for market, base in _BASE_ODDS.items()},
+                            **{market: round(base * factor, 2) for market, base in BASE_ODDS.items()},
                         },
                     )
         stats = pd.DataFrame(stats_records)[

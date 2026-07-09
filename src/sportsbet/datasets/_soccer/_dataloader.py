@@ -22,13 +22,8 @@ from ._utils import MARKETS, market_outcomes
 
 TRAINING_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/{league}_{division}_{year}.csv'
 FIXTURES_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling/fixtures.csv'
-
 CONNECTIONS_LIMIT = 20
-
-# Identity columns shared by every soccer snapshot.
 IDENTITY_COLS = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
-
-# Feed odds column prefixes mapped to provider (odds-type) names, and market suffixes.
 PROVIDERS: dict[str, str] = {'bet365': 'B365', 'market_average': 'Avg', 'market_maximum': 'Max'}
 FEED_MARKETS: dict[str, str] = {
     'home_win': 'H',
@@ -126,8 +121,6 @@ class SoccerDataLoader(BaseDataLoader):
     def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
         self.param_grid = param_grid
 
-    # ----------------------------------------------------------------- discovery
-
     @classmethod
     def _param_grid_all(cls: type[Self]) -> ParamGrid:
         """Return the full selectable parameter grid for the source."""
@@ -146,8 +139,6 @@ class SoccerDataLoader(BaseDataLoader):
         """Resolve the parameter combinations selected by `param_grid`."""
         grid = self._param_grid_all() if self.param_grid is None else self.param_grid
         return list(ParameterGrid(grid))
-
-    # ----------------------------------------------------------------- data source
 
     @lru_cache  # noqa: B019
     def _raw_data(self: Self) -> pd.DataFrame:
@@ -211,8 +202,6 @@ class SoccerDataLoader(BaseDataLoader):
             # Pin nanosecond resolution: newer pandas infers ``us`` from strings.
             data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
         return data.reset_index(drop=True)
-
-    # ----------------------------------------------------------------- extraction
 
     def _prepare(self: Self, odds_type: str | None) -> None:
         """Populate the base-loader inputs from the selected snapshots and odds type."""

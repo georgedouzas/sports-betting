@@ -7,10 +7,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-# Over/under goal lines supported by the soccer loaders.
 OVER_UNDER_LINES: tuple[float, ...] = (2.5, 3.5)
-
-# The 1X2 markets plus the over/under markets, in a stable order.
 MARKETS: list[str] = [
     'home_win',
     'draw',

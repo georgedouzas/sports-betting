@@ -12,21 +12,7 @@ from sklearn.utils import check_scalar
 
 from ._schema import BaseOddsSchema, BaseStatsSchema
 
-# --------------------------------------------------------------------------- #
-# Column-naming grammar (research.md R4)
-#
-# One shared definition, imported by both the extraction engine (below) and the
-# bettors (`sportsbet.evaluation`), so the two never drift:
-#   - fixed feature/odds column ..... bare name (e.g. ``league``)
-#   - time-varying feature .......... ``{col}__{status}__{time}``
-#   - odds .......................... ``{provider}__{col}__{status}__{time}``
-#   - target (Y) .................... ``{col}__{target_status}__{target_time}``
-# The delimiter is a fixed double underscore and ``event_time`` renders as whole
-# minutes (``{n}min``).
-# --------------------------------------------------------------------------- #
-
 DELIMITER = '__'
-
 LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
 
