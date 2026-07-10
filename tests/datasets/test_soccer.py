@@ -4,9 +4,9 @@ import pandas as pd
 import pytest
 
 from sportsbet.datasets import (
+    BaseDataLoader,
     DummySoccerDataLoader,
     SoccerDataLoader,
-    from_csv,
     from_dataframe,
     from_snapshots,
 )
@@ -182,23 +182,8 @@ def test_from_dataframe_single_moment_splits_stats_and_odds():
     assert loader.get_odds_types() == PROVIDERS
 
 
-def test_from_csv_single_moment(tmp_path):
-    """Test a user's wide single-moment CSV is consumed without downloading."""
-    wide = pd.DataFrame(
-        [
-            {
-                'date': '2025-09-01',
-                'league': 'England',
-                'division': 1,
-                'year': 2025,
-                'home_team': 'Arsenal',
-                'away_team': 'Chelsea',
-                'market_average__home_win': 1.8,
-                'market_maximum__home_win': 1.9,
-            },
-        ],
-    )
-    path = tmp_path / 'matches.csv'
-    wide.to_csv(path, index=False)
-    loader = from_csv(str(path), event_status='preplay', event_time=pd.Timedelta('0min'))
-    assert loader.get_odds_types() == PROVIDERS
+def test_base_dataloader_requires_snapshots():
+    """Test the abstract base cannot be instantiated without a data source."""
+    cls = BaseDataLoader
+    with pytest.raises(TypeError, match='abstract'):
+        cls()
