@@ -1,6 +1,6 @@
 [build-system]
-requires = ["pdm-pep517"]
-build-backend = "pdm.pep517.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [project]
 name = "sports_betting"
@@ -57,9 +57,12 @@ gui = [
     "reflex==0.7.0",
     "reflex-ag-grid>=0.0.10",
 ]
-[tool.pdm]
-version = {source = "scm"}
-build = {package-dir = "src", editable-backend = "editables"}
+[tool.pdm.version]
+source = "scm"
+
+[tool.pdm.build]
+package-dir = "src"
+editable-backend = "editables"
 
 [tool.pdm.scripts]
 clean = "nox --error-on-external-run -R -s clean"
