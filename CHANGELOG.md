@@ -6,32 +6,58 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## Unreleased
+## [0.13.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.13.0) - 2026-07-10
+
+<small>[Compare with 0.12.1](https://github.com/georgedouzas/sports-betting/compare/0.12.1...0.13.0)</small>
 
 ### Features
 
-- Add in-play (live) betting support. Data is now modelled as long-format event
-  snapshots (`event_status` × `event_time`) validated by `pandera` schemas, and
-  `extract_train_data` extracts moment-aware `X`/`Y`/`O` for any target moment
-  (pre-match or in-play) via `target_event_status`/`target_event_time`, with no
-  post-target information leaking into the features.
-- `extract_train_data` returns a uniform three-tuple `(X, Y, O)` for both
-  supervised and unsupervised modes (`Y` is `None` when unsupervised).
-- Restore the public API: `SoccerDataLoader`, `DummySoccerDataLoader`,
-  `load_dataloader`, and the base/soccer `pandera` schemas.
+- Add an input horizon and factory construction functions ([4e9bfe7](https://github.com/georgedouzas/sports-betting/commit/4e9bfe755bf8e6207535c65d0e0a332104236cdb) by georgedouzas).
+- Expose target moment in CLI and GUI ([c926886](https://github.com/georgedouzas/sports-betting/commit/c9268864e391ea3af9e653914c063956d49c79a9) by georgedouzas).
+- Adapt bettors to moment-aware X/Y/O ([c2f42b9](https://github.com/georgedouzas/sports-betting/commit/c2f42b919163e72e4053dc0c66a208d51266bcbc) by georgedouzas).
+- Add soccer and offline dummy snapshot dataloaders ([86381e6](https://github.com/georgedouzas/sports-betting/commit/86381e65ba4d9004f00727cee2618b6b365f1c02) by georgedouzas).
+- Add moment-aware event-snapshot data model ([21d23ce](https://github.com/georgedouzas/sports-betting/commit/21d23ced6d1f4e3010be253948dfa87242c9163c) by georgedouzas).
+- Validate pandas schema ([b2b1f21](https://github.com/georgedouzas/sports-betting/commit/b2b1f21fbadaca4df714c09f6fa7a9b408509d90) by georgedouzas).
+- Modify base class ([214e0c4](https://github.com/georgedouzas/sports-betting/commit/214e0c477bf6afb177fbb3628a9affc8e9e20b8d) by georgedouzas).
 
-### Changed
+### Bug Fixes
 
-- Adopt a single flattened column-naming grammar shared by extraction and
-  bettors: fixed features keep bare names, time-varying features are
-  `{col}__{status}__{time}`, and odds are `{provider}__{col}__{status}__{time}`.
-- Bettors (`ClassifierBettor`, `OddsComparisonBettor`, `BettorGridSearchCV`,
-  `backtest`) consume the moment-aware `X`/`Y`/`O` and reconcile markets by base
-  name, using the latest available odds per market.
-- Reinforcement learning is removed from `extract_train_data` and specified as a
-  separate future method; `learning_type` accepts `supervised`/`unsupervised`.
-- The CLI and GUI expose the target moment (`TARGET_EVENT_STATUS` /
-  `TARGET_EVENT_TIME`).
+- Pass the full odds data to bet when scoring ([986f050](https://github.com/georgedouzas/sports-betting/commit/986f050d30eae9c39e3fef4a4a443e61719b9235) by georgedouzas).
+- Discover feed parameters from a manifest ([b068e9c](https://github.com/georgedouzas/sports-betting/commit/b068e9c9cbc12e46dc369e34799f1185bf211602) by georgedouzas).
+- Make the soccer feed robust to empty fixtures ([e35401f](https://github.com/georgedouzas/sports-betting/commit/e35401faad32b747503e783ab9647973982ecb22) by georgedouzas).
+
+### Docs
+
+- Fix stale betting_markets grammar in the README ([2b1d1aa](https://github.com/georgedouzas/sports-betting/commit/2b1d1aa75c849ad2ae73a8fc3022cbd3a737c0a8) by georgedouzas).
+- Document all bettor parameters and the grid search ([43dba56](https://github.com/georgedouzas/sports-betting/commit/43dba5697d1428bad0547942f9b8bb3404571bf8) by georgedouzas).
+- Fix the ambiguous user-guide cross-reference ([6b389d4](https://github.com/georgedouzas/sports-betting/commit/6b389d4cd38aad79aa87ce1bf83f9b12c22596ab) by georgedouzas).
+- Expand the dataloader guide and add an end-to-end guide ([f7a3252](https://github.com/georgedouzas/sports-betting/commit/f7a3252169f1716039b3f15222903768aec3ff95) by georgedouzas).
+- Document long-format snapshots and consumption ([9983571](https://github.com/georgedouzas/sports-betting/commit/998357158d220c4a9547e29aeb0189a8310d9ef8) by georgedouzas).
+- Use market_average provider in bettor examples ([b6c77af](https://github.com/georgedouzas/sports-betting/commit/b6c77afc964e7f1625aa3d8b10755dede8cd583d) by georgedouzas).
+- Align spec-kit gate docs with copier update ([4ddcb18](https://github.com/georgedouzas/sports-betting/commit/4ddcb181dc163b3f9e7e0c90ac61b9aae3f6b3e7) by georgedouzas).
+- Update guides and changelog for in-play model ([21ea968](https://github.com/georgedouzas/sports-betting/commit/21ea96856263b47102dd1d8d7a940c8c38cd834c) by georgedouzas).
+
+### Code Refactoring
+
+- Drop the test-only engine helper from source ([7b67140](https://github.com/georgedouzas/sports-betting/commit/7b67140d0ab3ef9eee8f8f2da51c5da9ed8e6936) by georgedouzas).
+- Move the factory functions to a dedicated module ([99b8289](https://github.com/georgedouzas/sports-betting/commit/99b82894c1d4a8da87e36eac8fdc52414139ffae) by georgedouzas).
+- Make BaseDataLoader abstract and drop from_csv ([0cc738e](https://github.com/georgedouzas/sports-betting/commit/0cc738e71a7320d8d872fd556f696d4a047d37eb) by georgedouzas).
+- Make all dataloaders inherit BaseDataLoader directly ([9bb32e5](https://github.com/georgedouzas/sports-betting/commit/9bb32e5edfeaf4de4e5a766ac4db6e11f301841b) by georgedouzas).
+- Read long-format snapshots and derive schemas ([de8ecbb](https://github.com/georgedouzas/sports-betting/commit/de8ecbb065238ea39b5b47f4e3c58c96c675c9b2) by georgedouzas).
+- Simplify comments and constants ([0c662f0](https://github.com/georgedouzas/sports-betting/commit/0c662f03066aab4c7bb247c756bfeb1718c9c816) by georgedouzas).
+
+### Tests
+
+- Flatten base tests and quiet the untyped-body note ([0394023](https://github.com/georgedouzas/sports-betting/commit/039402384349ae9f063156f3e568eafa3f75cf6f) by georgedouzas).
+- Cover long-format loader and data consumption ([ada3d57](https://github.com/georgedouzas/sports-betting/commit/ada3d578ba0ef670ce5c79191112f183d7e7232c) by georgedouzas).
+
+### Chore
+
+- Update copier template ([f20166e](https://github.com/georgedouzas/sports-betting/commit/f20166e62a9db273638c90b9f47307792690ddc8) by georgedouzas).
+- Add spec-kit tooling and in-play feature specs ([10def40](https://github.com/georgedouzas/sports-betting/commit/10def406faa20fd0a66aa2eaf8af5e1717a671c6) by georgedouzas).
+- Configure bandit for the checks session ([d619a52](https://github.com/georgedouzas/sports-betting/commit/d619a5241904ac31003a6fb9056236c40493fe7a) by georgedouzas).
+- Change to correct template name ([bb3c1de](https://github.com/georgedouzas/sports-betting/commit/bb3c1dee0071e488b309ff2755d28566321c2864) by georgedouzas).
+- Do not build source distribution ([93c9b50](https://github.com/georgedouzas/sports-betting/commit/93c9b50bd169c865d20d2e4494e36d2af294a72a) by georgedouzas).
 
 ## [0.12.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.12.1) - 2025-12-07
 
@@ -39,7 +65,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Chore
 
-- Change distribution name ([730c794](https://github.com/georgedouzas/sports-betting/commit/730c794bfdf7f0bc1863d30f88256211f6597d86) by georgedouzas).
+- Release 0.12.1 ([56cc79b](https://github.com/georgedouzas/sports-betting/commit/56cc79bf27097d9023908e933501405e37837aae) by georgedouzas).
+- Change distribution name ([de7cf6f](https://github.com/georgedouzas/sports-betting/commit/de7cf6ff801018106c5c56bca96186c212e451c4) by georgedouzas).
 
 ## [0.12.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.12.0) - 2025-12-07
 
@@ -275,7 +302,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Predictions 03/10/2023 ([6af121b](https://github.com/georgedouzas/sports-betting/commit/6af121be9aef9b4c51bfd7866ddfb9b38e6b5576) by georgedouzas).
 - Skip session if fixtures data are empty ([00d3eeb](https://github.com/georgedouzas/sports-betting/commit/00d3eeb0eb491f94f1036096d97f7fab6e303b98) by georgedouzas).
 
-## [0.8.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.0) - 2023-09-29
+## [0.8.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.0) - 2023-09-30
 
 <small>[Compare with 0.7.0](https://github.com/georgedouzas/sports-betting/compare/0.7.0...0.8.0)</small>
 
@@ -467,7 +494,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 <small>[Compare with 0.2.1](https://github.com/georgedouzas/sports-betting/compare/0.2.1...0.2.2)</small>
 
-## [0.2.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.2.1) - 2022-02-01
+## [0.2.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.2.1) - 2022-02-02
 
 <small>[Compare with 0.2.0](https://github.com/georgedouzas/sports-betting/compare/0.2.0...0.2.1)</small>
 
@@ -479,7 +506,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 <small>[Compare with 0.1.5](https://github.com/georgedouzas/sports-betting/compare/0.1.5...0.1.6)</small>
 
-## [0.1.5](https://github.com/georgedouzas/sports-betting/releases/tag/0.1.5) - 2022-01-18
+## [0.1.5](https://github.com/georgedouzas/sports-betting/releases/tag/0.1.5) - 2022-01-19
 
 <small>[Compare with 0.1.4](https://github.com/georgedouzas/sports-betting/compare/0.1.4...0.1.5)</small>
 
