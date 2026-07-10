@@ -130,6 +130,7 @@ extract the training data using the method `extract_train_data`. All of its para
 - `drop_na_thres`: threshold in the range `[0.0, 1.0]` controlling how aggressively feature columns with missing values are dropped.
 - `odds_type`: the provider used for the odds' matrix `O_train`.
 - `target_event_status` and `target_event_time`: the target moment to predict.
+- `input_event_status` and `input_event_time`: the latest snapshot to keep as a feature (the *input horizon*).
 - `learning_type`: `'supervised'` (the default) or `'unsupervised'`, in which case `Y_train` is `None`.
 
 We use the following dataloader as an example:
@@ -221,6 +222,36 @@ assert 'home_goals__inplay__30min' in X_inplay.columns.tolist()
 assert 'home_goals__inplay__60min' not in X_inplay.columns.tolist()
 ```
 
+### The input horizon
+
+By default every snapshot before the target moment becomes a feature. Often you do not want all of them: to bet *before kick-off*
+you can only rely on pre-match information, so half-time or other in-play snapshots must not enter the model. The
+`input_event_status` and `input_event_time` parameters cap the features at a chosen moment — the *input horizon* — keeping only
+snapshots up to and including it. For a pre-match model, set the horizon to `preplay`:
+
+```python
+X_pre, Y_pre, O_pre = dataloader.extract_train_data(
+    odds_type='market_average',
+    input_event_status='preplay',
+    input_event_time=pd.Timedelta('0min'),
+)
+assert not [col for col in X_pre.columns if '__inplay__' in col]
+```
+
+To use information up to half-time only, set the horizon to `inplay` at 45 minutes; snapshots after it are dropped:
+
+```python
+X_ht, *_ = dataloader.extract_train_data(
+    odds_type='market_average',
+    input_event_status='inplay',
+    input_event_time=pd.Timedelta('45min'),
+)
+assert all('__inplay__60min' not in col and '__inplay__90min' not in col for col in X_ht.columns)
+```
+
+The same horizon is applied to the fixtures data, so training and prediction always use the same feature set. This is central to
+using the dataloader in practice — see [Sports betting in practice](in_practice.md).
+
 ### Unsupervised extraction
 
 Passing `learning_type='unsupervised'` returns only features and odds; the targets `Y_train` are `None`:
@@ -263,9 +294,9 @@ assert Y_fix is None
 
 ## Consuming your own data
 
-The extraction, grammar and moment-aware model described above are not tied to the bundled feed: any dataloader can consume data
-you provide, through three class methods on
-[`BaseDataLoader`][sportsbet.datasets.BaseDataLoader] (and therefore on every dataloader). Because the layout is
+The extraction, grammar and moment-aware model described above are not tied to the bundled feed: three factory functions build a
+dataloader straight from data you provide — [`from_snapshots`][sportsbet.datasets.from_snapshots],
+[`from_dataframe`][sportsbet.datasets.from_dataframe] and [`from_csv`][sportsbet.datasets.from_csv]. Because the layout is
 [derived from the data](#everything-is-derived-from-the-data), your columns only need to follow the long format — the providers,
 markets, features and their fixed/time-varying roles are inferred for you.
 
@@ -279,7 +310,7 @@ moment, tagged with `event_status` and `event_time` (whole minutes); a match wit
 
 ```python
 import pandas as pd
-from sportsbet.datasets import SoccerDataLoader, market_outcomes
+from sportsbet.datasets import from_snapshots, market_outcomes
 
 def snapshot(event_status, event_time, date, home, away, home_goals, away_goals, home_avg, away_avg):
     return dict(
@@ -316,7 +347,7 @@ odds = pd.DataFrame([
     quote('2025-09-01', 'Liverpool', 'Wolves', 1.4, 4.5, 7.0),
 ])
 
-dataloader = SoccerDataLoader.from_snapshots(stats, odds)
+dataloader = from_snapshots(stats, odds)
 assert dataloader.get_odds_types() == ['market_average']
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 assert Y_train.columns.tolist() == ['home_win__postplay__0min', 'draw__postplay__0min', 'away_win__postplay__0min']
@@ -332,14 +363,14 @@ declare exactly what that moment is with `event_status` and `event_time` — not
 
 ```python
 import pandas as pd
-from sportsbet.datasets import SoccerDataLoader
+from sportsbet.datasets import from_dataframe
 
 upcoming = pd.DataFrame([{
     'date': '2025-09-01', 'league': 'England', 'division': 1, 'year': 2025,
     'home_team': 'Liverpool', 'away_team': 'Wolves', 'home_points_avg': 2.4, 'away_points_avg': 1.0,
     'market_average__home_win': 1.4, 'market_average__draw': 4.5, 'market_average__away_win': 7.0,
 }])
-dataloader = SoccerDataLoader.from_dataframe(upcoming, event_status='preplay', event_time=pd.Timedelta('0min'))
+dataloader = from_dataframe(upcoming, event_status='preplay', event_time=pd.Timedelta('0min'))
 assert dataloader.get_odds_types() == ['market_average']
 ```
 
