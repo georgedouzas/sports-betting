@@ -222,7 +222,7 @@ from sportsbet.evaluation import ClassifierBettor, backtest
 tscv = TimeSeriesSplit(5)
 init_cash = 10000.0
 stake = 50.0
-betting_markets = ['home_win__full_time_goals', 'draw__full_time_goals', 'away_win__full_time_goals']
+betting_markets = ['home_win', 'draw', 'away_win']
 classifier = make_pipeline(
   make_column_transformer(
     (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']), remainder='passthrough'
