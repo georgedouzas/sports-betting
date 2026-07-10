@@ -199,7 +199,7 @@ def release(session: nox.Session) -> None:
     session.run('git', 'push', '-u', 'origin', f'release_{version}', external=True)
 
     # Create and merge PR from release branch to main
-    session.run('gh', 'pr', 'create', '--base', 'main', external=True)
+    session.run('gh', 'pr', 'create', '--base', 'main', '--fill', external=True)
     session.run('gh', 'pr', 'merge', '--rebase', '--delete-branch', external=True)
 
     # Create and push the tag, which triggers the release workflow to build and
