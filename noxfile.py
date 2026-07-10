@@ -182,7 +182,7 @@ def release(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
-    session.run('pdm', 'install', '-dG', 'changelog', '-dG', 'release', '--no-default', external=True)
+    session.run('pdm', 'install', '-dG', 'changelog', '--no-default', external=True)
     from git_changelog.cli import build_and_render  # noqa: PLC0415
 
     changelog, _ = build_and_render(**CHANGELOG_ARGS)
@@ -202,12 +202,9 @@ def release(session: nox.Session) -> None:
     session.run('gh', 'pr', 'create', '--base', 'main', external=True)
     session.run('gh', 'pr', 'merge', '--rebase', '--delete-branch', external=True)
 
-    # Create tag
+    # Create and push the tag, which triggers the release workflow to build and
+    # publish the distribution to GitHub and PyPI.
     session.run('git', 'checkout', 'main', external=True)
     session.run('git', 'pull', '--rebase', external=True)
     session.run('git', 'tag', version, external=True)
     session.run('git', 'push', '--tags', external=True)
-
-    # Build and upload artifacts
-    session.run('pdm', 'build', '--no-sdist', external=True)
-    session.run('twine', 'upload', '--skip-existing', 'dist/*')

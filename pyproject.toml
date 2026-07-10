@@ -114,9 +114,6 @@ tests = [
 changelog = [
     "git-changelog>=2.5.2",
 ]
-release = [
-    "twine>=5.1.1",
-]
 
 [tool.black]
 line-length = 120
