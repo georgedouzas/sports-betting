@@ -87,3 +87,14 @@ def test_bgscv_fit(n_splits):
     assert np.array_equal(bgscv.betting_markets_, bgscv.best_estimator_.betting_markets_)
     assert np.array_equal(bgscv.feature_names_out_, bgscv.best_estimator_.feature_names_out_)
     assert len(bgscv.cv_results_['params']) == len(bgscv.param_grid['betting_markets'])
+
+
+def test_bgscv_scores_odds_bettor():
+    """Test the grid search computes finite cross-validated scores for an odds-appending bettor."""
+    bgscv = BettorGridSearchCV(
+        estimator=OddsComparisonBettor(),
+        param_grid={'alpha': [0.02, 0.05]},
+        cv=TimeSeriesSplit(2),
+    )
+    bgscv.fit(X_train, Y_train, O_train)
+    assert np.isfinite(bgscv.best_score_)

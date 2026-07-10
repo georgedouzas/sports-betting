@@ -2,10 +2,17 @@
 
 import re
 
+import numpy as np
 import pytest
 
 from sportsbet.evaluation import OddsComparisonBettor
 from tests.evaluation import O_fix, O_train, X_fix, X_train, Y_train
+
+
+def test_score_returns_finite():
+    """Test score works when the bettor appends the full odds data to its features."""
+    bettor = OddsComparisonBettor(alpha=0.03).fit(X_train, Y_train, O_train)
+    assert np.isfinite(bettor.score(X_train, Y_train, O_train))
 
 
 @pytest.mark.parametrize('odds_types', ['market_average', ('market_average',), ['market_average', None]])
