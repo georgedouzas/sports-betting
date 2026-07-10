@@ -3,7 +3,13 @@
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import DummySoccerDataLoader, SoccerDataLoader
+from sportsbet.datasets import (
+    DummySoccerDataLoader,
+    SoccerDataLoader,
+    from_csv,
+    from_dataframe,
+    from_snapshots,
+)
 
 PROVIDERS = ['market_average', 'market_maximum']
 
@@ -118,11 +124,33 @@ def test_extract_fixtures_data_matches_columns(loader):
 def test_from_snapshots_consumes_long_data(long_snapshots):
     """Test canonical long snapshots are consumed without downloading."""
     stats, odds = long_snapshots
-    loader = SoccerDataLoader.from_snapshots(stats, odds)
+    loader = from_snapshots(stats, odds)
     assert loader.get_odds_types() == PROVIDERS
     _, Y, O = loader.extract_train_data(odds_type='market_average')
     assert 'home_win__postplay__0min' in Y.columns
     assert {col.split('__')[0] for col in O.columns} == {'market_average'}
+
+
+def test_input_event_status_caps_features(long_snapshots):
+    """Test the input horizon restricts the features to snapshots up to that moment."""
+    stats, odds = long_snapshots
+    loader = from_snapshots(stats, odds)
+    X_pre, *_ = loader.extract_train_data(
+        odds_type='market_average',
+        input_event_status='preplay',
+        input_event_time=pd.Timedelta('0min'),
+    )
+    assert not [col for col in X_pre.columns if '__inplay__' in col]
+    X_30, *_ = loader.extract_train_data(
+        odds_type='market_average',
+        input_event_status='inplay',
+        input_event_time=pd.Timedelta('30min'),
+    )
+    assert any('__inplay__30min' in col for col in X_30.columns)
+    assert not any('__inplay__60min' in col or '__inplay__90min' in col for col in X_30.columns)
+    # The default keeps every in-play snapshot before the target.
+    X_all, *_ = loader.extract_train_data(odds_type='market_average')
+    assert any('__inplay__90min' in col for col in X_all.columns)
 
 
 def test_from_dataframe_single_moment_splits_stats_and_odds():
@@ -145,7 +173,7 @@ def test_from_dataframe_single_moment_splits_stats_and_odds():
             },
         ],
     )
-    loader = SoccerDataLoader.from_dataframe(wide, event_status='preplay', event_time=pd.Timedelta('0min'))
+    loader = from_dataframe(wide, event_status='preplay', event_time=pd.Timedelta('0min'))
     stats, odds = loader._snapshots()
     assert (stats['event_status'] == 'preplay').all()
     assert not [col for col in stats.columns if '__' in col]
@@ -172,5 +200,5 @@ def test_from_csv_single_moment(tmp_path):
     )
     path = tmp_path / 'matches.csv'
     wide.to_csv(path, index=False)
-    loader = SoccerDataLoader.from_csv(str(path), event_status='preplay', event_time=pd.Timedelta('0min'))
+    loader = from_csv(str(path), event_status='preplay', event_time=pd.Timedelta('0min'))
     assert loader.get_odds_types() == PROVIDERS

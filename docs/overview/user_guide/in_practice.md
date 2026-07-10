@@ -21,7 +21,9 @@ simply missing (`NaN`). The practical question is therefore always: *how far has
 - Betting **in-play** → the snapshots up to the current minute exist too, so the model may use in-play features up to that minute.
 
 This is why including half-time data in `X` at training time requires half-time data at prediction time: you can only bet on a
-match once it has actually reached half-time.
+match once it has actually reached half-time. You express the betting moment with the
+[input horizon](dataloader.md#the-input-horizon) — the `input_event_status` and `input_event_time` arguments of
+`extract_train_data` — and it is applied to both the training and the fixtures data, so the two never fall out of step.
 
 ## Betting before kick-off
 
@@ -31,7 +33,7 @@ snapshots do not exist yet. We can see this directly: build an upcoming fixture 
 
 ```python
 import pandas as pd
-from sportsbet.datasets import SoccerDataLoader, market_outcomes
+from sportsbet.datasets import from_snapshots, market_outcomes
 
 # Two finished matches (with a half-time snapshot) and one upcoming fixture.
 def snapshot(status, minutes, date, home, away, hg, ag, home_avg, away_avg):
@@ -60,7 +62,7 @@ odds = pd.DataFrame([
          home_team='Liverpool', away_team='Wolves', provider='market_average', home_win=1.4, draw=4.5, away_win=7.0),
 ])
 
-dataloader = SoccerDataLoader.from_snapshots(stats, odds)
+dataloader = from_snapshots(stats, odds)
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
@@ -70,8 +72,9 @@ assert X_fix[inplay_cols].isna().all().all()
 assert X_fix[['home_points_avg', 'away_points_avg']].notna().all().all()
 ```
 
-So a pre-match model should be trained on the pre-match features only — the fixed identity columns and the `preplay` features,
-i.e. the columns whose name has no moment suffix. The full end-to-end flow, using the offline
+So a pre-match model should be trained on pre-match features only. Rather than filtering columns by hand, cap the features at the
+`preplay` [input horizon](dataloader.md#the-input-horizon) — the same horizon is then applied to the fixtures, keeping training and
+prediction in step. The full end-to-end flow, using the offline
 [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader]:
 
 ```python
@@ -82,16 +85,16 @@ from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor, backtest
 
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
+X_train, Y_train, O_train = dataloader.extract_train_data(
+    odds_type='market_average', input_event_status='preplay', input_event_time=pd.Timedelta('0min'),
+)
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
-
-# Keep only the pre-match numeric features (no in-play snapshots).
-pre_match = [col for col in X_train.columns if '__' not in col and X_train[col].dtype == float]
+num = X_train.columns[X_train.dtypes == float]   # numeric features for the classifier
 
 bettor = ClassifierBettor(classifier=make_pipeline(SimpleImputer(), KNeighborsClassifier(3)))
-backtest(bettor, X_train[pre_match], Y_train, O_train)          # evaluate on history
-bettor.fit(X_train[pre_match], Y_train)
-value_bets = bettor.bet(X_fix[pre_match], O_fix)                # value bets for upcoming matches
+backtest(bettor, X_train[num], Y_train, O_train)          # evaluate on history
+bettor.fit(X_train[num], Y_train)
+value_bets = bettor.bet(X_fix[num], O_fix)                # value bets for upcoming matches
 ```
 
 ## Betting in-play
@@ -103,6 +106,7 @@ The upcoming match bundled in [`DummySoccerDataLoader`][sportsbet.datasets.Dummy
 at 30 minutes, so `extract_fixtures_data` returns its 30-minute snapshot populated:
 
 ```python
+import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
@@ -110,25 +114,22 @@ from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor
 
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
+# Cap the features at the 30th minute: pre-match plus the 30-minute snapshot, nothing later.
+X_train, Y_train, O_train = dataloader.extract_train_data(
+    odds_type='market_average', input_event_status='inplay', input_event_time=pd.Timedelta('30min'),
+)
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
-
-# Use features known by the 30th minute only: pre-match plus the 30-minute snapshot.
-up_to_30 = [
-    col
-    for col in X_train.columns
-    if '__inplay__60min' not in col and '__inplay__90min' not in col and X_train[col].dtype == float
-]
 assert X_fix['home_goals__inplay__30min'].notna().all()   # the live match has reached 30 minutes
+num = X_train.columns[X_train.dtypes == float]
 
 bettor = ClassifierBettor(classifier=make_pipeline(SimpleImputer(), KNeighborsClassifier(3)))
-bettor.fit(X_train[up_to_30], Y_train)
-value_bets = bettor.bet(X_fix[up_to_30], O_fix)
+bettor.fit(X_train[num], Y_train)
+value_bets = bettor.bet(X_fix[num], O_fix)
 ```
 
 To predict a live match that is not part of the bundled feed, assemble its current state — the snapshots observed so far — and load
-it with [`from_snapshots`][sportsbet.datasets.BaseDataLoader.from_snapshots] (or
-[`from_dataframe`][sportsbet.datasets.BaseDataLoader.from_dataframe] for a single moment), leaving the result unresolved so it is
-treated as a fixture. See [Consuming your own data](dataloader.md#consuming-your-own-data).
+it with [`from_snapshots`][sportsbet.datasets.from_snapshots] (or
+[`from_dataframe`][sportsbet.datasets.from_dataframe] for a single moment), leaving the result unresolved so it is treated as a
+fixture. See [Consuming your own data](dataloader.md#consuming-your-own-data).
 
 The key point is the same in both cases: keep the training features and the serving features in step with the moment you bet.

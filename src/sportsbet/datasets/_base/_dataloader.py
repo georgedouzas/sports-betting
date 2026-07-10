@@ -26,6 +26,8 @@ from ._schema import (
 DELIMITER = '__'
 LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
+INPUT_EVENT_STATUSES = ('preplay', 'inplay', 'postplay')
+_STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
 PARAM_COLS = ['league', 'division', 'year']
 
 
@@ -137,135 +139,6 @@ class BaseDataLoader:
         msg = f'{cls.__name__} does not implement parameter discovery.'
         raise NotImplementedError(msg)
 
-    # -- Construction from user data -------------------------------------------------------------
-
-    @classmethod
-    def from_snapshots(
-        cls: type[Self],
-        stats: pd.DataFrame,
-        odds: pd.DataFrame,
-        *,
-        param_grid: ParamGrid | None = None,
-    ) -> Self:
-        """Build a loader from canonical long `stats` and `odds` snapshots.
-
-        Use this when the data already follows the exported long format, i.e. one
-        row per match and moment with explicit `event_status`/`event_time` columns
-        (`stats` carrying the values, `odds` carrying `{provider}` and the markets).
-        No moment is assumed — every row states its own.
-
-        Args:
-            stats:
-                Long statistics snapshots.
-            odds:
-                Long odds snapshots.
-            param_grid:
-                Optional selection, mirroring the constructor.
-
-        Returns:
-            A loader that reads the provided snapshots instead of downloading them.
-
-        Examples:
-            >>> import pandas as pd
-            >>> from sportsbet.datasets import SoccerDataLoader
-            >>> identity = dict(date='2024-08-16', league='England', division=1, year=2025,
-            ...                 home_team='A', away_team='B')
-            >>> stats = pd.DataFrame([
-            ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'home_win': None},
-            ...     {'event_status': 'inplay', 'event_time': 45, **identity, 'home_win': 1},
-            ...     {'event_status': 'postplay', 'event_time': 0, **identity, 'home_win': 1},
-            ... ])
-            >>> odds = pd.DataFrame([
-            ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'provider': 'bookie', 'home_win': 1.8},
-            ... ])
-            >>> loader = SoccerDataLoader.from_snapshots(stats, odds)
-            >>> loader.get_odds_types()
-            ['bookie']
-            >>> X, Y, O = loader.extract_train_data(odds_type='bookie')
-            >>> list(Y.columns)
-            ['home_win__postplay__0min']
-        """
-        loader = cls(param_grid=param_grid)
-        loader._provided_snapshots = (stats, odds)
-        return loader
-
-    @classmethod
-    def from_dataframe(
-        cls: type[Self],
-        data: pd.DataFrame,
-        *,
-        event_status: str,
-        event_time: pd.Timedelta,
-        param_grid: ParamGrid | None = None,
-    ) -> Self:
-        """Build a loader from a user's wide match table taken at a single moment.
-
-        Every row of `data` is treated as a snapshot at the caller-declared
-        `event_status`/`event_time` — no moment is assumed. `data` must carry the
-        identity columns (`date`, `league`, `division`, `year`, `home_team`,
-        `away_team`), any number of value columns (goals, market outcomes,
-        features), and `{provider}__{market}` odds columns. For several moments,
-        provide long snapshots directly or call this per moment.
-
-        Args:
-            data:
-                One row per match at a single moment.
-            event_status:
-                The status the rows represent, e.g. `'preplay'` or `'postplay'`.
-            event_time:
-                The time into the match the rows represent.
-            param_grid:
-                Optional selection, mirroring the constructor.
-
-        Returns:
-            A loader that reads the provided data instead of downloading it.
-        """
-        loader = cls(param_grid=param_grid)
-        loader._provided_snapshots = cls._wide_to_snapshots(data, event_status, event_time)
-        return loader
-
-    @classmethod
-    def from_csv(
-        cls: type[Self],
-        path: str,
-        *,
-        event_status: str,
-        event_time: pd.Timedelta,
-        param_grid: ParamGrid | None = None,
-    ) -> Self:
-        """Build a loader from a CSV of a user's wide match table at a single moment.
-
-        See [`from_dataframe`][sportsbet.datasets.BaseDataLoader.from_dataframe].
-        """
-        return cls.from_dataframe(
-            pd.read_csv(path),
-            event_status=event_status,
-            event_time=event_time,
-            param_grid=param_grid,
-        )
-
-    @staticmethod
-    def _wide_to_snapshots(
-        data: pd.DataFrame,
-        event_status: str,
-        event_time: pd.Timedelta,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Split a wide single-moment frame into long `stats`/`odds` snapshots."""
-        odds_cols = odds_columns(list(data.columns))
-        stats = data.drop(columns=odds_cols).assign(event_status=event_status, event_time=event_time)
-        by_provider: dict[str, dict[str, str]] = {}
-        for col in odds_cols:
-            provider, market = parse_odds_column(col)
-            by_provider.setdefault(provider, {})[market] = col
-        records = []
-        for _, row in data.iterrows():
-            identity = {col: row[col] for col in IDENTITY_COLS}
-            for provider, markets in by_provider.items():
-                record = {**identity, 'event_status': event_status, 'event_time': event_time, 'provider': provider}
-                record.update({market: row[col] for market, col in markets.items()})
-                records.append(record)
-        return stats, pd.DataFrame(records)
-
     # -- Parameter discovery ---------------------------------------------------------------------
 
     @classmethod
@@ -369,13 +242,23 @@ class BaseDataLoader:
         data: pd.DataFrame,
         target_event_status: str,
         target_event_time: pd.Timedelta,
+        input_event_status: str | None = None,
+        input_event_time: pd.Timedelta | None = None,
     ) -> pd.Series:
-        """Mask of snapshots strictly before the target moment (no post-target leakage)."""
-        if target_event_status == 'postplay':
-            return data['event_status'].isin(['preplay', 'inplay'])
-        return (data['event_status'] == 'preplay') | (
-            (data['event_status'] == 'inplay') & (data['event_time'] < target_event_time)
-        )
+        """Mask of snapshots strictly before the target, optionally capped at an input horizon.
+
+        A snapshot is kept when it is strictly before the target moment (no post-target leakage) and, when an input
+        horizon is given, at or before it.
+        """
+        rank = data['event_status'].map(_STATUS_RANK)
+        time = data['event_time']
+        target_rank = _STATUS_RANK[target_event_status]
+        before_target = (rank < target_rank) | ((rank == target_rank) & (time < target_event_time))
+        if input_event_status is None:
+            return before_target
+        input_rank = _STATUS_RANK[input_event_status]
+        up_to_input = (rank < input_rank) | ((rank == input_rank) & (time <= input_event_time))
+        return before_target & up_to_input
 
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
         """Pivot long snapshots into wide, moment-aware feature columns."""
@@ -429,10 +312,13 @@ class BaseDataLoader:
         odds: pd.DataFrame,
         target_event_status: str,
         target_event_time: pd.Timedelta,
+        input_event_status: str | None = None,
+        input_event_time: pd.Timedelta | None = None,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Build aligned, date-indexed ``X`` and ``O`` for the given snapshots."""
-        X = self._pivot_features(stats[self._feature_mask(stats, target_event_status, target_event_time)])
-        O = self._pivot_odds(odds[self._feature_mask(odds, target_event_status, target_event_time)])
+        horizon = (target_event_status, target_event_time, input_event_status, input_event_time)
+        X = self._pivot_features(stats[self._feature_mask(stats, *horizon)])
+        O = self._pivot_odds(odds[self._feature_mask(odds, *horizon)])
         O = O.reindex(X.index)
         X = X.reset_index().set_index('date')
         O.index = X.index
@@ -459,8 +345,10 @@ class BaseDataLoader:
         learning_type: str | None,
         target_event_status: str | None,
         target_event_time: pd.Timedelta | None,
+        input_event_status: str | None,
+        input_event_time: pd.Timedelta | None,
     ) -> tuple[str, str, pd.Timedelta]:
-        """Validate and default the learning type and target moment, storing fitted state."""
+        """Validate and default the learning type, target moment and input horizon."""
         check_scalar(learning_type, 'learning_type', (NoneType, str))
         if learning_type is not None and learning_type not in LEARNING_TYPES:
             msg = f'Invalid learning type. It should be one of {LEARNING_TYPES}. Got {learning_type} instead.'
@@ -482,6 +370,20 @@ class BaseDataLoader:
             raise ValueError(msg)
         self.target_event_time_ = target_event_time if target_event_time is not None else pd.Timedelta('0min')
 
+        check_scalar(input_event_status, 'input_event_status', (NoneType, str))
+        if input_event_status is not None and input_event_status not in INPUT_EVENT_STATUSES:
+            msg = (
+                f'Invalid input event status. It should be one of {INPUT_EVENT_STATUSES}. '
+                f'Got {input_event_status} instead.'
+            )
+            raise ValueError(msg)
+        self.input_event_status_ = input_event_status
+        check_scalar(input_event_time, 'input_event_time', (NoneType, pd.Timedelta))
+        if input_event_time is not None and input_event_time < pd.Timedelta('0min'):
+            msg = 'The event time should be positive.'
+            raise ValueError(msg)
+        self.input_event_time_ = input_event_time if input_event_time is not None else pd.Timedelta('0min')
+
         return self.learning_type_, self.target_event_status_, self.target_event_time_
 
     def extract_train_data(
@@ -492,6 +394,8 @@ class BaseDataLoader:
         learning_type: str | None = None,
         target_event_status: str | None = None,
         target_event_time: pd.Timedelta | None = None,
+        input_event_status: str | None = None,
+        input_event_time: pd.Timedelta | None = None,
     ) -> TrainData:
         """Extract the moment-aware training data.
 
@@ -500,9 +404,9 @@ class BaseDataLoader:
         It returns historical data that can be used to create a betting strategy
         based on heuristics or machine learning models. The method prepares data
         for the prediction target defined by `target_event_status` and
-        `target_event_time`. All information before the target becomes features
-        (X), the target-moment outcomes become labels (Y), and the corresponding
-        betting odds become O.
+        `target_event_time`. Every snapshot before the target becomes features
+        (X) — optionally capped at an input horizon — the target-moment outcomes
+        become labels (Y), and the corresponding betting odds become O.
 
         Args:
             drop_na_thres:
@@ -517,6 +421,13 @@ class BaseDataLoader:
                 `'inplay'` or `'postplay'` (default `'postplay'`).
             target_event_time:
                 In-play target time (e.g. `pd.Timedelta('60min')`). Defaults to 0.
+            input_event_status:
+                Latest snapshot status to keep as a feature, one of `'preplay'`,
+                `'inplay'`, `'postplay'`. `None` (default) keeps every snapshot
+                before the target; e.g. `'preplay'` keeps only pre-match features.
+            input_event_time:
+                Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
+                together with `input_event_status`. Defaults to 0.
 
         Returns:
             (X, Y, O):
@@ -539,11 +450,13 @@ class BaseDataLoader:
             msg = 'No `inplay` or `postplay` events were found.'
             raise ValueError(msg)
 
-        # Validate and resolve the learning type and target moment
+        # Validate and resolve the learning type, target moment and input horizon
         learning_type, target_event_status, target_event_time = self._resolve_params(
             learning_type,
             target_event_status,
             target_event_time,
+            input_event_status,
+            input_event_time,
         )
 
         # Split matches into those resolvable at the target moment (training) and the rest (fixtures)
@@ -565,6 +478,8 @@ class BaseDataLoader:
             self.odds[train_odds_mask],
             target_event_status,
             target_event_time,
+            self.input_event_status_,
+            self.input_event_time_,
         )
         X = self._apply_drop_na(X, drop_na_thres)
         self.odds_cols_ = O.columns
@@ -613,6 +528,8 @@ class BaseDataLoader:
             self.odds[fixtures_odds_mask],
             self.target_event_status_,
             self.target_event_time_,
+            self.input_event_status_,
+            self.input_event_time_,
         )
         X = X.reindex(columns=self.input_cols_)
         O = O.reindex(columns=self.odds_cols_)
@@ -648,3 +565,128 @@ def load_dataloader(path: str) -> BaseDataLoader:
     with Path(path).open('rb') as file:
         dataloader = cloudpickle.load(file)
     return dataloader
+
+
+def _wide_to_snapshots(
+    data: pd.DataFrame,
+    event_status: str,
+    event_time: pd.Timedelta,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split a wide single-moment frame into long `stats`/`odds` snapshots."""
+    odds_cols = odds_columns(list(data.columns))
+    stats = data.drop(columns=odds_cols).assign(event_status=event_status, event_time=event_time)
+    by_provider: dict[str, dict[str, str]] = {}
+    for col in odds_cols:
+        provider, market = parse_odds_column(col)
+        by_provider.setdefault(provider, {})[market] = col
+    records = []
+    for _, row in data.iterrows():
+        identity = {col: row[col] for col in IDENTITY_COLS}
+        for provider, markets in by_provider.items():
+            record = {**identity, 'event_status': event_status, 'event_time': event_time, 'provider': provider}
+            record.update({market: row[col] for market, col in markets.items()})
+            records.append(record)
+    return stats, pd.DataFrame(records)
+
+
+def from_snapshots(
+    stats: pd.DataFrame,
+    odds: pd.DataFrame,
+    *,
+    param_grid: ParamGrid | None = None,
+) -> BaseDataLoader:
+    """Build a dataloader from canonical long `stats` and `odds` snapshots.
+
+    Use this when the data already follows the exported long format, i.e. one row
+    per match and moment with explicit `event_status`/`event_time` columns (`stats`
+    carrying the values, `odds` carrying `{provider}` and the markets). No moment is
+    assumed — every row states its own.
+
+    Args:
+        stats:
+            Long statistics snapshots.
+        odds:
+            Long odds snapshots.
+        param_grid:
+            Optional selection, mirroring the dataloader constructor.
+
+    Returns:
+        A dataloader that reads the provided snapshots instead of downloading them.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.datasets import from_snapshots
+        >>> identity = dict(date='2024-08-16', league='England', division=1, year=2025,
+        ...                 home_team='A', away_team='B')
+        >>> stats = pd.DataFrame([
+        ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'home_win': None},
+        ...     {'event_status': 'inplay', 'event_time': 45, **identity, 'home_win': 1},
+        ...     {'event_status': 'postplay', 'event_time': 0, **identity, 'home_win': 1},
+        ... ])
+        >>> odds = pd.DataFrame([
+        ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'provider': 'bookie', 'home_win': 1.8},
+        ... ])
+        >>> loader = from_snapshots(stats, odds)
+        >>> loader.get_odds_types()
+        ['bookie']
+        >>> X, Y, O = loader.extract_train_data(odds_type='bookie')
+        >>> list(Y.columns)
+        ['home_win__postplay__0min']
+    """
+    loader = BaseDataLoader(param_grid=param_grid)
+    loader._provided_snapshots = (stats, odds)
+    return loader
+
+
+def from_dataframe(
+    data: pd.DataFrame,
+    *,
+    event_status: str,
+    event_time: pd.Timedelta,
+    param_grid: ParamGrid | None = None,
+) -> BaseDataLoader:
+    """Build a dataloader from a user's wide match table taken at a single moment.
+
+    Every row of `data` is treated as a snapshot at the caller-declared
+    `event_status`/`event_time` — no moment is assumed. `data` must carry the
+    identity columns (`date`, `league`, `division`, `year`, `home_team`,
+    `away_team`), any number of value columns (goals, market outcomes, features),
+    and `{provider}__{market}` odds columns. For several moments, provide long
+    snapshots to [`from_snapshots`][sportsbet.datasets.from_snapshots] instead, or
+    call this per moment.
+
+    Args:
+        data:
+            One row per match at a single moment.
+        event_status:
+            The status the rows represent, e.g. `'preplay'` or `'postplay'`.
+        event_time:
+            The time into the match the rows represent.
+        param_grid:
+            Optional selection, mirroring the dataloader constructor.
+
+    Returns:
+        A dataloader that reads the provided data instead of downloading it.
+    """
+    loader = BaseDataLoader(param_grid=param_grid)
+    loader._provided_snapshots = _wide_to_snapshots(data, event_status, event_time)
+    return loader
+
+
+def from_csv(
+    path: str,
+    *,
+    event_status: str,
+    event_time: pd.Timedelta,
+    param_grid: ParamGrid | None = None,
+) -> BaseDataLoader:
+    """Build a dataloader from a CSV of a user's wide match table at a single moment.
+
+    See [`from_dataframe`][sportsbet.datasets.from_dataframe].
+    """
+    return from_dataframe(
+        pd.read_csv(path),
+        event_status=event_status,
+        event_time=event_time,
+        param_grid=param_grid,
+    )
