@@ -11,7 +11,7 @@ import pandas as pd
 
 from ... import ParamGrid
 from ._dataloader import BaseDataLoader
-from ._schema import IDENTITY_COLS, BaseOddsSchema, BaseStatsSchema, odds_columns, parse_odds_column
+from ._schema import IDENTITY_COLS, odds_columns, parse_odds_column
 
 
 class _SnapshotsDataLoader(BaseDataLoader):
@@ -22,24 +22,6 @@ class _SnapshotsDataLoader(BaseDataLoader):
             msg = 'No snapshots were provided.'
             raise NotImplementedError(msg)
         return self._provided_snapshots
-
-
-def _from_components(
-    stats: pd.DataFrame,
-    odds: pd.DataFrame,
-    stats_schema: type[BaseStatsSchema],
-    odds_schema: type[BaseOddsSchema],
-    targets: list[str],
-) -> BaseDataLoader:
-    """Build a loader directly from ready snapshots and schemas (the extraction engine)."""
-    loader = _SnapshotsDataLoader()
-    loader.stats = stats
-    loader.odds = odds
-    loader.stats_schema = stats_schema
-    loader.odds_schema = odds_schema
-    loader.targets = targets
-    loader._feed = False
-    return loader
 
 
 def _wide_to_snapshots(

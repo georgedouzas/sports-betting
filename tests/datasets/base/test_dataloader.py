@@ -4,8 +4,32 @@ import pandas as pd
 import pandera.pandas as pa
 import pytest
 
-from sportsbet.datasets import required_col
-from sportsbet.datasets._base._factory import _from_components
+from sportsbet.datasets import BaseDataLoader, required_col
+
+
+class _EngineDataLoader(BaseDataLoader):
+    """A concrete dataloader whose snapshots and schemas are supplied directly.
+
+    It exercises the extraction engine of the public `BaseDataLoader` with ready
+    components, so `_prepare` (which would otherwise derive the schemas) is a no-op.
+    """
+
+    def _snapshots(self):
+        return self.stats, self.odds
+
+    def _prepare(self, odds_type):
+        """Skip snapshot preparation; the components are provided directly."""
+
+
+def _from_components(stats, odds, stats_schema, odds_schema, targets):
+    """Build an engine loader directly from ready snapshots and schemas."""
+    loader = _EngineDataLoader()
+    loader.stats = stats
+    loader.odds = odds
+    loader.stats_schema = stats_schema
+    loader.odds_schema = odds_schema
+    loader.targets = targets
+    return loader
 
 
 def test_base_dataloader_initialization(stats, odds, stats_schema, odds_schema):
