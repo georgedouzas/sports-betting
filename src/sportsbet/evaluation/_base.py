@@ -12,7 +12,7 @@ from typing import ClassVar, Self
 import cloudpickle
 import numpy as np
 import pandas as pd
-from nptyping import NDArray, Shape, String
+from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, MultiOutputMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.utils import check_consistent_length, check_scalar
@@ -90,7 +90,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         self.init_cash = init_cash
         self.stake = stake
 
-    def _get_feature_names_odds(self: Self, O: pd.DataFrame) -> NDArray[Shape['*'], String]:  # noqa: F722
+    def _get_feature_names_odds(self: Self, O: pd.DataFrame) -> NDArray[np.str_]:
         # One odds column per selected market base, at the latest snapshot, ordered to match
         # `betting_markets_` so positional alignment with `Y` holds.
         columns = list(O.columns)

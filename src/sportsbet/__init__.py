@@ -12,14 +12,14 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from nptyping import Bool, Float, Int, NDArray, Shape
+from numpy.typing import NDArray
 
 Param = dict[str, Any]
 ParamGrid = dict[str, list[Any]] | list[dict[str, list[Any]]]
 TrainData = tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame]
 FixturesData = tuple[pd.DataFrame, None, pd.DataFrame]
-Data = NDArray[Shape['*, *'], Float]
-BoolData = NDArray[Shape['*, *'], Bool]
-Indices = NDArray[Shape['*, *'], Int]
+Data = NDArray[np.float64]
+BoolData = NDArray[np.bool_]
+Indices = NDArray[np.intp]
 Schema = list[tuple[str, type[int] | type[float] | type[object] | type[np.datetime64]]]
 OutputsMapping = dict[str, dict[str, Callable[..., pd.DataFrame]]]
