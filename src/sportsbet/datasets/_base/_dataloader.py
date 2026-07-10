@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 from types import NoneType
 from typing import Self
@@ -62,15 +63,16 @@ def odds_market(odds_col: str) -> str:
     return DELIMITER.join(odds_col.split(DELIMITER)[1:])
 
 
-class BaseDataLoader:
-    """The base class for dataloaders.
+class BaseDataLoader(ABC):
+    """The abstract base class for dataloaders.
 
     A dataloader reads long event-snapshot `stats` and `odds` data, validates it,
     derives the available providers, markets and per-column metadata from the data
-    itself, and extracts moment-aware training and fixtures data. Concrete
-    dataloaders only need to provide their data source by implementing
-    [`_snapshots`][sportsbet.datasets.BaseDataLoader] and, when they download data,
-    [`_all_params`][sportsbet.datasets.BaseDataLoader].
+    itself, and extracts moment-aware training and fixtures data. Everything but the
+    data source is implemented here; a concrete dataloader only needs to implement
+    the abstract [`_snapshots`][sportsbet.datasets.BaseDataLoader] method and, when
+    its data is downloadable, override the optional `_all_params` hook to enable
+    parameter discovery.
 
     Args:
         param_grid:
@@ -113,9 +115,9 @@ class BaseDataLoader:
         stats_schema: type[BaseStatsSchema],
         odds_schema: type[BaseOddsSchema],
         targets: list[str],
-    ) -> Self:
+    ) -> BaseDataLoader:
         """Build a loader directly from ready snapshots and schemas (the extraction engine)."""
-        loader = cls()
+        loader = _SnapshotsDataLoader()
         loader.stats = stats
         loader.odds = odds
         loader.stats_schema = stats_schema
@@ -124,18 +126,22 @@ class BaseDataLoader:
         loader._feed = False
         return loader
 
-    # -- Data source hooks (implemented by concrete dataloaders) --------------------------------
+    # -- Data source hooks -----------------------------------------------------------------------
 
+    @abstractmethod
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return the long `stats`/`odds` snapshots (provided, or from the source)."""
-        if self._provided_snapshots is not None:
-            return self._provided_snapshots
-        msg = f'{type(self).__name__} does not implement a data source.'
-        raise NotImplementedError(msg)
+        """Return the long `stats`/`odds` snapshots.
+
+        Every dataloader must implement this.
+        """
 
     @classmethod
     def _all_params(cls: type[Self]) -> list[dict]:
-        """Return the available `league`/`division`/`year` combinations of the source."""
+        """Return the available parameter combinations, if the source supports discovery.
+
+        Optional hook: dataloaders whose data is downloadable override it to enable
+        `get_all_params`; the others (e.g. in-memory data) leave it unimplemented.
+        """
         msg = f'{cls.__name__} does not implement parameter discovery.'
         raise NotImplementedError(msg)
 
@@ -551,6 +557,16 @@ class BaseDataLoader:
         return self
 
 
+class _SnapshotsDataLoader(BaseDataLoader):
+    """Concrete dataloader backed by in-memory snapshots, used by the factory functions."""
+
+    def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        if self._provided_snapshots is None:
+            msg = 'No snapshots were provided.'
+            raise NotImplementedError(msg)
+        return self._provided_snapshots
+
+
 def load_dataloader(path: str) -> BaseDataLoader:
     """Load the dataloader object.
 
@@ -633,7 +649,7 @@ def from_snapshots(
         >>> list(Y.columns)
         ['home_win__postplay__0min']
     """
-    loader = BaseDataLoader(param_grid=param_grid)
+    loader = _SnapshotsDataLoader(param_grid=param_grid)
     loader._provided_snapshots = (stats, odds)
     return loader
 
@@ -668,25 +684,6 @@ def from_dataframe(
     Returns:
         A dataloader that reads the provided data instead of downloading it.
     """
-    loader = BaseDataLoader(param_grid=param_grid)
+    loader = _SnapshotsDataLoader(param_grid=param_grid)
     loader._provided_snapshots = _wide_to_snapshots(data, event_status, event_time)
     return loader
-
-
-def from_csv(
-    path: str,
-    *,
-    event_status: str,
-    event_time: pd.Timedelta,
-    param_grid: ParamGrid | None = None,
-) -> BaseDataLoader:
-    """Build a dataloader from a CSV of a user's wide match table at a single moment.
-
-    See [`from_dataframe`][sportsbet.datasets.from_dataframe].
-    """
-    return from_dataframe(
-        pd.read_csv(path),
-        event_status=event_status,
-        event_time=event_time,
-        param_grid=param_grid,
-    )

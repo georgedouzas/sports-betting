@@ -294,9 +294,9 @@ assert Y_fix is None
 
 ## Consuming your own data
 
-The extraction, grammar and moment-aware model described above are not tied to the bundled feed: three factory functions build a
-dataloader straight from data you provide — [`from_snapshots`][sportsbet.datasets.from_snapshots],
-[`from_dataframe`][sportsbet.datasets.from_dataframe] and [`from_csv`][sportsbet.datasets.from_csv]. Because the layout is
+The extraction, grammar and moment-aware model described above are not tied to the bundled feed: two factory functions build a
+dataloader straight from data you provide — [`from_snapshots`][sportsbet.datasets.from_snapshots] and
+[`from_dataframe`][sportsbet.datasets.from_dataframe]. Because the layout is
 [derived from the data](#everything-is-derived-from-the-data), your columns only need to follow the long format — the providers,
 markets, features and their fixed/time-varying roles are inferred for you.
 
@@ -357,9 +357,9 @@ assert list(zip(X_fix['home_team'], X_fix['away_team'])) == [('Liverpool', 'Wolv
 
 ### From a single-moment table
 
-If instead you have one wide row per match, all observed at the *same* moment, use `from_dataframe` (or `from_csv` for a file) and
-declare exactly what that moment is with `event_status` and `event_time` — nothing is assumed. Odds columns follow the
-`{provider}__{market}` naming and are split out into the `odds` table automatically:
+If instead you have one wide row per match, all observed at the *same* moment, use `from_dataframe` and declare exactly what that
+moment is with `event_status` and `event_time` — nothing is assumed. Odds columns follow the `{provider}__{market}` naming and are
+split out into the `odds` table automatically:
 
 ```python
 import pandas as pd

@@ -86,9 +86,7 @@ class SoccerDataLoader(BaseDataLoader):
         return manifest.to_dict('records')
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return the long `stats`/`odds` snapshots (downloaded once, or user-provided)."""
-        if self._provided_snapshots is not None:
-            return self._provided_snapshots
+        """Return the long `stats`/`odds` snapshots, downloaded once and cached."""
         if self._downloaded is None:
             stats_urls = [STATS_URL.format(**params) for params in self._selected_params()]
             odds_urls = [ODDS_URL.format(**params) for params in self._selected_params()]
