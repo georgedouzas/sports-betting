@@ -154,6 +154,8 @@ convention = "google"
 
 [tool.mypy]
 ignore_missing_imports = true
+# annotation-unchecked: test functions are intentionally untyped, so notes about their bodies are noise.
+disable_error_code = ["annotation-unchecked"]
 exclude = ["tests/fixtures/", "docs/examples/", "docs/generated/"]
 warn_unused_ignores = true
 show_error_codes = true

@@ -39,7 +39,6 @@ def test_get_all_params_reads_manifest(monkeypatch):
     monkeypatch.setattr('sportsbet.datasets._soccer._dataloader._read_csvs', lambda urls: [manifest])
     params = SoccerDataLoader.get_all_params()
     assert {'league': 'England', 'division': 2, 'year': 2024} in params
-    # Netherlands has no division 2, so it is never offered.
     assert {'league': 'Netherlands', 'division': 2, 'year': 2024} not in params
 
 
@@ -70,7 +69,6 @@ def test_extract_train_data_maps_snapshots(loader):
     assert X.index.equals(O.index)
     assert 'home_win__postplay__0min' in Y.columns
     assert {col.split('__')[0] for col in O.columns} == {'market_average'}
-    # Derived, time-invariant pre-match features flow through as bare columns.
     assert {'home_points_avg', 'away_points_avg'}.issubset(X.columns)
 
 

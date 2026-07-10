@@ -82,7 +82,6 @@ class OddsComparisonBettor(BaseBettor):
         self.alpha = alpha
 
     def _check_odds_types(self: Self, X: pd.DataFrame) -> Self:
-        # Odds columns follow `{provider}__{market}__{status}__{time}` (four grammar tokens).
         available_odds_types = {col.split('__', maxsplit=1)[0] for col in X.columns if is_odds_column(col)}
         if not available_odds_types:
             error_msg = 'Input data do not include any odds columns.'
