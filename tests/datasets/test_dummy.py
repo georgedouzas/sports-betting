@@ -25,11 +25,8 @@ def test_extract_train_data_grammar_and_alignment():
     assert isinstance(X.index, pd.DatetimeIndex)
     assert X.index.equals(Y.index)
     assert X.index.equals(O.index)
-    # Market-shaped targets at the postplay moment
     assert 'home_win__postplay__0min' in Y.columns
-    # Odds carry the single selected provider prefix
     assert {col.split('__')[0] for col in O.columns} == {'market_average'}
-    # Fixed identity features keep bare names
     assert {'league', 'home_team', 'away_team'}.issubset(X.columns)
 
 
