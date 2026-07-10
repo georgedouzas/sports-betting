@@ -164,6 +164,26 @@ class BaseDataLoader:
 
         Returns:
             A loader that reads the provided snapshots instead of downloading them.
+
+        Examples:
+            >>> import pandas as pd
+            >>> from sportsbet.datasets import SoccerDataLoader
+            >>> identity = dict(date='2024-08-16', league='England', division=1, year=2025,
+            ...                 home_team='A', away_team='B')
+            >>> stats = pd.DataFrame([
+            ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'home_win': None},
+            ...     {'event_status': 'inplay', 'event_time': 45, **identity, 'home_win': 1},
+            ...     {'event_status': 'postplay', 'event_time': 0, **identity, 'home_win': 1},
+            ... ])
+            >>> odds = pd.DataFrame([
+            ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'provider': 'bookie', 'home_win': 1.8},
+            ... ])
+            >>> loader = SoccerDataLoader.from_snapshots(stats, odds)
+            >>> loader.get_odds_types()
+            ['bookie']
+            >>> X, Y, O = loader.extract_train_data(odds_type='bookie')
+            >>> list(Y.columns)
+            ['home_win__postplay__0min']
         """
         loader = cls(param_grid=param_grid)
         loader._provided_snapshots = (stats, odds)

@@ -27,9 +27,24 @@ identified by two columns:
 - `event_time`: a [pandas Timedelta] measuring the elapsed time from kick-off, e.g. `pd.Timedelta('30min')`. It is `0min` for
   `preplay` and `postplay` snapshots.
 
-The snapshots are validated with [pandera] schemas that describe the statistics and the odds columns. This moment-aware model is
-what enables both pre-match and in-play predictions from a single interface: you pick a *target moment* and the dataloader turns
-every earlier snapshot into features and the target-moment outcome into labels.
+The snapshots are stored as two long tables — a `stats` table with the match statistics and an `odds` table with one row per
+odds `provider` — sharing the same identity and event columns. This moment-aware model is what enables both pre-match and in-play
+predictions from a single interface: you pick a *target moment* and the dataloader turns every earlier snapshot into features and
+the target-moment outcome into labels.
+
+### Everything is derived from the data
+
+Nothing about the feed is hardcoded. When a dataloader reads its snapshots it *derives* the whole layout from the data itself:
+
+- the available odds **providers** (from the `provider` column of the `odds` table),
+- the betting **markets** (the value columns of the `odds` table, e.g. `home_win`, `over_2.5`),
+- the **features** (the remaining value columns of the `stats` table), and
+- for every value column, whether it is **fixed** (constant within a match, so it keeps a bare name) or **time-varying** (so it
+  is expanded per moment), and at which `event_status` it actually carries values.
+
+Those derived roles are captured in [pandera] schemas that are *built from the data* and used to validate it. A practical
+consequence is that you can feed the dataloader *any* set of columns that follows this long format and it will adapt — see
+[Consuming your own data](#consuming-your-own-data).
 
 All the examples in this section use the offline [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader], so they run
 without any network access.
@@ -65,15 +80,32 @@ assert all({'league', 'division', 'year'} == set(combination) for combination in
 
 ### Selection of parameters
 
-The parameter `param_grid` has the same usage as the initialization parameter of scikit-learn's [ParameterGrid]. The default value
-of `param_grid` is `None` and corresponds to the selection of all training data i.e. all leagues, years and divisions. If
-`param_grid` is provided, then it should be a dictionary or a list of dictionaries with the above keys and values as lists.
+The parameter `param_grid` has the same usage as the initialization parameter of scikit-learn's [ParameterGrid]. It accepts:
 
-For example, using the [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader] and selecting only the English league:
+- `None` (the default) — selects **all** available data, i.e. every combination returned by `get_all_params`.
+- a **dictionary** whose keys are a subset of `'league'`, `'division'`, `'year'` and whose values are lists.
+- a **list of dictionaries**, to select several disjoint groups at once.
+
+Only combinations that actually exist in the feed are selected, and any dimension you omit defaults to all of its available values
+— so an invalid combination (for example a division a league does not have) is never requested.
+
+Selecting a single league, letting `division` and `year` default to all their available values:
 
 ```python
 from sportsbet.datasets import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
+```
+
+Selecting explicit combinations with a dictionary of several keys:
+
+```python
+dataloader = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain'], 'division': [1], 'year': [2025]})
+```
+
+Selecting two disjoint groups with a list of dictionaries:
+
+```python
+dataloader = DummySoccerDataLoader(param_grid=[{'league': ['England']}, {'league': ['Spain']}])
 ```
 
 Once the dataloader is initialized, the training and fixtures data can be extracted.
@@ -98,6 +130,7 @@ extract the training data using the method `extract_train_data`. All of its para
 - `drop_na_thres`: threshold in the range `[0.0, 1.0]` controlling how aggressively feature columns with missing values are dropped.
 - `odds_type`: the provider used for the odds' matrix `O_train`.
 - `target_event_status` and `target_event_time`: the target moment to predict.
+- `learning_type`: `'supervised'` (the default) or `'unsupervised'`, in which case `Y_train` is `None`.
 
 We use the following dataloader as an example:
 
@@ -227,6 +260,91 @@ Since we are extracting the fixtures data, there is no target matrix:
 ```python
 assert Y_fix is None
 ```
+
+## Consuming your own data
+
+The extraction, grammar and moment-aware model described above are not tied to the bundled feed: any dataloader can consume data
+you provide, through three class methods on
+[`BaseDataLoader`][sportsbet.datasets.BaseDataLoader] (and therefore on every dataloader). Because the layout is
+[derived from the data](#everything-is-derived-from-the-data), your columns only need to follow the long format — the providers,
+markets, features and their fixed/time-varying roles are inferred for you.
+
+### From long snapshots
+
+If your data already follows the long format, pass the `stats` and `odds` tables to `from_snapshots`. Each row is a match at one
+moment, tagged with `event_status` and `event_time` (whole minutes); a match with no resolvable result is treated as a fixture. The
+`odds` table adds a `provider` column, and the markets it carries become the prediction targets. Here we build two finished matches
+(with a half-time, `inplay`/`45min`, snapshot) and one upcoming fixture, deriving the market outcomes from the goals with the
+[`market_outcomes`][sportsbet.datasets.market_outcomes] helper:
+
+```python
+import pandas as pd
+from sportsbet.datasets import SoccerDataLoader, market_outcomes
+
+def snapshot(event_status, event_time, date, home, away, home_goals, away_goals, home_avg, away_avg):
+    return dict(
+        event_status=event_status, event_time=event_time, date=date, league='England', division=1, year=2025,
+        home_team=home, away_team=away, home_goals=home_goals, away_goals=away_goals,
+        home_points_avg=home_avg, away_points_avg=away_avg,
+    )
+
+stats = pd.DataFrame([
+    snapshot('preplay', 0, '2024-08-16', 'Arsenal', 'Chelsea', None, None, 2.1, 1.5),
+    snapshot('inplay', 45, '2024-08-16', 'Arsenal', 'Chelsea', 1, 0, None, None),
+    snapshot('postplay', 0, '2024-08-16', 'Arsenal', 'Chelsea', 2, 0, None, None),
+    snapshot('preplay', 0, '2024-08-23', 'Everton', 'Spurs', None, None, 1.2, 1.9),
+    snapshot('inplay', 45, '2024-08-23', 'Everton', 'Spurs', 0, 1, None, None),
+    snapshot('postplay', 0, '2024-08-23', 'Everton', 'Spurs', 1, 2, None, None),
+    snapshot('preplay', 0, '2025-09-01', 'Liverpool', 'Wolves', None, None, 2.4, 1.0),  # upcoming fixture
+])
+markets = ['home_win', 'draw', 'away_win']
+played = stats['home_goals'].notna()
+stats.loc[played, markets] = market_outcomes(
+    stats.loc[played, 'home_goals'], stats.loc[played, 'away_goals'], markets,
+).to_numpy()
+
+def quote(date, home, away, home_win, draw, away_win):
+    return dict(
+        event_status='preplay', event_time=0, date=date, league='England', division=1, year=2025,
+        home_team=home, away_team=away, provider='market_average',
+        home_win=home_win, draw=draw, away_win=away_win,
+    )
+
+odds = pd.DataFrame([
+    quote('2024-08-16', 'Arsenal', 'Chelsea', 1.7, 3.6, 4.8),
+    quote('2024-08-23', 'Everton', 'Spurs', 2.6, 3.3, 2.5),
+    quote('2025-09-01', 'Liverpool', 'Wolves', 1.4, 4.5, 7.0),
+])
+
+dataloader = SoccerDataLoader.from_snapshots(stats, odds)
+assert dataloader.get_odds_types() == ['market_average']
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
+assert Y_train.columns.tolist() == ['home_win__postplay__0min', 'draw__postplay__0min', 'away_win__postplay__0min']
+X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
+assert list(zip(X_fix['home_team'], X_fix['away_team'])) == [('Liverpool', 'Wolves')]
+```
+
+### From a single-moment table
+
+If instead you have one wide row per match, all observed at the *same* moment, use `from_dataframe` (or `from_csv` for a file) and
+declare exactly what that moment is with `event_status` and `event_time` — nothing is assumed. Odds columns follow the
+`{provider}__{market}` naming and are split out into the `odds` table automatically:
+
+```python
+import pandas as pd
+from sportsbet.datasets import SoccerDataLoader
+
+upcoming = pd.DataFrame([{
+    'date': '2025-09-01', 'league': 'England', 'division': 1, 'year': 2025,
+    'home_team': 'Liverpool', 'away_team': 'Wolves', 'home_points_avg': 2.4, 'away_points_avg': 1.0,
+    'market_average__home_win': 1.4, 'market_average__draw': 4.5, 'market_average__away_win': 7.0,
+}])
+dataloader = SoccerDataLoader.from_dataframe(upcoming, event_status='preplay', event_time=pd.Timedelta('0min'))
+assert dataloader.get_odds_types() == ['market_average']
+```
+
+Since the whole frame is a single moment, this is a building block for one snapshot at a time: to build a full training set,
+provide long snapshots through `from_snapshots` instead, or combine several single-moment frames.
 
 ## Description of data
 
