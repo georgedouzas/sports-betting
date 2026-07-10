@@ -4,13 +4,14 @@ import pandas as pd
 import pandera.pandas as pa
 import pytest
 
-from sportsbet.datasets import BaseDataLoader, required_col
+from sportsbet.datasets import required_col
+from sportsbet.datasets._base._factory import _from_components
 
 
 def test_base_dataloader_initialization(stats, odds, stats_schema, odds_schema):
     """Test BaseDataLoader initialization."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     assert dataloader.stats is stats
     assert dataloader.odds is odds
     assert dataloader.stats_schema is stats_schema
@@ -23,7 +24,7 @@ def test_extract_train_data_fails_on_invalid_stats(stats, odds, stats_schema, od
     targets = ['home_goals', 'away_goals']
     stats_wrong = stats.copy()
     stats_wrong.loc[0, 'event_status'] = 'halftime'
-    dataloader = BaseDataLoader._from_components(stats_wrong, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats_wrong, odds, stats_schema, odds_schema, targets)
     with pytest.raises(pa.errors.SchemaError):
         dataloader.extract_train_data()
 
@@ -33,7 +34,7 @@ def test_extract_train_data_fails_on_invalid_odds(stats, odds, stats_schema, odd
     targets = ['home_goals', 'away_goals']
     odds_wrong = odds.copy()
     odds_wrong.loc[0, 'event_status'] = 'halftime'
-    dataloader = BaseDataLoader._from_components(stats, odds_wrong, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds_wrong, stats_schema, odds_schema, targets)
     with pytest.raises(pa.errors.SchemaError):
         dataloader.extract_train_data()
 
@@ -48,7 +49,7 @@ def test_extract_train_data_fails_on_mismatched_snapshot_cols(stats, odds, stats
         extra_col: str = required_col()
 
     odds = odds.assign(extra_col='value')
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, MismatchedOddsSchema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, MismatchedOddsSchema, targets)
     with pytest.raises(AssertionError, match="Stats and odds snapshots columns do not match"):
         dataloader.extract_train_data()
 
@@ -58,7 +59,7 @@ def test_extract_train_data_fails_on_no_inplay_postplay_events(stats, odds, stat
     targets = ['home_goals', 'away_goals']
     stats_preplay_only = stats.copy()
     stats_preplay_only = stats_preplay_only.loc[stats_preplay_only['event_status'] == 'preplay']
-    dataloader = BaseDataLoader._from_components(stats_preplay_only, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats_preplay_only, odds, stats_schema, odds_schema, targets)
     with pytest.raises(ValueError, match='No `inplay` or `postplay` events were found'):
         dataloader.extract_train_data()
 
@@ -66,7 +67,7 @@ def test_extract_train_data_fails_on_no_inplay_postplay_events(stats, odds, stat
 def test_extract_train_data_fails_on_invalid_learning_type(stats, odds, stats_schema, odds_schema):
     """Test extract_train_data fails on invalid learning type."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(ValueError, match="Invalid learning type"):
         dataloader.extract_train_data(learning_type='invalid')
 
@@ -74,7 +75,7 @@ def test_extract_train_data_fails_on_invalid_learning_type(stats, odds, stats_sc
 def test_extract_train_data_fails_on_non_string_learning_type(stats, odds, stats_schema, odds_schema):
     """Test extract_train_data fails on non-string learning type."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(TypeError):
         dataloader.extract_train_data(learning_type=123)
 
@@ -82,7 +83,7 @@ def test_extract_train_data_fails_on_non_string_learning_type(stats, odds, stats
 def test_extract_train_data_fails_on_invalid_event_status(stats, odds, stats_schema, odds_schema):
     """Test extract_train_data fails on invalid event status."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(ValueError, match="Invalid target event status"):
         dataloader.extract_train_data(target_event_status='invalid')
 
@@ -90,7 +91,7 @@ def test_extract_train_data_fails_on_invalid_event_status(stats, odds, stats_sch
 def test_extract_train_data_fails_on_non_string_event_status(stats, odds, stats_schema, odds_schema):
     """Test extract_train_data fails on non-string event status."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(TypeError):
         dataloader.extract_train_data(target_event_status=123)
 
@@ -98,7 +99,7 @@ def test_extract_train_data_fails_on_non_string_event_status(stats, odds, stats_
 def test_extract_train_data_fails_on_negative_event_time(stats, odds, stats_schema, odds_schema):
     """Test extract_train_data fails on negative event time."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(ValueError, match="The event time should be positive"):
         dataloader.extract_train_data(target_event_time=pd.Timedelta('-10min'))
 
@@ -106,7 +107,7 @@ def test_extract_train_data_fails_on_negative_event_time(stats, odds, stats_sche
 def test_extract_train_data_fails_on_non_timedelta_event_time(stats, odds, stats_schema, odds_schema):
     """Test extract_train_data fails on non-Timedelta event time."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(TypeError):
         dataloader.extract_train_data(target_event_time='10min')
 
@@ -114,7 +115,7 @@ def test_extract_train_data_fails_on_non_timedelta_event_time(stats, odds, stats
 def test_extract_train_data_returns_aligned_x_y_o(stats, odds, stats_schema, odds_schema):
     """Test supervised extraction returns aligned X, Y, O following the naming grammar (T007)."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     X, Y, O = dataloader.extract_train_data()
 
     # Return types: supervised always returns a three-tuple of frames
@@ -142,7 +143,7 @@ def test_extract_train_data_returns_aligned_x_y_o(stats, odds, stats_schema, odd
 def test_extract_train_data_inplay_target_excludes_later_snapshots(stats, odds, stats_schema, odds_schema):
     """Test an in-play 60 minute target leaks no post-target information (T008)."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     X, Y, _ = dataloader.extract_train_data(
         target_event_status='inplay',
         target_event_time=pd.Timedelta('60min'),
@@ -157,7 +158,7 @@ def test_extract_train_data_inplay_target_excludes_later_snapshots(stats, odds, 
 def test_extract_train_data_unsupervised_returns_x_none_o(stats, odds, stats_schema, odds_schema):
     """Test unsupervised extraction returns a uniform (X, None, O) three-tuple (T009)."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     X, Y, O = dataloader.extract_train_data(learning_type='unsupervised')
     assert isinstance(X, pd.DataFrame)
     assert Y is None
@@ -169,7 +170,7 @@ def test_extract_train_data_unsupervised_returns_x_none_o(stats, odds, stats_sch
 def test_extract_train_data_rejects_unknown_learning_type(learning_type, stats, odds, stats_schema, odds_schema):
     """Test unknown learning types (including reinforcement) are rejected (T009)."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(ValueError, match='Invalid learning type'):
         dataloader.extract_train_data(learning_type=learning_type)
 
@@ -177,7 +178,7 @@ def test_extract_train_data_rejects_unknown_learning_type(learning_type, stats, 
 def test_extract_fixtures_data_before_train_data_fails(stats, odds, stats_schema, odds_schema):
     """Test extract_fixtures_data requires a prior extract_train_data call (T012)."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     with pytest.raises(ValueError, match='extract_train_data'):
         dataloader.extract_fixtures_data()
 
@@ -185,7 +186,7 @@ def test_extract_fixtures_data_before_train_data_fails(stats, odds, stats_schema
 def test_extract_fixtures_data_matches_train_columns(stats, odds, stats_schema, odds_schema):
     """Test fixtures data reproduces the training column layout with Y None (T012)."""
     targets = ['home_goals', 'away_goals']
-    dataloader = BaseDataLoader._from_components(stats, odds, stats_schema, odds_schema, targets)
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
     X_train, _, O_train = dataloader.extract_train_data()
     X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
     assert Y_fix is None

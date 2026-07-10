@@ -15,20 +15,16 @@ from ... import FixturesData, ParamGrid, TrainData
 from ._schema import (
     EVENT_COLS,
     IDENTITY_COLS,
-    BaseOddsSchema,
-    BaseStatsSchema,
     build_odds_schema,
     build_stats_schema,
     derive_metadata,
-    odds_columns,
-    parse_odds_column,
 )
 
 DELIMITER = '__'
 LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
 INPUT_EVENT_STATUSES = ('preplay', 'inplay', 'postplay')
-_STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
+STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
 PARAM_COLS = ['league', 'division', 'year']
 
 
@@ -107,27 +103,6 @@ class BaseDataLoader(ABC):
         self._downloaded: tuple[pd.DataFrame, pd.DataFrame] | None = None
         self._feed = True
 
-    @classmethod
-    def _from_components(
-        cls: type[Self],
-        stats: pd.DataFrame,
-        odds: pd.DataFrame,
-        stats_schema: type[BaseStatsSchema],
-        odds_schema: type[BaseOddsSchema],
-        targets: list[str],
-    ) -> BaseDataLoader:
-        """Build a loader directly from ready snapshots and schemas (the extraction engine)."""
-        loader = _SnapshotsDataLoader()
-        loader.stats = stats
-        loader.odds = odds
-        loader.stats_schema = stats_schema
-        loader.odds_schema = odds_schema
-        loader.targets = targets
-        loader._feed = False
-        return loader
-
-    # -- Data source hooks -----------------------------------------------------------------------
-
     @abstractmethod
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the long `stats`/`odds` snapshots.
@@ -145,8 +120,6 @@ class BaseDataLoader(ABC):
         msg = f'{cls.__name__} does not implement parameter discovery.'
         raise NotImplementedError(msg)
 
-    # -- Parameter discovery ---------------------------------------------------------------------
-
     @classmethod
     def get_all_params(cls: type[Self]) -> list[dict]:
         """Return every available parameter combination the source actually provides."""
@@ -163,8 +136,6 @@ class BaseDataLoader(ABC):
             for combination in params
             if any(all(combination[key] in values for key, values in grid.items()) for grid in grids)
         ]
-
-    # -- Snapshot preparation --------------------------------------------------------------------
 
     @staticmethod
     def _concat(frames: list[pd.DataFrame]) -> pd.DataFrame:
@@ -237,8 +208,6 @@ class BaseDataLoader(ABC):
         self.drop_na_thres_ = drop_na_thres
         return X
 
-    # -- Extraction engine -----------------------------------------------------------------------
-
     def _identity_cols(self: Self) -> list[str]:
         """Snapshot columns that identify a match (all snapshot cols but the event ones)."""
         return [col for col in self.stats_schema.snapshot_cols() if col not in EVENT_COLS]
@@ -256,13 +225,13 @@ class BaseDataLoader(ABC):
         A snapshot is kept when it is strictly before the target moment (no post-target leakage) and, when an input
         horizon is given, at or before it.
         """
-        rank = data['event_status'].map(_STATUS_RANK)
+        rank = data['event_status'].map(STATUS_RANK)
         time = data['event_time']
-        target_rank = _STATUS_RANK[target_event_status]
+        target_rank = STATUS_RANK[target_event_status]
         before_target = (rank < target_rank) | ((rank == target_rank) & (time < target_event_time))
         if input_event_status is None:
             return before_target
-        input_rank = _STATUS_RANK[input_event_status]
+        input_rank = STATUS_RANK[input_event_status]
         up_to_input = (rank < input_rank) | ((rank == input_rank) & (time <= input_event_time))
         return before_target & up_to_input
 
@@ -557,16 +526,6 @@ class BaseDataLoader(ABC):
         return self
 
 
-class _SnapshotsDataLoader(BaseDataLoader):
-    """Concrete dataloader backed by in-memory snapshots, used by the factory functions."""
-
-    def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        if self._provided_snapshots is None:
-            msg = 'No snapshots were provided.'
-            raise NotImplementedError(msg)
-        return self._provided_snapshots
-
-
 def load_dataloader(path: str) -> BaseDataLoader:
     """Load the dataloader object.
 
@@ -581,109 +540,3 @@ def load_dataloader(path: str) -> BaseDataLoader:
     with Path(path).open('rb') as file:
         dataloader = cloudpickle.load(file)
     return dataloader
-
-
-def _wide_to_snapshots(
-    data: pd.DataFrame,
-    event_status: str,
-    event_time: pd.Timedelta,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Split a wide single-moment frame into long `stats`/`odds` snapshots."""
-    odds_cols = odds_columns(list(data.columns))
-    stats = data.drop(columns=odds_cols).assign(event_status=event_status, event_time=event_time)
-    by_provider: dict[str, dict[str, str]] = {}
-    for col in odds_cols:
-        provider, market = parse_odds_column(col)
-        by_provider.setdefault(provider, {})[market] = col
-    records = []
-    for _, row in data.iterrows():
-        identity = {col: row[col] for col in IDENTITY_COLS}
-        for provider, markets in by_provider.items():
-            record = {**identity, 'event_status': event_status, 'event_time': event_time, 'provider': provider}
-            record.update({market: row[col] for market, col in markets.items()})
-            records.append(record)
-    return stats, pd.DataFrame(records)
-
-
-def from_snapshots(
-    stats: pd.DataFrame,
-    odds: pd.DataFrame,
-    *,
-    param_grid: ParamGrid | None = None,
-) -> BaseDataLoader:
-    """Build a dataloader from canonical long `stats` and `odds` snapshots.
-
-    Use this when the data already follows the exported long format, i.e. one row
-    per match and moment with explicit `event_status`/`event_time` columns (`stats`
-    carrying the values, `odds` carrying `{provider}` and the markets). No moment is
-    assumed — every row states its own.
-
-    Args:
-        stats:
-            Long statistics snapshots.
-        odds:
-            Long odds snapshots.
-        param_grid:
-            Optional selection, mirroring the dataloader constructor.
-
-    Returns:
-        A dataloader that reads the provided snapshots instead of downloading them.
-
-    Examples:
-        >>> import pandas as pd
-        >>> from sportsbet.datasets import from_snapshots
-        >>> identity = dict(date='2024-08-16', league='England', division=1, year=2025,
-        ...                 home_team='A', away_team='B')
-        >>> stats = pd.DataFrame([
-        ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'home_win': None},
-        ...     {'event_status': 'inplay', 'event_time': 45, **identity, 'home_win': 1},
-        ...     {'event_status': 'postplay', 'event_time': 0, **identity, 'home_win': 1},
-        ... ])
-        >>> odds = pd.DataFrame([
-        ...     {'event_status': 'preplay', 'event_time': 0, **identity, 'provider': 'bookie', 'home_win': 1.8},
-        ... ])
-        >>> loader = from_snapshots(stats, odds)
-        >>> loader.get_odds_types()
-        ['bookie']
-        >>> X, Y, O = loader.extract_train_data(odds_type='bookie')
-        >>> list(Y.columns)
-        ['home_win__postplay__0min']
-    """
-    loader = _SnapshotsDataLoader(param_grid=param_grid)
-    loader._provided_snapshots = (stats, odds)
-    return loader
-
-
-def from_dataframe(
-    data: pd.DataFrame,
-    *,
-    event_status: str,
-    event_time: pd.Timedelta,
-    param_grid: ParamGrid | None = None,
-) -> BaseDataLoader:
-    """Build a dataloader from a user's wide match table taken at a single moment.
-
-    Every row of `data` is treated as a snapshot at the caller-declared
-    `event_status`/`event_time` — no moment is assumed. `data` must carry the
-    identity columns (`date`, `league`, `division`, `year`, `home_team`,
-    `away_team`), any number of value columns (goals, market outcomes, features),
-    and `{provider}__{market}` odds columns. For several moments, provide long
-    snapshots to [`from_snapshots`][sportsbet.datasets.from_snapshots] instead, or
-    call this per moment.
-
-    Args:
-        data:
-            One row per match at a single moment.
-        event_status:
-            The status the rows represent, e.g. `'preplay'` or `'postplay'`.
-        event_time:
-            The time into the match the rows represent.
-        param_grid:
-            Optional selection, mirroring the dataloader constructor.
-
-    Returns:
-        A dataloader that reads the provided data instead of downloading it.
-    """
-    loader = _SnapshotsDataLoader(param_grid=param_grid)
-    loader._provided_snapshots = _wide_to_snapshots(data, event_status, event_time)
-    return loader
