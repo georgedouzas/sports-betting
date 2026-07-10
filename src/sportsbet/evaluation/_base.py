@@ -370,11 +370,12 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         if set(Y_betting_markets) != set(O_betting_markets):
             error_msg = 'Output and odds data column names are not compatible.'
             raise ValueError(error_msg)
+        value_bets = self.bet(X, O)
         Y = Y[self.feature_names_out_]
         O = O[self._get_feature_names_odds(O)]
         returns = np.sum(
             np.nan_to_num(
-                (Y.to_numpy().astype(int) * O.to_numpy().astype(float) - 1) * self.bet(X, O).astype(int),
+                (Y.to_numpy().astype(int) * O.to_numpy().astype(float) - 1) * value_bets.astype(int),
             ),
             axis=1,
         )
