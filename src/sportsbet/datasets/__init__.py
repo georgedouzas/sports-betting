@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from ._base._dataloader import (
-    BaseDataLoader,
-    from_dataframe,
-    from_snapshots,
-    load_dataloader,
-)
+from ._base._dataloader import BaseDataLoader, load_dataloader
+from ._base._factory import from_dataframe, from_snapshots
 from ._base._schema import (
     BaseOddsSchema,
     BaseStatsSchema,
