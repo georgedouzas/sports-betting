@@ -85,7 +85,7 @@ def docs(session: nox.Session) -> None:
     """
     arg = check_cli(session, ['serve', 'build'])
     session.run('pdm', 'install', '-dG', 'docs', external=True)
-    session.run('mkdocs', arg)
+    session.run('properdocs', arg)
 
 
 @nox.session
