@@ -373,7 +373,7 @@ class BaseDataLoader(ABC):
     ) -> TrainData:
         """Extract the moment-aware training data.
 
-        Read more in the [user guide][dataloader].
+        Read more in the [user guide][user-guide].
 
         It returns historical data that can be used to create a betting strategy
         based on heuristics or machine learning models. The method prepares data
@@ -474,7 +474,7 @@ class BaseDataLoader(ABC):
     def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.
 
-        Read more in the [user guide][dataloader].
+        Read more in the [user guide][user-guide].
 
         It returns fixtures data that can be used to make predictions for upcoming
         matches. Before calling this method, `extract_train_data` must have been
