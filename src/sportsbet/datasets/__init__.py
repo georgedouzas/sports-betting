@@ -11,6 +11,7 @@ from ._base._schema import (
 )
 from ._soccer._dataloader import SoccerDataLoader
 from ._soccer._dummy import DummySoccerDataLoader
+from ._soccer._utils import market_outcomes
 
 __all__: list[str] = [
     'BaseDataLoader',
@@ -19,6 +20,7 @@ __all__: list[str] = [
     'DummySoccerDataLoader',
     'SoccerDataLoader',
     'load_dataloader',
+    'market_outcomes',
     'optional_col',
     'required_col',
 ]
