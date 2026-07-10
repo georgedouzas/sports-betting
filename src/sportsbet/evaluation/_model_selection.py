@@ -12,7 +12,7 @@ from typing import Any, Self
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from nptyping import Float, NDArray, Shape
+from numpy.typing import NDArray
 from sklearn import get_config, set_config
 from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
@@ -399,7 +399,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
             estimator: BaseBettor,
             X: pd.DataFrame,
             Y: pd.DataFrame,
-            sample_weight: NDArray[Shape['*'], Float] | None = None,  # noqa: F722
+            sample_weight: NDArray[np.float64] | None = None,
             **kwargs: dict[str, Any],
         ) -> float:
             Y = Y[estimator.feature_names_out_]
