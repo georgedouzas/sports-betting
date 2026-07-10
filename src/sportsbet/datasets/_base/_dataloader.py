@@ -101,7 +101,6 @@ class BaseDataLoader(ABC):
         self.param_grid = param_grid
         self._provided_snapshots: tuple[pd.DataFrame, pd.DataFrame] | None = None
         self._downloaded: tuple[pd.DataFrame, pd.DataFrame] | None = None
-        self._feed = True
 
     @abstractmethod
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -410,8 +409,7 @@ class BaseDataLoader(ABC):
                 `learning_type='unsupervised'`, `Y` is `None`. The three components
                 share the same date index and rows.
         """
-        if self._feed:
-            self._prepare(odds_type)
+        self._prepare(odds_type)
 
         self.stats_schema.validate(self.stats)
         self.odds_schema.validate(self.odds)
