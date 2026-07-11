@@ -207,4 +207,4 @@ def release(session: nox.Session) -> None:
     session.run('git', 'checkout', 'main', external=True)
     session.run('git', 'pull', '--rebase', external=True)
     session.run('git', 'tag', version, external=True)
-    session.run('git', 'push', '--tags', external=True)
+    session.run('git', 'push', 'origin', version, external=True)
