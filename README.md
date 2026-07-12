@@ -212,21 +212,38 @@ add the `--help` flag to get more information about its usage.
 
 #### Configuration
 
-In order to use the commands, a configuration file is required. You can find examples of such configuration files in
-`sports-betting/configs/`. The configuration file should have a Python file extension and contain a few variables. The variables 
-`DATALOADER_CLASS` and `PARAM_GRID` are mandatory while the rest are optional.
+The commands read a **Python configuration file**, and it hands over a dataloader you have already built. Examples live
+in `sports-betting/configs/`. Only `DATALOADER` is mandatory.
 
-The following variables configure the data extraction:
+```python
+from sportsbet.datasets import SoccerDataLoader
 
-- `DATALOADER_CLASS`: The dataloader class to use.
+DATALOADER = SoccerDataLoader(param_grid={'league': ['England', 'Italy'], 'year': [2025]})
+```
 
-- `PARAM_GRID`: The parameters grid to select the type of information that the data includes.
+It is a dataloader rather than a class because only a built one carries its **sources**, and only a source carries a
+**key**. That is what lets every sport and every data source reach the command line, and the key comes from the
+environment, so the file can be committed:
+
+```python
+import os
+
+from sportsbet.datasets import BasketballDataLoader, NBAStats, OddsApi
+
+DATALOADER = BasketballDataLoader(
+    param_grid={'league': ['NBA'], 'year': [2026]},
+    stats=NBAStats(),
+    odds=OddsApi(key=os.environ['ODDS_API_KEY'], markets=['h2h']),
+)
+```
+
+The rest are optional. These configure the data extraction:
 
 - `DROP_NA_THRES`: The parameter `drop_na_thres` of the dataloader's `extract_train_data`.
 
 - `ODDS_TYPE`: The parameter `odds_type` of the dataloader's `extract_train_data`.
 
-The following variables configure the betting process:
+And these the betting process:
 
 - `BETTOR`: A bettor object.
 
@@ -235,6 +252,22 @@ The following variables configure the betting process:
 - `N_JOBS`: The parameter `n_jobs` of the function `backtest`.
 
 - `VERBOSE`: The parameter `verbose` of the function `backtest`.
+
+### AI assistant
+
+Install the MCP server and an assistant can drive the library for you — find what data exists, price a download before
+it spends anything, prepare it, backtest a model and return the value bets:
+
+```bash
+pip install 'sports_betting[mcp]'
+```
+
+Point your assistant at the `sportsbet-mcp` command. It reads the **same configuration file the CLI reads**, so the two
+cannot drift apart, and your key stays in the environment rather than in a chat transcript.
+
+An assistant cannot spend your money by accident. Odds are bought per request, and a season of them can cost thousands
+of credits, so a preparation that costs anything is **refused** until the cost has been confirmed. The estimate is free
+and exact.
 
 #### Commands
 

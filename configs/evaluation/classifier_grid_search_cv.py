@@ -12,12 +12,13 @@ from sportsbet.datasets import SoccerDataLoader
 from sportsbet.evaluation import BettorGridSearchCV, ClassifierBettor
 
 # Data extraction
-DATALOADER_CLASS = SoccerDataLoader
-PARAM_GRID={
-    'league': ['Germany', 'Italy', 'France', 'England', 'Spain'],
-    'year': [2019, 2020, 2021, 2022, 2023, 2024],
-    'division': [1, 2],
-}
+DATALOADER = SoccerDataLoader(
+    param_grid={
+        'league': ['Germany', 'Italy', 'France', 'England', 'Spain'],
+        'year': [2019, 2020, 2021, 2022, 2023, 2024],
+        'division': [1, 2],
+    },
+)
 ODDS_TYPE = 'market_maximum'
 
 # Betting process

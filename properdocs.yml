@@ -25,6 +25,7 @@ nav:
       - Dataloader: overview/user_guide/dataloader.md
       - Data sources: overview/user_guide/sources.md
       - Bettor: overview/user_guide/bettor.md
+      - AI assistant: overview/user_guide/agent.md
       - In practice: overview/user_guide/in_practice.md
     - Changelog: overview/changelog.md
     - License: overview/license.md
