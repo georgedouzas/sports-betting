@@ -79,7 +79,7 @@ Explore the functionality with guidance from the built-in bot, which streams hel
 
 ### API
 
-The `sports-betting` package makes it easy to download sports betting data. The data is downloaded onto your own machine by
+The `sports-betting` package makes it easy to download sports betting data, for soccer and for basketball. The data is downloaded onto your own machine by
 an explicit `prepare` step, and never as a side effect of asking for a dataframe:
 
 ```python

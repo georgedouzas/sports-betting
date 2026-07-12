@@ -14,7 +14,7 @@ from ... import ParamGrid
 from .._base._dataloader import BaseDataLoader
 from .._base._schema import IDENTITY_COLS
 from .._sources._base import BaseStatsSource, RawItem, RawPayload
-from ._utils import market_outcomes
+from .._utils import market_outcomes
 
 _PARAM_GRID: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2025]}
 

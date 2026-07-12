@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 
 import pandas as pd
 
+from .._base._schema import EVENT_COLS
 from ._base import BaseOddsSource, RawItem, RawPayload
 
 URL = 'https://api.the-odds-api.com/v4'
@@ -53,6 +54,11 @@ LEAGUES_MAPPING = {
     'soccer_sweden_allsvenskan': ('Sweden', 1),
     'soccer_switzerland_superleague': ('Switzerland', 1),
     'soccer_usa_mls': ('USA', 1),
+    'basketball_euroleague': ('Euroleague', 1),
+    'basketball_nba': ('NBA', 1),
+    'basketball_wnba': ('WNBA', 1),
+    'basketball_ncaab': ('NCAAB', 1),
+    'basketball_nbl': ('NBL', 1),
 }
 MARKETS = ['h2h', 'totals']
 REGIONS = ['eu']
@@ -118,8 +124,11 @@ class OddsApi(BaseOddsSource):
             cost.
 
         moments:
-            The moments of a match to price, as `(event_status, minutes)` pairs. The default `None` prices the closing
-            odds and the odds at half time. Every moment is a separate snapshot, so it multiplies the cost.
+            The moments of a match to price, as `(event_status, minutes)` pairs.
+            The default `None` prices the moments the statistics carry, and no
+            others: a price for a moment there is nothing to pair with can never
+            be used, and it costs the same as one that can. Every moment is a
+            separate snapshot, so it multiplies the cost.
     """
 
     name: ClassVar[str] = 'odds_api'
@@ -142,6 +151,23 @@ class OddsApi(BaseOddsSource):
         regions = self.regions if self.regions is not None else REGIONS
         moments = self.moments if self.moments is not None else MOMENTS
         return markets, regions, moments
+
+    @staticmethod
+    def _moments(schedule: pd.DataFrame) -> list[tuple[str, int]]:
+        """Return the moments the statistics carry, which are the only ones worth a price.
+
+        A price is bought to be paired with what was known at that moment, so a moment the statistics do not have is a
+        price that can never be used — and it costs the same as one that can. A sport whose statistics stop at the
+        whistle has no use for the odds at half time.
+        """
+        moments = schedule[list(EVENT_COLS)].drop_duplicates()
+        return sorted(
+            {
+                (event_status, int(pd.Timedelta(event_time).total_seconds() // 60))
+                for event_status, event_time in moments.itertuples(index=False)
+                if event_status != 'postplay'
+            },
+        )
 
     def _query(self: Self) -> dict[str, str]:
         """Return the query the vendor expects, without the credential."""
@@ -218,6 +244,8 @@ class OddsApi(BaseOddsSource):
         if schedule is None or schedule.empty:
             return []
         markets, regions, moments = self._settings()
+        if self.moments is None:
+            moments = self._moments(schedule)
         sports = {(league, division): sport for sport, (league, division) in LEAGUES_MAPPING.items()}
         cost = HISTORICAL_MULTIPLIER * len(markets) * len(regions)
         now = _now()

@@ -128,18 +128,28 @@ def parse_odds_column(col: str) -> tuple[str, str]:
     return provider, market
 
 
-def derive_metadata(data: pd.DataFrame, value_cols: list[str]) -> dict[str, dict[str, Any]]:
+def derive_metadata(
+    data: pd.DataFrame,
+    value_cols: list[str],
+    allow_fixed: bool = True,
+) -> dict[str, dict[str, Any]]:
     """Derive per-column `include`/`fixed`/`type` metadata from a long snapshot frame.
 
     Nothing is assumed about a column's role: `include` is the set of statuses at
     which the column actually carries values, and `fixed` is whether the column is
     constant within every match.
 
+    A price is never fixed. It belongs to a provider and to a moment, so it keeps
+    them in its name even when only one provider offers it — otherwise a single
+    bookmaker would silently lose its prefix, which the whole odds grammar rests on.
+
     Args:
         data:
             A long snapshot frame with `event_status` and identity columns.
         value_cols:
             The value columns to describe (non-identity, non-event).
+        allow_fixed:
+            Whether a column may be constant within a match. `False` for odds.
 
     Returns:
         Mapping of column to `{'type', 'include', 'fixed'}`.
@@ -153,7 +163,7 @@ def derive_metadata(data: pd.DataFrame, value_cols: list[str]) -> dict[str, dict
     metadata = {}
     for col in value_cols:
         include = [status for status in STATUSES if data.loc[data['event_status'] == status, col].notna().any()]
-        fixed = bool(grouped[col].apply(_is_constant).all())
+        fixed = allow_fixed and bool(grouped[col].apply(_is_constant).all())
         col_type = int if pd.api.types.is_integer_dtype(data[col]) else float
         metadata[col] = {'type': col_type, 'include': include, 'fixed': fixed}
     return metadata

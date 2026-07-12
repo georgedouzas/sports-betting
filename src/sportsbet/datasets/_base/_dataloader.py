@@ -210,8 +210,14 @@ class BaseDataLoader(ABC):
             raise ValueError(msg)
         stats_value_cols = [col for col in stats.columns if col not in EVENT_COLS + IDENTITY_COLS]
         odds_value_cols = [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]
+        if not odds_value_cols:
+            msg = (
+                'The odds data carries no betting markets, so there is nothing to bet on and nothing to predict. '
+                'The markets a model learns are the ones its odds price, so a dataloader needs an odds source.'
+            )
+            raise ValueError(msg)
         stats_metadata = derive_metadata(stats, stats_value_cols)
-        odds_metadata = derive_metadata(odds, odds_value_cols)
+        odds_metadata = derive_metadata(odds, odds_value_cols, allow_fixed=False)
 
         odds = odds[odds['provider'] == odds_type] if odds_type is not None else odds.iloc[0:0]
         self.stats_ = build_stats_schema(stats_metadata).validate(stats)

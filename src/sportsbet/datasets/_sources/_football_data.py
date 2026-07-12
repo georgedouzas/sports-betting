@@ -13,7 +13,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from .._fetch import ENCODING, read_csv_content
-from .._soccer._utils import market_outcomes
+from .._utils import market_outcomes
 from ._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
 
 URL = 'https://www.football-data.co.uk'

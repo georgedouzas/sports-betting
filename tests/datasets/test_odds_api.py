@@ -26,21 +26,17 @@ MORE_MARKETS_AND_REGIONS = 4
 SCHEDULE = pd.DataFrame(
     [
         {
+            'event_status': event_status,
+            'event_time': pd.Timedelta(minutes=minutes),
             'date': KICKOFF,
             'league': 'England',
             'division': 1,
             'year': 2025,
-            'home_team': 'Man United',
-            'away_team': 'Fulham',
-        },
-        {
-            'date': KICKOFF,
-            'league': 'England',
-            'division': 1,
-            'year': 2025,
-            'home_team': 'Arsenal',
-            'away_team': 'Chelsea',
-        },
+            'home_team': home,
+            'away_team': away,
+        }
+        for home, away in [('Man United', 'Fulham'), ('Arsenal', 'Chelsea')]
+        for event_status, minutes in [('preplay', 0), ('inplay', 45), ('postplay', 0)]
     ],
 )
 
