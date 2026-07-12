@@ -49,6 +49,34 @@ Three things differ from soccer, and **none of them is configured** — each is 
 
 Only the seasons **both** sources publish are offered, so you cannot select a season your odds vendor cannot price.
 
+### A second league: the NBA
+
+A league is a **source**, not a dataloader. The NBA is the same sport, so it is the same dataloader with different
+statistics:
+
+```python
+from sportsbet.datasets import BasketballDataLoader, NBAStats, OddsApi
+
+dataloader = BasketballDataLoader(
+    param_grid={'league': ['NBA'], 'year': [2026]},
+    stats=NBAStats(),                              # free, no key
+    odds=OddsApi(key='...', markets=['h2h']),      # yours
+)
+```
+
+[`NBAStats`][sportsbet.datasets.NBAStats] is free and needs no key. A season is named by the year it **ends** in, so
+`2026` is the 2025-26 season, and it carries the regular season, the play-in and the play-offs — but never the
+pre-season, and never the all-star weekend, whose teams are not clubs.
+
+It is **live**: the games played this week carry their scores this week, which is what makes the current season
+bettable rather than merely reviewable. That sounds obvious and it is not — the NBA's own official archive publishes a
+season's results only months *after* the season ends, so a source built on it could backtest the league and never bet
+on it.
+
+Price it before you buy it. A full NBA season is a lot of time-stamped odds, and
+[`prepare(dry_run=True)`](#preparing-the-data) tells you exactly how many credits it would cost **without spending
+any**.
+
 ## Code, not data
 
 This library ships the code that fetches the data, never the data itself. The odds published by bookmakers belong to whoever
