@@ -7,15 +7,61 @@ confidently wrong, so these tests are mostly about it failing loudly.
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import ReconciliationReport, SoccerDataLoader, UnmatchedError, resolve
-from sportsbet.datasets._resolver import ALIASES
+from sportsbet.datasets import SoccerDataLoader, UnmatchedError, resolve
+from sportsbet.datasets._resolver import similarity
 
 KICKOFF = pd.Timestamp('2024-08-16 19:00', tz='UTC')
 TOLERATED = 0.5
+MATCHES = 10
+
+FEED = [
+    'Arsenal',
+    'Aston Villa',
+    'Bournemouth',
+    'Brentford',
+    'Brighton',
+    'Chelsea',
+    'Crystal Palace',
+    'Everton',
+    'Fulham',
+    'Ipswich',
+    'Leicester',
+    'Liverpool',
+    'Man City',
+    'Man United',
+    'Newcastle',
+    "Nott'm Forest",
+    'Southampton',
+    'Tottenham',
+    'West Ham',
+    'Wolves',
+]
+VENDOR = [
+    'Arsenal',
+    'Aston Villa',
+    'AFC Bournemouth',
+    'Brentford',
+    'Brighton and Hove Albion',
+    'Chelsea',
+    'Crystal Palace',
+    'Everton',
+    'Fulham',
+    'Ipswich Town',
+    'Leicester City',
+    'Liverpool',
+    'Manchester City',
+    'Manchester United',
+    'Newcastle United',
+    'Nottingham Forest',
+    'Southampton',
+    'Tottenham Hotspur',
+    'West Ham United',
+    'Wolverhampton Wanderers',
+]
 
 
-def _stats(*teams):
-    """Build the statistics of the matches that exist."""
+def _frame(pairs, odds=False):
+    """Build the snapshots of the matches of a season."""
     return pd.DataFrame(
         [
             {
@@ -27,135 +73,136 @@ def _stats(*teams):
                 'year': 2025,
                 'home_team': home,
                 'away_team': away,
-                'home_points_avg': 2.0,
+                **({'provider': 'pinnacle', 'home_win': 1.8} if odds else {'home_points_avg': 2.0}),
             }
-            for index, (home, away) in enumerate(teams)
+            for index, (home, away) in enumerate(pairs)
         ],
     )
 
 
-def _odds(*teams):
-    """Build the odds of the matches a vendor priced."""
-    return pd.DataFrame(
-        [
-            {
-                'event_status': 'preplay',
-                'event_time': pd.Timedelta(0),
-                'date': KICKOFF + pd.Timedelta(days=index, minutes=3),
-                'league': 'England',
-                'division': 1,
-                'year': 2025,
-                'home_team': home,
-                'away_team': away,
-                'provider': 'pinnacle',
-                'home_win': 1.8,
-            }
-            for index, (home, away) in enumerate(teams)
-        ],
-    )
+def _season(names):
+    """Pair every club of a roster with another, exactly once."""
+    return [(names[index], names[index + MATCHES]) for index in range(MATCHES)]
 
 
-def _resolve(stats, odds, aliases=None, max_unmatched_rate=0.0):
-    """Reconcile the two, with the aliases the library knows."""
-    return resolve(stats, odds, {**ALIASES, **(aliases or {})}, max_unmatched_rate)
-
-
-def test_a_club_named_the_same_is_matched():
-    """Test the names that already agree need no help."""
-    stats = _stats(('Arsenal', 'Chelsea'))
-    resolved, report = _resolve(stats, _odds(('Arsenal', 'Chelsea')))
-    assert report.matched == 1
+def test_a_roster_is_paired_without_any_alias():
+    """Test the clubs of a league are paired with no help, since the two sources hold the same roster."""
+    odds = _frame(_season(VENDOR), odds=True)
+    resolved, report = resolve(_frame(_season(FEED)), odds)
+    assert report.matched == MATCHES
     assert report.unmatched_rate == 0.0
-    assert list(resolved['home_team']) == ['Arsenal']
+    paired = dict(zip(odds['home_team'], resolved['home_team'], strict=True))
+    paired.update(zip(odds['away_team'], resolved['away_team'], strict=True))
+    assert paired == dict(zip(VENDOR, FEED, strict=True))
 
 
-def test_a_club_named_differently_is_matched_by_a_known_alias():
-    """Test the aliases the library knows bridge the names the two sources give the same club."""
-    stats = _stats(('Man United', 'Nott\'m Forest'))
-    resolved, report = _resolve(stats, _odds(('Manchester United', 'Nottingham Forest')))
+def test_the_two_clubs_of_a_city_are_not_swapped():
+    """Test the pairing that would be fatal is the one the roster makes safe: both names are present on both sides."""
+    resolved, report = resolve(
+        _frame([('Man United', 'Man City')]),
+        _frame([('Manchester United', 'Manchester City')], odds=True),
+    )
     assert report.matched == 1
-    assert list(resolved['home_team']) == ['Man United']
-    assert list(resolved['away_team']) == ["Nott'm Forest"]
+    assert resolved['home_team'].iloc[0] == 'Man United'
+    assert resolved['away_team'].iloc[0] == 'Man City'
 
 
-def test_the_odds_carry_the_identity_of_the_statistics():
-    """Test the odds take the kick-off of the statistics, so the two align rather than nearly align."""
-    stats = _stats(('Arsenal', 'Chelsea'))
-    resolved, _ = _resolve(stats, _odds(('Arsenal', 'Chelsea')))
-    assert resolved['date'].iloc[0] == KICKOFF
+def test_a_club_is_compared_by_the_letters_an_abbreviation_keeps():
+    """Test names are compared by the prefixes of their words, which is what an abbreviation preserves.
+
+    Comparing them as strings rates `Everton` against `Liverpool` above `Wolves` against `Wolverhampton Wanderers`,
+    which is the mistake that attaches one club's odds to another.
+    """
+    assert similarity('wolves', 'wolverhampton wanderers') > similarity('everton', 'liverpool')
+    assert similarity('everton', 'liverpool') == 0.0
+    assert similarity('man united', 'manchester united') > similarity('man city', 'manchester united')
 
 
 def test_only_the_noise_of_a_name_is_ignored():
     """Test accents, punctuation and club words are noise, so they are taken out before the names are compared."""
-    stats = _stats(('Bayern Munich', 'Köln'))
-    resolved, report = _resolve(stats, _odds(('FC Bayern Munich', 'Koln')))
+    resolved, report = resolve(
+        _frame([('Bayern Munich', 'Köln')]),
+        _frame([('FC Bayern Munich', 'Koln')], odds=True),
+    )
     assert report.matched == 1
-    assert list(resolved['home_team']) == ['Bayern Munich']
+    assert resolved['home_team'].iloc[0] == 'Bayern Munich'
 
 
-def test_an_unmatched_club_fails_loudly():
-    """Test a match whose odds are missing raises, rather than becoming a quietly smaller dataset."""
-    stats = _stats(('Arsenal', 'Chelsea'))
-    with pytest.raises(UnmatchedError, match='unmatched'):
-        _resolve(stats, _odds(('Arsenal FC Woolwich', 'Chelsea')))
+def test_the_odds_carry_the_identity_of_the_statistics():
+    """Test the odds take the kick-off and the spelling of the statistics, so the two line up exactly."""
+    resolved, _ = resolve(_frame([('Man United', 'Chelsea')]), _frame([('Manchester United', 'Chelsea')], odds=True))
+    assert resolved['date'].iloc[0] == KICKOFF
+    assert resolved['home_team'].iloc[0] == 'Man United'
 
 
-def test_the_failure_says_which_names_it_could_not_place():
-    """Test the failure names what it could not place, rather than leaving the user to guess."""
-    stats = _stats(('Arsenal', 'Chelsea'))
-    with pytest.raises(UnmatchedError) as failure:
-        _resolve(stats, _odds(('Woolwich Arsenal Reserves', 'Chelsea')))
-    assert 'Woolwich Arsenal Reserves' in failure.value.report.suggestions
+def test_the_wrong_club_is_never_forced_onto_the_one_left_over():
+    """Test the last name left is not paired just because it is the last one.
 
-
-def test_the_failure_offers_the_aliases_to_add():
-    """Test the failure hands back the aliases to check and paste, so fixing it is mechanical."""
-    stats = _stats(('Arsenal', 'Chelsea'))
-    with pytest.raises(UnmatchedError) as failure:
-        _resolve(stats, _odds(('Woolwich Arsenal Reserves', 'Chelsea')))
-    assert 'Arsenal' in failure.value.report.aliases()
-    assert 'aliases=' in str(failure.value)
-
-
-def test_a_suggestion_is_never_applied_on_its_own():
-    """Test a name that merely resembles another is not matched to it.
-
-    A wrong alias attaches the odds of one club to another and says nothing about it, which is worse than not matching.
+    A vendor that carries a club the statistics do not have would otherwise have its odds attached to the wrong match.
     """
-    stats = _stats(('Manchester City', 'Chelsea'))
     with pytest.raises(UnmatchedError) as failure:
-        _resolve(stats, _odds(('Manchester United', 'Chelsea')))
+        resolve(_frame([('Sheffield United', 'Arsenal')]), _frame([('Sheffield Wednesday', 'Arsenal')], odds=True))
     assert failure.value.report.matched == 0
 
 
-def test_a_given_alias_matches_what_the_library_does_not_know():
-    """Test a name the library does not know is bridged by an alias the user gives."""
-    stats = _stats(('Ath Bilbao', 'Chelsea'))
-    resolved, report = _resolve(stats, _odds(('Athletic Bilbao', 'Chelsea')), {'Athletic Bilbao': 'Ath Bilbao'})
+def test_a_club_the_odds_do_not_carry_fails_loudly():
+    """Test a match whose odds are missing raises, rather than becoming a quietly smaller dataset."""
+    with pytest.raises(UnmatchedError, match='unmatched'):
+        resolve(
+            _frame([('Arsenal', 'Chelsea'), ('Everton', 'Fulham')]),
+            _frame([('Arsenal', 'Chelsea')], odds=True),
+        )
+
+
+def test_unrelated_names_are_never_paired():
+    """Test two names with nothing in common are reported rather than paired."""
+    with pytest.raises(UnmatchedError) as failure:
+        resolve(_frame([('Everton', 'Arsenal')]), _frame([('Liverpool', 'Arsenal')], odds=True))
+    assert 'Liverpool' in failure.value.report.suggestions
+
+
+def test_an_abbreviation_is_paired_by_the_letters_it_keeps():
+    """Test a club abbreviated by shortening its words is paired, since that is what an abbreviation does."""
+    resolved, report = resolve(
+        _frame([('Ath Bilbao', 'Arsenal')]),
+        _frame([('Athletic Club Bilbao', 'Arsenal')], odds=True),
+    )
     assert report.matched == 1
-    assert list(resolved['home_team']) == ['Ath Bilbao']
+    assert resolved['home_team'].iloc[0] == 'Ath Bilbao'
+
+
+def test_the_failure_offers_the_aliases_to_check_and_paste():
+    """Test the failure hands back the names as they are written, so fixing it is mechanical."""
+    with pytest.raises(UnmatchedError) as failure:
+        resolve(_frame([('Sheffield United', 'Arsenal')]), _frame([('Sheffield Wednesday', 'Arsenal')], odds=True))
+    assert "'Sheffield Wednesday'" in failure.value.report.aliases()
+    assert 'aliases=' in str(failure.value)
+
+
+def test_a_given_alias_bridges_what_the_pairing_leaves_over():
+    """Test a name the pairing cannot place is bridged by an alias the user gives."""
+    resolved, report = resolve(
+        _frame([('Sheffield United', 'Arsenal')]),
+        _frame([('Sheffield Wednesday', 'Arsenal')], odds=True),
+        {'Sheffield Wednesday': 'Sheffield United'},
+    )
+    assert report.matched == 1
+    assert resolved['home_team'].iloc[0] == 'Sheffield United'
 
 
 def test_the_tolerance_is_a_deliberate_choice():
     """Test a rate of missing odds can be tolerated, but only on purpose."""
-    stats = _stats(('Arsenal', 'Chelsea'), ('Everton', 'Spurs'))
-    _, report = _resolve(stats, _odds(('Arsenal', 'Chelsea')), max_unmatched_rate=TOLERATED)
+    _, report = resolve(
+        _frame([('Arsenal', 'Chelsea'), ('Everton', 'Fulham')]),
+        _frame([('Arsenal', 'Chelsea')], odds=True),
+        max_unmatched_rate=TOLERATED,
+    )
     assert report.matched == 1
     assert report.unmatched_rate == TOLERATED
     assert len(report.unmatched_stats) == 1
 
 
-def test_the_report_is_kept_on_the_dataloader(monkeypatch):
-    """Test the reconciliation is inspectable after an extraction."""
-    stats = _stats(('Man United', 'Chelsea'))
-    odds = _odds(('Manchester United', 'Chelsea'))
-    loader = SoccerDataLoader()
-    monkeypatch.setattr(SoccerDataLoader, '_snapshots', lambda self: (stats, odds))
-    assert isinstance(getattr(loader, 'reconciliation_', ReconciliationReport()), ReconciliationReport)
-
-
-def test_the_same_source_is_never_reconciled():
+def test_the_free_feed_is_never_reconciled():
     """Test the free feed needs no reconciliation, since its statistics and its odds come from the same row."""
-    loader = SoccerDataLoader()
-    stats_source, odds_source = loader.sources
+    stats_source, odds_source = SoccerDataLoader().sources
     assert stats_source.name == odds_source.name

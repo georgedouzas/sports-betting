@@ -222,11 +222,21 @@ dataloader.reconciliation_          # matched, unmatched_rate, unmatched_stats, 
 By default **not one match may go without odds** (`max_unmatched_rate=0.0`). Cross that and it raises
 [`UnmatchedError`][sportsbet.datasets.UnmatchedError] rather than handing you a holed dataset.
 
-Casing, accents, punctuation and the club words leagues sprinkle differently (`FC`, `AFC`, `CF`) are treated as noise and ignored.
-What is left is compared **exactly**. A name that still differs is a *different name*, and the library will not guess — because a
-wrong guess attaches one club's odds to another match and says nothing about it, which is far worse than not matching at all.
+**Most of the time you will not have to do anything.** The names are paired **within a league and a season**, where the two
+sources hold the same twenty clubs. That is what makes it safe rather than a guess: every name that could be confused with another
+is *present on both sides*, so it matches itself before anything is inferred. `Manchester City` pairs with `Man City` because
+`Manchester United` and `Man United` are both there too, claiming each other.
 
-Names the library already knows are bridged for you. For the rest, the failure tells you exactly what to do:
+Clubs are abbreviated by **shortening their words**, not by changing their letters — `Man United`, `Wolves`, `Nott'm Forest` — so
+names are compared by the prefixes their words share. Comparing them as strings would be actively dangerous: it rates `Everton`
+against `Liverpool` as *more* alike than `Wolves` against `Wolverhampton Wanderers`, which is exactly the mistake that attaches one
+club's odds to another match.
+
+A name is paired only when it is clearly the best of the roster *and* clearly better than the next best. Anything ambiguous is left
+alone. The last name standing is never paired just for being last — a vendor carrying a club your statistics do not have would
+otherwise have its odds hung on the wrong match.
+
+When the pairing cannot place a name, it says so and tells you exactly what to do:
 
 ```text
 Matched 2 of 3 matches (33.3% unmatched). These team names were not found: ['Athletic Bilbao'].
@@ -236,7 +246,7 @@ aliases={
 }
 ```
 
-Check it — the suggestion is a resemblance, not a fact — and pass it back:
+**Check it** — a suggestion is a resemblance, not a fact, and the library will never apply one on its own. Then pass it back:
 
 ```python
 SoccerDataLoader(..., aliases={'Athletic Bilbao': 'Ath Bilbao'})
