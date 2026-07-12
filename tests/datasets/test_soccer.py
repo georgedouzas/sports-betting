@@ -44,7 +44,7 @@ class _Available:
             {'league': 'Netherlands', 'division': 1, 'year': 2024},
         ]
 
-    def required_items(self, params):
+    def required_items(self, params, schedule=None):
         return []
 
     def to_snapshots(self, payloads):

@@ -13,6 +13,7 @@ from rich.progress import Progress
 
 from ... import ParamGrid
 from .._base._dataloader import PARAM_COLS, BaseDataLoader
+from .._base._schema import IDENTITY_COLS
 from .._sources._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
 from .._sources._football_data import FootballDataOdds, FootballDataStats
 from .._store import BaseStore, LocalStore, NotPreparedError, PreparationReport, payloads_digest
@@ -81,6 +82,12 @@ class SoccerDataLoader(BaseDataLoader):
         stats_source, odds_source, _ = self._resolved()
         return stats_source, odds_source
 
+    def _authorize(self: Self, item: RawItem) -> str:
+        """Return the URL of an item, authorized by the source that declared it."""
+        stats_source, odds_source = self.sources
+        source = odds_source if item.source == odds_source.name else stats_source
+        return source.request_url(item)
+
     @staticmethod
     def _unique(items: list[RawItem]) -> list[RawItem]:
         """Return the items without duplicates, so an item two sources share is fetched once."""
@@ -92,7 +99,7 @@ class SoccerDataLoader(BaseDataLoader):
         items = self._unique(stats_source.index_items() + odds_source.index_items())
         if fetch:
             held = [] if refresh else store.held(items)
-            store.fetch([item for item in items if item not in held])
+            store.fetch([item for item in items if item not in held], self._authorize)
         return store.read(items)
 
     def _params(self: Self, fetch: bool, refresh: bool = False) -> list[dict]:
@@ -117,11 +124,33 @@ class SoccerDataLoader(BaseDataLoader):
         """
         return self._params(fetch=True)
 
+    def _schedule(self: Self, stats_items: list[RawItem], fetch: bool, refresh: bool) -> pd.DataFrame | None:
+        """Return the matches of the selected parameters, with their kick-off instants.
+
+        An odds source that addresses its prices by instant needs it, since a season alone does not say when its matches
+        are played. It comes from the statistics, which are read first, so a metered odds source can be priced exactly
+        without spending anything.
+        """
+        stats_source, _, store = self._resolved()
+        if fetch:
+            held = [] if refresh else store.held(stats_items)
+            store.fetch([item for item in stats_items if item not in held], stats_source.request_url)
+        snapshots = self._derive(stats_source, store.read(stats_items), store)
+        if snapshots.empty:
+            return None
+        return snapshots[IDENTITY_COLS].drop_duplicates()
+
     def _items(self: Self, fetch: bool, refresh: bool = False) -> tuple[list[RawItem], list[RawItem]]:
-        """Return the items the selected parameters need from each source."""
+        """Return the items the selected parameters need from each source.
+
+        An odds source that has to be told when the matches are is planned only after the statistics have been read, so
+        the schedule it is given is the real one rather than a guess.
+        """
         stats_source, odds_source, _ = self._resolved()
         params = self._filter_params(self._params(fetch, refresh))
-        return stats_source.required_items(params), odds_source.required_items(params)
+        stats_items = stats_source.required_items(params)
+        schedule = self._schedule(stats_items, fetch, refresh) if odds_source.needs_schedule() else None
+        return stats_items, odds_source.required_items(params, schedule)
 
     def _report(self: Self, fetch: bool, refresh: bool = False) -> PreparationReport:
         """Return what a preparation would fetch, what is held, and what it would cost."""
@@ -184,7 +213,7 @@ class SoccerDataLoader(BaseDataLoader):
         with Progress(transient=True) as progress:
             task = progress.add_task('Preparing the data', total=len(report.to_fetch))
             for item in report.to_fetch:
-                store.fetch([item])
+                store.fetch([item], self._authorize)
                 progress.advance(task)
         self._downloaded = None
         return report
@@ -214,12 +243,15 @@ class SoccerDataLoader(BaseDataLoader):
 
         They are a cache, not an archive: they are rebuilt from the raw payloads at no cost, so changing the transform
         never costs anything.
+
+        This is the seam every source's snapshots pass through, so it is where their instants are normalized to UTC. A
+        source that emitted a naive instant could not be compared with one that did not.
         """
         if not isinstance(store, LocalStore):
-            return source.to_snapshots(payloads)
+            return BaseDataLoader._finalize(source.to_snapshots(payloads))
         digest = payloads_digest(payloads, source.transform_digest())
         snapshots = store.read_snapshots(source.name, source.kind, digest)
         if snapshots is None:
-            snapshots = source.to_snapshots(payloads)
+            snapshots = BaseDataLoader._finalize(source.to_snapshots(payloads))
             store.write_snapshots(source.name, source.kind, digest, snapshots)
         return snapshots

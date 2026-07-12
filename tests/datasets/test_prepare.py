@@ -8,6 +8,7 @@ from sportsbet.datasets import (
     BaseStatsSource,
     LocalStore,
     NotPreparedError,
+    OddsApi,
     RawItem,
     SoccerDataLoader,
 )
@@ -31,7 +32,7 @@ class _Feed:
     def catalogue(self, payloads):
         return PARAMS
 
-    def required_items(self, params):
+    def required_items(self, params, schedule=None):
         return [
             RawItem(
                 source=self.name,
@@ -43,7 +44,22 @@ class _Feed:
         ]
 
     def to_snapshots(self, payloads):
-        return pd.DataFrame({'key': [payload.item.key for payload in payloads]})
+        return pd.DataFrame(
+            [
+                {
+                    'key': payload.item.key,
+                    'event_status': 'preplay',
+                    'event_time': 0,
+                    'date': pd.Timestamp('2024-08-16 19:00'),
+                    'league': 'England',
+                    'division': 1,
+                    'year': 2024,
+                    'home_team': 'Arsenal',
+                    'away_team': 'Chelsea',
+                }
+                for payload in payloads
+            ],
+        )
 
 
 class _FeedStats(_Feed, BaseStatsSource):
@@ -61,6 +77,9 @@ class _PricedOdds(_FeedOdds):
     cost = 620
 
 
+SPORTS = b'[{"key": "soccer_epl", "group": "Soccer", "title": "EPL", "active": true}]'
+
+
 @pytest.fixture
 def offline(monkeypatch):
     """Count the fetches and serve them without the network."""
@@ -68,7 +87,7 @@ def offline(monkeypatch):
 
     def read_urls_content(urls):
         fetches.extend(urls)
-        return [SEASON for _ in urls]
+        return [SPORTS if 'the-odds-api' in url else SEASON for url in urls]
 
     monkeypatch.setattr('sportsbet.datasets._store.read_urls_content', read_urls_content)
     return fetches
@@ -199,3 +218,61 @@ def test_a_changed_transform_rebuilds_the_derived_data(loader, offline, tmp_path
     monkeypatch.setattr(_Feed, 'transform_digest', lambda self: 'changed', raising=False)
     SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
     assert len(builds) == BOTH_SOURCES * 2
+
+
+SNAPSHOTS = pd.DataFrame(
+    [
+        {
+            'event_status': 'preplay',
+            'event_time': 0,
+            'date': pd.Timestamp('2024-08-16 19:00', tz='UTC'),
+            'league': 'England',
+            'division': 1,
+            'year': 2025,
+            'home_team': 'Man United',
+            'away_team': 'Fulham',
+        },
+        {
+            'event_status': 'preplay',
+            'event_time': 0,
+            'date': pd.Timestamp('2024-08-17 14:00', tz='UTC'),
+            'league': 'England',
+            'division': 1,
+            'year': 2025,
+            'home_team': 'Arsenal',
+            'away_team': 'Chelsea',
+        },
+    ],
+)
+
+
+class _ScheduleStats(_FeedStats):
+    """A free statistics source that says when the matches are played."""
+
+    def to_snapshots(self, payloads):
+        return SNAPSHOTS
+
+
+def test_a_metered_odds_source_is_priced_exactly_without_spending(tmp_path, offline):
+    """Test the cost of a metered odds source is known before a credit is spent.
+
+    The statistics are free and they say when the matches are played, so the snapshots the odds source needs can be
+    counted exactly without asking it for any of them. The catalogue of the vendor is read, since it is free, but not
+    one priced request is made.
+    """
+    odds = OddsApi(key='secret-key', markets=['h2h'], regions=['eu'])
+    loader = SoccerDataLoader(stats=_ScheduleStats(), odds=odds, store=LocalStore(tmp_path))
+    report = loader.prepare(dry_run=True)
+
+    snapshots = [item for item in report.to_fetch if item.source == 'odds_api']
+    assert report.estimated_cost == {'odds_api': sum(item.cost for item in snapshots)}
+    assert not [url for url in offline if '/odds' in url]
+
+
+def test_the_key_is_never_written_to_the_store(tmp_path, offline):
+    """Test the credential reaches the request and nothing else."""
+    odds = OddsApi(key='secret-key')
+    loader = SoccerDataLoader(stats=_ScheduleStats(), odds=odds, store=LocalStore(tmp_path))
+    report = loader.prepare(dry_run=True)
+    assert not [item for item in report.to_fetch if 'secret-key' in item.url]
+    assert not [path for path in tmp_path.rglob('*') if path.is_file() and b'secret-key' in path.read_bytes()]

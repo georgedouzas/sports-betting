@@ -184,3 +184,33 @@ source discover the schedule itself at ~40 credits a season.
 
 **Verified**: the same 380 matches, with per-match feature values identical. Only `date` gains its time, and same-day matches now
 sort by kick-off rather than arbitrarily.
+
+## D14. The odds source is planned from the statistics, so a metered plan is exact and free
+
+**Decision**: `required_items(params, schedule)`. A source declares `needs_schedule()`; the dataloader reads the statistics first,
+derives the schedule of kick-offs from them, and only then plans the odds. `prepare(dry_run=True)` may read free data to build the
+plan, but never a priced item.
+
+**Rationale**: The Odds API addresses historical prices by **timestamp**, not by season. "The price at minute 45" is a request for
+the snapshot at `kick-off + 45min`, so the source cannot plan anything from `{'league': 'England', 'year': 2025}` alone. It has to
+know when the matches are.
+
+Two ways to give it that. The source could discover the schedule itself, through the vendor's historical-events endpoint, at about
+40 credits a season. Or the statistics could supply it — which became possible once `date` carried the kick-off instant (D13).
+
+The second is strictly better, and the reason is worth stating: **the statistics are free.** So the dataloader can read them, count
+the snapshots the odds source would need, and quote an exact price — having spent nothing. Measured on a real season: 432 snapshots,
+8,642 credits, quoted for **zero** credits. Self-discovery would have cost ~40 credits to reach the same number.
+
+**FR-012 is amended** rather than violated. It said a dry run performs "no fetch". The property that actually matters is that it
+**spends nothing**. Reading a free catalogue and free statistics in order to make the estimate *exact* is worth far more to a user
+than refusing to read anything and reporting "unknown".
+
+**Credential handling**: the vendor takes its key as a query parameter, not a header, so the key cannot simply be omitted from a
+`RawItem` and added by the fetch layer. Instead a source exposes `request_url(item)`, which the store calls at the moment of the
+request. The key therefore never reaches a `RawItem`, never reaches the manifest, and never touches the disk — asserted by a test
+that scans the whole store for it.
+
+**Cost model, pinned against the vendor's documentation** rather than guessed: historical odds cost `10 x markets x regions`, live
+odds cost `markets x regions`, and `/v4/sports` is free. Matches that kick off together share a snapshot and are paid for once,
+which is what keeps a season in the thousands of credits rather than the tens of thousands.

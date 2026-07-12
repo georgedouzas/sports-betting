@@ -180,14 +180,14 @@ public discovery method.
 
 **Independent Test**: `pdm tests -k odds_api` against recorded payloads — no network, no credits.
 
-- [ ] T052 [US2] Create `src/sportsbet/datasets/_sources/_odds_api.py` with `OddsApi(key, markets, regions)`, per [contracts/source.md](contracts/source.md)
-- [ ] T053 [US2] Pin the vendor's cost multipliers and historical-coverage start date against the live documentation and implement `OddsApi.estimate()` (research D8 — pinned, not guessed)
-- [ ] T054 [US2] Implement `required_items()`: historical snapshot items for completed seasons, the live endpoint for the current one, `volatile` only for the latter
-- [ ] T055 [US2] Implement `to_snapshots()` mapping the vendor's response into the long odds schema, with `event_status`/`event_time` taken from the snapshot timestamp — this is what makes an in-play target priceable (SC-009)
-- [ ] T056 [US2] Inject the key at fetch time via request headers only. It must never reach a `RawItem`, the manifest, a log line or an error message (FR-027).
-- [ ] T057 [US2] Handle rate limits and quota exhaustion: fail with the source named and the reason given, leaving the store unchanged
-- [ ] T058 [P] [US2] Record vendor payloads into `tests/samples/odds_api/` and extend `tests/datasets/test_sources.py`
-- [ ] T059 [P] [US2] Add a `bandit`-clean credential-handling test asserting no key appears anywhere under the store path or in a raised message
+- [X] T052 [US2] Create `src/sportsbet/datasets/_sources/_odds_api.py` with `OddsApi(key, markets, regions)`, per [contracts/source.md](contracts/source.md)
+- [X] T053 [US2] Pin the vendor's cost multipliers and historical-coverage start date against the live documentation and implement `OddsApi.estimate()` (research D8 — pinned, not guessed)
+- [X] T054 [US2] Implement `required_items()`: historical snapshot items for completed seasons, the live endpoint for the current one, `volatile` only for the latter
+- [X] T055 [US2] Implement `to_snapshots()` mapping the vendor's response into the long odds schema, with `event_status`/`event_time` taken from the snapshot timestamp — this is what makes an in-play target priceable (SC-009)
+- [X] T056 [US2] Inject the key at fetch time via request headers only. It must never reach a `RawItem`, the manifest, a log line or an error message (FR-027).
+- [X] T057 [US2] Handle rate limits and quota exhaustion: fail with the source named and the reason given, leaving the store unchanged
+- [X] T058 [P] [US2] Record vendor payloads into `tests/samples/odds_api/` and extend `tests/datasets/test_sources.py`
+- [X] T059 [P] [US2] Add a `bandit`-clean credential-handling test asserting no key appears anywhere under the store path or in a raised message
 
 **Checkpoint**: US2 and US3 acceptance scenarios pass; an in-play target can be priced at the moment it occurred.
 

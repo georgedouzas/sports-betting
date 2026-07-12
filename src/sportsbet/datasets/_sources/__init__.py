@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
 from ._football_data import FootballDataOdds, FootballDataStats
+from ._odds_api import OddsApi
 
 __all__: list[str] = [
     'BaseOddsSource',
@@ -11,6 +12,7 @@ __all__: list[str] = [
     'BaseStatsSource',
     'FootballDataOdds',
     'FootballDataStats',
+    'OddsApi',
     'RawItem',
     'RawPayload',
 ]
