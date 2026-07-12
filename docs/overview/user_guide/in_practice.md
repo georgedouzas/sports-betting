@@ -152,6 +152,10 @@ X_fix, _, O_fix = dataloader.extract_fixtures_data()
 re-downloading the seasons that are already finished. Everything else on this page — the input horizon, the training and serving
 symmetry, the backtest — is unchanged. See [Preparing the data](dataloader.md#preparing-the-data).
 
+If the upstream feed corrects a season that has already finished, that will not be picked up on its own — the store has no
+reason to look at data it considers done. Ask it to, with `dataloader.prepare(refresh=True)`. See
+[What happens when the upstream data changes](dataloader.md#what-happens-when-the-upstream-data-changes).
+
 One honest limitation. The free feed carries **pre-match closing odds**, so the in-play flow above trains and predicts correctly
 but cannot be *backtested* against a real in-play price: nobody recorded what the odds were at minute 45. To backtest an in-play
 bet you need a source with time-stamped prices, injected as the dataloader's [odds source](dataloader.md#sources).

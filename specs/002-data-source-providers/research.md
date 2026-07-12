@@ -132,3 +132,26 @@ exactly the failure mode FR-023 exists to prevent. The intersection closes it.
 - *A classmethod on the source.* Same problem one layer down (a source's own config decides availability), and it would
   have to fetch without a store.
 - *A descriptor that works on both the class and the instance.* Machinery to preserve a call site that should not exist.
+
+## D12. Nothing upstream is immutable, and derived data is keyed by the code that derived it
+
+**Decision**: The derived-snapshot cache key includes the library version, not just the raw content. And `prepare(refresh=True)`
+re-reads everything the store holds, including seasons it considers finished.
+
+**Rationale**: Two silent-staleness bugs, both found by exercising the store rather than by reading it.
+
+1. *The derived cache was keyed only on the payloads.* Snapshots are produced by code as well as from data, so a release that
+   fixed a bug in `_extract_features` would leave the digest unchanged and hand the user the **old** transform's output. Silent
+   wrong data on upgrade — the exact failure class this design exists to rule out. Including the version over-invalidates on
+   every release, which costs nothing: rebuilding from raw is free by construction (FR-017).
+2. *A finished season was never re-read.* `volatile=False` was treated as "cannot change", but football-data.co.uk does correct
+   historical files. The honest meaning is "not expected to change, so do not re-read it unless asked". `refresh=True` is that
+   asking.
+
+**Why `refresh` is explicit and not a schedule or a TTL**: on a metered source a re-read is charged for again. A background
+freshness policy would spend the user's money without being asked, which FR-012 and FR-013 exist to prevent. A TTL would also
+have to be tuned, and the whole store design deliberately has nothing to tune.
+
+**Alternative considered**: conditional requests (`If-Modified-Since` / `ETag`) would let the store detect an upstream
+correction cheaply, without a full download and without spending credits. That is the better long-term answer for free sources
+and is worth doing, but it belongs in the fetch layer and is not needed to close the correctness hole.

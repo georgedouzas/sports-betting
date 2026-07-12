@@ -59,8 +59,9 @@ Those derived roles are captured in [pandera] schemas that are *built from the d
 consequence is that you can feed the dataloader *any* set of columns that follows this long format and it will adapt — see
 [Consuming your own data](#consuming-your-own-data).
 
-All the examples in this section use the offline [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader], so they run
-without any network access.
+Except where a real source is being shown, the examples in this section use the offline
+[`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader], so they run without any network access and without a
+preparation step.
 
 ## Initialization
 
@@ -201,8 +202,29 @@ dataloader = SoccerDataLoader(param_grid={'league': ['England']}, store=LocalSto
 
 The store keeps the raw downloads **forever**, and everything derived from them is rebuilt from those raw payloads at no cost.
 This matters if you ever pay for odds: changing the feature engineering, or upgrading the library, never re-downloads and never
-re-charges you. It also knows the difference between data that is finished (a completed season) and data that can still change
-(fixtures, the current season) — so the first is never fetched twice and the second is always refreshed.
+re-charges you. The derived data is keyed by the library version as well as by the raw content, so an upgrade that changes the
+transform rebuilds rather than serving you what the old one produced.
+
+### What happens when the upstream data changes
+
+The store treats two kinds of data differently:
+
+- **Data that is expected to change** — the fixtures, the season in progress, and the catalogue of what is available — is
+  re-read on every `prepare()`. You never have to invalidate anything by hand, and there is no expiry to tune.
+- **Data that is finished** — a completed season — is kept and not downloaded again. This is what makes `prepare()`
+  incremental, and what stops a metered source from re-charging you for history you already bought.
+
+The second rule has a limit worth knowing: **nothing upstream is truly immutable.** football-data.co.uk does occasionally
+correct a finished season, and a correction like that will not be picked up on its own, because the store has no reason to
+look. When you want it to look, ask:
+
+```python
+dataloader.prepare(refresh=True)   # re-read everything, including what is already held
+```
+
+That is a deliberate choice rather than a schedule, because on a metered source a refresh is charged for again. If the
+re-fetched content turns out to be identical, nothing downstream is rebuilt — the derived data is keyed by content, so an
+unchanged file costs nothing beyond the download.
 
 ## Column-naming grammar
 

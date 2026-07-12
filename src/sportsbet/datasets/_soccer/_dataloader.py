@@ -86,16 +86,16 @@ class SoccerDataLoader(BaseDataLoader):
         """Return the items without duplicates, so an item two sources share is fetched once."""
         return list(dict.fromkeys(items))
 
-    def _catalogue(self: Self, fetch: bool) -> list[RawPayload]:
+    def _catalogue(self: Self, fetch: bool, refresh: bool = False) -> list[RawPayload]:
         """Return the payloads of the catalogue, fetching them only when allowed to."""
         stats_source, odds_source, store = self._resolved()
         items = self._unique(stats_source.index_items() + odds_source.index_items())
         if fetch:
-            held = store.held(items)
+            held = [] if refresh else store.held(items)
             store.fetch([item for item in items if item not in held])
         return store.read(items)
 
-    def _params(self: Self, fetch: bool) -> list[dict]:
+    def _params(self: Self, fetch: bool, refresh: bool = False) -> list[dict]:
         """Return the combinations both sources publish, reading the catalogue from the store.
 
         It is the intersection, not the union: a season whose statistics exist but whose odds do not cannot be modelled,
@@ -103,7 +103,7 @@ class SoccerDataLoader(BaseDataLoader):
         silently smaller dataset.
         """
         stats_source, odds_source, _ = self._resolved()
-        payloads = self._catalogue(fetch)
+        payloads = self._catalogue(fetch, refresh)
         stats_params = stats_source.catalogue([p for p in payloads if p.item.source == stats_source.name])
         odds_params = odds_source.catalogue([p for p in payloads if p.item.source == odds_source.name])
         available = {tuple(sorted(params.items())) for params in odds_params}
@@ -117,18 +117,18 @@ class SoccerDataLoader(BaseDataLoader):
         """
         return self._params(fetch=True)
 
-    def _items(self: Self, fetch: bool) -> tuple[list[RawItem], list[RawItem]]:
+    def _items(self: Self, fetch: bool, refresh: bool = False) -> tuple[list[RawItem], list[RawItem]]:
         """Return the items the selected parameters need from each source."""
         stats_source, odds_source, _ = self._resolved()
-        params = self._filter_params(self._params(fetch))
+        params = self._filter_params(self._params(fetch, refresh))
         return stats_source.required_items(params), odds_source.required_items(params)
 
-    def _report(self: Self, fetch: bool) -> PreparationReport:
+    def _report(self: Self, fetch: bool, refresh: bool = False) -> PreparationReport:
         """Return what a preparation would fetch, what is held, and what it would cost."""
         stats_source, odds_source, store = self._resolved()
-        stats_items, odds_items = self._items(fetch)
+        stats_items, odds_items = self._items(fetch, refresh)
         items = self._unique(stats_items + odds_items)
-        held = store.held(items)
+        held = [] if refresh else store.held(items)
         to_fetch = [item for item in items if item not in held]
         costs = {
             source.name: source.estimate([item for item in to_fetch if item.source == source.name])
@@ -138,14 +138,14 @@ class SoccerDataLoader(BaseDataLoader):
             to_fetch=to_fetch,
             held=held,
             estimated_cost={name: cost for name, cost in costs.items() if cost},
-            unavailable=self._unavailable(fetch),
+            unavailable=self._unavailable(fetch, refresh),
         )
 
-    def _unavailable(self: Self, fetch: bool) -> list[dict]:
+    def _unavailable(self: Self, fetch: bool, refresh: bool = False) -> list[dict]:
         """Return the fully specified parameters the sources do not publish."""
         if self.param_grid is None:
             return []
-        available = {tuple(sorted(params.items())) for params in self._params(fetch)}
+        available = {tuple(sorted(params.items())) for params in self._params(fetch, refresh)}
         grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
         requested = [
             dict(zip(grid, values, strict=True))
@@ -155,23 +155,30 @@ class SoccerDataLoader(BaseDataLoader):
         ]
         return [params for params in requested if tuple(sorted(params.items())) not in available]
 
-    def prepare(self: Self, dry_run: bool = False) -> PreparationReport:
+    def prepare(self: Self, dry_run: bool = False, refresh: bool = False) -> PreparationReport:
         """Populate the store with the data the selected parameters need.
 
         Only what the store does not already hold is fetched, so it is incremental and resumable. A dry run reports
         what a preparation would fetch and what it would cost, without fetching any data and without spending
         anything. Resolving the catalogue of the sources is free, so a dry run still reads it.
 
+        A finished season is not fetched again, since it is not expected to change. Upstream can still correct one,
+        though, so nothing it publishes is truly immutable: `refresh` reads everything again. A metered source charges
+        for that, which is why it is asked for rather than done on a schedule.
+
         Args:
             dry_run:
                 If `True`, no data is fetched and nothing is spent; the report says what a preparation would do.
+
+            refresh:
+                If `True`, everything is fetched again, including what the store already holds.
 
         Returns:
             report:
                 What was fetched, what was already held, and what it cost.
         """
         _, _, store = self._resolved()
-        report = self._report(fetch=True)
+        report = self._report(fetch=True, refresh=refresh)
         if dry_run or not report.to_fetch:
             return report
         with Progress(transient=True) as progress:

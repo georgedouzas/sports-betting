@@ -136,7 +136,7 @@ class BaseDataLoader(ABC):
         msg = f'{type(self).__name__} does not implement parameter discovery.'
         raise NotImplementedError(msg)
 
-    def prepare(self: Self, dry_run: bool = False) -> PreparationReport:
+    def prepare(self: Self, dry_run: bool = False, refresh: bool = False) -> PreparationReport:
         """Populate the store with the data the selected parameters require.
 
         A dataloader that is not backed by a source has nothing to download, so it prepares nothing and returns an
@@ -145,6 +145,9 @@ class BaseDataLoader(ABC):
         Args:
             dry_run:
                 If `True`, nothing is fetched and nothing is spent; the report says what a preparation would do.
+
+            refresh:
+                If `True`, everything is fetched again, including what the store already holds.
 
         Returns:
             report:

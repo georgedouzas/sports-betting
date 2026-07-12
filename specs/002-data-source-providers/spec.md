@@ -148,6 +148,8 @@ Users of the dummy dataloader, the snapshot factory functions, and every example
 - **FR-018**: The store MUST distinguish immutable data (finished matches, completed seasons, historical snapshots) from volatile data (fixtures, the in-progress season) and MUST refresh only the latter.
 - **FR-019**: A partially written item MUST never be read back as complete.
 - **FR-020**: The store MUST preserve column types across a write/read round-trip; an empty result MUST NOT degrade the types of the data it is combined with.
+- **FR-035**: Derived data MUST be invalidated when the code that derives it changes, not only when the raw data changes. An upgrade that changes the transformation MUST NOT serve the output of the previous one.
+- **FR-036**: The system MUST provide a way to re-read data the store considers finished. Nothing upstream is truly immutable — a source can correct a completed season — so "finished" means "not re-read unless asked", never "cannot have changed". Because a metered source charges again for a re-read, it MUST be requested rather than done on a schedule.
 
 #### Reconciliation
 

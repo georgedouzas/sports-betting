@@ -11,6 +11,7 @@ import json
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
@@ -303,8 +304,19 @@ class LocalStore(BaseStore):
         os.replace(temporary, path)  # noqa: PTH105
 
 
+def _library_version() -> str:
+    """Return the version of the library, which the transform belongs to."""
+    try:
+        return version('sports-betting')
+    except PackageNotFoundError:
+        return 'unknown'
+
+
 def payloads_digest(payloads: list[RawPayload]) -> str:
     """Return the identity of a set of payloads, so what is derived from them is cached against it.
+
+    The version of the library is part of it, because the snapshots are derived by code as well as from data. Without
+    it an upgrade that changes the transform would serve the snapshots the old transform produced.
 
     Args:
         payloads:
@@ -312,7 +324,8 @@ def payloads_digest(payloads: list[RawPayload]) -> str:
 
     Returns:
         digest:
-            The identity of the payloads.
+            The identity of the payloads and of the transform that reads them.
     """
     parts = sorted(f'{payload.item.key}:{hashlib.sha256(payload.content).hexdigest()}' for payload in payloads)
+    parts.append(f'version:{_library_version()}')
     return hashlib.sha256('|'.join(parts).encode()).hexdigest()[:32]
