@@ -17,12 +17,11 @@ from ._options import get_config_path_option, get_data_path_option
 from ._utils import (
     get_bettor,
     get_cv,
-    get_dataloader_cls,
+    get_dataloader,
     get_drop_na_thres,
     get_module,
     get_n_jobs,
     get_odds_type,
-    get_param_grid,
     get_target_event_status,
     get_target_event_time,
     get_verbose,
@@ -42,13 +41,11 @@ def bettor() -> None:
 def backtest(config_path: str, data_path: str) -> None:
     """Apply backtesting to the bettor."""
     mod = get_module(config_path)
-    dataloader_cls = get_dataloader_cls(mod)
-    if dataloader_cls is None:
+    dataloader = get_dataloader(mod)
+    if dataloader is None:
         return
-    param_grid = get_param_grid(mod)
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
-    dataloader = dataloader_cls(param_grid)
     X_train, Y_train, O_train = dataloader.extract_train_data(
         drop_na_thres=drop_na_thres,
         odds_type=odds_type,
@@ -87,13 +84,11 @@ def backtest(config_path: str, data_path: str) -> None:
 def bet(config_path: str, data_path: str) -> None:
     """Get value bets."""
     mod = get_module(config_path)
-    dataloader_cls = get_dataloader_cls(mod)
-    if dataloader_cls is None:
+    dataloader = get_dataloader(mod)
+    if dataloader is None:
         return
-    param_grid = get_param_grid(mod)
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
-    dataloader = dataloader_cls(param_grid)
     X_train, Y_train, O_train = dataloader.extract_train_data(
         drop_na_thres=drop_na_thres,
         odds_type=odds_type,
