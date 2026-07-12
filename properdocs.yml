@@ -23,6 +23,7 @@ nav:
     - User guide: 
       - overview/user_guide/index.md
       - Dataloader: overview/user_guide/dataloader.md
+      - Data sources: overview/user_guide/sources.md
       - Bettor: overview/user_guide/bettor.md
       - In practice: overview/user_guide/in_practice.md
     - Changelog: overview/changelog.md

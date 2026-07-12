@@ -87,6 +87,41 @@ private methods `_fit` and `_predict_proba`, which is what makes it easy to defi
 historical data (and can be omitted, e.g. for an arbitrage bettor), while `_predict_proba` predicts the class probabilities (and
 can be trivial when value bets are not derived from probabilities).
 
+### Writing your own bettor
+
+Subclass [`BaseBettor`][sportsbet.evaluation.BaseBettor] and implement those two. You get value bets, backtesting and
+hyperparameter search for free:
+
+```python
+import numpy as np
+from sportsbet.evaluation import BaseBettor
+
+
+class HomeAdvantageBettor(BaseBettor):
+    """A bettor that always likes the home side a little more than the market does."""
+
+    def __init__(self, edge=0.05, betting_markets=None):
+        super().__init__(betting_markets=betting_markets)
+        self.edge = edge
+
+    def _fit(self, X, Y, O):
+        self.rates_ = Y.mean(axis=0).to_numpy()      # how often each market came in
+        return self
+
+    def _predict_proba(self, X):
+        markets = list(self.betting_markets_)
+        probabilities = np.tile(self.rates_, (len(X), 1))
+        probabilities[:, markets.index('home_win')] += self.edge
+        for event in self.complementary_events_:
+            outcomes = [markets.index(market) for market in event]
+            probabilities[:, outcomes] /= probabilities[:, outcomes].sum(axis=1, keepdims=True)
+        return probabilities
+```
+
+Note what you did **not** write. `complementary_events_` is derived from the data, so the same bettor renormalizes over
+three outcomes in soccer and two in basketball, and over each totals line separately, without being told which sport it
+is — see [complementary events](#which-markets-are-mutually-exclusive-is-derived-from-the-data).
+
 ## Model fit
 
 The bettor is fitted to the training data `(X_train, Y_train)` via the `fit` method. Fitting does not necessarily require a machine
