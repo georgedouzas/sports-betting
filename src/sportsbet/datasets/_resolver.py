@@ -214,6 +214,10 @@ def _mapping(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -
 
     What could not be paired is reported the way it is written rather than the way it is compared, so an alias can be
     checked and pasted as it stands.
+
+    A name is only reported when there is a club left for it to be. An odds source lists more than one competition under
+    a league, so a cup tie against a club from another division arrives alongside the league games. It belongs to nobody
+    here, and telling the user to write an alias for it would be telling them to fix something that is not broken.
     """
     given = {normalize(name): normalize(alias) for name, alias in aliases.items()}
     mapping: dict = {}
@@ -228,7 +232,8 @@ def _mapping(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -
         mapping[key] = {**given, **paired}
         for name in unpaired_odds:
             close = sorted(unpaired_stats, key=lambda other: -similarity(name, other))[:SUGGESTIONS]
-            unmatched[odds_roster[name]] = [stats_roster[other] for other in close]
+            if close:
+                unmatched[odds_roster[name]] = [stats_roster[other] for other in close]
     return mapping, unmatched
 
 
