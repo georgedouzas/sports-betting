@@ -2,9 +2,10 @@
 
 from sportsbet.datasets import SoccerDataLoader
 
-DATALOADER_CLASS = SoccerDataLoader
-PARAM_GRID = {
-    'league': ['England', 'Italy', 'Greece'],
-    'year': [2023],
-}
+DATALOADER = SoccerDataLoader(
+    param_grid={
+        'league': ['England', 'Italy', 'Greece'],
+        'year': [2023],
+    },
+)
 ODDS_TYPE = 'market_maximum'

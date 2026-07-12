@@ -2,4 +2,4 @@
 
 from sportsbet.datasets import SoccerDataLoader
 
-DATALOADER_CLASS = SoccerDataLoader
+DATALOADER = SoccerDataLoader()

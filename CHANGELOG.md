@@ -8,9 +8,57 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 <!-- insertion marker -->
 ## Unreleased
 
-<small>New data source</small>
+<small>A new sport's league, and surfaces that reach all of it</small>
+
+### Removed
+
+- **BREAKING: the GUI is gone**, along with the `sportsbet-gui` command, the `gui` extra, `reflex`, `reflex-ag-grid`,
+  `nest-asyncio` and the Node toolchain they needed.
+
+  It was a quarter of the codebase and nothing tested it — `pyproject.toml` excluded it from the test run by name — and
+  it reached one sport of two. What it offered, using the library without writing Python, is now offered by the CLI and
+  by an AI assistant, both of which reach *all* of the library and are tested.
+
+### Changed
+
+- **BREAKING: a CLI configuration hands over a dataloader, not a class.** `DATALOADER_CLASS` and `PARAM_GRID` are
+  replaced by a single `DATALOADER`.
+
+  ```python
+  # before
+  DATALOADER_CLASS = SoccerDataLoader
+  PARAM_GRID = {'league': ['England'], 'year': [2025]}
+
+  # after
+  DATALOADER = SoccerDataLoader(param_grid={'league': ['England'], 'year': [2025]})
+  ```
+
+  The old contract handed over a class, and a class carries no sources, and a source is what carries a key. So the
+  command line could express exactly one configuration in the whole library — soccer with the free feed. Basketball
+  raised, and no odds could be bought for any sport. A built dataloader fixes all of it, and the key comes from the
+  environment, so a configuration file can still be committed:
+
+  ```python
+  DATALOADER = BasketballDataLoader(
+      param_grid={'league': ['NBA'], 'year': [2026]},
+      stats=NBAStats(),
+      odds=OddsApi(key=os.environ['ODDS_API_KEY']),
+  )
+  ```
+
+  A configuration written for the old contract now says what to change.
 
 ### Added
+
+- An **MCP server**, so an AI assistant can drive the library: `pip install 'sports-betting[mcp]'`, then point the
+  assistant at `sportsbet-mcp`. It finds what data exists, prices a download before spending anything, prepares it,
+  backtests a model and returns the value bets.
+
+  It reads the *same* configuration the CLI reads, so the two cannot drift, and a key never enters a tool call. **An
+  assistant cannot spend by surprise**: a preparation that costs anything is refused until the cost is confirmed, and
+  the estimate is exact and free.
+
+  No model, no model key and no model call is added to the library. The assistant stays outside it.
 
 - `NBAStats`, a free, key-less statistics source for the **NBA**, backed by ESPN. It carries the regular season, the
   play-in and the play-offs, with the tip-off as a UTC instant, and it is live: the games played this week carry their

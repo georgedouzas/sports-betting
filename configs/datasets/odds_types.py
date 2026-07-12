@@ -2,8 +2,9 @@
 
 from sportsbet.datasets import SoccerDataLoader
 
-DATALOADER_CLASS = SoccerDataLoader
-PARAM_GRID = {
-    'league': ['England'],
-    'year': [2019, 2022],
-}
+DATALOADER = SoccerDataLoader(
+    param_grid={
+        'league': ['England'],
+        'year': [2019, 2022],
+    },
+)
