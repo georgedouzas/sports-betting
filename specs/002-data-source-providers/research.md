@@ -215,32 +215,39 @@ that scans the whole store for it.
 odds cost `markets x regions`, and `/v4/sports` is free. Matches that kick off together share a snapshot and are paid for once,
 which is what keeps a season in the thousands of credits rather than the tens of thousands.
 
-## D15. A wrong alias is worse than an unmatched team
+## D15. Pair the rosters of a league-season; never compare a name against every club there is
 
-**Decision**: normalize away what is genuinely noise (casing, accents, punctuation, the club words leagues sprinkle differently),
-then compare **exactly**. Bridge the rest with an alias table. Never accept a resemblance. Default `max_unmatched_rate=0.0`, and
-raise `UnmatchedError` past it.
+**Decision**: reconcile team names **within a (league, division, year) group**, where both sources hold the same roster of about
+twenty clubs and the mapping is a bijection. Exact-match what agrees, then pair what is left by **token-prefix** similarity,
+accepting only a clear winner that clearly beats the runner-up. Ship **no** alias table; leave `aliases` as the escape hatch for
+what the pairing cannot place. Default `max_unmatched_rate=0.0`, and raise `UnmatchedError` past it.
 
-**Rationale**: the two sources do not merely *format* names differently, they use *different names*: `Man United` against
-`Manchester United`, `Wolves` against `Wolverhampton Wanderers`, `Nott'm Forest` against `Nottingham Forest`. No normalization
-bridges those, so an alias table is not optional.
+**Rationale**: the first cut compared each vendor name against every club in the library and refused to guess, which was safe but
+left the user to hand-build a mapping table for ~27 leagues. It also shipped 14 hand-written aliases, none of them verifiable
+without a vendor key.
 
-The temptation is a fuzzy matcher. It is the wrong call, and the reason is asymmetric:
+Both problems come from the same mistake: **the candidate set was wrong.** A club is only ever compared with the twenty clubs of
+its own league-season. That changes the risk entirely — the names that could be confused with each other are all *present on both
+sides*, so they claim each other before anything is inferred. `Manchester City` cannot be mis-paired to `Man United`, because
+`Manchester United` is sitting right there wanting it.
 
-- An **unmatched** team is loud. The match has no odds, the rate rises, the gate fires.
-- A **wrong** alias is silent. It attaches one club's odds to another club's match, and reports nothing. The dataset looks
-  complete. The backtest looks clean. It is wrong.
+**Similarity by token prefix, not by string.** A club is abbreviated by shortening its words, not by altering their letters:
+`Man United`, `Wolves`, `Nott'm Forest`. So tokens are compared by the prefix they share. String similarity is worse than useless
+here — `SequenceMatcher` rates `Everton`/`Liverpool` at **0.50**, above `Wolves`/`Wolverhampton Wanderers` at **0.41**. The
+token-prefix score gives **0.00** and **0.83**. That inversion is precisely the failure that hangs one club's odds on another
+match.
 
-`Manchester United` and `Manchester City` are one token apart. Any similarity threshold that bridges `Man United` will eventually
-bridge those two, and nothing will say so. So the library reports resemblances as **suggestions** and applies none of them.
+**Guards that keep it honest**:
 
-**What makes it usable anyway**: the failure is mechanical to fix. It names the clubs it could not place, ranks what they resemble,
-and prints a paste-ready `aliases={...}` dict. The user checks it — a resemblance is not a fact — and passes it back.
+- A pair is accepted only above a similarity floor *and* with a clear margin over the runner-up.
+- The last name standing is **not** paired for being last. A vendor carrying a club the statistics lack would otherwise have its
+  odds attached to the wrong match. Verified: `Sheffield Wednesday` against a roster holding only `Sheffield United` raises.
+- Unrelated leftovers are never paired. Verified: `Liverpool` against `Everton` raises.
 
-**Only aliases that can be verified are shipped.** Inventing entries for leagues whose club names cannot be checked would be
-inventing exactly the silent corruption above. An alias the library lacks fails loudly, which is safe; an alias the library got
-wrong does not, which is not.
+**Verified against the real rosters**: the 20 clubs of the 2024/25 English top flight, as the free feed writes them and as an odds
+vendor writes them, pair **20 out of 20 with no aliases at all** — including `Wolverhampton Wanderers` → `Wolves`,
+`Nottingham Forest` → `Nott'm Forest`, `AFC Bournemouth` → `Bournemouth`, and both Manchester clubs to the right ones.
 
-**The odds take the statistics' identity**, not their own: the statistics say which matches exist, the odds say what they were
-priced at. So the reconciled odds carry the statistics' kick-off and spelling, and the two tables line up exactly rather than
-nearly.
+**A wrong alias is still worse than an unmatched team**, and that is why nothing ambiguous is ever guessed: an unmatched team is
+loud (the rate rises, the gate fires) while a wrong pairing is silent (the dataset looks complete, the backtest looks clean, and it
+is wrong). The pairing does not weaken that rule; it just makes the rule rarely bite.

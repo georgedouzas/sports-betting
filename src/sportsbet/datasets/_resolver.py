@@ -8,32 +8,20 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from difflib import get_close_matches
 from typing import Self
 
 import pandas as pd
 
 MATCH_COLS = ['league', 'division', 'year', 'home_team', 'away_team']
+GROUP_COLS = ['league', 'division', 'year']
 TEAM_COLS = ['home_team', 'away_team']
 NOISE = {'fc', 'afc', 'cf', 'sc', 'ac', 'as', 'ss', 'us', 'if', 'bk', 'club', 'the'}
 SUGGESTIONS = 3
+MIN_PREFIX = 3
+MIN_SIMILARITY = 0.6
+MIN_MARGIN = 0.15
 
-ALIASES: dict[str, str] = {
-    'Manchester United': 'Man United',
-    'Manchester City': 'Man City',
-    'Nottingham Forest': "Nott'm Forest",
-    'Wolverhampton Wanderers': 'Wolves',
-    'Tottenham Hotspur': 'Tottenham',
-    'Brighton and Hove Albion': 'Brighton',
-    'West Ham United': 'West Ham',
-    'Newcastle United': 'Newcastle',
-    'Leicester City': 'Leicester',
-    'Ipswich Town': 'Ipswich',
-    'Leeds United': 'Leeds',
-    'Sheffield United': 'Sheffield United',
-    'Luton Town': 'Luton',
-    'Norwich City': 'Norwich',
-}
+ALIASES: dict[str, str] = {}
 
 
 def normalize(name: str) -> str:
@@ -127,13 +115,122 @@ class ReconciliationReport:
         return ' '.join(lines[:2]) + ('\n' + lines[2] if len(lines) > 2 else '')  # noqa: PLR2004
 
 
-def _identity(data: pd.DataFrame, aliases: dict[str, str] | None = None) -> pd.DataFrame:
-    """Return the match columns with the team names normalized and aliased."""
-    mapping = {normalize(name): normalize(alias) for name, alias in (aliases or {}).items()}
+def _prefix(one: str, other: str) -> int:
+    """Return how many characters two tokens begin with in common."""
+    common = 0
+    for character, candidate in zip(one, other, strict=False):
+        if character != candidate:
+            break
+        common += 1
+    return common
+
+
+def similarity(one: str, other: str) -> float:
+    """Return how alike two names are, by the tokens they begin with in common.
+
+    A club is abbreviated by shortening its words, not by changing their letters: `Man United` for `Manchester United`,
+    `Wolves` for `Wolverhampton Wanderers`. So tokens are compared by the prefix they share, which is what an
+    abbreviation preserves.
+
+    Comparing the names as strings does not survive this. It rates `Everton` against `Liverpool` more alike than
+    `Wolves` against `Wolverhampton Wanderers`, which is exactly the mistake that attaches one club's odds to another.
+
+    Args:
+        one:
+            A normalized team name.
+
+        other:
+            A normalized team name.
+
+    Returns:
+        similarity:
+            How alike they are, from 0 to 1.
+    """
+    tokens, others = sorted([one.split(), other.split()], key=len)
+    if not tokens or not others:
+        return 0.0
+    total = 0.0
+    for token in tokens:
+        scores = [
+            _prefix(token, candidate) / min(len(token), len(candidate))
+            for candidate in others
+            if _prefix(token, candidate) >= MIN_PREFIX
+        ]
+        total += max(scores, default=0.0)
+    return total / len(tokens)
+
+
+def _pair_rosters(stats_names: set[str], odds_names: set[str]) -> tuple[dict[str, str], set[str], set[str]]:
+    """Pair the roster of one source with the roster of the other, for a single league and season.
+
+    The two rosters are the same clubs, so this is a pairing of about twenty names against twenty, not a search through
+    every club there is. That is what makes it safe: the names that could be confused with each other are all present,
+    so they match themselves before anything is inferred, and what is left over has nothing to be confused with.
+
+    A name is paired only when it is clearly the best of the roster and clearly better than the next best. Anything
+    ambiguous is left unpaired and reported, since a wrong pairing says nothing about itself.
+    """
+    matched = {name: name for name in odds_names & stats_names}
+    unpaired_odds = odds_names - set(matched)
+    unpaired_stats = stats_names - set(matched.values())
+
+    candidates = []
+    for name in unpaired_odds:
+        scores = sorted(((similarity(name, other), other) for other in unpaired_stats), reverse=True)
+        if not scores:
+            break
+        best, runner_up = scores[0], (scores[1] if len(scores) > 1 else (0.0, ''))
+        candidates.append((best[0], best[0] - runner_up[0], name, best[1]))
+
+    for score, margin, name, other in sorted(candidates, reverse=True):
+        if name not in unpaired_odds or other not in unpaired_stats:
+            continue
+        alone = len(unpaired_odds) == 1 and len(unpaired_stats) == 1
+        if score >= MIN_SIMILARITY and (margin >= MIN_MARGIN or alone):
+            matched[name] = other
+            unpaired_odds.discard(name)
+            unpaired_stats.discard(other)
+    return matched, unpaired_odds, unpaired_stats
+
+
+def _roster(data: pd.DataFrame) -> dict[str, str]:
+    """Return the clubs of a league and season, normalized and as they are written."""
+    return {normalize(name): name for col in TEAM_COLS for name in data[col]}
+
+
+def _mapping(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -> tuple[dict, dict[str, list[str]]]:
+    """Return, per league and season, the names of the odds mapped to the names of the statistics.
+
+    What could not be paired is reported the way it is written rather than the way it is compared, so an alias can be
+    checked and pasted as it stands.
+    """
+    given = {normalize(name): normalize(alias) for name, alias in aliases.items()}
+    mapping: dict = {}
+    unmatched: dict[str, list[str]] = {}
+    for key, odds_group in odds.groupby(GROUP_COLS):
+        stats_group = stats[(stats[GROUP_COLS] == pd.Series(key, index=GROUP_COLS)).all(axis=1)]
+        if stats_group.empty:
+            continue
+        stats_roster = _roster(stats_group)
+        odds_roster = {given.get(name, name): written for name, written in _roster(odds_group).items()}
+        paired, unpaired_odds, unpaired_stats = _pair_rosters(set(stats_roster), set(odds_roster))
+        mapping[key] = {**given, **paired}
+        for name in unpaired_odds:
+            close = sorted(unpaired_stats, key=lambda other: -similarity(name, other))[:SUGGESTIONS]
+            unmatched[odds_roster[name]] = [stats_roster[other] for other in close]
+    return mapping, unmatched
+
+
+def _identity(data: pd.DataFrame, mapping: dict | None = None) -> pd.DataFrame:
+    """Return the match columns with the team names normalized, and mapped when a mapping is given."""
     identity = data[MATCH_COLS].copy()
     for col in TEAM_COLS:
-        normalized = identity[col].map(normalize)
-        identity[col] = normalized.map(lambda name: mapping.get(name, name))
+        identity[col] = identity[col].map(normalize)
+    if mapping is None:
+        return identity
+    keys = list(zip(*[data[col] for col in GROUP_COLS], strict=True))
+    for col in TEAM_COLS:
+        identity[col] = [mapping.get(key, {}).get(name, name) for key, name in zip(keys, identity[col], strict=True)]
     return identity
 
 
@@ -148,6 +245,10 @@ def resolve(
     Two sources name the same club differently, so the odds carry the identity of the statistics rather than their own.
     The statistics say which matches exist; the odds say what they were priced at.
 
+    The names are paired within a league and a season, where the two sources hold the same twenty clubs. That is what
+    makes pairing them safe rather than a guess: every name that could be confused with another is present on both
+    sides, so it matches itself before anything is inferred.
+
     A match whose odds are not found is the failure that matters. It does not look like an error, it looks like a
     smaller dataset, and it produces a backtest that is confidently wrong. So it is counted and, past the tolerance,
     raised.
@@ -160,7 +261,8 @@ def resolve(
             The long odds snapshots.
 
         aliases:
-            The team names of the odds source, mapped to the names of the statistics source.
+            The team names of the odds source, mapped to the names of the statistics source, for the clubs the pairing
+            leaves over.
 
         max_unmatched_rate:
             The proportion of matches that may go without odds. The default `0.0` allows none.
@@ -173,13 +275,14 @@ def resolve(
         UnmatchedError:
             If more matches went without odds than the tolerance allows.
     """
+    mapping, suggestions = _mapping(stats, odds, {**ALIASES, **(aliases or {})})
     matches = stats[[*MATCH_COLS, 'date']].drop_duplicates(subset=MATCH_COLS)
     canonical = _identity(matches).assign(
         date_=matches['date'].to_numpy(),
         home_team_=matches['home_team'].to_numpy(),
         away_team_=matches['away_team'].to_numpy(),
     )
-    resolved = odds.drop(columns=['date']).assign(**{col: _identity(odds, aliases)[col] for col in MATCH_COLS})
+    resolved = odds.drop(columns=['date']).assign(**{col: _identity(odds, mapping)[col] for col in MATCH_COLS})
     resolved = resolved.merge(canonical, on=MATCH_COLS, how='left')
 
     found = resolved['date_'].notna()
@@ -198,37 +301,8 @@ def resolve(
         unmatched_stats=unmatched_stats,
         unmatched_odds=unmatched_odds,
         unmatched_rate=len(unmatched_stats) / total if total else 0.0,
-        suggestions=_suggestions(unmatched_odds, matches, aliases),
+        suggestions=suggestions,
     )
     if report.unmatched_rate > max_unmatched_rate:
         raise UnmatchedError(report)
     return resolved, report
-
-
-def _suggestions(
-    unmatched_odds: pd.DataFrame,
-    matches: pd.DataFrame,
-    aliases: dict[str, str] | None = None,
-) -> dict[str, list[str]]:
-    """Return, for every team name that was not found, the names it most resembles.
-
-    A name an alias already bridges is not reported, even when its match failed for the sake of the other team: the user
-    would be sent to write an alias that already exists.
-
-    They are a starting point for an alias, never an alias. A wrong one attaches the odds of one club to another and
-    says nothing about it, which is worse than not matching at all.
-    """
-    if unmatched_odds.empty:
-        return {}
-    mapping = {normalize(name): normalize(alias) for name, alias in (aliases or {}).items()}
-    known = sorted({name for col in TEAM_COLS for name in matches[col]})
-    normalized = {normalize(name): name for name in known}
-    suggestions = {}
-    for col in TEAM_COLS:
-        for name in unmatched_odds[col].unique():
-            aliased = mapping.get(normalize(name), normalize(name))
-            if aliased in normalized:
-                continue
-            close = get_close_matches(aliased, list(normalized), n=SUGGESTIONS, cutoff=0.4)
-            suggestions[name] = [normalized[match] for match in close]
-    return suggestions
