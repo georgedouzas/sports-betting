@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import click
 
-from ._betting import bettor
-from ._data import dataloader
+from ._betting import model
+from ._data import data
 
 
 @click.group()
@@ -20,5 +20,5 @@ def main() -> None:
     return
 
 
-main.add_command(dataloader)
-main.add_command(bettor)
+main.add_command(data)
+main.add_command(model)

@@ -1,0 +1,181 @@
+"""Implements the selection, which is what a surface is told instead of being handed a file.
+
+A dataloader is a sport, the data to select from it, and the sources it reads. All of that is a short, closed list of
+names, so it fits in the arguments of a command or of a tool, and nothing needs to be written down first.
+
+A betting model does not fit, and pretending otherwise would be the mistake. A model is a scikit-learn estimator, and an
+estimator can be any pipeline anybody can build. The ready-made ones are named here, and anything beyond them is named
+by where it lives, as an object rather than as a settings file that tries to describe one.
+
+The command line and the server are told the same things in the same way, so neither owns a format the other has to
+learn.
+"""
+
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
+
+from __future__ import annotations
+
+import os
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder
+
+from . import ParamGrid
+from .datasets import (
+    BaseDataLoader,
+    BaseOddsSource,
+    BaseStatsSource,
+    BasketballDataLoader,
+    DummySoccerDataLoader,
+    EuroLeagueStats,
+    FootballDataOdds,
+    FootballDataStats,
+    NBAStats,
+    OddsApi,
+    SoccerDataLoader,
+)
+from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
+
+SPORTS: dict[str, type[BaseDataLoader]] = {
+    'soccer': SoccerDataLoader,
+    'basketball': BasketballDataLoader,
+    'dummy': DummySoccerDataLoader,
+}
+STATS_SOURCES: dict[str, type[BaseStatsSource]] = {
+    'football-data': FootballDataStats,
+    'euroleague': EuroLeagueStats,
+    'nba': NBAStats,
+}
+ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
+    'football-data': FootballDataOdds,
+    'odds-api': OddsApi,
+}
+MODELS = ['odds-comparison', 'logistic']
+KEYED_SOURCES = {'odds-api'}
+DEFAULT_KEY_ENV = 'ODDS_API_KEY'
+SPORTLESS = {'dummy'}
+
+
+class SelectionError(ValueError):
+    """Raised when what a surface was told does not describe something that can be built."""
+
+
+def _load_object(reference: str) -> object:
+    """Return the object a reference names, which is a Python file and a name inside it."""
+    path, _, name = reference.partition(':')
+    if not name:
+        msg = f'`{reference}` should name an object inside a Python file, as in `models.py:BETTOR`.'
+        raise SelectionError(msg)
+    if not Path(path).exists():
+        msg = f'The file `{path}` does not exist.'
+        raise SelectionError(msg)
+    spec = spec_from_file_location('sportsbet_model', path)
+    if spec is None or spec.loader is None:
+        msg = f'The file `{path}` could not be read as Python.'
+        raise SelectionError(msg)
+    mod = module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if not hasattr(mod, name):
+        msg = f'The file `{path}` has no `{name}` in it.'
+        raise SelectionError(msg)
+    return getattr(mod, name)
+
+
+def _odds_source(odds: str, key_env: str, markets: list[str] | None, regions: list[str] | None) -> BaseOddsSource:
+    """Return the odds source a name asks for, reading a key from the environment when it needs one."""
+    if odds not in ODDS_SOURCES:
+        msg = f'`{odds}` is not an odds source. The ones there are: {", ".join(sorted(ODDS_SOURCES))}.'
+        raise SelectionError(msg)
+    if odds not in KEYED_SOURCES:
+        return ODDS_SOURCES[odds]()
+    key = os.environ.get(key_env)
+    if not key:
+        msg = (
+            f'`{odds}` needs a key, and the environment has no `{key_env}`. Put the key there and it stays out of your '
+            f'shell history, or name another variable with `--odds-key-env`.'
+        )
+        raise SelectionError(msg)
+    return OddsApi(key=key, markets=markets or None, regions=regions or None)
+
+
+def build_dataloader(
+    sport: str,
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+) -> BaseDataLoader:
+    """Return the dataloader a selection describes.
+
+    A source that is not named is the sport's own, so the ordinary case needs nothing but the sport and what to select
+    from it.
+    """
+    if sport not in SPORTS:
+        msg = f'`{sport}` is not a sport. The ones there are: {", ".join(sorted(SPORTS))}.'
+        raise SelectionError(msg)
+    selected: ParamGrid = {
+        name: values for name, values in (('league', leagues), ('division', divisions), ('year', years)) if values
+    }
+    param_grid = selected or None
+    if sport in SPORTLESS:
+        if stats or odds:
+            msg = f'The `{sport}` sport carries its own data, so it takes no sources.'
+            raise SelectionError(msg)
+        return SPORTS[sport](param_grid=param_grid)
+    if stats is not None and stats not in STATS_SOURCES:
+        msg = f'`{stats}` is not a statistics source. The ones there are: {", ".join(sorted(STATS_SOURCES))}.'
+        raise SelectionError(msg)
+    sources = {
+        'stats': STATS_SOURCES[stats]() if stats else None,
+        'odds': _odds_source(odds, odds_key_env, odds_markets, odds_regions) if odds else None,
+    }
+    return SPORTS[sport](param_grid=param_grid, **sources)
+
+
+def build_bettor(
+    model: str,
+    alpha: float = 0.05,
+    init_cash: float | None = None,
+    stake: float | None = None,
+    betting_markets: list[str] | None = None,
+) -> BaseBettor:
+    """Return the betting model a selection describes.
+
+    A ready-made model is named. Anything else is a scikit-learn estimator, which no set of arguments can describe, so
+    it is named by where it lives — `models.py:BETTOR` — and it is built in Python, where it belongs.
+    """
+    markets = betting_markets or None
+    if ':' in model:
+        built = _load_object(model)
+        if not isinstance(built, BaseBettor):
+            msg = f'`{model}` is not a bettor.'
+            raise SelectionError(msg)
+        return built
+    if model == 'odds-comparison':
+        return OddsComparisonBettor(alpha=alpha, betting_markets=markets, init_cash=init_cash, stake=stake)
+    if model == 'logistic':
+        classifier = make_pipeline(
+            make_column_transformer(
+                (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
+                remainder='passthrough',
+            ),
+            SimpleImputer(),
+            MultiOutputClassifier(LogisticRegression(solver='liblinear', random_state=7, class_weight='balanced')),
+        )
+        return ClassifierBettor(classifier, betting_markets=markets, init_cash=init_cash, stake=stake)
+    msg = (
+        f'`{model}` is not a model. The ready-made ones are: {", ".join(MODELS)}. Anything else is a scikit-learn '
+        f'estimator, so build it in Python and name it, as in `models.py:BETTOR`.'
+    )
+    raise SelectionError(msg)

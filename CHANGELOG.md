@@ -21,32 +21,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- **BREAKING: a CLI configuration hands over a dataloader, not a class.** `DATALOADER_CLASS` and `PARAM_GRID` are
-  replaced by a single `DATALOADER`.
+- **BREAKING: the CLI takes no configuration file.** The `--config-path` option, the `DATALOADER_CLASS`/`PARAM_GRID`
+  variables and the `configs/` examples are all gone. A command is told what to do in its own arguments, and the
+  command groups are now `data` and `model`.
 
-  ```python
+  ```bash
   # before
-  DATALOADER_CLASS = SoccerDataLoader
-  PARAM_GRID = {'league': ['England'], 'year': [2025]}
+  sportsbet dataloader training -c config.py
 
   # after
-  DATALOADER = SoccerDataLoader(param_grid={'league': ['England'], 'year': [2025]})
+  sportsbet data training --sport soccer --league England --year 2025 --odds-type market_maximum
   ```
 
-  The old contract handed over a class, and a class carries no sources, and a source is what carries a key. So the
-  command line could express exactly one configuration in the whole library — soccer with the free feed. Basketball
-  raised, and no odds could be bought for any sport. A built dataloader fixes all of it, and the key comes from the
-  environment, so a configuration file can still be committed:
+  The old contract handed the CLI a dataloader *class*, and a class carries no sources, and a source is what carries a
+  key — so the command line could express exactly one configuration in the whole library, soccer with the free feed.
+  Now every sport, every source and every credential reaches it, and a key is read from the environment, so it never
+  appears in a command or in a shell's history:
 
-  ```python
-  DATALOADER = BasketballDataLoader(
-      param_grid={'league': ['NBA'], 'year': [2026]},
-      stats=NBAStats(),
-      odds=OddsApi(key=os.environ['ODDS_API_KEY']),
-  )
+  ```bash
+  export ODDS_API_KEY=...
+  sportsbet data prepare --sport basketball --league NBA --year 2026 --stats nba --odds odds-api --dry-run
   ```
 
-  A configuration written for the old contract now says what to change.
+  A betting model is the one thing that cannot be a flag, because it is a scikit-learn estimator and no arrangement of
+  arguments can describe one. `odds-comparison` and `logistic` are ready-made; a model of your own is built in Python
+  and named as an object, with `--model models.py:BETTOR`.
 
 ### Added
 
@@ -54,9 +53,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   assistant at `sportsbet-mcp`. It finds what data exists, prices a download before spending anything, prepares it,
   backtests a model and returns the value bets.
 
-  It reads the *same* configuration the CLI reads, so the two cannot drift, and a key never enters a tool call. **An
-  assistant cannot spend by surprise**: a preparation that costs anything is refused until the cost is confirmed, and
-  the estimate is exact and free.
+  Its tools take the *same* arguments the commands take, so the two surfaces cannot drift and there is no file to write
+  first. A key is never one of those arguments: what is named is the environment variable holding it. **An assistant
+  cannot spend by surprise**: a preparation that costs anything is refused until the cost is confirmed, and the estimate
+  is exact and free.
 
   No model, no model key and no model call is added to the library. The assistant stays outside it.
 

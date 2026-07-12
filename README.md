@@ -207,51 +207,66 @@ bettor.bet(X_fix, O_fix)
 
 ### CLI
 
-The command `sportsbet` provides various sub-commands to download data and predict the value bets. For any sub-command you may
-add the `--help` flag to get more information about its usage.
+The `sportsbet` command is told what to do in its own arguments. **There is no configuration file**, and nothing has to
+be written down before anything can be run. Add `--help` to any command to see what it takes.
 
-#### Configuration
+Try it with no downloads at all — `dummy` is a made-up soccer league:
 
-The commands read a **Python configuration file**, and it hands over a dataloader you have already built. Examples live
-in `sports-betting/configs/`. Only `DATALOADER` is mandatory.
-
-```python
-from sportsbet.datasets import SoccerDataLoader
-
-DATALOADER = SoccerDataLoader(param_grid={'league': ['England', 'Italy'], 'year': [2025]})
+```bash
+sportsbet data params --sport dummy
+sportsbet model backtest --sport dummy --league England --odds-type market_average --model odds-comparison
 ```
 
-It is a dataloader rather than a class because only a built one carries its **sources**, and only a source carries a
-**key**. That is what lets every sport and every data source reach the command line, and the key comes from the
-environment, so the file can be committed:
+#### Data
 
-```python
-import os
+```bash
+# what can be selected, asked of the source itself
+sportsbet data params --sport soccer
 
-from sportsbet.datasets import BasketballDataLoader, NBAStats, OddsApi
+# what a download would fetch and cost, without doing it
+sportsbet data prepare --sport soccer --league England --year 2025 --dry-run
 
-DATALOADER = BasketballDataLoader(
-    param_grid={'league': ['NBA'], 'year': [2026]},
-    stats=NBAStats(),
-    odds=OddsApi(key=os.environ['ODDS_API_KEY'], markets=['h2h']),
-)
+# training data and fixtures, written as CSV
+sportsbet data training --sport soccer --league England --year 2025 --odds-type market_maximum -o ./data
+sportsbet data fixtures --sport soccer --league England --year 2025 --odds-type market_maximum -o ./data
 ```
 
-The rest are optional. These configure the data extraction:
+Any sport, any data source, and any credential. A source that needs a key reads it from the **environment**, so the key
+never appears in the command, in your shell history, or in a file:
 
-- `DROP_NA_THRES`: The parameter `drop_na_thres` of the dataloader's `extract_train_data`.
+```bash
+export ODDS_API_KEY=...
 
-- `ODDS_TYPE`: The parameter `odds_type` of the dataloader's `extract_train_data`.
+sportsbet data prepare --sport basketball --league NBA --year 2026 \
+    --stats nba --odds odds-api --odds-market h2h --dry-run
+```
 
-And these the betting process:
+#### Models
 
-- `BETTOR`: A bettor object.
+```bash
+sportsbet model backtest --sport soccer --league England --year 2025 \
+    --odds-type market_maximum --model odds-comparison --alpha 0.03 --cv 3 -o ./data
 
-- `CV`: The parameter `cv` of the function `backtest`.
+sportsbet model bet --sport soccer --league England --year 2025 \
+    --odds-type market_maximum --model logistic -o ./data
+```
 
-- `N_JOBS`: The parameter `n_jobs` of the function `backtest`.
+`odds-comparison` and `logistic` are ready-made and cover the ordinary case. **A model of your own is a scikit-learn
+estimator, and no arrangement of flags can describe one** — inventing a syntax that tried would just be a worse Python.
+So you build it in Python and name it:
 
-- `VERBOSE`: The parameter `verbose` of the function `backtest`.
+```python
+# models.py
+from sportsbet.evaluation import ClassifierBettor
+BETTOR = ClassifierBettor(my_pipeline, init_cash=10000.0, stake=50.0)
+```
+
+```bash
+sportsbet model backtest --sport soccer --league England --year 2025 \
+    --odds-type market_maximum --model models.py:BETTOR
+```
+
+That is one object, not a bag of settings, and it is the only part of the library that cannot be a flag.
 
 ### AI assistant
 
@@ -262,53 +277,10 @@ it spends anything, prepare it, backtest a model and return the value bets:
 pip install 'sports_betting[mcp]'
 ```
 
-Point your assistant at the `sportsbet-mcp` command. It reads the **same configuration file the CLI reads**, so the two
-cannot drift apart, and your key stays in the environment rather than in a chat transcript.
+Point your assistant at the `sportsbet-mcp` command. Its tools take the **same arguments the commands take**, so the two
+surfaces cannot drift apart, and there is no file to write first. Your key is never one of those arguments: what the
+assistant names is the *environment variable* holding it, so the key itself stays out of the transcript.
 
 An assistant cannot spend your money by accident. Odds are bought per request, and a season of them can cost thousands
 of credits, so a preparation that costs anything is **refused** until the cost has been confirmed. The estimate is free
 and exact.
-
-#### Commands
-
-Once these variables are provided, we can select the appropriate commands to select any of the `sports-betting`'s functionalities.
-
-##### Dataloader
-
-Show available parameters for dataloaders:
-
-```bash
-sportsbet dataloader params -c config.py
-```
-
-Show available odds types:
-
-```bash
-sportsbet dataloader odds-types -c config.py
-```
-
-Extract training data and save them as CSV files:
-
-```bash
-sportsbet dataloader training -c config.py -d /path/to/directory
-```
-
-Extract fixtures data and save them as CSV files:
-
-```bash
-sportsbet dataloader fixtures -c config.py -d /path/to/directory
-```
-
-##### Bettor
-
-Backtest the bettor and save the results as CSV file:
-
-```bash
-sportsbet bettor backtest -c config.py -d /path/to/directory
-```
-
-Get the value bets and save them as CSV file:
-
-```bash
-sportsbet bettor bet -c config.py -d /path/to/directory
-```
