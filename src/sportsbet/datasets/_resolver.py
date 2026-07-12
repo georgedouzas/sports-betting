@@ -21,7 +21,18 @@ MIN_PREFIX = 3
 MIN_SIMILARITY = 0.6
 MIN_MARGIN = 0.15
 
-ALIASES: dict[str, str] = {}
+ALIASES: dict[str, str] = {
+    'Olimpia Milano': 'EA7 Emporio Armani Milan',
+}
+"""The clubs the pairing cannot place, and only those.
+
+A club is normally paired without help, because the two sources hold the same roster and a name is only ever compared
+with the twenty or so clubs of its own league and season. What lands here is a club the two sources call by genuinely
+different names, sharing no word between them.
+
+`Olimpia Milano` is the historic name of the club; `EA7 Emporio Armani Milan` is its sponsor's. They have nothing in
+common but the city, so nothing can pair them and nothing should try.
+"""
 
 
 def normalize(name: str) -> str:

@@ -1,4 +1,4 @@
-"""Includes utilities for soccer data."""
+"""Includes utilities shared by the sports."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -13,6 +13,9 @@ def market_outcomes(home_goals: pd.Series, away_goals: pd.Series, markets: list[
 
     A convenience for producing market-outcome columns (e.g. when preparing a
     frame for `from_dataframe`); the loader itself never derives markets.
+
+    It is not a soccer thing. A sport that cannot be drawn simply does not ask
+    for a draw, and the outcome comes out two-way.
 
     Args:
         home_goals:

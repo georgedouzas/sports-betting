@@ -10,12 +10,44 @@ This section presents the dataloader object in details. The available dataloader
 
 - [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader]: Soccer data loader with bundled sample data, for offline testing and the examples below.
 - [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]: Soccer data loader that downloads historical and fixtures data from the sources you give it.
+- [`BasketballDataLoader`][sportsbet.datasets.BasketballDataLoader]: Basketball data loader, covering the EuroLeague.
 
-We aim to include in the future more dataloaders for various sports and betting markets:
+We aim to include in the future more sports and betting markets, such as the NFL and hockey. **A sport is a data source,
+not an engine** — the two dataloaders above differ only in which sources they default to, and nothing in the extraction
+knows which sport it is looking at.
 
-- Basketball
-- NFL
-- Hockey
+## Basketball
+
+```python
+from sportsbet.datasets import BasketballDataLoader, EuroLeagueStats, OddsApi
+
+dataloader = BasketballDataLoader(
+    param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
+    stats=EuroLeagueStats(),                       # free, no key
+    odds=OddsApi(key='...', markets=['h2h']),      # yours
+)
+dataloader.prepare()
+X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
+```
+
+[`EuroLeagueStats`][sportsbet.datasets.EuroLeagueStats] reads the competition's own public API. It is free, needs no key,
+and a whole season arrives in a single request.
+
+Three things differ from soccer, and **none of them is configured** — each is read from the data:
+
+- **There is no draw.** A tie goes to overtime, so the outcome is two-way: `home_win` and `away_win`. The bettor derives
+  which markets are mutually exclusive from the columns the data carries, so a two-way outcome simply falls out — and
+  soccer keeps its three-way one.
+- **There is no totals market.** Basketball has no *line*: the total points of a game run from about 125 to 229 and a
+  bookmaker sets a different one every night. This library expresses a market as a **column**, and `over_167.5` would be
+  true of one game and meaningless for the next. A market whose line moves needs a change to the data model, so it is not
+  here yet.
+- **You must bring odds.** There is **no free basketball odds source anywhere**, so `odds` has no default. A dataloader
+  without one carries no betting markets and therefore has nothing to predict — and it says exactly that rather than
+  failing somewhere deeper. Soccer is the exception, not the rule: football-data is the only feed in the library that
+  gives statistics *and* odds for nothing.
+
+Only the seasons **both** sources publish are offered, so you cannot select a season your odds vendor cannot price.
 
 ## Code, not data
 
