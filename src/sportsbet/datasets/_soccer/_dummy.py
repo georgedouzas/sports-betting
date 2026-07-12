@@ -13,7 +13,37 @@ from sklearn.model_selection import ParameterGrid
 from ... import ParamGrid
 from .._base._dataloader import BaseDataLoader
 from .._base._schema import IDENTITY_COLS
+from .._sources._base import BaseStatsSource, RawItem, RawPayload
 from ._utils import market_outcomes
+
+_PARAM_GRID: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2025]}
+
+
+class _DummySoccerStats(BaseStatsSource):
+    """Publishes the parameters of the bundled sample data.
+
+    The data is bundled rather than downloaded, so there is nothing to fetch and nothing to transform.
+    """
+
+    name: ClassVar[str] = 'dummy_soccer'
+
+    def index_items(self: Self) -> list[RawItem]:
+        """Return no items, since nothing is downloaded."""
+        return []
+
+    def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
+        """Return the parameters of the bundled data."""
+        return list(ParameterGrid(_PARAM_GRID))
+
+    def required_items(self: Self, params: list[dict]) -> list[RawItem]:
+        """Return no items, since nothing is downloaded."""
+        return []
+
+    def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
+        """Never called: the dataloader carries the bundled snapshots itself."""
+        msg = 'The bundled sample data is not built from payloads.'
+        raise NotImplementedError(msg)
+
 
 _MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
 _PROVIDERS = ['market_average', 'market_maximum']
@@ -165,10 +195,13 @@ class DummySoccerDataLoader(BaseDataLoader):
         >>> pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
     """
 
-    _PARAM_GRID: ClassVar[ParamGrid] = {'league': ['England', 'Spain'], 'division': [1], 'year': [2025]}
+    @property
+    def sources(self: Self) -> tuple[_DummySoccerStats]:
+        """The source publishing the parameters of the bundled data."""
+        return (_DummySoccerStats(),)
 
     def _all_params(self: Self) -> list[dict]:
-        return list(ParameterGrid(self._PARAM_GRID))
+        return list(ParameterGrid(_PARAM_GRID))
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         selected_leagues = {params['league'] for params in self._selected_params() if 'league' in params}

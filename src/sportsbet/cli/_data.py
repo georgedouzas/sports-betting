@@ -35,12 +35,16 @@ def dataloader() -> None:
 @dataloader.command()
 @get_config_path_option()
 def params(config_path: str) -> None:
-    """Show the available parameters to select data for a dataloader."""
+    """Show the available parameters to select data for a dataloader.
+
+    It asks the data source, since a parameter grid cannot be written before it is known what exists.
+    """
     mod = get_module(config_path)
     dataloader_cls = get_dataloader_cls(mod)
     if dataloader_cls is None:
         return
-    all_params = dataloader_cls().get_all_params()
+    stats_source, *_ = dataloader_cls().sources
+    all_params = stats_source.available_params()
     cols = list({param for params in all_params for param in params})
     available_params = pd.DataFrame({col: [params.get(col, '-') for params in all_params] for col in cols})
     print_console([available_params], ['Available parameters'])

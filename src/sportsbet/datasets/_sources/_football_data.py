@@ -892,7 +892,7 @@ class _FootballDataSource(BaseSource):
         )
         return items
 
-    def available_params(self: Self, payloads: list[RawPayload]) -> list[dict]:
+    def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the combinations the feed publishes.
 
         The leagues published as a single whole-history file carry their seasons in a column, so their years are read

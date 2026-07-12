@@ -7,9 +7,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from .._store import BaseStore
 
 
 @dataclass(frozen=True)
@@ -63,8 +66,11 @@ class BaseSource(ABC):
     """The abstract base class for data sources.
 
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
-    It never fetches, so preparation can always be planned and priced without spending anything, and extraction can
-    never download by accident.
+    Its planning and transform methods never fetch, so a preparation can always be planned and priced without spending
+    anything, and an extraction can never download by accident.
+
+    It also answers what it publishes, through `available_params`. That question has to be answerable before a
+    `param_grid` is written, so it belongs here and not on a dataloader that is configured with one.
     """
 
     name: ClassVar[str]
@@ -80,8 +86,8 @@ class BaseSource(ABC):
         """
 
     @abstractmethod
-    def available_params(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the parameter combinations the source publishes.
+    def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
+        """Return the parameter combinations the index payloads describe.
 
         Args:
             payloads:
@@ -91,6 +97,30 @@ class BaseSource(ABC):
             params:
                 The available `league`, `division` and `year` combinations.
         """
+
+    def available_params(self: Self, store: BaseStore | None = None) -> list[dict]:
+        """Return the parameter combinations the source publishes.
+
+        This is where you start: a `param_grid` cannot be written before it is known what exists, so it needs no
+        dataloader. The catalogue is free and it is kept in the store, so it is downloaded once.
+
+        It depends on how the source is configured, since a credential may only cover part of what the source offers.
+
+        Args:
+            store:
+                Where the catalogue is kept. The default `None` keeps it in `~/.sportsbet`.
+
+        Returns:
+            params:
+                The available `league`, `division` and `year` combinations.
+        """
+        from .._store import LocalStore  # noqa: PLC0415
+
+        store = store if store is not None else LocalStore()
+        items = self.index_items()
+        held = store.held(items)
+        store.fetch([item for item in items if item not in held])
+        return self.catalogue(store.read(items))
 
     @abstractmethod
     def required_items(self: Self, params: list[dict]) -> list[RawItem]:

@@ -10,33 +10,49 @@ A source knows *what* raw items a selection of parameters needs, and *how* to tu
 class BaseSource(ABC):
 
     name: ClassVar[str]
+    kind: ClassVar[str]          # 'stats' or 'odds'
 
-    @abstractmethod
-    def available_params(self, payloads: list[RawPayload]) -> list[Param]:
-        """Return the league/division/year combinations this source publishes."""
+    def available_params(self, store: BaseStore | None = None) -> list[Param]:
+        """Return the league/division/year combinations this source publishes.
+
+        The public discovery API. It needs no dataloader and no param_grid, because you cannot write a
+        param_grid until you know what exists.
+        """
+        store = store if store is not None else LocalStore()
+        items = self.index_items()
+        store.fetch([item for item in items if item not in store.held(items)])
+        return self.catalogue(store.read(items))
 
     @abstractmethod
     def index_items(self) -> list[RawItem]:
-        """Return the items needed to discover what is available."""
+        """Return the items needed to discover what is available. Always free."""
+
+    @abstractmethod
+    def catalogue(self, payloads: list[RawPayload]) -> list[Param]:
+        """Parse the index payloads into the combinations this source publishes. Pure."""
 
     @abstractmethod
     def required_items(self, params: list[Param]) -> list[RawItem]:
-        """Return the raw items needed to cover the selected parameters."""
+        """Return the raw items needed to cover the selected parameters. Pure."""
 
     @abstractmethod
     def to_snapshots(self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Transform the raw payloads into a long snapshot table."""
+        """Transform the raw payloads into a long snapshot table. Pure."""
 
     def estimate(self, items: list[RawItem]) -> int:
         """Return the units this source would charge to fetch the items. Free sources return 0."""
         return sum(item.cost for item in items)
 ```
 
+`available_params` is an **instance** method, never a classmethod: what a source publishes depends on its own
+configuration. `OddsApi(key=...)` can only offer the seasons that key's subscription tier covers, so a class-level answer
+would be wrong for every configured instance.
+
 `BaseStatsSource` and `BaseOddsSource` are marker subclasses. They exist so the dataloader can type-check that `stats=` receives a stats source and `odds=` an odds source — a mistake that would otherwise surface as a confusing schema error deep inside extraction.
 
 ## Rules
 
-1. **No I/O.** A source that opens a socket or a file violates the contract. This is what makes `prepare(dry_run=True)` free (FR-012) and extraction fetch-free (FR-013) by construction, rather than by discipline.
+1. **The planning and transform methods are pure.** `index_items`, `catalogue`, `required_items` and `to_snapshots` must not open a socket or a file. That is what makes `prepare(dry_run=True)` free (FR-012) and extraction fetch-free (FR-013) by construction rather than by discipline. `available_params` is the one exception: it resolves the source's own catalogue through the store it is given. The catalogue is free by construction, and `prepare(dry_run=True)` resolves it anyway, so this costs nothing and breaks no invariant.
 2. **`required_items` is pure and cheap.** It is called on every `prepare()`, including dry runs. It must be deterministic: the same `params` produce the same items in the same order.
 3. **Item keys are shared deliberately.** `FootballDataStats` and `FootballDataOdds` return items with identical `(source, key)` pairs, because they read the same upstream CSV. The store fetches each item once and hands the same payload to both.
 4. **`to_snapshots` returns the long format.** `stats` sources return the `stats` table; `odds` sources return the `odds` table. Both conform to the existing schemas from `001-in-play-betting` — this feature does not change them.

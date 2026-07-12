@@ -149,6 +149,29 @@ description: "Task list for Pluggable Data-Source Providers"
 
 ---
 
+## Phase 4b: Move discovery to the source (US1 — P1)
+
+**Purpose**: Writing a `param_grid` requires knowing what exists, so discovery cannot live on an object constructed
+*with* a `param_grid`. See research D11.
+
+**Goal**: `FootballDataStats().available_params()` answers the question, no dataloader involved. The dataloader has no
+public discovery method.
+
+**Independent Test**: `pdm tests -k "sources or soccer"`, plus a check that `get_all_params` is gone from the public API.
+
+- [X] T069 [US1] Split the source contract in `src/sportsbet/datasets/_sources/_base.py`: `catalogue(payloads)` stays pure, and a new public `available_params(store=None)` resolves the catalogue through the store and returns the combinations (FR-031, FR-032)
+- [X] T070 [US1] Rename the football-data source's catalogue parser to `catalogue` in `src/sportsbet/datasets/_sources/_football_data.py`, keeping it pure
+- [X] T071 [US1] Delete the public `get_all_params` from `src/sportsbet/datasets/_base/_dataloader.py` (FR-033)
+- [X] T072 [US1] Make the dataloader's private `_all_params()` the **intersection** of the statistics and odds sources in `src/sportsbet/datasets/_soccer/_dataloader.py`, so a season only one source publishes is never selected (FR-034)
+- [X] T073 [US1] Point the CLI at the source: the config gains `STATS`/`ODDS`/`STORE` mirroring the constructor, and `dataloader params` in `src/sportsbet/cli/_data.py` asks the statistics source
+- [X] T074 [US1] Point the GUI's parameter pickers at the source in `src/sportsbet/gui/app/states.py`
+- [X] T075 [P] [US1] Test discovery in `tests/datasets/test_sources.py`: a source answers without a dataloader, and two sources with different coverage intersect rather than union
+- [X] T076 [P] [US1] Update `docs/overview/user_guide/dataloader.md`, `docs/examples/plot_soccer_data.py` and `README.md` for the new discovery entry point
+
+**Checkpoint**: no public `get_all_params` anywhere, and a user can discover parameters before constructing anything.
+
+---
+
 ## Phase 5: The commercial odds source (US2 — P1)
 
 **Purpose**: Make in-play betting real rather than notional. This is the first time we can know the price that was actually available at minute 45.

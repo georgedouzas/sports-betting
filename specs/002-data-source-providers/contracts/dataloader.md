@@ -54,6 +54,23 @@ SoccerDataLoader(
 )
 ```
 
+## Discovery is not on the dataloader
+
+`get_all_params()` does **not** exist. Writing a `param_grid` requires knowing what is available, so discovery cannot
+live on an object you construct *with* a `param_grid` — that is a chicken-and-egg, and it is why the method was awkward
+to place. Ask the source instead:
+
+```python
+FootballDataStats().available_params()
+```
+
+The dataloader keeps a **private** `_all_params()`, used for one thing only: refusing to request a combination the
+sources do not publish. It returns the **intersection** of what the statistics source and the odds source publish,
+because a season whose statistics exist but whose odds do not cannot be modelled (FR-034). Asking only the statistics
+source — as an earlier version did — would offer seasons back to 1994 alongside an odds vendor whose history starts in
+2020, and the missing odds would surface as a silently smaller dataset. That is precisely the failure this feature
+exists to prevent.
+
 ## Rules
 
 1. **Extraction never fetches (FR-013).** `extract_train_data` and `extract_fixtures_data` raise `NotPreparedError` on an unprepared store. The error carries the `PreparationReport`, so it names what is missing and what obtaining it would cost. There is no flag that turns this into a fetch.
@@ -67,7 +84,7 @@ SoccerDataLoader(
 `prepare()` is a capability, so it must exist on all three delivery surfaces:
 
 - **Python**: `loader.prepare()`.
-- **CLI**: a `prepare` subcommand, with `--dry-run` reporting the plan and the cost estimate.
-- **GUI**: a preparation step in the dataloader-creation flow, showing progress and the estimate before it spends anything.
+- **CLI**: a `prepare` subcommand, with `--dry-run` reporting the plan and the cost estimate. The config file mirrors the constructor (`STATS`, `ODDS`, `STORE`), and `dataloader params` asks the statistics source rather than the dataloader.
+- **GUI**: a preparation step in the dataloader-creation flow, showing progress and the estimate before it spends anything. Its parameter pickers are populated from the source.
 
 A surface that cannot prepare cannot extract, which would make it useless — so this is not optional polish.
