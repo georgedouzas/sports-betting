@@ -63,6 +63,40 @@ def latest_odds_column(columns: list[str], base: str, provider: str | None = Non
     return best
 
 
+OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
+
+
+def complementary_events(markets: list[str]) -> list[list[str]]:
+    """Return the groups of markets that are mutually exclusive and exhaustive.
+
+    They are derived from the markets the data actually carries, rather than named in advance. `over` and `under` are
+    complementary at whatever the line is, whether it is 2.5 goals or 220.5 points. The outcome of a match is whichever
+    of a home win, a draw and an away win the data has, so a sport that cannot be drawn simply has two of them.
+
+    It has to come from the data rather than from a list. A home win and an away win are complementary in a sport that
+    cannot be drawn, and are not in a sport that can, and only the data knows which sport this is.
+
+    Args:
+        markets:
+            The betting markets the data carries.
+
+    Returns:
+        events:
+            The groups of markets whose probabilities sum to one.
+    """
+    groups = []
+    outcomes = [market for market in OUTCOME_MARKETS if market in markets]
+    if len(outcomes) > 1:
+        groups.append(outcomes)
+    lines: dict[str, list[str]] = {}
+    for market in markets:
+        for side in ('over', 'under'):
+            if market.startswith(f'{side}_'):
+                lines.setdefault(market.removeprefix(f'{side}_'), []).append(market)
+    groups.extend(sorted(group) for group in lines.values() if len(group) > 1)
+    return groups
+
+
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
     """The base class for bettors.
 
@@ -72,11 +106,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
 
     TOL = 1e-6
     # Mutually-exclusive markets, identified by their base name (e.g. ``home_win``).
-    COMPLEMENTARY_EVENTS: ClassVar = [
-        ['home_win', 'draw', 'away_win'],
-        ['over_2.5', 'under_2.5'],
-        ['over_3.5', 'under_3.5'],
-    ]
+    COMPLEMENTARY_EVENTS: ClassVar[list[list[str]] | None] = None
 
     _append_odds = False
 
@@ -113,6 +143,9 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
 
         # Betting markets are identified by their base name (e.g. `home_win`)
         Y_bases = list(dict.fromkeys(Y_betting_markets))
+        self.complementary_events_ = (
+            complementary_events(Y_bases) if self.COMPLEMENTARY_EVENTS is None else self.COMPLEMENTARY_EVENTS
+        )
         if self.betting_markets is None:
             self.betting_markets_ = np.array(Y_bases)
         elif not isinstance(self.betting_markets, list) or (
@@ -239,7 +272,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         return np.array([], dtype=float)
 
     def _normalize_proba(self: Self, Y_proba_pred: Data) -> Data:
-        for events in self.COMPLEMENTARY_EVENTS:
+        for events in self.complementary_events_:
             if set(self.betting_markets_).issuperset(events):
                 mask = np.isin(self.betting_markets_, events)
                 Y_proba_pred_sum = Y_proba_pred[:, mask].sum(axis=1)
@@ -334,7 +367,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         O = O[self._get_feature_names_odds(O)]
         B_pred = Y_proba_pred * O > 1
         B_pred_selected = []
-        for events in self.COMPLEMENTARY_EVENTS:
+        for events in self.complementary_events_:
             events_indices = np.where(np.isin(self.betting_markets_, events))[0]
             if events_indices.size > 0:
                 estimated_returns = np.nan_to_num(

@@ -5,8 +5,10 @@ import re
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.dummy import DummyClassifier
 from sklearn.exceptions import NotFittedError
 
+from sportsbet.evaluation import ClassifierBettor, complementary_events
 from sportsbet.evaluation._base import BaseBettor, latest_odds_column, market_base
 from tests.evaluation import O_train, TestBettor, X_train, Y_train
 
@@ -192,3 +194,68 @@ def test_bet_shape_and_dtype():
     B = bettor.bet(X_train, O_train)
     assert B.shape == (len(X_train), bettor.betting_markets_.size)
     assert B.dtype == bool
+
+
+SOCCER = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
+BASKETBALL = ['home_win', 'away_win', 'over_220.5', 'under_220.5']
+BOTH_GROUPS = 2
+
+
+def test_complementary_events_group_the_outcome_of_a_match():
+    """Test the outcome group is whichever of a home win, a draw and an away win the data carries."""
+    assert ['home_win', 'draw', 'away_win'] in complementary_events(SOCCER)
+
+
+def test_complementary_events_group_a_line_at_whatever_it_is():
+    """Test over and under are complementary at any line, not only at the ones named in advance."""
+    assert ['over_1.5', 'under_1.5'] in complementary_events(['over_1.5', 'under_1.5'])
+    assert ['over_220.5', 'under_220.5'] in complementary_events(BASKETBALL)
+
+
+def test_complementary_events_have_no_draw_when_the_data_has_none():
+    """Test a sport that cannot be drawn has a two-way outcome, which is derived rather than declared."""
+    assert ['home_win', 'away_win'] in complementary_events(BASKETBALL)
+    assert len(complementary_events(BASKETBALL)) == BOTH_GROUPS
+
+
+def test_a_home_win_and_an_away_win_are_not_complementary_when_a_draw_exists():
+    """Test they are complementary in a sport that cannot be drawn and are not in one that can.
+
+    Only the data knows which sport it is, which is why the groups cannot be named in advance.
+    """
+    assert ['home_win', 'away_win'] not in complementary_events(SOCCER)
+
+
+def test_an_unknown_line_no_longer_breaks_a_bet(bettor_data):
+    """Test a market outside the ones named in advance can be bet on.
+
+    It used to be dropped from every group, so nothing was left to bet and the bet failed to be built at all.
+    """
+    X, Y, O = bettor_data(['over_1.5', 'under_1.5'])
+    bettor = ClassifierBettor(DummyClassifier(strategy='prior')).fit(X, Y, O)
+    value_bets = bettor.bet(X, O)
+    assert value_bets.shape == (len(X), 2)
+
+
+def test_the_probabilities_of_a_line_are_normalized(bettor_data):
+    """Test the probabilities of a market outside the ones named in advance sum to one."""
+    X, Y, O = bettor_data(['over_1.5', 'under_1.5'])
+    bettor = ClassifierBettor(DummyClassifier(strategy='prior')).fit(X, Y, O)
+    assert bettor.predict_proba(X).sum(axis=1) == pytest.approx(1.0)
+
+
+@pytest.fixture
+def bettor_data():
+    """Build training data for a set of betting markets."""
+
+    def build(markets, rows=4):
+        index = pd.DatetimeIndex(pd.to_datetime([f'2024-01-0{row + 1}' for row in range(rows)]), name='date')
+        X = pd.DataFrame({'feature': range(rows)}, index=index).astype(float)
+        Y = pd.DataFrame(
+            {f'{market}__postplay__0min': [row % 2 for row in range(rows)] for market in markets},
+            index=index,
+        )
+        O = pd.DataFrame({f'market_average__{market}__postplay__0min': [1.9] * rows for market in markets}, index=index)
+        return X, Y, O
+
+    return build

@@ -251,3 +251,34 @@ vendor writes them, pair **20 out of 20 with no aliases at all** — including `
 **A wrong alias is still worse than an unmatched team**, and that is why nothing ambiguous is ever guessed: an unmatched team is
 loud (the rate rises, the gate fires) while a wrong pairing is silent (the dataset looks complete, the backtest looks clean, and it
 is wrong). The pairing does not weaken that rule; it just makes the rule rarely bite.
+
+## D16. The complementary markets are derived from the data, like everything else
+
+**Decision**: `complementary_events(markets)` derives the mutually exclusive and exhaustive groups from the markets the data
+carries. `BaseBettor.COMPLEMENTARY_EVENTS` becomes an override that defaults to `None`.
+
+**Rationale**: it was a hardcoded soccer list — `[['home_win','draw','away_win'], ['over_2.5','under_2.5'],
+['over_3.5','under_3.5']]` — and that is a **live bug, not a basketball one**. Both places that use it only recognize a group they
+hold in full, so any market outside the list is skipped:
+
+- `_normalize_proba` leaves it un-normalized. Verified: `over_1.5`/`under_1.5` probabilities sum to **0.60**, and value bets are
+  computed from them.
+- `bet` drops it from every group, so nothing is left to concatenate. Verified: `bet()` raises `ValueError: No objects to
+  concatenate` for `over_1.5`/`under_1.5` — a market The Odds API returns today.
+
+The rules are derivable. `over_X` and `under_X` are complementary at whatever `X` is. The outcome group is whichever of a home
+win, a draw and an away win the data holds.
+
+**The draw is why it must be derived rather than listed.** `home_win` and `away_win` are complementary in a sport that cannot be
+drawn, and are not in a sport that can. A list cannot express that; the data can. So a sport without a draw gets a two-way outcome
+for nothing, and soccer keeps its three-way one.
+
+**The other alleged soccer-specific spot was not one.** `IDENTITY_COLS` (`league`, `division`, `year`, `home_team`, `away_team`)
+was expected to need generalizing per sport. It does not: a basketball dataloader passing `league='NBA', division=1, year=2025`
+extracts cleanly, with a two-way `Y`. Verified rather than assumed, and left alone.
+
+**What basketball actually needs is a data source, not a code change.** Odds are solved — The Odds API already covers
+`basketball_nba`, `basketball_euroleague`, `basketball_wnba` and more, on the same endpoints and the same cost model. Statistics
+are not: there is no basketball equivalent of football-data.co.uk, so there is no free feed carrying statistics **and** odds. The
+realistic options are `nba_api` (free, NBA only, unofficial) or a paid vendor, and there is no free basketball odds source at all.
+So basketball would have no free path, which is a product decision rather than an engineering one, and is left to the maintainer.
