@@ -20,8 +20,7 @@ CONFIG = """
 from sklearn.model_selection import TimeSeriesSplit
 from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor
-DATALOADER_CLASS = DummySoccerDataLoader
-PARAM_GRID = {'league': ['England', 'Spain']}
+DATALOADER = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain']})
 DROP_NA_THRES = 0.0
 ODDS_TYPE = 'market_average'
 TARGET_EVENT_STATUS = 'postplay'

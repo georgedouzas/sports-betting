@@ -14,7 +14,6 @@ from rich.console import Console
 from rich.panel import Panel
 from sklearn.model_selection import TimeSeriesSplit
 
-from .. import ParamGrid
 from ..datasets import BaseDataLoader
 from ..evaluation._base import BaseBettor
 
@@ -42,31 +41,39 @@ def get_module(config_path: str) -> ModuleType | None:
     return None
 
 
-def get_dataloader_cls(mod: ModuleType | None) -> type[BaseDataLoader] | None:
-    """Get the dataloader class."""
+OUTDATED = (
+    '[bold red]`DATALOADER_CLASS` and `PARAM_GRID` are no longer used.\n\n'
+    '[/bold red]A configuration file now hands over a dataloader you have already built, so that it can carry its '
+    'sources, and a source can carry its key:\n\n'
+    '[bold green]DATALOADER = SoccerDataLoader(param_grid={\'league\': [\'England\'], \'year\': [2025]})'
+)
+
+
+def get_dataloader(mod: ModuleType | None) -> BaseDataLoader | None:
+    """Get the dataloader.
+
+    It is a dataloader, not a class, because only a built one carries its sources, and only a source carries a key. That
+    is what lets every sport and every source reach the command line.
+    """
     console = Console()
     if mod is None:
         return None
-    if not hasattr(mod, 'DATALOADER_CLASS'):
+    if hasattr(mod, 'DATALOADER_CLASS') or hasattr(mod, 'PARAM_GRID'):
+        console.print(Panel.fit(OUTDATED))
+        return None
+    if not hasattr(mod, 'DATALOADER'):
         warning = Panel.fit(
-            '[bold red]Configuration file does not have a `DATALOADER_CLASS` variable.',
+            '[bold red]Configuration file does not have a `DATALOADER` variable.',
         )
         console.print(warning)
         return None
-    elif not issubclass(mod.DATALOADER_CLASS, BaseDataLoader):
+    elif not isinstance(mod.DATALOADER, BaseDataLoader):
         warning = Panel.fit(
-            '[bold red]`DATALOADER_CLASS` variable should be a `\'dataloader\'` class.',
+            '[bold red]`DATALOADER` variable should be a `\'dataloader\'` object.',
         )
         console.print(warning)
         return None
-    return mod.DATALOADER_CLASS
-
-
-def get_param_grid(mod: ModuleType | None) -> ParamGrid | None:
-    """Get the parameters grid class."""
-    if mod is not None and hasattr(mod, 'PARAM_GRID'):
-        return mod.PARAM_GRID
-    return None
+    return mod.DATALOADER
 
 
 def get_drop_na_thres(mod: ModuleType | None) -> float:
@@ -106,9 +113,9 @@ def get_bettor(mod: ModuleType | None) -> BaseBettor | None:
         )
         console.print(warning)
         return None
-    elif not hasattr(mod, 'DATALOADER_CLASS'):
+    elif not hasattr(mod, 'DATALOADER'):
         warning = Panel.fit(
-            '[bold red]Configuration file does not have a `DATALOADER_CLASS` variable.',
+            '[bold red]Configuration file does not have a `DATALOADER` variable.',
         )
         console.print(warning)
         return None
