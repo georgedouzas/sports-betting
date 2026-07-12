@@ -50,7 +50,12 @@ Funding = "https://github.com/sponsors/georgedouzas"
 
 [project.scripts]
 sportsbet = "sportsbet.cli:main"
+sportsbet-mcp = "sportsbet.mcp:run"
 
+[project.optional-dependencies]
+mcp = [
+    "mcp>=1.2",
+]
 [tool.pdm.version]
 source = "scm"
 

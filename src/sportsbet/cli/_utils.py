@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
 from types import ModuleType
 
 import pandas as pd
@@ -14,66 +12,33 @@ from rich.console import Console
 from rich.panel import Panel
 from sklearn.model_selection import TimeSeriesSplit
 
+from .._config import ConfigError, read_bettor, read_dataloader, read_module
 from ..datasets import BaseDataLoader
 from ..evaluation._base import BaseBettor
 
 
 def get_module(config_path: str) -> ModuleType | None:
     """Get the configuration file as module."""
-    console = Console()
-    if not Path(config_path).exists():
-        warning = Panel.fit(
-            '[bold red]Path of configuration file does not exist.',
-        )
-        console.print(warning)
+    try:
+        return read_module(config_path)
+    except ConfigError as error:
+        Console().print(Panel.fit(f'[bold red]{error}'))
         return None
-    spec = spec_from_file_location('mod', config_path)
-    if spec is not None:
-        mod = module_from_spec(spec)
-        if spec.loader is not None:
-            spec.loader.exec_module(mod)
-            return mod
-    else:
-        warning = Panel.fit(
-            '[bold red]Configuration file does not have the expected content.',
-        )
-        console.print(warning)
-    return None
-
-
-OUTDATED = (
-    '[bold red]`DATALOADER_CLASS` and `PARAM_GRID` are no longer used.\n\n'
-    '[/bold red]A configuration file now hands over a dataloader you have already built, so that it can carry its '
-    'sources, and a source can carry its key:\n\n'
-    '[bold green]DATALOADER = SoccerDataLoader(param_grid={\'league\': [\'England\'], \'year\': [2025]})'
-)
 
 
 def get_dataloader(mod: ModuleType | None) -> BaseDataLoader | None:
-    """Get the dataloader.
+    """Get the dataloader a configuration hands over.
 
     It is a dataloader, not a class, because only a built one carries its sources, and only a source carries a key. That
     is what lets every sport and every source reach the command line.
     """
-    console = Console()
     if mod is None:
         return None
-    if hasattr(mod, 'DATALOADER_CLASS') or hasattr(mod, 'PARAM_GRID'):
-        console.print(Panel.fit(OUTDATED))
+    try:
+        return read_dataloader(mod)
+    except ConfigError as error:
+        Console().print(Panel.fit(f'[bold red]{error}'))
         return None
-    if not hasattr(mod, 'DATALOADER'):
-        warning = Panel.fit(
-            '[bold red]Configuration file does not have a `DATALOADER` variable.',
-        )
-        console.print(warning)
-        return None
-    elif not isinstance(mod.DATALOADER, BaseDataLoader):
-        warning = Panel.fit(
-            '[bold red]`DATALOADER` variable should be a `\'dataloader\'` object.',
-        )
-        console.print(warning)
-        return None
-    return mod.DATALOADER
 
 
 def get_drop_na_thres(mod: ModuleType | None) -> float:
@@ -104,28 +69,13 @@ def get_target_event_time(mod: ModuleType | None) -> pd.Timedelta | None:
 
 def get_bettor(mod: ModuleType | None) -> BaseBettor | None:
     """Get the bettor."""
-    console = Console()
     if mod is None:
         return None
-    if not hasattr(mod, 'BETTOR'):
-        warning = Panel.fit(
-            '[bold red]Configuration file does not have a `BETTOR` variable.',
-        )
-        console.print(warning)
+    try:
+        return read_bettor(mod)
+    except ConfigError as error:
+        Console().print(Panel.fit(f'[bold red]{error}'))
         return None
-    elif not hasattr(mod, 'DATALOADER'):
-        warning = Panel.fit(
-            '[bold red]Configuration file does not have a `DATALOADER` variable.',
-        )
-        console.print(warning)
-        return None
-    elif not isinstance(mod.BETTOR, BaseBettor):
-        warning = Panel.fit(
-            '[bold red]`BETTOR` variable should be a `\'bettor\'` object.',
-        )
-        console.print(warning)
-        return None
-    return mod.BETTOR
 
 
 def get_cv(mod: ModuleType | None) -> TimeSeriesSplit | None:
