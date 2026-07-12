@@ -139,6 +139,34 @@ assert probabilities.shape == (1, 3)
 assert abs(probabilities.sum(axis=1)[0] - 1.0) < 1e-6
 ```
 
+### Which markets are mutually exclusive is derived from the data
+
+Nothing is named in advance. [`complementary_events`][sportsbet.evaluation.complementary_events] reads the markets your data
+actually carries and works out which of them are exhaustive:
+
+- `over` and `under` are complementary at **whatever the line is** — 2.5 goals, 1.5 goals, 220.5 points. A line the library has
+  never seen is grouped like any other.
+- The outcome of a match is **whichever of `home_win`, `draw` and `away_win` the data has**.
+
+That second rule has to come from the data, and cannot be a list. `home_win` and `away_win` *are* complementary in a sport that
+cannot be drawn, and are *not* in a sport that can — and only the data knows which sport this is:
+
+```python
+from sportsbet.evaluation import complementary_events
+
+# soccer: a draw is possible, so a home win and an away win are not exhaustive on their own
+assert complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']) == [
+    ['home_win', 'draw', 'away_win'], ['over_2.5', 'under_2.5'],
+]
+
+# a sport without a draw: the outcome is two-way, and the line is wherever it is
+assert complementary_events(['home_win', 'away_win', 'over_220.5', 'under_220.5']) == [
+    ['home_win', 'away_win'], ['over_220.5', 'under_220.5'],
+]
+```
+
+A bettor can still override it by setting `COMPLEMENTARY_EVENTS` on its class, but it should not need to.
+
 ## Value bets prediction
 
 The fitted bettor predicts the value bets with the `bet` method, which returns one boolean column per selected market. We can join
