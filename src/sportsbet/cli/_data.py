@@ -40,10 +40,33 @@ def params(config_path: str) -> None:
     dataloader_cls = get_dataloader_cls(mod)
     if dataloader_cls is None:
         return
-    all_params = dataloader_cls.get_all_params()
+    all_params = dataloader_cls().get_all_params()
     cols = list({param for params in all_params for param in params})
     available_params = pd.DataFrame({col: [params.get(col, '-') for params in all_params] for col in cols})
     print_console([available_params], ['Available parameters'])
+
+
+@dataloader.command()
+@get_config_path_option()
+@click.option('--dry-run', is_flag=True, help='Report what a preparation would fetch and cost, without doing it.')
+def prepare(config_path: str, dry_run: bool) -> None:
+    """Download the data a dataloader needs, so an extraction never has to."""
+    mod = get_module(config_path)
+    dataloader_cls = get_dataloader_cls(mod)
+    if dataloader_cls is None:
+        return
+    param_grid = get_param_grid(mod)
+    report = dataloader_cls(param_grid).prepare(dry_run=dry_run)
+    summary = pd.DataFrame(
+        {
+            'To fetch': [len(report.to_fetch)],
+            'Held': [len(report.held)],
+            'Estimated cost': [', '.join(f'{name}: {cost}' for name, cost in report.estimated_cost.items()) or '-'],
+        },
+    )
+    print_console([summary], ['Preparation' if not dry_run else 'Preparation (dry run)'])
+    if report.unavailable:
+        print_console([pd.DataFrame(report.unavailable)], ['Unavailable parameters'])
 
 
 @dataloader.command()
@@ -55,7 +78,9 @@ def odds_types(config_path: str) -> None:
     if dataloader_cls is None:
         return
     param_grid = get_param_grid(mod)
-    odds_types = pd.DataFrame(dataloader_cls(param_grid).get_odds_types(), columns=['Type'])
+    dataloader = dataloader_cls(param_grid)
+    dataloader.prepare()
+    odds_types = pd.DataFrame(dataloader.get_odds_types(), columns=['Type'])
     print_console([odds_types], ['Available odds types'])
 
 
@@ -72,6 +97,7 @@ def training(config_path: str, data_path: str) -> None:
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
     dataloader = dataloader_cls(param_grid)
+    dataloader.prepare()
     X_train, Y_train, O_train = dataloader.extract_train_data(
         drop_na_thres=drop_na_thres,
         odds_type=odds_type,
@@ -106,6 +132,7 @@ def fixtures(config_path: str, data_path: str) -> None:
     drop_na_thres = get_drop_na_thres(mod)
     odds_type = get_odds_type(mod)
     dataloader = dataloader_cls(param_grid)
+    dataloader.prepare()
     dataloader.extract_train_data(
         drop_na_thres=drop_na_thres,
         odds_type=odds_type,

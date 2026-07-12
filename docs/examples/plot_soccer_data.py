@@ -15,9 +15,10 @@ from sportsbet.datasets import SoccerDataLoader
 # --------------------------------
 #
 # We can get the available parameters in order to select the training data
-# to be extracted, using the `get_all_params` class method.
+# to be extracted, using the `get_all_params` method. What is available depends on the
+# data source, so it is a property of the configured dataloader rather than of its class.
 
-SoccerDataLoader.get_all_params()
+SoccerDataLoader().get_all_params()
 
 # %%
 # We select to extract training data only for the year 2021 of the first
@@ -25,6 +26,17 @@ SoccerDataLoader.get_all_params()
 
 param_grid = {'league': ['Spain', 'Italy'], 'division': [1], 'year': [2021]}
 dataloader = SoccerDataLoader(param_grid=param_grid)
+
+# %%
+# Preparing the data
+# ------------------
+#
+# The data is downloaded onto your own machine by the `prepare` method, and never as a
+# side effect of asking for it. Extracting from a dataloader that was not prepared raises
+# rather than quietly downloading, so no data request can cost time or money by surprise.
+# It is incremental, so re-running it only fetches what changed upstream.
+
+dataloader.prepare()
 
 # %%
 # Extracting the training data

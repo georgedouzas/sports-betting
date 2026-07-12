@@ -324,6 +324,12 @@ class DataloaderCreationState(DataloaderState):
             name = f'"{name}"'
         self.param_checked[name] = checked
 
+    def prepared_dataloader(self: Self) -> BaseDataLoader:
+        """Return a dataloader whose data is downloaded, since an extraction never downloads."""
+        dataloader = DATALOADERS[self.sport_selection](self.param_grid)
+        dataloader.prepare()
+        return dataloader
+
     def update_params(self: Self) -> None:
         """Update the parameters grid."""
         self.params = [
@@ -359,7 +365,7 @@ class DataloaderCreationState(DataloaderState):
         yield
         if self.visibility_level == VISIBILITY_LEVELS_DATALOADER_CREATION['sport']:
             self.dataloader_filename = 'dataloader.pkl'
-            self.all_params = DATALOADERS[self.sport_selection].get_all_params()
+            self.all_params = DATALOADERS[self.sport_selection]().get_all_params()
             self.all_leagues = list(chunked(sorted({params['league'] for params in self.all_params}), 6))
             self.all_years = list(chunked(sorted({params['year'] for params in self.all_params}), 5))
             self.all_divisions = list(chunked(sorted({params['division'] for params in self.all_params}), 1))
@@ -386,7 +392,7 @@ class DataloaderCreationState(DataloaderState):
         elif self.visibility_level == VISIBILITY_LEVELS_DATALOADER_CREATION['parameters']:
             self.update_params()
             self.param_grid = [{k: [v] for k, v in param.items()} for param in self.params]
-            self.odds_types = DATALOADERS[self.sport_selection](self.param_grid).get_odds_types()
+            self.odds_types = self.prepared_dataloader().get_odds_types()
             self.loading = False
             yield
             message = """The training data consists of input, output, and odds, while the fixtures include only
@@ -406,7 +412,7 @@ class DataloaderCreationState(DataloaderState):
                 self.streamed_message += char
                 yield
         elif self.visibility_level == VISIBILITY_LEVELS_DATALOADER_CREATION['training_parameters']:
-            dataloader = DATALOADERS[self.sport_selection](self.param_grid)
+            dataloader = self.prepared_dataloader()
             X_train, Y_train, O_train = dataloader.extract_train_data(
                 odds_type=self.odds_type,
                 drop_na_thres=float(self.drop_na_thres[0]),

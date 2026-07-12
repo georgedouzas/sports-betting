@@ -8,7 +8,7 @@ from sportsbet.datasets import DummySoccerDataLoader, load_dataloader
 
 def test_get_all_params():
     """Test the discovery of all selectable parameters offline."""
-    params = DummySoccerDataLoader.get_all_params()
+    params = DummySoccerDataLoader().get_all_params()
     assert {'league': 'England', 'division': 1, 'year': 2025} in params
     assert {'league': 'Spain', 'division': 1, 'year': 2025} in params
 

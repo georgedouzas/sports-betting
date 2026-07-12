@@ -5,68 +5,30 @@
 
 from __future__ import annotations
 
-import asyncio
-import io
+from itertools import product
 from typing import Self
 
-import aiohttp
 import pandas as pd
+from rich.progress import Progress
 
-from .._base._dataloader import BaseDataLoader
-
-BASE_URL = 'https://raw.githubusercontent.com/georgedouzas/sports-betting/data/data/soccer/modelling'
-STATS_URL = BASE_URL + '/stats/{league}_{division}_{year}.csv'
-ODDS_URL = BASE_URL + '/odds/{league}_{division}_{year}.csv'
-STATS_FIXTURES_URL = BASE_URL + '/stats/fixtures.csv'
-ODDS_FIXTURES_URL = BASE_URL + '/odds/fixtures.csv'
-PARAMS_URL = BASE_URL + '/params.csv'
-CONNECTIONS_LIMIT = 20
-
-
-async def _read_url_content_async(client: aiohttp.ClientSession, url: str) -> str:
-    """Read asynchronously the URL content."""
-
-    async with client.get(url) as response:
-        with io.StringIO(await response.text(encoding='ISO-8859-1')) as text_io:
-            return text_io.getvalue()
-
-
-async def _read_urls_content_async(urls: list[str]) -> list[str]:
-    """Read asynchronously the URLs content."""
-
-    async with aiohttp.ClientSession(
-        raise_for_status=True,
-        connector=aiohttp.TCPConnector(limit=CONNECTIONS_LIMIT),
-    ) as client:
-        futures = [_read_url_content_async(client, url) for url in urls]
-        return await asyncio.gather(*futures)
-
-
-def _read_urls_content(urls: list[str]) -> list[str]:
-    """Read the URLs content."""
-    return asyncio.run(_read_urls_content_async(urls))
-
-
-def _read_csvs(urls: list[str]) -> list[pd.DataFrame]:
-    """Read the CSVs."""
-    urls_content = _read_urls_content(urls)
-    csvs = []
-    for content in urls_content:
-        names = pd.read_csv(io.StringIO(content), nrows=0, encoding='ISO-8859-1').columns.to_list()
-        csv = pd.read_csv(io.StringIO(content), names=names, skiprows=1, encoding='ISO-8859-1', on_bad_lines='skip')
-        csvs.append(csv)
-    return csvs
+from ... import ParamGrid
+from .._base._dataloader import PARAM_COLS, BaseDataLoader
+from .._sources._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
+from .._sources._football_data import FootballDataOdds, FootballDataStats
+from .._store import BaseStore, LocalStore, NotPreparedError, PreparationReport, payloads_digest
 
 
 class SoccerDataLoader(BaseDataLoader):
     """Dataloader for soccer data.
 
-    It downloads long event-snapshot `stats` and `odds` data for the selected
-    leagues, years and divisions, then derives the providers, markets, per-column
-    metadata and moment-aware training and fixtures data from the data itself.
-    Nothing about the feed is hardcoded: the available parameters come from the
-    feed manifest, the moments come from the stored `event_status`/`event_time`,
-    and each column's role is derived from where it actually carries values.
+    It reads long event-snapshot `stats` and `odds` data from the injected sources for the selected leagues, years and
+    divisions, then derives the providers, markets, per-column metadata and moment-aware training and fixtures data
+    from the data itself. Nothing about the sources is hardcoded: the available parameters come from the sources, the
+    moments come from the stored `event_status`/`event_time`, and each column's role is derived from where it actually
+    carries values.
+
+    The data is downloaded by `prepare` and never by an extraction, so no data request can spend money or time by
+    surprise. An extraction against a store that is not prepared fails loudly and says what is missing.
 
     Read more in the [user guide][user-guide].
 
@@ -76,21 +38,168 @@ class SoccerDataLoader(BaseDataLoader):
             `'division'` or `'year'` and values are sequences of allowed values,
             mirroring scikit-learn's `ParameterGrid`. The default `None` selects
             all available parameters.
+
+        stats:
+            The source of the statistics. Each source carries its own settings,
+            so they never spread onto the dataloader. The default `None` uses the
+            free football-data.co.uk feed.
+
+        odds:
+            The source of the odds. It may differ from the statistics source,
+            since free statistics and paid odds are complementary rather than
+            alternatives. The default `None` uses the free football-data.co.uk feed.
+
+        store:
+            Where the downloaded data is kept. The default `None` keeps it in
+            `~/.sportsbet`.
     """
 
-    @classmethod
-    def _all_params(cls: type[Self]) -> list[dict]:
-        """Return the available `league`/`division`/`year` combinations from the feed manifest."""
-        manifest = _read_csvs([PARAMS_URL])[0]
-        manifest = manifest[['league', 'division', 'year']].astype({'division': int, 'year': int})
-        return manifest.to_dict('records')
+    def __init__(
+        self: Self,
+        param_grid: ParamGrid | None = None,
+        stats: BaseStatsSource | None = None,
+        odds: BaseOddsSource | None = None,
+        store: BaseStore | None = None,
+    ) -> None:
+        super().__init__(param_grid)
+        self.stats = stats
+        self.odds = odds
+        self.store = store
+
+    def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource, BaseStore]:
+        """Return the sources and the store, built once and kept."""
+        if self._components is None:
+            stats_source = self.stats if self.stats is not None else FootballDataStats()
+            odds_source = self.odds if self.odds is not None else FootballDataOdds()
+            store = self.store if self.store is not None else LocalStore()
+            self._components = (stats_source, odds_source, store)
+        return self._components
+
+    @staticmethod
+    def _unique(items: list[RawItem]) -> list[RawItem]:
+        """Return the items without duplicates, so an item two sources share is fetched once."""
+        return list(dict.fromkeys(items))
+
+    def _catalogue(self: Self, fetch: bool) -> list[RawPayload]:
+        """Return the payloads of the catalogue, fetching them only when allowed to."""
+        stats_source, odds_source, store = self._resolved()
+        items = self._unique(stats_source.index_items() + odds_source.index_items())
+        if fetch:
+            held = store.held(items)
+            store.fetch([item for item in items if item not in held])
+        return store.read(items)
+
+    def _params(self: Self, fetch: bool) -> list[dict]:
+        """Return the combinations the sources publish, reading the catalogue from the store."""
+        stats_source, odds_source, _ = self._resolved()
+        payloads = self._catalogue(fetch)
+        odds_source.available_params(payloads)
+        return stats_source.available_params(payloads)
+
+    def _all_params(self: Self) -> list[dict]:
+        """Return the available `league`/`division`/`year` combinations of the statistics source.
+
+        Discovery is not an extraction, so it reads the catalogue from the feed when the store does not hold it. The
+        catalogue is free.
+        """
+        return self._params(fetch=True)
+
+    def _items(self: Self, fetch: bool) -> tuple[list[RawItem], list[RawItem]]:
+        """Return the items the selected parameters need from each source."""
+        stats_source, odds_source, _ = self._resolved()
+        params = self._filter_params(self._params(fetch))
+        return stats_source.required_items(params), odds_source.required_items(params)
+
+    def _report(self: Self, fetch: bool) -> PreparationReport:
+        """Return what a preparation would fetch, what is held, and what it would cost."""
+        stats_source, odds_source, store = self._resolved()
+        stats_items, odds_items = self._items(fetch)
+        items = self._unique(stats_items + odds_items)
+        held = store.held(items)
+        to_fetch = [item for item in items if item not in held]
+        costs = {
+            source.name: source.estimate([item for item in to_fetch if item.source == source.name])
+            for source in (stats_source, odds_source)
+        }
+        return PreparationReport(
+            to_fetch=to_fetch,
+            held=held,
+            estimated_cost={name: cost for name, cost in costs.items() if cost},
+            unavailable=self._unavailable(fetch),
+        )
+
+    def _unavailable(self: Self, fetch: bool) -> list[dict]:
+        """Return the fully specified parameters the sources do not publish."""
+        if self.param_grid is None:
+            return []
+        available = {tuple(sorted(params.items())) for params in self._params(fetch)}
+        grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
+        requested = [
+            dict(zip(grid, values, strict=True))
+            for grid in grids
+            if sorted(grid) == sorted(PARAM_COLS)
+            for values in product(*[grid[key] for key in grid])
+        ]
+        return [params for params in requested if tuple(sorted(params.items())) not in available]
+
+    def prepare(self: Self, dry_run: bool = False) -> PreparationReport:
+        """Populate the store with the data the selected parameters need.
+
+        Only what the store does not already hold is fetched, so it is incremental and resumable. A dry run reports
+        what a preparation would fetch and what it would cost, without fetching any data and without spending
+        anything. Resolving the catalogue of the sources is free, so a dry run still reads it.
+
+        Args:
+            dry_run:
+                If `True`, no data is fetched and nothing is spent; the report says what a preparation would do.
+
+        Returns:
+            report:
+                What was fetched, what was already held, and what it cost.
+        """
+        _, _, store = self._resolved()
+        report = self._report(fetch=True)
+        if dry_run or not report.to_fetch:
+            return report
+        with Progress(transient=True) as progress:
+            task = progress.add_task('Preparing the data', total=len(report.to_fetch))
+            for item in report.to_fetch:
+                store.fetch([item])
+                progress.advance(task)
+        self._downloaded = None
+        return report
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return the long `stats`/`odds` snapshots, downloaded once and cached."""
+        """Return the long `stats`/`odds` snapshots of the sources, read from the store.
+
+        It never fetches. When the store is not prepared it fails loudly, so a data request can never download by
+        surprise.
+        """
         if self._downloaded is None:
-            stats_urls = [STATS_URL.format(**params) for params in self._selected_params()]
-            odds_urls = [ODDS_URL.format(**params) for params in self._selected_params()]
-            stats = self._concat(_read_csvs([*stats_urls, STATS_FIXTURES_URL]))
-            odds = self._concat(_read_csvs([*odds_urls, ODDS_FIXTURES_URL]))
+            stats_source, odds_source, store = self._resolved()
+            try:
+                stats_items, odds_items = self._items(fetch=False)
+                items = self._unique(stats_items + odds_items)
+                payloads = {(payload.item.source, payload.item.key): payload for payload in store.read(items)}
+            except KeyError as error:
+                raise NotPreparedError(self._report(fetch=True)) from error
+            stats = self._derive(stats_source, [payloads[item.source, item.key] for item in stats_items], store)
+            odds = self._derive(odds_source, [payloads[item.source, item.key] for item in odds_items], store)
             self._downloaded = (stats, odds)
         return self._downloaded
+
+    @staticmethod
+    def _derive(source: BaseSource, payloads: list[RawPayload], store: BaseStore) -> pd.DataFrame:
+        """Return the snapshots of a source, kept so they are not rebuilt on every extraction.
+
+        They are a cache, not an archive: they are rebuilt from the raw payloads at no cost, so changing the transform
+        never costs anything.
+        """
+        if not isinstance(store, LocalStore):
+            return source.to_snapshots(payloads)
+        digest = payloads_digest(payloads)
+        snapshots = store.read_snapshots(source.name, source.kind, digest)
+        if snapshots is None:
+            snapshots = source.to_snapshots(payloads)
+            store.write_snapshots(source.name, source.kind, digest, snapshots)
+        return snapshots

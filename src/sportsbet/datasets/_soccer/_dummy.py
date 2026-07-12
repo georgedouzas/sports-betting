@@ -167,9 +167,8 @@ class DummySoccerDataLoader(BaseDataLoader):
 
     _PARAM_GRID: ClassVar[ParamGrid] = {'league': ['England', 'Spain'], 'division': [1], 'year': [2025]}
 
-    @classmethod
-    def _all_params(cls: type[Self]) -> list[dict]:
-        return list(ParameterGrid(cls._PARAM_GRID))
+    def _all_params(self: Self) -> list[dict]:
+        return list(ParameterGrid(self._PARAM_GRID))
 
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         selected_leagues = {params['league'] for params in self._selected_params() if 'league' in params}

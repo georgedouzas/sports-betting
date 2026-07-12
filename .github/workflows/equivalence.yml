@@ -1,0 +1,36 @@
+name: Equivalence
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  equivalence:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Python versions
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Set up PDM
+      uses: pdm-project/setup-pdm@v4
+      with:
+        cache: true
+        cache-dependency-path: pyproject.toml
+
+    - name: Install dependencies
+      run: pdm install -dG tests
+
+    - name: Check the extracted data against the reference fingerprint
+      run: pdm run pytest tests/datasets/test_equivalence.py -m network --no-cov

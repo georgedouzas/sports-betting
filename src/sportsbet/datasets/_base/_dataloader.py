@@ -12,6 +12,7 @@ import pandas as pd
 from sklearn.utils import check_scalar
 
 from ... import FixturesData, ParamGrid, TrainData
+from .._store import PreparationReport
 from ._schema import (
     EVENT_COLS,
     IDENTITY_COLS,
@@ -81,6 +82,12 @@ class BaseDataLoader(ABC):
         param_grid_ (list[dict]):
             The league/division/year combinations of the loaded data.
 
+        stats_ (pd.DataFrame):
+            The validated long `stats` snapshots.
+
+        odds_ (pd.DataFrame):
+            The validated long `odds` snapshots of the selected provider.
+
         drop_na_thres_ (float):
             The checked value of `drop_na_thres`.
 
@@ -101,6 +108,7 @@ class BaseDataLoader(ABC):
         self.param_grid = param_grid
         self._provided_snapshots: tuple[pd.DataFrame, pd.DataFrame] | None = None
         self._downloaded: tuple[pd.DataFrame, pd.DataFrame] | None = None
+        self._components: tuple | None = None
 
     @abstractmethod
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -109,24 +117,41 @@ class BaseDataLoader(ABC):
         Every dataloader must implement this.
         """
 
-    @classmethod
-    def _all_params(cls: type[Self]) -> list[dict]:
+    def _all_params(self: Self) -> list[dict]:
         """Return the available parameter combinations, if the source supports discovery.
 
-        Optional hook: dataloaders whose data is downloadable override it to enable
+        Optional hook: dataloaders backed by a source override it to enable
         `get_all_params`; the others (e.g. in-memory data) leave it unimplemented.
         """
-        msg = f'{cls.__name__} does not implement parameter discovery.'
+        msg = f'{type(self).__name__} does not implement parameter discovery.'
         raise NotImplementedError(msg)
 
-    @classmethod
-    def get_all_params(cls: type[Self]) -> list[dict]:
-        """Return every available parameter combination the source actually provides."""
-        return cls._all_params()
+    def get_all_params(self: Self) -> list[dict]:
+        """Return every available parameter combination the source actually provides.
 
-    def _selected_params(self: Self) -> list[dict]:
+        What is available depends on the injected source, so it is a property of the configured dataloader rather than
+        of its class.
+        """
+        return self._all_params()
+
+    def prepare(self: Self, dry_run: bool = False) -> PreparationReport:
+        """Populate the store with the data the selected parameters require.
+
+        A dataloader that is not backed by a source has nothing to download, so it prepares nothing and returns an
+        empty report. Dataloaders backed by a source override it.
+
+        Args:
+            dry_run:
+                If `True`, nothing is fetched and nothing is spent; the report says what a preparation would do.
+
+        Returns:
+            report:
+                What was fetched, what was already held, and what it cost.
+        """
+        return PreparationReport()
+
+    def _filter_params(self: Self, params: list[dict]) -> list[dict]:
         """Filter the available combinations by `param_grid` (no invalid combinations are fabricated)."""
-        params = self._all_params()
         if self.param_grid is None:
             return params
         grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
@@ -136,15 +161,9 @@ class BaseDataLoader(ABC):
             if any(all(combination[key] in values for key, values in grid.items()) for grid in grids)
         ]
 
-    @staticmethod
-    def _concat(frames: list[pd.DataFrame]) -> pd.DataFrame:
-        """Concatenate feed frames, skipping empty ones so their dtypes do not leak.
-
-        An empty CSV (e.g. `fixtures.csv` when nothing is upcoming) reads back as all-object columns, which would
-        otherwise coerce the identity dtypes of the real data.
-        """
-        non_empty = [frame for frame in frames if not frame.empty]
-        return pd.concat(non_empty, ignore_index=True) if non_empty else frames[0].copy()
+    def _selected_params(self: Self) -> list[dict]:
+        """Return the available combinations the `param_grid` selects."""
+        return self._filter_params(self._all_params())
 
     @staticmethod
     def _finalize(data: pd.DataFrame) -> pd.DataFrame:
@@ -174,7 +193,7 @@ class BaseDataLoader(ABC):
         _, odds = self._snapshots()
         return sorted(odds['provider'].dropna().unique().tolist())
 
-    def _prepare(self: Self, odds_type: str | None) -> None:
+    def _load(self: Self, odds_type: str | None) -> None:
         """Read and validate the snapshots, derive their metadata and build the inputs."""
         stats, odds = self._snapshots()
         stats = self._finalize(stats)
@@ -190,11 +209,11 @@ class BaseDataLoader(ABC):
         odds_metadata = derive_metadata(odds, odds_value_cols)
 
         odds = odds[odds['provider'] == odds_type] if odds_type is not None else odds.iloc[0:0]
-        self.stats = build_stats_schema(stats_metadata).validate(stats)
-        self.odds = build_odds_schema(odds_metadata).validate(odds)
-        self.stats_schema = build_stats_schema(stats_metadata)
-        self.odds_schema = build_odds_schema(odds_metadata)
-        self.targets = odds_value_cols
+        self.stats_ = build_stats_schema(stats_metadata).validate(stats)
+        self.odds_ = build_odds_schema(odds_metadata).validate(odds)
+        self.stats_schema_ = build_stats_schema(stats_metadata)
+        self.odds_schema_ = build_odds_schema(odds_metadata)
+        self.targets_ = odds_value_cols
         self.odds_type_ = odds_type
         self.param_grid_ = stats[PARAM_COLS].drop_duplicates().to_dict('records')
 
@@ -209,7 +228,7 @@ class BaseDataLoader(ABC):
 
     def _identity_cols(self: Self) -> list[str]:
         """Snapshot columns that identify a match (all snapshot cols but the event ones)."""
-        return [col for col in self.stats_schema.snapshot_cols() if col not in EVENT_COLS]
+        return [col for col in self.stats_schema_.snapshot_cols() if col not in EVENT_COLS]
 
     def _feature_mask(
         self: Self,
@@ -237,21 +256,21 @@ class BaseDataLoader(ABC):
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
         """Pivot long snapshots into wide, moment-aware feature columns."""
         index_cols = self._identity_cols()
-        feature_cols = [col for col in stats.columns if col not in self.stats_schema.snapshot_cols()]
+        feature_cols = [col for col in stats.columns if col not in self.stats_schema_.snapshot_cols()]
         X = stats.pivot_table(values=feature_cols, index=index_cols, columns=EVENT_COLS, aggfunc='first')
         keep = [
             (col, event_status, event_time)
             for col, event_status, event_time in X.columns
-            if event_status in self.stats_schema.col_metadata(col)['include']
+            if event_status in self.stats_schema_.col_metadata(col)['include']
         ]
         X = X[keep]
         cols = pd.DataFrame(X.columns.tolist(), columns=['col', 'event_status', 'event_time'])
         cols = cols.groupby(['col'], group_keys=False)[['col', 'event_status', 'event_time']].apply(
-            lambda group: group.iloc[:1] if self.stats_schema.col_metadata(group.iloc[0]['col'])['fixed'] else group,
+            lambda group: group.iloc[:1] if self.stats_schema_.col_metadata(group.iloc[0]['col'])['fixed'] else group,
         )
         X = X[list(cols.itertuples(index=False, name=None))]
         X.columns = [
-            col if self.stats_schema.col_metadata(col)['fixed'] else feature_column(col, event_status, event_time)
+            col if self.stats_schema_.col_metadata(col)['fixed'] else feature_column(col, event_status, event_time)
             for col, event_status, event_time in X.columns
         ]
         return X
@@ -259,23 +278,27 @@ class BaseDataLoader(ABC):
     def _pivot_odds(self: Self, odds: pd.DataFrame) -> pd.DataFrame:
         """Pivot long odds snapshots into wide, per-provider odds columns."""
         index_cols = self._identity_cols()
-        odds_cols = [col for col in odds.columns if col not in self.odds_schema.snapshot_cols() and col != 'provider']
+        odds_cols = [col for col in odds.columns if col not in self.odds_schema_.snapshot_cols() and col != 'provider']
         O = odds.pivot_table(values=odds_cols, index=index_cols, columns=[*EVENT_COLS, 'provider'], aggfunc='first')
         keep = [
             (col, event_status, event_time, provider)
             for col, event_status, event_time, provider in O.columns
-            if event_status in self.odds_schema.col_metadata(col)['include']
+            if event_status in self.odds_schema_.col_metadata(col)['include']
         ]
         O = O[keep]
         cols = pd.DataFrame(O.columns.tolist(), columns=['col', 'event_status', 'event_time', 'provider'])
         cols = cols.groupby(['col', 'provider'], group_keys=False)[
             ['col', 'event_status', 'event_time', 'provider']
         ].apply(
-            lambda group: group.iloc[:1] if self.odds_schema.col_metadata(group.iloc[0]['col'])['fixed'] else group,
+            lambda group: group.iloc[:1] if self.odds_schema_.col_metadata(group.iloc[0]['col'])['fixed'] else group,
         )
         O = O[list(cols.itertuples(index=False, name=None))]
         O.columns = [
-            col if self.odds_schema.col_metadata(col)['fixed'] else odds_column(provider, col, event_status, event_time)
+            (
+                col
+                if self.odds_schema_.col_metadata(col)['fixed']
+                else odds_column(provider, col, event_status, event_time)
+            )
             for col, event_status, event_time, provider in O.columns
         ]
         return O
@@ -307,10 +330,10 @@ class BaseDataLoader(ABC):
     ) -> pd.DataFrame:
         """Build the target table evaluated at the target moment, aligned to ``index``."""
         mask = (stats['event_status'] == target_event_status) & (stats['event_time'] == target_event_time)
-        targets = stats.loc[mask, self._identity_cols() + self.targets].set_index(self._identity_cols())
+        targets = stats.loc[mask, self._identity_cols() + self.targets_].set_index(self._identity_cols())
         targets = targets.reindex(index)
         columns_mapping = {
-            target: target_column(target, target_event_status, target_event_time) for target in self.targets
+            target: target_column(target, target_event_status, target_event_time) for target in self.targets_
         }
         return targets.rename(columns=columns_mapping)
 
@@ -409,16 +432,16 @@ class BaseDataLoader(ABC):
                 `learning_type='unsupervised'`, `Y` is `None`. The three components
                 share the same date index and rows.
         """
-        self._prepare(odds_type)
+        self._load(odds_type)
 
-        self.stats_schema.validate(self.stats)
-        self.odds_schema.validate(self.odds)
-        if self.stats_schema.snapshot_cols() != self.odds_schema.snapshot_cols():
+        self.stats_schema_.validate(self.stats_)
+        self.odds_schema_.validate(self.odds_)
+        if self.stats_schema_.snapshot_cols() != self.odds_schema_.snapshot_cols():
             msg = 'Stats and odds snapshots columns do not match.'
             raise AssertionError(msg)
 
         # Check if inplay or postplay events exist
-        event_statuses = [status for status in self.stats['event_status'].unique() if status != 'preplay']
+        event_statuses = [status for status in self.stats_['event_status'].unique() if status != 'preplay']
         if not event_statuses:
             msg = 'No `inplay` or `postplay` events were found.'
             raise ValueError(msg)
@@ -434,21 +457,21 @@ class BaseDataLoader(ABC):
 
         # Split matches into those resolvable at the target moment (training) and the rest (fixtures)
         index_cols = self._identity_cols()
-        target_mask = (self.stats['event_status'] == target_event_status) & (
-            self.stats['event_time'] == target_event_time
+        target_mask = (self.stats_['event_status'] == target_event_status) & (
+            self.stats_['event_time'] == target_event_time
         )
-        train_ids = pd.MultiIndex.from_frame(self.stats.loc[target_mask, index_cols])
+        train_ids = pd.MultiIndex.from_frame(self.stats_.loc[target_mask, index_cols])
         if train_ids.empty:
             msg = 'No resolvable events were found for the requested target moment.'
             raise ValueError(msg)
         self._train_ids = train_ids
-        train_mask = pd.MultiIndex.from_frame(self.stats[index_cols]).isin(train_ids)
-        train_odds_mask = pd.MultiIndex.from_frame(self.odds[index_cols]).isin(train_ids)
+        train_mask = pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(train_ids)
+        train_odds_mask = pd.MultiIndex.from_frame(self.odds_[index_cols]).isin(train_ids)
 
         # Extract input and odds data
         X, O = self._extract(
-            self.stats[train_mask],
-            self.odds[train_odds_mask],
+            self.stats_[train_mask],
+            self.odds_[train_odds_mask],
             target_event_status,
             target_event_time,
             self.input_event_status_,
@@ -462,7 +485,7 @@ class BaseDataLoader(ABC):
 
         # Extract output data
         Y = self._extract_targets(
-            self.stats[train_mask],
+            self.stats_[train_mask],
             pd.MultiIndex.from_frame(X.reset_index()[index_cols]),
             target_event_status,
             target_event_time,
@@ -490,15 +513,15 @@ class BaseDataLoader(ABC):
             msg = 'The `extract_train_data` method should be called before `extract_fixtures_data`.'
             raise ValueError(msg)
         index_cols = self._identity_cols()
-        fixtures_mask = ~pd.MultiIndex.from_frame(self.stats[index_cols]).isin(self._train_ids)
-        fixtures_odds_mask = ~pd.MultiIndex.from_frame(self.odds[index_cols]).isin(self._train_ids)
+        fixtures_mask = ~pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._train_ids)
+        fixtures_odds_mask = ~pd.MultiIndex.from_frame(self.odds_[index_cols]).isin(self._train_ids)
         if not fixtures_mask.any():
             X = pd.DataFrame(columns=self.input_cols_, index=pd.DatetimeIndex([], name='date'))
             O = pd.DataFrame(columns=self.odds_cols_, index=pd.DatetimeIndex([], name='date'))
             return X, None, O
         X, O = self._extract(
-            self.stats[fixtures_mask],
-            self.odds[fixtures_odds_mask],
+            self.stats_[fixtures_mask],
+            self.odds_[fixtures_odds_mask],
             self.target_event_status_,
             self.target_event_time_,
             self.input_event_status_,

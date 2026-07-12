@@ -16,6 +16,7 @@ data in a consistent format that makes it easy to create predictive models. We i
 ```python
 from sportsbet.datasets import SoccerDataLoader
 dataloader = SoccerDataLoader(param_grid={'league': ['Italy', 'Spain'], 'year': [2023, 2024]})
+dataloader.prepare()
 ```
 
 The next step is to extract the training data, including the market maximum odds:

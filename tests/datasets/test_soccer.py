@@ -5,6 +5,8 @@ import pytest
 
 from sportsbet.datasets import (
     BaseDataLoader,
+    BaseOddsSource,
+    BaseStatsSource,
     DummySoccerDataLoader,
     SoccerDataLoader,
     from_dataframe,
@@ -27,33 +29,52 @@ def loader(monkeypatch, long_snapshots):
     return SoccerDataLoader(param_grid={'league': ['England']})
 
 
-def test_get_all_params_reads_manifest(monkeypatch):
-    """Test parameter discovery reads the feed manifest and fabricates no invalid combos."""
-    manifest = pd.DataFrame(
-        {
-            'league': ['England', 'England', 'Netherlands'],
-            'division': [1, 2, 1],
-            'year': [2024, 2024, 2024],
-        },
-    )
-    monkeypatch.setattr('sportsbet.datasets._soccer._dataloader._read_csvs', lambda urls: [manifest])
-    params = SoccerDataLoader.get_all_params()
+class _Available:
+    """A source publishing a fixed set of combinations and needing no catalogue."""
+
+    name = 'available'
+
+    def index_items(self):
+        return []
+
+    def available_params(self, payloads):
+        return [
+            {'league': 'England', 'division': 1, 'year': 2024},
+            {'league': 'England', 'division': 2, 'year': 2024},
+            {'league': 'Netherlands', 'division': 1, 'year': 2024},
+        ]
+
+    def required_items(self, params):
+        return []
+
+    def to_snapshots(self, payloads):
+        return pd.DataFrame()
+
+
+class _AvailableStats(_Available, BaseStatsSource):
+    """The statistics of a source publishing a fixed set of combinations."""
+
+
+class _AvailableOdds(_Available, BaseOddsSource):
+    """The odds of a source publishing a fixed set of combinations."""
+
+
+def _available_loader(param_grid=None):
+    """Build a dataloader whose sources publish a fixed set of combinations."""
+    return SoccerDataLoader(param_grid=param_grid, stats=_AvailableStats(), odds=_AvailableOdds())
+
+
+def test_get_all_params_reads_the_source():
+    """Test parameter discovery asks the source and fabricates no invalid combos."""
+    params = _available_loader().get_all_params()
     assert {'league': 'England', 'division': 2, 'year': 2024} in params
     assert {'league': 'Netherlands', 'division': 2, 'year': 2024} not in params
 
 
-def test_selected_params_filters_without_fabricating(monkeypatch):
+def test_selected_params_filters_without_fabricating():
     """Test a partial param_grid filters the available combos instead of a cartesian product."""
-    manifest = pd.DataFrame(
-        {
-            'league': ['England', 'England', 'Netherlands'],
-            'division': [1, 2, 1],
-            'year': [2024, 2024, 2024],
-        },
-    )
-    monkeypatch.setattr('sportsbet.datasets._soccer._dataloader._read_csvs', lambda urls: [manifest])
-    selected = SoccerDataLoader(param_grid={'league': ['Netherlands']})._selected_params()
-    assert selected == [{'league': 'Netherlands', 'division': 1, 'year': 2024}]
+    loader = _available_loader({'league': ['Netherlands']})
+    assert loader._selected_params() == [{'league': 'Netherlands', 'division': 1, 'year': 2024}]
 
 
 def test_get_odds_types_derived_from_data(loader):
