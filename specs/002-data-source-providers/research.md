@@ -97,3 +97,38 @@ These are not incidental. They are the behaviour the fingerprint pins.
 **Rationale**: SC-004 says extraction can never fetch. The only way to *know* that is to make fetching impossible during tests and see the suite stay green. It also removes the upstream site as a CI flake source — the existing `test_soccer.py` hits the live mirror today.
 
 **Constraint this imposes**: `--doctest-modules` runs every `>>>` in `src/`. Network-touching classes must not carry executable doctests. `SoccerDataLoader` already has none; `FootballData*` and `OddsApi` must follow suit and document by prose plus a non-executed fenced block.
+
+## D11. Discovery belongs to the source, and is not on the dataloader at all
+
+**Decision**: `BaseSource.available_params()` is the public discovery API. The dataloader has **no** public discovery
+method; it keeps a private `_all_params()` used only to filter `param_grid`, and that filter is the **intersection** of
+what the statistics source and the odds source publish.
+
+**Rationale**: To write a `param_grid` you must first know what exists. So discovery cannot live on an object that is
+constructed *with* a `param_grid` — `SoccerDataLoader().get_all_params()` means building a throwaway dataloader to ask a
+question that has nothing to do with loading data. That is a chicken-and-egg, and it is the whole reason discovery was
+awkward to place.
+
+Availability is determined by the source and its configuration: `OddsApi(key=...)` can only offer what the key's tier
+covers. So it is per-instance on the source, not a class-level fact and not a dataloader fact.
+
+The dataloader needs the available parameters for exactly one thing — refusing to request a combination the source does
+not publish. That is internal. Making it public was a leftover from when the data source was hardcoded into the class,
+which is the only world in which "what is available" was a property of the dataloader.
+
+**Corrects an earlier mistake**: the invariant "a source never fetches" was over-applied. What must hold is that
+*extraction* never fetches and that *planning* is free — enforced by `required_items()` and `to_snapshots()` being pure
+and by extraction reading only from the store. The catalogue is free by construction and `prepare(dry_run=True)` already
+resolves it, so a source resolving its own catalogue breaks nothing.
+
+**Fixes a latent bug**: `_all_params()` asked only the statistics source. With `FootballDataStats` + `OddsApi` that would
+offer seasons back to 1994, which no odds vendor has, and the missing odds would surface as a silently smaller dataset —
+exactly the failure mode FR-023 exists to prevent. The intersection closes it.
+
+**Alternatives rejected**:
+
+- *Keep `get_all_params()` as a classmethod.* It cannot see an injected source, so it would silently answer for the
+  default one. A wrong answer that looks right.
+- *A classmethod on the source.* Same problem one layer down (a source's own config decides availability), and it would
+  have to fetch without a store.
+- *A descriptor that works on both the class and the instance.* Machinery to preserve a call site that should not exist.

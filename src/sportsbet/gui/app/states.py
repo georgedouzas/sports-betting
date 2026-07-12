@@ -324,6 +324,12 @@ class DataloaderCreationState(DataloaderState):
             name = f'"{name}"'
         self.param_checked[name] = checked
 
+    def source_params(self: Self) -> list[dict[str, Any]]:
+        """Return what the data source publishes, since a parameter grid needs it to be written."""
+        stats_source, *_ = DATALOADERS[self.sport_selection]().sources
+        params: list[dict[str, Any]] = stats_source.available_params()
+        return params
+
     def prepared_dataloader(self: Self) -> BaseDataLoader:
         """Return a dataloader whose data is downloaded, since an extraction never downloads."""
         dataloader = DATALOADERS[self.sport_selection](self.param_grid)
@@ -365,7 +371,7 @@ class DataloaderCreationState(DataloaderState):
         yield
         if self.visibility_level == VISIBILITY_LEVELS_DATALOADER_CREATION['sport']:
             self.dataloader_filename = 'dataloader.pkl'
-            self.all_params = DATALOADERS[self.sport_selection]().get_all_params()
+            self.all_params = self.source_params()
             self.all_leagues = list(chunked(sorted({params['league'] for params in self.all_params}), 6))
             self.all_years = list(chunked(sorted({params['year'] for params in self.all_params}), 5))
             self.all_divisions = list(chunked(sorted({params['division'] for params in self.all_params}), 1))
@@ -678,7 +684,8 @@ class DataloaderLoadingState(DataloaderState):
                 if O_fix is not None
                 else None
             )
-            all_params = dataloader.get_all_params()
+            stats_source, *_ = dataloader.sources
+            all_params = stats_source.available_params()
             self.all_leagues = list(chunked(sorted({params['league'] for params in all_params}), 6))
             self.all_years = list(chunked(sorted({params['year'] for params in all_params}), 5))
             self.all_divisions = list(chunked(sorted({params['division'] for params in all_params}), 1))

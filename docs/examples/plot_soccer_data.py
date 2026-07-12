@@ -8,17 +8,17 @@ This example illustrates the usage of the [`SoccerDataLoader`][sportsbet.dataset
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
-from sportsbet.datasets import SoccerDataLoader
+from sportsbet.datasets import FootballDataStats, SoccerDataLoader
 
 # %%
 # Getting the available parameters
 # --------------------------------
 #
-# We can get the available parameters in order to select the training data
-# to be extracted, using the `get_all_params` method. What is available depends on the
-# data source, so it is a property of the configured dataloader rather than of its class.
+# A parameter grid cannot be written before it is known what exists, so we ask the data
+# source rather than a dataloader. What a source publishes depends on how it is
+# configured, since a credential may only cover part of what it offers.
 
-SoccerDataLoader().get_all_params()
+FootballDataStats().available_params()
 
 # %%
 # We select to extract training data only for the year 2021 of the first

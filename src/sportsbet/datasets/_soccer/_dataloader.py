@@ -75,6 +75,12 @@ class SoccerDataLoader(BaseDataLoader):
             self._components = (stats_source, odds_source, store)
         return self._components
 
+    @property
+    def sources(self: Self) -> tuple[BaseStatsSource, BaseOddsSource]:
+        """The resolved statistics and odds sources."""
+        stats_source, odds_source, _ = self._resolved()
+        return stats_source, odds_source
+
     @staticmethod
     def _unique(items: list[RawItem]) -> list[RawItem]:
         """Return the items without duplicates, so an item two sources share is fetched once."""
@@ -90,14 +96,21 @@ class SoccerDataLoader(BaseDataLoader):
         return store.read(items)
 
     def _params(self: Self, fetch: bool) -> list[dict]:
-        """Return the combinations the sources publish, reading the catalogue from the store."""
+        """Return the combinations both sources publish, reading the catalogue from the store.
+
+        It is the intersection, not the union: a season whose statistics exist but whose odds do not cannot be modelled,
+        so it is never selected. Asking only the statistics source would offer it and let the missing odds surface as a
+        silently smaller dataset.
+        """
         stats_source, odds_source, _ = self._resolved()
         payloads = self._catalogue(fetch)
-        odds_source.available_params(payloads)
-        return stats_source.available_params(payloads)
+        stats_params = stats_source.catalogue([p for p in payloads if p.item.source == stats_source.name])
+        odds_params = odds_source.catalogue([p for p in payloads if p.item.source == odds_source.name])
+        available = {tuple(sorted(params.items())) for params in odds_params}
+        return [params for params in stats_params if tuple(sorted(params.items())) in available]
 
     def _all_params(self: Self) -> list[dict]:
-        """Return the available `league`/`division`/`year` combinations of the statistics source.
+        """Return the combinations both sources publish, used only to filter `param_grid`.
 
         Discovery is not an extraction, so it reads the catalogue from the feed when the store does not hold it. The
         catalogue is free.

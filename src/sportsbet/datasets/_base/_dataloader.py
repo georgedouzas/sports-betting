@@ -117,22 +117,24 @@ class BaseDataLoader(ABC):
         Every dataloader must implement this.
         """
 
-    def _all_params(self: Self) -> list[dict]:
-        """Return the available parameter combinations, if the source supports discovery.
+    @property
+    def sources(self: Self) -> tuple:
+        """The data sources of the dataloader.
 
-        Optional hook: dataloaders backed by a source override it to enable
-        `get_all_params`; the others (e.g. in-memory data) leave it unimplemented.
+        Ask a source what it publishes, since a `param_grid` cannot be written before it is known what exists. It is
+        empty for a dataloader whose data is provided directly rather than downloaded.
+        """
+        return ()
+
+    def _all_params(self: Self) -> list[dict]:
+        """Return the available parameter combinations, used only to filter `param_grid`.
+
+        Discovery is not a dataloader concern: a `param_grid` cannot be written before it is known what exists, so the
+        question is answered by the source's `available_params`. A dataloader needs the answer only to refuse a
+        combination the sources do not publish.
         """
         msg = f'{type(self).__name__} does not implement parameter discovery.'
         raise NotImplementedError(msg)
-
-    def get_all_params(self: Self) -> list[dict]:
-        """Return every available parameter combination the source actually provides.
-
-        What is available depends on the injected source, so it is a property of the configured dataloader rather than
-        of its class.
-        """
-        return self._all_params()
 
     def prepare(self: Self, dry_run: bool = False) -> PreparationReport:
         """Populate the store with the data the selected parameters require.

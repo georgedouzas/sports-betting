@@ -124,6 +124,13 @@ Users of the dummy dataloader, the snapshot factory functions, and every example
 - **FR-007**: Adding a new source MUST NOT require changing the dataloader, the extraction engine, or any other source.
 - **FR-008**: The data-source contract of the existing abstract dataloader (returning long-format statistics and odds snapshots) MUST NOT change; this feature is an implementation behind that existing seam.
 
+#### Discovery
+
+- **FR-031**: A user MUST be able to ask a source directly what parameters it publishes, **without constructing a dataloader**. Writing a `param_grid` requires knowing what exists, so discovery cannot depend on an object that is configured with a `param_grid`.
+- **FR-032**: What a source publishes MAY depend on that source's own configuration (for example, a credential's subscription tier), so discovery MUST be answered per configured source and never as a property of a source's class.
+- **FR-033**: The dataloader MUST NOT expose a public discovery method. It needs the available parameters only to filter `param_grid` internally, which is not a user-facing concern.
+- **FR-034**: When the statistics and the odds come from different sources, the dataloader MUST select only the parameters **both** sources publish. A season whose statistics exist but whose odds do not cannot be modelled, and MUST NOT be silently selected.
+
 #### Preparation
 
 - **FR-009**: The system MUST expose an explicit preparation step that populates the local store for the configured `param_grid`.

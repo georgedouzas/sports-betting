@@ -70,32 +70,34 @@ matrices of training and fixtures data have the same columns.
 
 ### Available parameters
 
-The available parameters and their values are provided from the `get_all_params` method. What is available depends on the data source, so it belongs to the configured dataloader rather than to its class:
+**Ask the source.** You cannot write a `param_grid` before you know what exists, so discovery does not live on the
+dataloader — it lives on the data source, which is what actually determines availability:
 
 ```python
-from sportsbet.datasets import DummySoccerDataLoader
-assert DummySoccerDataLoader().get_all_params() == [
-    {'division': 1, 'league': 'England', 'year': 2025},
-    {'division': 1, 'league': 'Spain', 'year': 2025}
-]
-```
+from sportsbet.datasets import FootballDataStats
 
-Similarly, for [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]:
-
-```python
-from sportsbet.datasets import SoccerDataLoader
-params = SoccerDataLoader().get_all_params()
-# The available combinations are discovered from the feed, so only the
-# league/division/year that actually exist are ever offered.
+params = FootballDataStats().available_params()
+# Only the league/division/year combinations the feed actually publishes are
+# ever offered, so an invalid one can never be requested.
 assert {'division': 1, 'league': 'England', 'year': 2024} in params
 assert all({'league', 'division', 'year'} == set(combination) for combination in params)
 ```
+
+`available_params` is an instance method rather than a class method, because what a source publishes depends on how it is
+configured — a credential may only cover part of what the source offers.
+
+The catalogue is re-read on every call rather than cached, so a new season shows up as soon as the feed publishes it.
+It is small, and reading it takes a couple of seconds.
+
+Only the parameters that **both** your statistics source and your odds source publish can be modelled, so the dataloader
+selects their intersection. A season whose statistics exist but whose odds do not is never chosen — otherwise the missing
+odds would show up as a quietly smaller dataset and a confidently wrong backtest.
 
 ### Selection of parameters
 
 The parameter `param_grid` has the same usage as the initialization parameter of scikit-learn's [ParameterGrid]. It accepts:
 
-- `None` (the default) — selects **all** available data, i.e. every combination returned by `get_all_params`.
+- `None` (the default) — selects **all** available data, i.e. every combination both sources publish.
 - a **dictionary** whose keys are a subset of `'league'`, `'division'`, `'year'` and whose values are lists.
 - a **list of dictionaries**, to select several disjoint groups at once.
 
@@ -642,5 +644,5 @@ dataloader.extract_train_data(odds_type='market_average')
 path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')
 dataloader.save(path)
 reloaded = load_dataloader(path)
-assert reloaded.get_all_params() == dataloader.get_all_params()
+assert reloaded.param_grid_ == dataloader.param_grid_
 ```
