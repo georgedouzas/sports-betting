@@ -9,13 +9,7 @@ import pytest
 
 from sportsbet.mcp import server
 
-FREE_CONFIG = """
-from sportsbet.datasets import DummySoccerDataLoader
-from sportsbet.evaluation import OddsComparisonBettor
-DATALOADER = DummySoccerDataLoader(param_grid={'league': ['England']})
-BETTOR = OddsComparisonBettor(alpha=0.03)
-"""
-
+DUMMY = {'sport': 'dummy', 'leagues': ['England']}
 TOOLS = [
     'available_params',
     'estimate_preparation',
@@ -26,14 +20,7 @@ TOOLS = [
     'bet',
 ]
 COST = 17722
-
-
-@pytest.fixture
-def free_config(tmp_path):
-    """A configuration whose sources charge nothing."""
-    path = tmp_path / 'free.py'
-    path.write_text(FREE_CONFIG)
-    return str(path)
+METERED = {'to_fetch': 898, 'held': 0, 'cost': {'odds_api': COST}, 'total_cost': COST}
 
 
 def _call(name, **arguments):
@@ -48,59 +35,64 @@ def test_the_library_is_reachable_through_the_tools():
     assert [tool.name for tool in tools] == TOOLS
 
 
-def test_every_tool_is_handed_a_configuration():
-    """Test a tool is told which configuration to use, rather than being handed a dataloader in its arguments.
+def test_a_tool_is_told_what_to_do_and_reads_no_file():
+    """Test a tool takes what it needs in its arguments, as a command does.
 
-    It is the same configuration the command line reads, so the two surfaces cannot come to mean different things, and a
-    key stays out of a tool call, where it would be written into a transcript.
+    There is nothing to write down first, and nothing left behind to fall out of date.
     """
     tools = asyncio.run(server.list_tools())
     for tool in tools:
-        assert 'config_path' in tool.inputSchema['properties']
-        assert 'key' not in tool.inputSchema['properties']
+        properties = tool.inputSchema['properties']
+        assert 'sport' in properties
+        assert 'config_path' not in properties
 
 
-def test_a_free_preparation_needs_no_confirmation(free_config):
+def test_a_key_is_never_an_argument():
+    """Test what a tool is told is the name of the variable holding the key, never the key.
+
+    A key passed as an argument is a key written into a transcript.
+    """
+    tools = asyncio.run(server.list_tools())
+    for tool in tools:
+        properties = tool.inputSchema['properties']
+        assert 'odds_key_env' in properties
+        assert 'key' not in properties
+
+
+def test_a_free_preparation_needs_no_confirmation():
     """Test a preparation that costs nothing is not made to ask permission to cost nothing.
 
     The rule exists to stop a surprise on a bill, not to add ceremony to a free download.
     """
-    _call('prepare', config_path=free_config)
+    _call('prepare', **DUMMY)
 
 
-def test_the_price_is_free_to_ask_for(free_config):
+def test_the_price_is_free_to_ask_for():
     """Test what a preparation would cost can be learned without paying for it."""
-    estimate = _call('estimate_preparation', config_path=free_config)
-    assert estimate['total_cost'] == 0
+    assert _call('estimate_preparation', **DUMMY)['total_cost'] == 0
 
 
-def test_a_preparation_that_costs_money_is_refused_until_the_price_is_known(monkeypatch, free_config):
+def test_a_preparation_that_costs_money_is_refused_until_the_price_is_known(monkeypatch):
     """Test an assistant cannot spend by accident.
 
     A season of odds costs thousands of credits. An assistant trying to be helpful could buy them in a single call, and
     whoever is paying would find out afterwards. So the refusal lives in the code, not in a sentence in a docstring
     asking the model to be careful.
     """
-    monkeypatch.setattr(
-        'sportsbet.mcp._server._report',
-        lambda config_path: (None, {'to_fetch': 898, 'held': 0, 'cost': {'odds_api': COST}, 'total_cost': COST}),
-    )
+    monkeypatch.setattr('sportsbet.mcp._server._report', lambda selection: (None, METERED))
     with pytest.raises(Exception, match=str(COST)):
-        _call('prepare', config_path=free_config)
+        _call('prepare', **DUMMY)
 
 
-def test_a_preparation_is_refused_when_the_price_confirmed_is_the_wrong_one(monkeypatch, free_config):
+def test_a_preparation_is_refused_when_the_price_confirmed_is_the_wrong_one(monkeypatch):
     """Test confirming some other number does not buy the data, and the real cost is named."""
-    monkeypatch.setattr(
-        'sportsbet.mcp._server._report',
-        lambda config_path: (None, {'to_fetch': 898, 'held': 0, 'cost': {'odds_api': COST}, 'total_cost': COST}),
-    )
+    monkeypatch.setattr('sportsbet.mcp._server._report', lambda selection: (None, METERED))
     with pytest.raises(Exception, match=str(COST)):
-        _call('prepare', config_path=free_config, confirm_cost=100)
+        _call('prepare', **DUMMY, confirm_cost=100)
 
 
-def test_a_preparation_runs_once_the_price_is_confirmed(monkeypatch, free_config):
-    """Test the data is bought when whoever is paying has been told what it costs and said so."""
+def test_a_preparation_runs_once_the_price_is_confirmed(monkeypatch):
+    """Test the data is bought when whoever is paying has been told what it costs and has said so."""
     prepared = []
 
     class _Dataloader:
@@ -108,40 +100,12 @@ def test_a_preparation_runs_once_the_price_is_confirmed(monkeypatch, free_config
             prepared.append(True)
             return type('Report', (), {'to_fetch': [], 'held': [], 'estimated_cost': {'odds_api': COST}})()
 
-    monkeypatch.setattr(
-        'sportsbet.mcp._server._report',
-        lambda config_path: (
-            _Dataloader(),
-            {'to_fetch': 898, 'held': 0, 'cost': {'odds_api': COST}, 'total_cost': COST},
-        ),
-    )
-    _call('prepare', config_path=free_config, confirm_cost=COST)
+    monkeypatch.setattr('sportsbet.mcp._server._report', lambda selection: (_Dataloader(), METERED))
+    _call('prepare', **DUMMY, confirm_cost=COST)
     assert prepared
 
 
-def test_an_assistant_can_go_from_nothing_to_value_bets(free_config):
-    """Test the whole journey works without a line of Python written by the user."""
-    _call('prepare', config_path=free_config)
-
-    params = _call('available_params', config_path=free_config)
-    assert params
-
-    train = _call('extract_train_data', config_path=free_config, odds_type='market_average')
-    assert train['X']
-    assert train['Y']
-    assert train['O']
-
-    fixtures = _call('extract_fixtures_data', config_path=free_config)
-    assert 'X' in fixtures
-
-    results = _call('backtest', config_path=free_config, odds_type='market_average')
-    assert results
-
-    bets = _call('bet', config_path=free_config, odds_type='market_average')
-    assert isinstance(bets, list)
-
-
-def test_a_tool_can_reach_a_source_that_fetches(monkeypatch, free_config):
+def test_a_tool_can_reach_a_source_that_fetches(monkeypatch):
     """Test the library can open its own event loop while a tool is being answered.
 
     A tool is answered inside an event loop, and the library opens one of its own to fetch, and a loop cannot be opened
@@ -154,5 +118,21 @@ def test_a_tool_can_reach_a_source_that_fetches(monkeypatch, free_config):
             asyncio.run(asyncio.sleep(0))
             return type('Report', (), {'to_fetch': [], 'held': [], 'estimated_cost': {}, 'unavailable': []})()
 
-    monkeypatch.setattr('sportsbet.mcp._server.read_dataloader', lambda mod: _Dataloader())
-    assert _call('prepare', config_path=free_config) == {'fetched': 0, 'held': 0, 'cost': {}}
+    monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', lambda **selection: _Dataloader())
+    assert _call('prepare', **DUMMY) == {'fetched': 0, 'held': 0, 'cost': {}}
+
+
+def test_an_assistant_can_go_from_nothing_to_value_bets():
+    """Test the whole journey works without a line of Python written by the user."""
+    _call('prepare', **DUMMY)
+
+    assert _call('available_params', **DUMMY)
+
+    train = _call('extract_train_data', **DUMMY, odds_type='market_average')
+    assert train['X']
+    assert train['Y']
+    assert train['O']
+
+    assert 'X' in _call('extract_fixtures_data', **DUMMY, odds_type='market_average')
+    assert _call('backtest', **DUMMY, odds_type='market_average', model='odds-comparison', cv=2)
+    assert isinstance(_call('bet', **DUMMY, odds_type='market_average', model='odds-comparison'), list)

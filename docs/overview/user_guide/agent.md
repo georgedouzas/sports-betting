@@ -20,19 +20,17 @@ that generates advice with a language model" is not a thing anyone should instal
 So the library is made **legible** to an assistant rather than given one. You bring your own; every model concern — the
 key, the choice, the cost, the nondeterminism — stays on your side of the line.
 
-## Every tool reads the same configuration the CLI reads
+## Every tool takes what the commands take
 
-A tool is not handed a dataloader in its arguments. It is handed the **path** of a
-[configuration file](dataloader.md), the same Python module `sportsbet` reads.
+A tool is told what to do in its arguments, exactly as a command is — a sport, what to select from it, and where its
+data comes from. **There is no configuration file**, and nothing has to be written down before anything can be run.
 
-That is worth explaining, because it is the design decision the whole surface rests on.
-
-- **The two surfaces cannot drift.** One configuration, one reader. A second, JSON-shaped way to describe a dataloader
-  would be a second set of capabilities — which is precisely the disease that killed the GUI.
-- **Your key never enters a tool call.** It stays in `os.environ`, read by the configuration. A key passed as a tool
-  argument is a key written into a transcript.
-- **The assistant can write the configuration**, which is a thing assistants are good at. You are left with a file you
-  can read, edit, keep and re-run — not a conversation you have to have again.
+- **The two surfaces cannot drift.** One vocabulary, one builder. A second, differently-shaped way to describe a
+  dataloader would be a second set of capabilities — which is precisely the disease that killed the GUI.
+- **Your key is never an argument.** What the assistant names is the *environment variable* holding it
+  (`odds_key_env`), never the key. A key passed as a tool argument is a key written into a transcript.
+- **Nothing is left behind to fall out of date.** A file the assistant wrote three sessions ago, still pointing at last
+  season, is a bug waiting to happen. A tool call describes itself.
 
 ## An assistant cannot spend your money by accident
 
@@ -45,11 +43,12 @@ So the price is free to ask for, and the refusal is in the **code** — not in a
 model to be careful:
 
 ```text
-estimate_preparation(config)          -> {to_fetch: 898, cost: {'odds_api': 17722}}
+estimate_preparation(sport='basketball', leagues=['NBA'], years=[2026], stats='nba', odds='odds-api')
+    -> {to_fetch: 898, cost: {'odds_api': 17722}}
 
-prepare(config)                       -> REFUSED. The cost was never confirmed.
-prepare(config, confirm_cost=100)     -> REFUSED. It costs 17722, not 100.
-prepare(config, confirm_cost=17722)   -> runs
+prepare(...)                     -> REFUSED. The cost was never confirmed.
+prepare(..., confirm_cost=100)   -> REFUSED. It costs 17722, not 100.
+prepare(..., confirm_cost=17722) -> runs
 ```
 
 The estimate is **exact** — it is the real list of what would be bought — and it costs **nothing**, because the free
@@ -68,8 +67,11 @@ ceremony to a free download.
 | `prepare` | **yes** | Downloads. Requires the cost to be confirmed. |
 | `extract_train_data` | no | The training data. |
 | `extract_fixtures_data` | no | The games not yet played. |
-| `backtest` | no | Backtests the configuration's bettor. |
+| `backtest` | no | Backtests a betting model. |
 | `bet` | no | The value bets for the fixtures. |
 
-Everything the [command line](dataloader.md) can do, an assistant can do — which, since the CLI reaches every sport and
-every source, means all of it.
+A model is named: `odds-comparison` or `logistic`, or one of your own as `models.py:BETTOR`, since no set of arguments
+can describe a scikit-learn estimator.
+
+Everything the command line can do, an assistant can do, because they are told the same things in the same way —
+which, since the command line reaches every sport and every source, means all of it.

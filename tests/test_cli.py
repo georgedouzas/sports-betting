@@ -1,26 +1,23 @@
-"""Test that the CLI produces results equivalent to the API (SC-005 parity)."""
-
-import importlib.util
+"""Test the CLI, which is told what to do in its arguments and reads no file."""
 
 import pandas as pd
 import pytest
 from sklearn.model_selection import TimeSeriesSplit
 
 from sportsbet.cli import main
-from sportsbet.datasets import BasketballDataLoader, DummySoccerDataLoader, NBAStats, OddsApi
+from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
+
+DUMMY = ['--sport', 'dummy', '--league', 'England', '--league', 'Spain']
+MARKET = ['--odds-type', 'market_average', '--target-event-status', 'postplay']
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_cli_training_matches_api(cli_runner, cli_config_path):
-    """Test CLI-extracted training data matches the equivalent API extraction."""
-    result = cli_runner.invoke(
-        main,
-        ['dataloader', 'training', '-c', str(cli_config_path), '-d', str(cli_config_path.parent)],
-    )
+def test_the_training_data_matches_the_api(cli_runner, tmp_path):
+    """Test the data the command line extracts is the data the API extracts."""
+    result = cli_runner.invoke(main, ['data', 'training', *DUMMY, *MARKET, '-o', str(tmp_path)])
     assert result.exit_code == 0, result.output
-    data_path = cli_config_path.parent / 'sports-betting-data'
-    X_cli = pd.read_csv(data_path / 'X_train.csv', index_col=0)
+    X_cli = pd.read_csv(tmp_path / 'sports-betting-data' / 'X_train.csv', index_col=0)
 
     loader = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain']})
     X_api, _, _ = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
@@ -30,15 +27,27 @@ def test_cli_training_matches_api(cli_runner, cli_config_path):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_cli_backtest_matches_api(cli_runner, cli_config_path):
-    """Test CLI backtest matches the equivalent API backtest per period."""
+def test_a_backtest_matches_the_api(cli_runner, tmp_path):
+    """Test the backtest the command line runs is the backtest the API runs."""
     result = cli_runner.invoke(
         main,
-        ['bettor', 'backtest', '-c', str(cli_config_path), '-d', str(cli_config_path.parent)],
+        [
+            'model',
+            'backtest',
+            *DUMMY,
+            *MARKET,
+            '--model',
+            'odds-comparison',
+            '--alpha',
+            '0.03',
+            '--cv',
+            '2',
+            '-o',
+            str(tmp_path),
+        ],
     )
     assert result.exit_code == 0, result.output
-    data_path = cli_config_path.parent / 'sports-betting-data'
-    cli_results = pd.read_csv(data_path / 'backtesting_results.csv')
+    cli_results = pd.read_csv(tmp_path / 'sports-betting-data' / 'backtesting_results.csv')
 
     loader = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain']})
     X, Y, O = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
@@ -49,60 +58,69 @@ def test_cli_backtest_matches_api(cli_runner, cli_config_path):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_an_outdated_config_says_what_to_change(cli_runner, tmp_path):
-    """Test a configuration written for the old contract is told what replaces it.
-
-    It is a breaking change, so it has to behave like one: naming the replacement, rather than raising an attribute
-    error or quietly doing nothing.
-    """
-    config = tmp_path / 'outdated.py'
-    config.write_text(
-        'from sportsbet.datasets import DummySoccerDataLoader\n'
-        'DATALOADER_CLASS = DummySoccerDataLoader\n'
-        "PARAM_GRID = {'league': ['England']}\n",
-    )
-    result = cli_runner.invoke(main, ['dataloader', 'params', '-c', str(config)])
-    assert 'DATALOADER_CLASS' in result.output
-    assert 'DATALOADER =' in result.output
-
-
-@pytest.mark.xdist_group(name='serial')
-def test_the_parameters_are_available_before_anything_is_selected(cli_runner, tmp_path):
-    """Test the parameters can be asked for without a selection.
-
-    It is the command that tells a user what to select, so requiring them to have already selected something would make
-    it useless.
-    """
-    config = tmp_path / 'unselected.py'
-    config.write_text(
-        'from sportsbet.datasets import DummySoccerDataLoader\nDATALOADER = DummySoccerDataLoader()\n',
-    )
-    result = cli_runner.invoke(main, ['dataloader', 'params', '-c', str(config)])
+def test_nothing_has_to_be_written_down_first(cli_runner):
+    """Test a command needs no file of any kind, only what it is told."""
+    result = cli_runner.invoke(main, ['data', 'params', '--sport', 'dummy'])
     assert result.exit_code == 0, result.output
     assert 'England' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_a_source_that_carries_a_key_reaches_the_command_line(cli_runner, tmp_path):
-    """Test a dataloader whose source needs a credential can be configured.
-
-    This is what the old contract could not express. It handed over a class, and a class carries no sources, so no
-    source could carry a key, so basketball was unreachable and no odds could be bought for any sport.
-    """
-    config = tmp_path / 'nba.py'
-    config.write_text(
-        'from sportsbet.datasets import BasketballDataLoader, NBAStats, OddsApi\n'
-        'DATALOADER = BasketballDataLoader(\n'
-        "    param_grid={'league': ['NBA'], 'year': [2026]},\n"
-        '    stats=NBAStats(),\n'
-        "    odds=OddsApi(key='a-key-that-is-never-used-offline'),\n"
-        ')\n',
+def test_a_source_that_needs_a_key_reads_it_from_the_environment(cli_runner, monkeypatch):
+    """Test a key is never written into a command, so it stays out of a shell's history."""
+    monkeypatch.setenv('ODDS_API_KEY', 'a-key-that-is-never-used-offline')
+    result = cli_runner.invoke(
+        main,
+        [
+            'data',
+            'params',
+            '--sport',
+            'basketball',
+            '--league',
+            'NBA',
+            '--stats',
+            'nba',
+            '--odds',
+            'odds-api',
+            '--odds-market',
+            'h2h',
+        ],
     )
-    spec = importlib.util.spec_from_file_location('nba_config', config)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    assert 'needs a key' not in result.output
 
-    assert isinstance(mod.DATALOADER, BasketballDataLoader)
-    stats, odds = mod.DATALOADER.sources
-    assert isinstance(stats, NBAStats)
-    assert isinstance(odds, OddsApi)
+
+@pytest.mark.xdist_group(name='serial')
+def test_a_missing_key_says_which_one_is_missing(cli_runner, monkeypatch):
+    """Test a key that is not there names itself, rather than failing somewhere deeper."""
+    monkeypatch.delenv('ODDS_API_KEY', raising=False)
+    result = cli_runner.invoke(
+        main,
+        ['data', 'prepare', '--sport', 'basketball', '--league', 'NBA', '--stats', 'nba', '--odds', 'odds-api'],
+    )
+    assert 'ODDS_API_KEY' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_a_model_of_your_own_is_named_by_where_it_lives(cli_runner, tmp_path):
+    """Test a scikit-learn model built in Python reaches the command line.
+
+    No arrangement of arguments can describe an estimator, and inventing a syntax that tried would be a worse Python. So
+    a model of your own is named as an object, and it is built where objects are built.
+    """
+    models = tmp_path / 'models.py'
+    models.write_text(
+        'from sportsbet.evaluation import OddsComparisonBettor\nBETTOR = OddsComparisonBettor(alpha=0.02)\n',
+    )
+    result = cli_runner.invoke(
+        main,
+        ['model', 'backtest', *DUMMY, *MARKET, '--model', f'{models}:BETTOR', '--cv', '2'],
+    )
+    assert result.exit_code == 0, result.output
+    assert 'Backtesting results' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_a_model_that_does_not_exist_says_what_there_is(cli_runner):
+    """Test a model nobody has heard of is answered with the ones there are."""
+    result = cli_runner.invoke(main, ['model', 'backtest', *DUMMY, *MARKET, '--model', 'wishful-thinking'])
+    assert 'odds-comparison' in result.output

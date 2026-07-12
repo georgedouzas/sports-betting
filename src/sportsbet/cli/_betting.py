@@ -11,109 +11,68 @@ import click
 import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
+from sklearn.model_selection import TimeSeriesSplit
 
-from ..evaluation import backtest as bt
-from ._options import get_config_path_option, get_data_path_option
-from ._utils import (
-    get_bettor,
-    get_cv,
-    get_dataloader,
-    get_drop_na_thres,
-    get_module,
-    get_n_jobs,
-    get_odds_type,
-    get_target_event_status,
-    get_target_event_time,
-    get_verbose,
-    print_console,
-)
+from ..evaluation import backtest as run_backtest
+from ._options import EXTRACTION, MODEL, OUTPUT, SELECTION, options
+from ._utils import extraction, modelled, print_console, selected
 
 
 @click.group()
-def bettor() -> None:
-    """Backtest a bettor and predict the value bets."""
+def model() -> None:
+    """Backtest a betting model and predict the value bets."""
     return
 
 
-@bettor.command()
-@get_config_path_option()
-@get_data_path_option()
-def backtest(config_path: str, data_path: str) -> None:
-    """Apply backtesting to the bettor."""
-    mod = get_module(config_path)
-    dataloader = get_dataloader(mod)
-    if dataloader is None:
-        return
-    drop_na_thres = get_drop_na_thres(mod)
-    odds_type = get_odds_type(mod)
-    X_train, Y_train, O_train = dataloader.extract_train_data(
-        drop_na_thres=drop_na_thres,
-        odds_type=odds_type,
-        target_event_status=get_target_event_status(mod),
-        target_event_time=get_target_event_time(mod),
-    )
-    bettor = get_bettor(mod)
-    if bettor is None:
-        return
-    if O_train is None or O_train.empty:
-        console = Console()
-        warning = Panel.fit(
-            '[bold red]Dataloader does not support odds data. Backtesting of bettor is not possible.',
+@model.command()
+@options(SELECTION, EXTRACTION, MODEL, OUTPUT)
+def backtest(cv: int, n_jobs: int, verbose: int, data_path: str | None, **selection: object) -> None:
+    """Backtest a betting model."""
+    with selected(selection) as dataloader, modelled(selection) as bettor:
+        if dataloader is None or bettor is None:
+            return
+        dataloader.prepare()
+        X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection))
+        if O_train is None or O_train.empty:
+            Console().print(Panel.fit('[bold red]There are no odds, so there is nothing to backtest against.'))
+            return
+        results = run_backtest(
+            bettor,
+            X_train,
+            Y_train,
+            O_train,
+            cv=TimeSeriesSplit(cv),
+            n_jobs=n_jobs,
+            verbose=verbose,
         )
-        console.print(warning)
-        return
-    backtesting_results = bt(
-        bettor,
-        X_train,
-        Y_train,
-        O_train,
-        cv=get_cv(mod),
-        n_jobs=get_n_jobs(mod),
-        verbose=get_verbose(mod),
-    )
-    if mod is not None:
-        print_console([backtesting_results], ['Backtesting results'])
+        print_console([results], ['Backtesting results'])
         if data_path is not None:
-            (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
-            backtesting_results.to_csv(Path(data_path) / 'sports-betting-data' / 'backtesting_results.csv')
+            written = Path(data_path) / 'sports-betting-data'
+            written.mkdir(parents=True, exist_ok=True)
+            results.to_csv(written / 'backtesting_results.csv')
 
 
-@bettor.command()
-@get_config_path_option()
-@get_data_path_option()
-def bet(config_path: str, data_path: str) -> None:
-    """Get value bets."""
-    mod = get_module(config_path)
-    dataloader = get_dataloader(mod)
-    if dataloader is None:
-        return
-    drop_na_thres = get_drop_na_thres(mod)
-    odds_type = get_odds_type(mod)
-    X_train, Y_train, O_train = dataloader.extract_train_data(
-        drop_na_thres=drop_na_thres,
-        odds_type=odds_type,
-        target_event_status=get_target_event_status(mod),
-        target_event_time=get_target_event_time(mod),
-    )
-    bettor = get_bettor(mod)
-    if bettor is None:
-        return
-    X_fix, _, O_fix = dataloader.extract_fixtures_data()
-    if X_fix.empty or O_fix is None or O_fix.empty:
-        console = Console()
-        warning = Panel.fit(
-            '[bold red]Fixtures data were empty.',
+@model.command()
+@options(SELECTION, EXTRACTION, MODEL, OUTPUT)
+def bet(cv: int, n_jobs: int, verbose: int, data_path: str | None, **selection: object) -> None:
+    """Predict the value bets of the games that have not been played yet."""
+    with selected(selection) as dataloader, modelled(selection) as bettor:
+        if dataloader is None or bettor is None:
+            return
+        dataloader.prepare()
+        X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection))
+        X_fix, _, O_fix = dataloader.extract_fixtures_data()
+        if X_fix.empty or O_fix is None or O_fix.empty:
+            Console().print(Panel.fit('[bold red]Fixtures data were empty.'))
+            return
+        bettor.fit(X_train, Y_train, O_train)
+        value_bets = pd.DataFrame(
+            bettor.bet(X_fix, O_fix),
+            columns=list(bettor.betting_markets_),
+            index=X_fix.index,
         )
-        console.print(warning)
-        return
-    bettor.fit(X_train, Y_train, O_train)
-    value_bets = pd.DataFrame(
-        bettor.bet(X_fix, O_fix),
-        columns=list(bettor.betting_markets_),
-        index=X_fix.index,
-    )
-    if mod is not None:
         print_console([value_bets], ['Value bets'])
         if data_path is not None:
-            (Path(data_path) / 'sports-betting-data').mkdir(parents=True, exist_ok=True)
-            value_bets.to_csv(Path(data_path) / 'sports-betting-data' / 'value_bets.csv')
+            written = Path(data_path) / 'sports-betting-data'
+            written.mkdir(parents=True, exist_ok=True)
+            value_bets.to_csv(written / 'value_bets.csv')

@@ -4,9 +4,9 @@ The assistant lives outside the library. Nothing here calls a model, holds a mod
 stays a set of estimators that behave the same way every time they are run, and the assistant is one more consumer of
 it.
 
-Every tool is handed the path of the same configuration the command line reads, rather than a description of a
-dataloader in the arguments. One configuration and one reader means the two surfaces cannot come to mean different
-things, and it keeps a key out of a tool call, where it would be written into a transcript.
+A tool is told what to do in its arguments, exactly as a command is, so there is no file to write first and nothing left
+behind to fall out of date. A key is never one of those arguments: what is named is the environment variable holding it,
+so the key itself stays out of a transcript.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -20,13 +20,15 @@ from typing import Any, TypeVar
 
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
+from sklearn.model_selection import TimeSeriesSplit
 
-from .._config import read_bettor, read_dataloader, read_module
+from .._selection import DEFAULT_KEY_ENV, build_bettor, build_dataloader
 from ..evaluation import backtest as run_backtest
 
 server: FastMCP = FastMCP('sportsbet')
 
 Answer = TypeVar('Answer')
+Selection = dict[str, Any]
 
 
 async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
@@ -48,9 +50,32 @@ def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
     ]
 
 
-def _report(config_path: str) -> tuple[Any, dict[str, Any]]:
-    """Return the dataloader and what a preparation would fetch and cost, without fetching anything metered."""
-    dataloader = read_dataloader(read_module(config_path))
+def _selection(
+    sport: str,
+    leagues: list[str] | None,
+    divisions: list[int] | None,
+    years: list[int] | None,
+    stats: str | None,
+    odds: str | None,
+    odds_key_env: str,
+    odds_markets: list[str] | None,
+) -> Selection:
+    """Return what a tool was told about the data to use."""
+    return {
+        'sport': sport,
+        'leagues': leagues,
+        'divisions': divisions,
+        'years': years,
+        'stats': stats,
+        'odds': odds,
+        'odds_key_env': odds_key_env,
+        'odds_markets': odds_markets,
+    }
+
+
+def _report(selection: Selection) -> tuple[Any, dict[str, Any]]:
+    """Return the dataloader, and what a preparation would fetch and cost, spending nothing."""
+    dataloader = build_dataloader(**selection)
     report = dataloader.prepare(dry_run=True)
     estimate = {
         'to_fetch': len(report.to_fetch),
@@ -62,33 +87,21 @@ def _report(config_path: str) -> tuple[Any, dict[str, Any]]:
     return dataloader, estimate
 
 
-def _available_params(config_path: str) -> list[dict]:
-    """Return the leagues, divisions and seasons that can be selected.
-
-    Free, and downloads no data.
-    """
-    dataloader = read_dataloader(read_module(config_path))
-    stats_source, *_ = dataloader.sources
+def _available_params(selection: Selection) -> list[dict]:
+    """Return what can be selected."""
+    stats_source, *_ = build_dataloader(**selection).sources
     return stats_source.available_params()
 
 
-def _estimate_preparation(config_path: str) -> dict[str, Any]:
-    """Return what a preparation would fetch and exactly what it would cost, spending nothing.
-
-    Call this before `prepare`. The cost is the real list of what would be bought, not a guess, and it is free to ask.
-    """
-    _, estimate = _report(config_path)
+def _estimate_preparation(selection: Selection) -> dict[str, Any]:
+    """Return what a preparation would fetch and cost."""
+    _, estimate = _report(selection)
     return estimate
 
 
-def _prepare(config_path: str, confirm_cost: int | None = None) -> dict[str, Any]:
-    """Download the data a dataloader needs.
-
-    A source that charges is not allowed to charge by surprise. If the preparation costs anything, `confirm_cost` must
-    be the total that `estimate_preparation` reports, so that whoever is paying has been told the price first. A
-    preparation that costs nothing needs no confirmation.
-    """
-    dataloader, estimate = _report(config_path)
+def _prepare(selection: Selection, confirm_cost: int | None) -> dict[str, Any]:
+    """Download the data, refusing to spend what has not been agreed to."""
+    dataloader, estimate = _report(selection)
     total = estimate['total_cost']
     if total and confirm_cost != total:
         msg = (
@@ -100,107 +113,187 @@ def _prepare(config_path: str, confirm_cost: int | None = None) -> dict[str, Any
     return {'fetched': len(report.to_fetch), 'held': len(report.held), 'cost': dict(report.estimated_cost)}
 
 
-def _extract_train_data(config_path: str, odds_type: str | None = None) -> dict[str, Any]:
-    """Return the training data of the prepared data."""
-    dataloader = read_dataloader(read_module(config_path))
-    X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
+def _extract_train_data(selection: Selection, odds_type: str | None) -> dict[str, Any]:
+    """Return the training data."""
+    X, Y, O = build_dataloader(**selection).extract_train_data(odds_type=odds_type)
     return {'X': _records(X), 'Y': _records(Y), 'O': _records(O)}
 
 
-def _extract_fixtures_data(config_path: str, odds_type: str | None = None) -> dict[str, Any]:
+def _extract_fixtures_data(selection: Selection, odds_type: str | None) -> dict[str, Any]:
     """Return the games that have not been played yet.
 
-    The fixtures take the shape of the training data, so the training data is extracted first, with the same odds. A
-    fixture that carried a different kind of price from the one a model learned on would be a column the model has never
-    seen.
-
-    A tool is answered on its own and remembers nothing between calls, so what a dataloader would have kept from an
-    earlier extraction has to be established here.
+    The training data is extracted first, so the fixtures take its shape and the same kind of odds. A tool is answered
+    on its own and remembers nothing, so what a dataloader would have kept from an earlier extraction is established
+    here.
     """
-    dataloader = read_dataloader(read_module(config_path))
+    dataloader = build_dataloader(**selection)
     dataloader.extract_train_data(odds_type=odds_type)
     X, _, O = dataloader.extract_fixtures_data()
     return {'X': _records(X), 'O': _records(O)}
 
 
-def _backtest(config_path: str, odds_type: str | None = None) -> list[dict[str, Any]]:
-    """Return the backtesting results of the configuration's bettor."""
-    mod = read_module(config_path)
-    dataloader, bettor = read_dataloader(mod), read_bettor(mod)
+def _backtest(selection: Selection, odds_type: str | None, model: str, alpha: float, cv: int) -> list[dict[str, Any]]:
+    """Return the backtesting results of a model."""
+    dataloader, bettor = build_dataloader(**selection), build_bettor(model, alpha=alpha)
     X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
-    return _records(run_backtest(bettor, X, Y, O))
+    return _records(run_backtest(bettor, X, Y, O, cv=TimeSeriesSplit(cv)))
 
 
-def _bet(config_path: str, odds_type: str | None = None) -> list[dict[str, Any]]:
+def _bet(selection: Selection, odds_type: str | None, model: str, alpha: float) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
-    mod = read_module(config_path)
-    dataloader, bettor = read_dataloader(mod), read_bettor(mod)
+    dataloader, bettor = build_dataloader(**selection), build_bettor(model, alpha=alpha)
     X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
     bettor.fit(X, Y, O)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
+    if X_fix.empty:
+        return []
     value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=list(bettor.betting_markets_))
     games = X_fix[['home_team', 'away_team']].reset_index()
     return _records(pd.concat([games, value_bets], axis=1))
 
 
 @server.tool()
-async def available_params(config_path: str) -> list[dict]:
+async def available_params(
+    sport: str,
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+) -> list[dict]:
     """Return the leagues, divisions and seasons that can be selected.
 
     Free, and downloads no data.
     """
-    result: list[dict] = await _offload(_available_params, config_path)
+    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    result: list[dict] = await _offload(_available_params, selection)
     return result
 
 
 @server.tool()
-async def estimate_preparation(config_path: str) -> dict[str, Any]:
+async def estimate_preparation(
+    sport: str,
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+) -> dict[str, Any]:
     """Return what a preparation would fetch and exactly what it would cost, spending nothing.
 
     Call this before `prepare`. The cost is the real list of what would be bought rather than a guess, and asking is
     free.
     """
-    result: dict[str, Any] = await _offload(_estimate_preparation, config_path)
+    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    result: dict[str, Any] = await _offload(_estimate_preparation, selection)
     return result
 
 
 @server.tool()
-async def prepare(config_path: str, confirm_cost: int | None = None) -> dict[str, Any]:
-    """Download the data a dataloader needs.
+async def prepare(
+    sport: str,
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+    confirm_cost: int | None = None,
+) -> dict[str, Any]:
+    """Download the data.
 
     A source that charges is not allowed to charge by surprise. If the preparation costs anything, `confirm_cost` must
     be the total that `estimate_preparation` reports, so whoever is paying has been told the price first. A preparation
     that costs nothing needs no confirmation.
     """
-    result: dict[str, Any] = await _offload(_prepare, config_path, confirm_cost)
+    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    result: dict[str, Any] = await _offload(_prepare, selection, confirm_cost)
     return result
 
 
 @server.tool()
-async def extract_train_data(config_path: str, odds_type: str | None = None) -> dict[str, Any]:
+async def extract_train_data(
+    sport: str,
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+    odds_type: str | None = None,
+) -> dict[str, Any]:
     """Return the training data of the prepared data."""
-    result: dict[str, Any] = await _offload(_extract_train_data, config_path, odds_type)
+    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    result: dict[str, Any] = await _offload(_extract_train_data, selection, odds_type)
     return result
 
 
 @server.tool()
-async def extract_fixtures_data(config_path: str, odds_type: str | None = None) -> dict[str, Any]:
+async def extract_fixtures_data(
+    sport: str,
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+    odds_type: str | None = None,
+) -> dict[str, Any]:
     """Return the games that have not been played yet."""
-    result: dict[str, Any] = await _offload(_extract_fixtures_data, config_path, odds_type)
+    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    result: dict[str, Any] = await _offload(_extract_fixtures_data, selection, odds_type)
     return result
 
 
 @server.tool()
-async def backtest(config_path: str, odds_type: str | None = None) -> list[dict[str, Any]]:
-    """Return the backtesting results of the configuration's bettor."""
-    result: list[dict[str, Any]] = await _offload(_backtest, config_path, odds_type)
+async def backtest(
+    sport: str,
+    model: str = 'odds-comparison',
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+    odds_type: str | None = None,
+    alpha: float = 0.05,
+    cv: int = 3,
+) -> list[dict[str, Any]]:
+    """Return the backtesting results of a betting model.
+
+    A ready-made model is named. A scikit-learn one built in Python is named by where it lives, as in
+    `models.py:BETTOR`, since no set of arguments can describe an estimator.
+    """
+    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, model, alpha, cv)
     return result
 
 
 @server.tool()
-async def bet(config_path: str, odds_type: str | None = None) -> list[dict[str, Any]]:
+async def bet(
+    sport: str,
+    model: str = 'odds-comparison',
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    stats: str | None = None,
+    odds: str | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+    odds_type: str | None = None,
+    alpha: float = 0.05,
+) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
-    result: list[dict[str, Any]] = await _offload(_bet, config_path, odds_type)
+    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, model, alpha)
     return result
 
 
