@@ -14,6 +14,7 @@ The sources that ship with the library:
 | [`FootballDataStats`][sportsbet.datasets.FootballDataStats] | soccer | free | statistics, 1993 onward |
 | [`FootballDataOdds`][sportsbet.datasets.FootballDataOdds] | soccer | free | pre-match closing odds |
 | [`EuroLeagueStats`][sportsbet.datasets.EuroLeagueStats] | basketball | free | statistics, from the competition's own API |
+| [`NBAStats`][sportsbet.datasets.NBAStats] | basketball | free | statistics, the NBA, live through a season |
 | [`OddsApi`][sportsbet.datasets.OddsApi] | any | **your key** | time-stamped odds, live and historical |
 
 Mix them however you like. Free statistics with paid odds is the realistic configuration, and the only way to backtest an

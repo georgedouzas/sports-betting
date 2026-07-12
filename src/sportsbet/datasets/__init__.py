@@ -23,6 +23,7 @@ from ._sources._base import (
 )
 from ._sources._euroleague import EuroLeagueStats
 from ._sources._football_data import FootballDataOdds, FootballDataStats
+from ._sources._nba import NBAStats
 from ._sources._odds_api import OddsApi
 from ._store import BaseStore, LocalStore, NotPreparedError, PreparationReport
 from ._utils import market_outcomes
@@ -41,6 +42,7 @@ __all__: list[str] = [
     'FootballDataOdds',
     'FootballDataStats',
     'LocalStore',
+    'NBAStats',
     'NotPreparedError',
     'OddsApi',
     'PreparationReport',

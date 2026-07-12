@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## Unreleased
+
+<small>New data source</small>
+
+### Added
+
+- `NBAStats`, a free, key-less statistics source for the **NBA**, backed by ESPN. It carries the regular season, the
+  play-in and the play-offs, with the tip-off as a UTC instant, and it is live: the games played this week carry their
+  scores this week. Use it as the statistics of the existing basketball dataloader —
+  `BasketballDataLoader(stats=NBAStats(), odds=OddsApi(key=...))`. As with the EuroLeague, the odds need your own key,
+  because no free basketball odds feed exists.
+
 ## [0.13.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.13.1) - 2026-07-10
 
 <small>[Compare with 0.13.0](https://github.com/georgedouzas/sports-betting/compare/0.13.0...0.13.1)</small>
