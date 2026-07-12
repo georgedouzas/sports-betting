@@ -442,6 +442,7 @@ HALF_TIME_COLS = {
 }
 CHAMPIONSHIP_DIVISION = 5
 CENTURY_PIVOT = 68
+FEED_TIMEZONE = 'Europe/London'
 KEY_PARTS = 3
 DRAW_MARGIN = 0.25
 FIXTURES_KEY = 'fixtures'
@@ -721,13 +722,31 @@ def _key_params(key: str) -> tuple[str, int, int | None]:
     return parts[0], int(parts[1]), year
 
 
+def _kickoff(data: pd.DataFrame, date_format: str) -> pd.Series:
+    """Return the kick-off instant in UTC.
+
+    The feed publishes every league's kick-off in UK time, whatever the country the match is played in, so it is
+    converted here. A source resolves its own time zone at its own boundary and never emits a local or naive instant,
+    which is what lets `date + event_time` address a moment of a match in wall-clock time.
+
+    Older seasons carry no kick-off time. Their matches fall back to midnight, and they predate every time-stamped odds
+    source, so they can never be joined to one.
+    """
+    date = pd.to_datetime(data['Date'], format=date_format, dayfirst=True)
+    if 'Time' in data.columns:
+        time = pd.to_timedelta(data['Time'].astype(str) + ':00', errors='coerce')
+        date = date + time.fillna(pd.Timedelta(0))
+    date = date.dt.tz_localize(FEED_TIMEZONE, ambiguous=True, nonexistent='shift_forward')
+    return date.dt.tz_convert('UTC').dt.tz_localize(None)
+
+
 def _process_training(payloads: list[RawPayload]) -> list[tuple[str, int, int, pd.DataFrame]]:
     """Process the raw season payloads into typed, per-season frames."""
     processed = []
     for payload in payloads:
         data = read_csv_content(payload.content)
         data = data.replace('^#', np.nan, regex=True).copy()
-        data['Date'] = pd.to_datetime(data['Date'], format='mixed', dayfirst=True)
+        data['Date'] = _kickoff(data, 'mixed')
         league, division, year = _key_params(payload.item.key)
         if year is not None:
             season = data.assign(league=league, division=division, year=year)
@@ -756,7 +775,7 @@ def _process_fixtures(content: bytes, latest_years: pd.DataFrame) -> pd.DataFram
     """Process the raw fixtures payload into a typed frame of upcoming matches."""
     data = read_csv_content(content)
     data = data.rename(columns={'ï»¿Div': 'Div'}).copy()
-    data['Date'] = pd.to_datetime(data['Date'], format='%d/%m/%Y')
+    data['Date'] = _kickoff(data, '%d/%m/%Y')
     data = data.dropna(axis=0, how='any', subset=['Div', 'HomeTeam', 'AwayTeam'])
     leagues_mapping = {value[0]: key for key, value in LEAGUES_MAPPING.items()}
     data = data.assign(

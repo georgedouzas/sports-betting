@@ -122,6 +122,7 @@ Users of the dummy dataloader, the snapshot factory functions, and every example
 - **FR-005**: The free sources MUST fetch only the source files needed by the configured `param_grid`.
 - **FR-006**: The system MUST provide a keyed commercial odds source supporting time-stamped historical snapshots, upcoming fixtures and in-play prices, with user-selected markets.
 - **FR-007**: Adding a new source MUST NOT require changing the dataloader, the extraction engine, or any other source.
+- **FR-037**: `date` MUST be the kick-off instant of the match, in UTC. Every source MUST convert its own local representation into that at its own boundary; no source may emit a naive or a local instant. This makes `date + event_time` the wall-clock instant of a snapshot, which is the address a time-stamped odds source needs in order to be asked for the price at a given minute. Where a source has no kick-off time, `date` is midnight UTC of the match day, and such rows cannot be joined to a time-stamped odds source.
 - **FR-008**: The data-source contract of the existing abstract dataloader (returning long-format statistics and odds snapshots) MUST NOT change; this feature is an implementation behind that existing seam.
 
 #### Discovery

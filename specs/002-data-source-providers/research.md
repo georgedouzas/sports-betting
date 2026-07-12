@@ -155,3 +155,32 @@ have to be tuned, and the whole store design deliberately has nothing to tune.
 **Alternative considered**: conditional requests (`If-Modified-Since` / `ETag`) would let the store detect an upstream
 correction cheaply, without a full download and without spending credits. That is the better long-term answer for free sources
 and is worth doing, but it belongs in the fetch layer and is not needed to close the correctness hole.
+
+## D13. `date` is the kick-off instant in UTC, and `date + event_time` addresses a snapshot
+
+**Decision**: `date` carries the kick-off **instant**, tz-aware UTC, for both tables and from every source. A source resolves its
+own time zone at its own boundary. The invariant this buys is `date + event_time = the wall-clock instant of the snapshot`.
+
+**Rationale**: `event_time` is elapsed-from-kick-off, but kick-off itself was never stored — `_preprocess_data` dropped the feed's
+`Time` column, so `date` was a calendar day. That is fine for pre-match odds, which do not care. It is fatal for in-play odds: The
+Odds API addresses historical prices by **wall-clock timestamp**, so "the price at minute 45 of Arsenal–Chelsea" is a request for
+the snapshot at `kick-off + 45min`. With a day-level date there is no such request to make. Kick-off time is therefore not a
+nicety for one source; it is load-bearing for the whole in-play premise.
+
+**The time zone was determined empirically, not assumed.** The feed's own notes define `Time` only as "Time of match kick off",
+with no zone. English kick-offs land on the classic UK slots (15:00, 12:30, 17:30). Spanish ones land on 13:00 / 15:15 / 17:30 /
+20:00 — exactly the standard La Liga CEST slots (14:00 / 16:15 / 18:30 / 21:00) shifted by −1 hour. So the feed publishes **every**
+league in **UK time**, whatever country the match is played in. Reading it as UTC, or as the match's local time, would have shifted
+every in-play join by an hour or more, silently.
+
+**Coverage lines up**: the feed carries `Time` from 2019/20 onward; The Odds API's historical odds begin 2020-06-06. The seasons
+where in-play odds are obtainable are exactly the seasons that have kick-off times. Earlier seasons keep a midnight `date`, and the
+intersection rule of D11 already stops them being selected alongside a time-stamped odds source.
+
+**What it collapses**: it removes the question of how an odds source learns *when* the matches are. With kick-off times in the
+statistics, the dataloader can hand the odds source the schedule. Since the statistics source is free, a dry run can produce an
+**exact** credit estimate for a metered odds source while spending **nothing** — which is strictly better than having the odds
+source discover the schedule itself at ~40 credits a season.
+
+**Verified**: the same 380 matches, with per-match feature values identical. Only `date` gains its time, and same-day matches now
+sort by kick-off rather than arbitrarily.

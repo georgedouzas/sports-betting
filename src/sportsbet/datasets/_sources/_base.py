@@ -5,8 +5,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import inspect
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Self
 
 import pandas as pd
@@ -151,6 +154,23 @@ class BaseSource(ABC):
             snapshots:
                 The long snapshots.
         """
+
+    def transform_digest(self: Self) -> str:
+        """Return the identity of the code that turns the payloads into snapshots.
+
+        The snapshots are derived by code as well as from data, so what is cached against them has to know when the
+        code changes. A release version cannot: an editable install keeps the version it was installed with, so an
+        edited transform would keep serving what the previous one produced.
+
+        Returns:
+            digest:
+                The identity of the transform.
+        """
+        try:
+            module = Path(inspect.getfile(type(self)))
+            return hashlib.sha256(module.read_bytes()).hexdigest()[:16]
+        except (OSError, TypeError):
+            return type(self).__name__
 
     def estimate(self: Self, items: list[RawItem]) -> int:
         """Return the units the source charges to fetch the items.

@@ -40,6 +40,25 @@ identified by two columns:
 - `event_time`: a [pandas Timedelta] measuring the elapsed time from kick-off, e.g. `pd.Timedelta('30min')`. It is `0min` for
   `preplay` and `postplay` snapshots.
 
+### Time is always UTC, and `date` is the kick-off
+
+`date` is the **kick-off instant** of the match, in UTC — not the calendar day. Every source converts its own local
+representation into UTC at its own boundary, so no source ever hands you a naive or a local time. The football-data.co.uk feed,
+for instance, publishes *every* league's kick-off in **UK time** regardless of the country the match is played in, and that is
+resolved before you ever see it.
+
+This gives the model its central invariant:
+
+```text
+date + event_time  =  the wall-clock instant of the snapshot
+```
+
+which is what makes a moment of a match *addressable*. "The odds at minute 45 of Arsenal–Chelsea" is a real timestamp you can ask
+an odds provider for. Without a kick-off time it would not be.
+
+Some older seasons of a feed carry no kick-off time. Their matches fall back to midnight UTC, and because they predate every
+time-stamped odds source, they can never be paired with one anyway.
+
 The snapshots are stored as two long tables — a `stats` table with the match statistics and an `odds` table with one row per
 odds `provider` — sharing the same identity and event columns. This moment-aware model is what enables both pre-match and in-play
 predictions from a single interface: you pick a *target moment* and the dataloader turns every earlier snapshot into features and

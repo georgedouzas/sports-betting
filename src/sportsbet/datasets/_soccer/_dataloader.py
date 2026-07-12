@@ -217,7 +217,7 @@ class SoccerDataLoader(BaseDataLoader):
         """
         if not isinstance(store, LocalStore):
             return source.to_snapshots(payloads)
-        digest = payloads_digest(payloads)
+        digest = payloads_digest(payloads, source.transform_digest())
         snapshots = store.read_snapshots(source.name, source.kind, digest)
         if snapshots is None:
             snapshots = source.to_snapshots(payloads)

@@ -11,7 +11,6 @@ import json
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
@@ -304,28 +303,23 @@ class LocalStore(BaseStore):
         os.replace(temporary, path)  # noqa: PTH105
 
 
-def _library_version() -> str:
-    """Return the version of the library, which the transform belongs to."""
-    try:
-        return version('sports-betting')
-    except PackageNotFoundError:
-        return 'unknown'
+def payloads_digest(payloads: list[RawPayload], transform: str) -> str:
+    """Return the identity of a set of payloads and of the code that reads them.
 
-
-def payloads_digest(payloads: list[RawPayload]) -> str:
-    """Return the identity of a set of payloads, so what is derived from them is cached against it.
-
-    The version of the library is part of it, because the snapshots are derived by code as well as from data. Without
-    it an upgrade that changes the transform would serve the snapshots the old transform produced.
+    The transform is part of it because the snapshots are derived by code as well as from data. Without it, a change to
+    the transform would leave the identity untouched and serve the snapshots the previous one produced.
 
     Args:
         payloads:
             The payloads the snapshots are derived from.
+
+        transform:
+            The identity of the code that turns them into snapshots.
 
     Returns:
         digest:
             The identity of the payloads and of the transform that reads them.
     """
     parts = sorted(f'{payload.item.key}:{hashlib.sha256(payload.content).hexdigest()}' for payload in payloads)
-    parts.append(f'version:{_library_version()}')
+    parts.append(f'transform:{transform}')
     return hashlib.sha256('|'.join(parts).encode()).hexdigest()[:32]
