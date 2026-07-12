@@ -31,7 +31,7 @@ class _TestSource(BaseSource):
     def catalogue(self, payloads):
         return PARAMS
 
-    def required_items(self, params):
+    def required_items(self, params, schedule=None):
         return [
             RawItem(
                 source=self.name,

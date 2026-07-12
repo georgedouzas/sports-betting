@@ -933,7 +933,7 @@ class _FootballDataSource(BaseSource):
         params = [{'league': league, 'division': division, 'year': year} for league, division, year, _ in catalogue]
         return sorted(params, key=lambda param: (param['league'], param['division'], param['year']))
 
-    def required_items(self: Self, params: list[dict]) -> list[RawItem]:
+    def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return one item per selected season file, plus the fixtures of the feed.
 
         The URLs are looked up in the catalogue rather than constructed, so a combination the feed does not publish is

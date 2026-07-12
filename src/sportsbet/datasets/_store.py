@@ -19,7 +19,11 @@ import pandas as pd
 from ._fetch import read_urls_content
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ._sources._base import RawItem, RawPayload
+
+    Authorize = Callable[[RawItem], str]
 
 DEFAULT_PATH = Path.home() / '.sportsbet'
 
@@ -97,12 +101,16 @@ class BaseStore(ABC):
         """
 
     @abstractmethod
-    def fetch(self: Self, items: list[RawItem]) -> list[RawPayload]:
+    def fetch(self: Self, items: list[RawItem], authorize: Authorize | None = None) -> list[RawPayload]:
         """Fetch the items and persist their raw payloads.
 
         Args:
             items:
                 The items to fetch.
+
+            authorize:
+                Returns the URL to fetch an item from. A source uses it to add its credential at the moment of the
+                request, so the credential never reaches the store.
 
         Returns:
             payloads:
@@ -209,12 +217,16 @@ class LocalStore(BaseStore):
             if not item.volatile and (item.source, item.key) in manifest and self._raw_path(item).exists()
         ]
 
-    def fetch(self: Self, items: list[RawItem]) -> list[RawPayload]:
+    def fetch(self: Self, items: list[RawItem], authorize: Authorize | None = None) -> list[RawPayload]:
         """Fetch the items and persist their raw payloads.
 
         Args:
             items:
                 The items to fetch.
+
+            authorize:
+                Returns the URL to fetch an item from. A source uses it to add its credential at the moment of the
+                request, so the credential never reaches the store.
 
         Returns:
             payloads:
@@ -224,7 +236,8 @@ class LocalStore(BaseStore):
 
         if not items:
             return []
-        contents = read_urls_content([item.url for item in items])
+        urls = [authorize(item) if authorize is not None else item.url for item in items]
+        contents = read_urls_content(urls)
         payloads = []
         for item, content in zip(items, contents, strict=True):
             _write_atomic(self._raw_path(item), gzip.compress(content))

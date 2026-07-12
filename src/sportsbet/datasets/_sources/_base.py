@@ -126,21 +126,53 @@ class BaseSource(ABC):
         store = store if store is not None else LocalStore()
         items = self.index_items()
         held = [] if refresh else store.held(items)
-        store.fetch([item for item in items if item not in held])
+        store.fetch([item for item in items if item not in held], self.request_url)
         return self.catalogue(store.read(items))
 
     @abstractmethod
-    def required_items(self: Self, params: list[dict]) -> list[RawItem]:
+    def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the raw items the selected parameters need.
 
         Args:
             params:
                 The selected parameter combinations.
 
+            schedule:
+                The matches of the selected parameters, with their kick-off instants. An odds source that addresses its
+                prices by timestamp needs it, since a season alone does not say when its matches are played. It is
+                `None` for a source that carries its own schedule.
+
         Returns:
             items:
                 The items to fetch. Deterministic for the same parameters.
         """
+
+    def needs_schedule(self: Self) -> bool:
+        """Return whether the source has to be told when the matches are.
+
+        A source that carries its own schedule, because its events and its odds arrive in the same file, does not.
+
+        Returns:
+            needed:
+                Whether `required_items` needs a schedule.
+        """
+        return False
+
+    def request_url(self: Self, item: RawItem) -> str:
+        """Return the URL to fetch an item from.
+
+        The credential is added here, at the moment of the request, so it never reaches a `RawItem` and is never
+        written to the store.
+
+        Args:
+            item:
+                The item to fetch.
+
+        Returns:
+            url:
+                Where to fetch it from.
+        """
+        return item.url
 
     @abstractmethod
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:

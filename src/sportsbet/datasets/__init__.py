@@ -21,6 +21,7 @@ from ._sources._base import (
     RawPayload,
 )
 from ._sources._football_data import FootballDataOdds, FootballDataStats
+from ._sources._odds_api import OddsApi
 from ._store import BaseStore, LocalStore, NotPreparedError, PreparationReport
 
 __all__: list[str] = [
@@ -36,6 +37,7 @@ __all__: list[str] = [
     'FootballDataStats',
     'LocalStore',
     'NotPreparedError',
+    'OddsApi',
     'PreparationReport',
     'RawItem',
     'RawPayload',

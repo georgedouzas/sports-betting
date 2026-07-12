@@ -168,6 +168,40 @@ feed carries pre-match closing odds, which is enough to backtest a pre-match bet
 the price that was available at minute 45. A source with time-stamped prices does. Combining free statistics with your own paid
 odds is therefore the realistic configuration, and a single "free or paid" switch could not express it.
 
+### Bringing your own odds
+
+[`OddsApi`][sportsbet.datasets.OddsApi] buys time-stamped prices from [The Odds API](https://the-odds-api.com) with **your** key.
+That is what makes an in-play bet backtestable: the odds it returns are the ones that were actually on offer at the minute the bet
+would have been placed.
+
+```python
+from sportsbet.datasets import SoccerDataLoader, FootballDataStats, OddsApi
+
+dataloader = SoccerDataLoader(
+    param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
+    stats=FootballDataStats(),                                    # free
+    odds=OddsApi(key='...', markets=['h2h', 'totals'], regions=['eu']),   # yours
+)
+```
+
+**It costs money, so it is priced before it is spent.** A historical snapshot costs ten times a live one, multiplied by every
+market and every region you ask for. Ask what it would cost first:
+
+```python
+report = dataloader.prepare(dry_run=True)
+report.estimated_cost     # {'odds_api': 8642}
+```
+
+That number is *exact*, and it costs *nothing* to obtain. The statistics are free and they say when every match kicks off, so the
+snapshots to buy — one per kick-off, per moment — can be counted without asking the vendor for a single one of them. Matches that
+kick off together share a snapshot and are paid for once.
+
+Your key is added to a request at the moment it is made. It is never part of a stored item and never written to the store.
+
+Two limits are worth knowing. The vendor's history begins in **June 2020**, and historical prices are a **paid tier**. Since only
+the seasons both sources publish can be modelled, older seasons simply are not offered when `OddsApi` is the odds source — you
+cannot accidentally select a season it cannot price.
+
 A source declares *what* it needs and *how* to transform it. It never fetches — that is the store's job. This is what makes the
 guarantees below possible rather than merely intended.
 

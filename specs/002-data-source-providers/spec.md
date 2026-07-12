@@ -122,6 +122,8 @@ Users of the dummy dataloader, the snapshot factory functions, and every example
 - **FR-005**: The free sources MUST fetch only the source files needed by the configured `param_grid`.
 - **FR-006**: The system MUST provide a keyed commercial odds source supporting time-stamped historical snapshots, upcoming fixtures and in-play prices, with user-selected markets.
 - **FR-007**: Adding a new source MUST NOT require changing the dataloader, the extraction engine, or any other source.
+- **FR-038**: An odds source whose prices are addressed by instant rather than by season MUST be given the schedule of the selected matches, since a season alone does not say when its matches are played. The dataloader MUST read the statistics first and derive the schedule from them, so the odds plan is built from the real kick-offs rather than from a guess.
+- **FR-039**: A credential MUST be added to a request at the moment the request is made. It MUST NOT be part of a stored item, and MUST NOT be written to the store.
 - **FR-037**: `date` MUST be the kick-off instant of the match, in UTC. Every source MUST convert its own local representation into that at its own boundary; no source may emit a naive or a local instant. This makes `date + event_time` the wall-clock instant of a snapshot, which is the address a time-stamped odds source needs in order to be asked for the price at a given minute. Where a source has no kick-off time, `date` is midnight UTC of the match day, and such rows cannot be joined to a time-stamped odds source.
 - **FR-008**: The data-source contract of the existing abstract dataloader (returning long-format statistics and odds snapshots) MUST NOT change; this feature is an implementation behind that existing seam.
 
@@ -137,7 +139,7 @@ Users of the dummy dataloader, the snapshot factory functions, and every example
 - **FR-009**: The system MUST expose an explicit preparation step that populates the local store for the configured `param_grid`.
 - **FR-010**: Preparation MUST be incremental: it MUST fetch only what the store does not already hold.
 - **FR-011**: Preparation MUST be resumable: an interrupted run MUST be able to continue without re-fetching or re-paying for completed work.
-- **FR-012**: Preparation MUST support a dry run that reports what would be fetched, what is already held, and — for metered sources — an estimated cost, while performing no fetch and incurring no cost.
+- **FR-012**: Preparation MUST support a dry run that reports what would be fetched, what is already held, and — for metered sources — an estimated cost, **without spending anything**. It MAY read free data in order to build the plan (a source's catalogue, and the statistics that say when the matches are played), because that is what makes the estimate exact rather than a guess. It MUST NOT fetch any priced item.
 - **FR-013**: Data extraction MUST NEVER trigger fetching. If the store is not prepared for the requested `param_grid`, extraction MUST fail immediately, state precisely what is missing, and direct the user to the preparation step.
 - **FR-014**: Preparation MUST report progress for long-running fetches.
 

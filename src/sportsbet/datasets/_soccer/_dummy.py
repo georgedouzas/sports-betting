@@ -35,7 +35,7 @@ class _DummySoccerStats(BaseStatsSource):
         """Return the parameters of the bundled data."""
         return list(ParameterGrid(_PARAM_GRID))
 
-    def required_items(self: Self, params: list[dict]) -> list[RawItem]:
+    def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return no items, since nothing is downloaded."""
         return []
 
