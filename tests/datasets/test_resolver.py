@@ -206,3 +206,19 @@ def test_the_free_feed_is_never_reconciled():
     """Test the free feed needs no reconciliation, since its statistics and its odds come from the same row."""
     stats_source, odds_source = SoccerDataLoader().sources
     assert stats_source.name == odds_source.name
+
+
+def test_a_club_from_another_competition_is_not_a_problem_to_fix():
+    """Test a club that belongs to nobody here is dropped quietly rather than reported as a missing alias.
+
+    An odds source lists more than one competition under a league, so a cup tie against a club from another division
+    arrives alongside the league games. Telling the user to write an alias for it would be telling them to fix something
+    that is not broken.
+    """
+    stats = _frame([('Arsenal', 'Chelsea'), ('Everton', 'Fulham')])
+    odds = _frame([('Arsenal', 'Chelsea'), ('Everton', 'Fulham'), ('Coventry City', 'Hull City')], odds=True)
+    resolved, report = resolve(stats, odds)
+    assert report.matched == len(stats)
+    assert report.unmatched_rate == 0.0
+    assert not report.suggestions
+    assert set(resolved['home_team']) == {'Arsenal', 'Everton'}

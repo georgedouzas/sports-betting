@@ -46,3 +46,8 @@ docs/generated/
 tests/samples/reference_frames/
 tests/samples/football_data/
 tests/samples/store/
+
+# Secrets: never commit a credential
+.env
+.env.*
+!.env.example

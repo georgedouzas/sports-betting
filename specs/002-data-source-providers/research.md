@@ -282,3 +282,35 @@ extracts cleanly, with a two-way `Y`. Verified rather than assumed, and left alo
 are not: there is no basketball equivalent of football-data.co.uk, so there is no free feed carrying statistics **and** odds. The
 realistic options are `nba_api` (free, NBA only, unofficial) or a paid vendor, and there is no free basketball odds source at all.
 So basketball would have no free path, which is a product decision rather than an engineering one, and is left to the maintainer.
+
+## D17. Verified against a real key: the sport keys are right, and a league key is not a league
+
+**Smoke-tested with a live Odds API key** (2 credits). Two findings.
+
+**All 38 mapped sport keys are real.** `/v4/sports` returns 170 sports and every key the library maps — the 33 soccer
+ones and the 5 basketball ones — is among them. A wrong key would have meant that league silently never appearing in the
+catalogue, which is a safe failure but an invisible one.
+
+**A league key does not return a league.** `soccer_epl` returned `Coventry City`, `Hull City` and `Ipswich Town` — none
+of them in the Premier League. `Arsenal v Coventry City` is a **League Cup tie**, filed under the league key. So the
+vendor's event list is *not* the league roster, which weakens the assumption the roster pairing rests on (D15: "both
+sources hold the same twenty clubs").
+
+The guards hold anyway, and this is why they exist:
+
+- The extra club has **no counterpart** among the unpaired statistics, so the similarity floor and the margin rule never
+  pair it with anything. Verified: `Coventry City` is not force-matched.
+- Its odds rows are **dropped**, and the gate does not fire — because the gate counts *our games that went without odds*,
+  not *their odds that went without a game of ours*. Every league game still got its price.
+
+**What was wrong was the advice.** The report told the user to write an alias for `Coventry City` — a club that is not
+theirs, with no suggestion to offer. Fixed: a name is reported only when there is a club left for it to be. Telling a
+user to fix something that is not broken is worse than saying nothing.
+
+**Also verified**: the roster pairing maps **16 of 16** clubs correctly using the *real* names on *both* sides —
+football-data's `Man United`, `Nott'm Forest`, `Brighton` against the vendor's `Manchester United`,
+`Nottingham Forest`, `Brighton and Hove Albion` — with **no aliases at all**. And one assumption was wrong: the vendor
+writes `Bournemouth`, not `AFC Bournemouth`. It pairs regardless, which is the point of not hand-writing a table.
+
+**Not verifiable on this key**: historical odds are a paid tier. The historical request shape remains untested against
+the live endpoint.
