@@ -98,17 +98,21 @@ class BaseSource(ABC):
                 The available `league`, `division` and `year` combinations.
         """
 
-    def available_params(self: Self, store: BaseStore | None = None) -> list[dict]:
+    def available_params(self: Self, store: BaseStore | None = None, refresh: bool = False) -> list[dict]:
         """Return the parameter combinations the source publishes.
 
         This is where you start: a `param_grid` cannot be written before it is known what exists, so it needs no
-        dataloader. The catalogue is free and it is kept in the store, so it is downloaded once.
+        dataloader. The catalogue is free and it is re-read, so a new season shows up as soon as it is published.
 
-        It depends on how the source is configured, since a credential may only cover part of what the source offers.
+        What is published depends on how the source is configured, since a credential may only cover part of what the
+        source offers.
 
         Args:
             store:
                 Where the catalogue is kept. The default `None` keeps it in `~/.sportsbet`.
+
+            refresh:
+                If `True`, everything is read again, including what the store already holds.
 
         Returns:
             params:
@@ -118,7 +122,7 @@ class BaseSource(ABC):
 
         store = store if store is not None else LocalStore()
         items = self.index_items()
-        held = store.held(items)
+        held = [] if refresh else store.held(items)
         store.fetch([item for item in items if item not in held])
         return self.catalogue(store.read(items))
 

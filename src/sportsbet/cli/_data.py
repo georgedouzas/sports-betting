@@ -53,14 +53,15 @@ def params(config_path: str) -> None:
 @dataloader.command()
 @get_config_path_option()
 @click.option('--dry-run', is_flag=True, help='Report what a preparation would fetch and cost, without doing it.')
-def prepare(config_path: str, dry_run: bool) -> None:
+@click.option('--refresh', is_flag=True, help='Fetch everything again, including what the store already holds.')
+def prepare(config_path: str, dry_run: bool, refresh: bool) -> None:
     """Download the data a dataloader needs, so an extraction never has to."""
     mod = get_module(config_path)
     dataloader_cls = get_dataloader_cls(mod)
     if dataloader_cls is None:
         return
     param_grid = get_param_grid(mod)
-    report = dataloader_cls(param_grid).prepare(dry_run=dry_run)
+    report = dataloader_cls(param_grid).prepare(dry_run=dry_run, refresh=refresh)
     summary = pd.DataFrame(
         {
             'To fetch': [len(report.to_fetch)],

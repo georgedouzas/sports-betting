@@ -16,6 +16,7 @@ PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}]
 SEASON = b'league,year\nEngland,2024\n'
 PRICED_ITEMS = 2
 FREE_ITEMS = 1
+BOTH_SOURCES = 2
 
 
 class _Feed:
@@ -160,3 +161,41 @@ def test_unavailable_params_are_reported(tmp_path, offline):
     )
     report = loader.prepare(dry_run=True)
     assert report.unavailable == [{'league': 'England', 'division': 1, 'year': 1800}]
+
+
+def test_a_finished_season_is_not_fetched_again(loader, offline):
+    """Test a season that cannot change upstream is held, so it is never downloaded twice."""
+    loader.prepare()
+    offline.clear()
+    loader.prepare()
+    assert not [url for url in offline if url.endswith('England.csv')]
+
+
+def test_refresh_fetches_what_is_held(loader, offline):
+    """Test a correction upstream is picked up on request, since nothing published is truly immutable."""
+    loader.prepare()
+    offline.clear()
+    report = loader.prepare(refresh=True)
+    assert [item.key for item in report.to_fetch] == ['England_1_2024']
+    assert 'https://example.com/England.csv' in offline
+
+
+def test_an_upgrade_rebuilds_the_derived_data(loader, offline, tmp_path, monkeypatch):
+    """Test a release that changes the transform never serves what the previous one produced.
+
+    The snapshots are derived by code as well as from data, so the library is part of their identity.
+    """
+    builds = []
+    to_snapshots = _Feed.to_snapshots
+    monkeypatch.setattr(_Feed, 'to_snapshots', lambda self, payloads: builds.append(1) or to_snapshots(self, payloads))
+
+    loader.prepare()
+    loader._snapshots()
+    assert len(builds) == BOTH_SOURCES
+
+    SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
+    assert len(builds) == BOTH_SOURCES
+
+    monkeypatch.setattr('sportsbet.datasets._store._library_version', lambda: '9.9.9')
+    SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
+    assert len(builds) == BOTH_SOURCES * 2
