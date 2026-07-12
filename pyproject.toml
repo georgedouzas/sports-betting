@@ -50,14 +50,7 @@ Funding = "https://github.com/sponsors/georgedouzas"
 
 [project.scripts]
 sportsbet = "sportsbet.cli:main"
-sportsbet-gui = "sportsbet.gui.main:run"
 
-[project.optional-dependencies]
-gui = [
-    "nest-asyncio>=1.6.0",
-    "reflex==0.7.0",
-    "reflex-ag-grid>=0.0.10",
-]
 [tool.pdm.version]
 source = "scm"
 
@@ -163,11 +156,10 @@ show_error_codes = true
 
 [tool.bandit]
 # B101: asserts are used in tests and for invariant/type narrowing.
-# B404/B603/B607: the GUI launcher runs `node`/`reflex` with fixed, trusted arguments.
-skips = ["B101", "B404", "B603", "B607"]
+skips = ["B101"]
 
 [tool.pytest.ini_options]
-addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "--ignore=src/sportsbet/gui", "-m", "not network"]
+addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "-m", "not network"]
 testpaths = ["src", "tests"]
 markers = ["network: reads the live feed; deselected by default, run with `-m network`"]
 

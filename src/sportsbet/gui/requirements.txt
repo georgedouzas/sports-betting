@@ -1,4 +1,0 @@
-nest-asyncio>=1.6.0
-reflex>=0.6.8
-reflex-ag-grid>=0.0.10
-sports-betting>=0.10.0
