@@ -6,7 +6,7 @@ import mkdocs_gen_files
 
 nav = mkdocs_gen_files.nav.Nav()
 
-paths = [path for path in sorted(Path('src').rglob('*.py')) if 'cli' not in str(path) and 'gui' not in str(path)]
+paths = [path for path in sorted(Path('src').rglob('*.py')) if 'cli' not in str(path)]
 paths = [
     path
     for path in paths

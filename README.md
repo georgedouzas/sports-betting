@@ -49,11 +49,8 @@
 
 ## Introduction
 
-The `sports-betting package` is a handy set of tools for creating, testing, and using sports betting models. It comes
-with a Python API, a CLI, and even a GUI built with [Reflex](https://reflex.dev/) to keep things simple:
-
-![](screenshots/predictions.png)
-![](docs/screenshots/predictions.png)
+The `sports-betting` package is a handy set of tools for creating, testing, and using sports betting models. It comes
+with a Python API, a CLI, and an MCP server, so you can drive it from code, from a terminal, or from an AI assistant.
 
 The main components of `sports-betting` are dataloaders and bettors objects:
 
@@ -61,21 +58,6 @@ The main components of `sports-betting` are dataloaders and bettors objects:
 - Bettors provide an easy way to backtest betting strategies and predict the value bets of future events.
 
 ## Quick start
-
-### GUI
-
-`sports-betting` comes with a GUI that provides a intuitive way to interact with the library. It supports the following
-functionalitites:
-
-- Easily upload, create, or update dataloaders to handle historical and fixtures data.
-- Develop and test betting models with tools for backtesting and identifying value bets.
-
-To launch the GUI, simply run the command `sportsbet-gui`. Once started, you’ll see the initial screen:
-
-![](screenshots/initial.png)
-![](docs/screenshots/initial.png)
-
-Explore the functionality with guidance from the built-in bot, which streams helpful messages along the way.
 
 ### API
 
@@ -141,10 +123,10 @@ For user installation, `sports-betting` is currently available on the PyPi's rep
 pip install sports_betting
 ```
 
-If you have Node.js version v22.0.0 or higher, you can optionally install the GUI:
+To drive the library from an AI assistant, install the MCP server:
 
 ```bash
-pip install sports_betting[gui]
+pip install 'sports_betting[mcp]'
 ```
 
 Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
@@ -158,31 +140,11 @@ pdm install
 
 ## Usage
 
-You can access `sports-betting` through the GUI application, the Python API, or the CLI. However, it’s a good idea to
-get familiar with the Python API since you’ll need it to create configuration files for the CLI or load custom betting
-models into the GUI. `sports-betting` supports all common sports betting needs i.e. fetching historical and fixtures
-data as well as backtesting of betting strategies and prediction of value bets. 
-
-## GUI
-
-Launch the GUI app with the command `sportsbet-gui`.
-
-Here are a few things you can do with the GUI:
-
-- Configure the dataloader:
-
-![](screenshots/parameters.png)
-![](docs/screenshots/parameters.png)
-
-- Create a new betting model:
-
-![](screenshots/betting_model.png)
-![](docs/screenshots/betting_model.png)
-
-- Run the model to get either backtesting results or value bets:
-
-![](screenshots/backtesting.png)
-![](docs/screenshots/backtesting.png)
+You can access `sports-betting` through the Python API, the CLI, or an AI assistant via the MCP server. It is worth
+getting familiar with the Python API either way, since a CLI configuration file *is* Python — it hands the CLI a
+dataloader you built yourself, which is what lets any sport, any data source and any credential reach every surface.
+`sports-betting` supports all common sports betting needs: fetching historical and fixtures data, backtesting betting
+strategies, and predicting value bets.
 
 ### API
 
