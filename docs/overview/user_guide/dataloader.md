@@ -202,6 +202,52 @@ Two limits are worth knowing. The vendor's history begins in **June 2020**, and 
 the seasons both sources publish can be modelled, older seasons simply are not offered when `OddsApi` is the odds source — you
 cannot accidentally select a season it cannot price.
 
+### When two sources name a club differently
+
+This is the most dangerous thing in the library, so it is worth being blunt about.
+
+Two sources do not name the same club the same way. The free feed says `Man United`, `Nott'm Forest`, `Wolves`; the odds vendor
+says `Manchester United`, `Nottingham Forest`, `Wolverhampton Wanderers`. If a name fails to match, that match simply has no odds
+— and **a missing odd does not look like an error**. It looks like a slightly smaller dataset, which produces a backtest that is
+clean, plausible, and wrong.
+
+So when your statistics and your odds come from different sources, they are reconciled, and the result is a hard gate:
+
+```python
+dataloader.prepare()
+X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
+dataloader.reconciliation_          # matched, unmatched_rate, unmatched_stats, unmatched_odds
+```
+
+By default **not one match may go without odds** (`max_unmatched_rate=0.0`). Cross that and it raises
+[`UnmatchedError`][sportsbet.datasets.UnmatchedError] rather than handing you a holed dataset.
+
+Casing, accents, punctuation and the club words leagues sprinkle differently (`FC`, `AFC`, `CF`) are treated as noise and ignored.
+What is left is compared **exactly**. A name that still differs is a *different name*, and the library will not guess — because a
+wrong guess attaches one club's odds to another match and says nothing about it, which is far worse than not matching at all.
+
+Names the library already knows are bridged for you. For the rest, the failure tells you exactly what to do:
+
+```text
+Matched 2 of 3 matches (33.3% unmatched). These team names were not found: ['Athletic Bilbao'].
+Check them and pass them as `aliases`:
+aliases={
+    'Athletic Bilbao': 'Ath Bilbao',
+}
+```
+
+Check it — the suggestion is a resemblance, not a fact — and pass it back:
+
+```python
+SoccerDataLoader(..., aliases={'Athletic Bilbao': 'Ath Bilbao'})
+```
+
+The reconciled odds then carry the **statistics'** identity: their kick-off and their spelling, so the two tables line up exactly
+rather than nearly.
+
+None of this runs on the free path, where the statistics and the odds come from the same upstream row and their identities are
+equal by construction.
+
 A source declares *what* it needs and *how* to transform it. It never fetches — that is the store's job. This is what makes the
 guarantees below possible rather than merely intended.
 

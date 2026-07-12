@@ -10,6 +10,7 @@ from ._base._schema import (
     optional_col,
     required_col,
 )
+from ._resolver import ReconciliationReport, UnmatchedError, resolve
 from ._soccer._dataloader import SoccerDataLoader
 from ._soccer._dummy import DummySoccerDataLoader
 from ._soccer._utils import market_outcomes
@@ -41,11 +42,14 @@ __all__: list[str] = [
     'PreparationReport',
     'RawItem',
     'RawPayload',
+    'ReconciliationReport',
     'SoccerDataLoader',
+    'UnmatchedError',
     'from_dataframe',
     'from_snapshots',
     'load_dataloader',
     'market_outcomes',
     'optional_col',
     'required_col',
+    'resolve',
 ]

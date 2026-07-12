@@ -214,3 +214,33 @@ that scans the whole store for it.
 **Cost model, pinned against the vendor's documentation** rather than guessed: historical odds cost `10 x markets x regions`, live
 odds cost `markets x regions`, and `/v4/sports` is free. Matches that kick off together share a snapshot and are paid for once,
 which is what keeps a season in the thousands of credits rather than the tens of thousands.
+
+## D15. A wrong alias is worse than an unmatched team
+
+**Decision**: normalize away what is genuinely noise (casing, accents, punctuation, the club words leagues sprinkle differently),
+then compare **exactly**. Bridge the rest with an alias table. Never accept a resemblance. Default `max_unmatched_rate=0.0`, and
+raise `UnmatchedError` past it.
+
+**Rationale**: the two sources do not merely *format* names differently, they use *different names*: `Man United` against
+`Manchester United`, `Wolves` against `Wolverhampton Wanderers`, `Nott'm Forest` against `Nottingham Forest`. No normalization
+bridges those, so an alias table is not optional.
+
+The temptation is a fuzzy matcher. It is the wrong call, and the reason is asymmetric:
+
+- An **unmatched** team is loud. The match has no odds, the rate rises, the gate fires.
+- A **wrong** alias is silent. It attaches one club's odds to another club's match, and reports nothing. The dataset looks
+  complete. The backtest looks clean. It is wrong.
+
+`Manchester United` and `Manchester City` are one token apart. Any similarity threshold that bridges `Man United` will eventually
+bridge those two, and nothing will say so. So the library reports resemblances as **suggestions** and applies none of them.
+
+**What makes it usable anyway**: the failure is mechanical to fix. It names the clubs it could not place, ranks what they resemble,
+and prints a paste-ready `aliases={...}` dict. The user checks it — a resemblance is not a fact — and passes it back.
+
+**Only aliases that can be verified are shipped.** Inventing entries for leagues whose club names cannot be checked would be
+inventing exactly the silent corruption above. An alias the library lacks fails loudly, which is safe; an alias the library got
+wrong does not, which is not.
+
+**The odds take the statistics' identity**, not their own: the statistics say which matches exist, the odds say what they were
+priced at. So the reconciled odds carry the statistics' kick-off and spelling, and the two tables line up exactly rather than
+nearly.

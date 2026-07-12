@@ -14,6 +14,7 @@ from rich.progress import Progress
 from ... import ParamGrid
 from .._base._dataloader import PARAM_COLS, BaseDataLoader
 from .._base._schema import IDENTITY_COLS
+from .._resolver import ALIASES, resolve
 from .._sources._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
 from .._sources._football_data import FootballDataOdds, FootballDataStats
 from .._store import BaseStore, LocalStore, NotPreparedError, PreparationReport, payloads_digest
@@ -53,6 +54,22 @@ class SoccerDataLoader(BaseDataLoader):
         store:
             Where the downloaded data is kept. The default `None` keeps it in
             `~/.sportsbet`.
+
+        aliases:
+            The team names of the odds source, mapped to the names of the
+            statistics source, for when the two do not name a club the same way.
+            They are added to the ones the library already knows.
+
+        max_unmatched_rate:
+            The proportion of matches that may go without odds when the two
+            sources are different. The default `0.0` allows none, since a match
+            whose odds are missing does not look like an error: it looks like a
+            smaller dataset and a backtest that is confidently wrong.
+
+    Attributes:
+        reconciliation_ (ReconciliationReport):
+            How well the matches of the two sources were found in each other.
+            Only set when they are different sources.
     """
 
     def __init__(
@@ -61,11 +78,15 @@ class SoccerDataLoader(BaseDataLoader):
         stats: BaseStatsSource | None = None,
         odds: BaseOddsSource | None = None,
         store: BaseStore | None = None,
+        aliases: dict[str, str] | None = None,
+        max_unmatched_rate: float = 0.0,
     ) -> None:
         super().__init__(param_grid)
         self.stats = stats
         self.odds = odds
         self.store = store
+        self.aliases = aliases
+        self.max_unmatched_rate = max_unmatched_rate
 
     def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource, BaseStore]:
         """Return the sources and the store, built once and kept."""
@@ -234,6 +255,9 @@ class SoccerDataLoader(BaseDataLoader):
                 raise NotPreparedError(self._report(fetch=True)) from error
             stats = self._derive(stats_source, [payloads[item.source, item.key] for item in stats_items], store)
             odds = self._derive(odds_source, [payloads[item.source, item.key] for item in odds_items], store)
+            if stats_source.name != odds_source.name and not odds.empty:
+                aliases = {**ALIASES, **(self.aliases or {})}
+                odds, self.reconciliation_ = resolve(stats, odds, aliases, self.max_unmatched_rate)
             self._downloaded = (stats, odds)
         return self._downloaded
 

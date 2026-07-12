@@ -201,12 +201,12 @@ public discovery method.
 
 **Independent Test**: `pdm tests -k resolver` — deliberately mismatched naming produces an accurate unmatched rate and a raised error, not NaN odds.
 
-- [ ] T060 [US4] Create `src/sportsbet/datasets/_resolver.py` with the match identity, the per-source alias tables and the windowed kickoff match
-- [ ] T061 [US4] Implement `ReconciliationReport` with matched/unmatched counts, rates and example rows (FR-022, FR-024)
-- [ ] T062 [US4] Enforce `max_unmatched_rate` in `SoccerDataLoader`, defaulting strict, raising above tolerance (FR-023)
-- [ ] T063 [US4] Skip the resolver entirely when stats and odds come from the same source — the free path's identities are equal by construction
-- [ ] T064 [P] [US4] Write `tests/datasets/test_resolver.py`: accurate unmatched rate, a hard failure above tolerance, and reporting-but-not-dropping within tolerance
-- [ ] T065 [P] [US4] Document the resolver and the quality gate in `docs/overview/user_guide/dataloader.md`
+- [X] T060 [US4] Create `src/sportsbet/datasets/_resolver.py` with the match identity, the per-source alias tables and the windowed kickoff match
+- [X] T061 [US4] Implement `ReconciliationReport` with matched/unmatched counts, rates and example rows (FR-022, FR-024)
+- [X] T062 [US4] Enforce `max_unmatched_rate` in `SoccerDataLoader`, defaulting strict, raising above tolerance (FR-023)
+- [X] T063 [US4] Skip the resolver entirely when stats and odds come from the same source — the free path's identities are equal by construction
+- [X] T064 [P] [US4] Write `tests/datasets/test_resolver.py`: accurate unmatched rate, a hard failure above tolerance, and reporting-but-not-dropping within tolerance
+- [X] T065 [P] [US4] Document the resolver and the quality gate in `docs/overview/user_guide/dataloader.md`
 
 **Checkpoint**: all user stories functional.
 
