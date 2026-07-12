@@ -1,5 +1,6 @@
 """Configuration for the pytest test suite."""
 
+import socket
 from importlib.resources import files
 from pathlib import Path
 from typing import Annotated
@@ -35,6 +36,24 @@ def pandas_terminal_width() -> None:
     """Set options to display data."""
     pd.set_option('display.width', 1000)
     pd.set_option('display.max_columns', 1000)
+
+
+@pytest.fixture(autouse=True)
+def no_network(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fail any test that reaches the network, unless it is marked `network`.
+
+    Extraction must never fetch, so the only way to know it does not is to make fetching impossible and watch the suite
+    stay green.
+    """
+    if request.node.get_closest_marker('network'):
+        return
+
+    def guard(*args: object, **kwargs: object) -> None:
+        msg = 'The test suite must not reach the network. Use a recorded payload or mark the test `network`.'
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(socket.socket, 'connect', guard)
+    monkeypatch.setattr(socket.socket, 'connect_ex', guard)
 
 
 @pytest.fixture

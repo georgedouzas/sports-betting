@@ -13,12 +13,32 @@ from ._base._schema import (
 from ._soccer._dataloader import SoccerDataLoader
 from ._soccer._dummy import DummySoccerDataLoader
 from ._soccer._utils import market_outcomes
+from ._sources._base import (
+    BaseOddsSource,
+    BaseSource,
+    BaseStatsSource,
+    RawItem,
+    RawPayload,
+)
+from ._sources._football_data import FootballDataOdds, FootballDataStats
+from ._store import BaseStore, LocalStore, NotPreparedError, PreparationReport
 
 __all__: list[str] = [
     'BaseDataLoader',
     'BaseOddsSchema',
+    'BaseOddsSource',
+    'BaseSource',
     'BaseStatsSchema',
+    'BaseStatsSource',
+    'BaseStore',
     'DummySoccerDataLoader',
+    'FootballDataOdds',
+    'FootballDataStats',
+    'LocalStore',
+    'NotPreparedError',
+    'PreparationReport',
+    'RawItem',
+    'RawPayload',
     'SoccerDataLoader',
     'from_dataframe',
     'from_snapshots',

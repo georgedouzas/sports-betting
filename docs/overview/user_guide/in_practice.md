@@ -133,3 +133,25 @@ it with [`from_snapshots`][sportsbet.datasets.from_snapshots] (or
 fixture. See [Consuming your own data](dataloader.md#consuming-your-own-data).
 
 The key point is the same in both cases: keep the training features and the serving features in step with the moment you bet.
+
+## Doing this on real data
+
+The examples above use the offline [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader] so they run anywhere. On
+real data the flow is identical, with one step in front of it: the data has to be downloaded before it can be used.
+
+```python
+from sportsbet.datasets import SoccerDataLoader
+
+dataloader = SoccerDataLoader(param_grid={'league': ['England'], 'division': [1], 'year': [2025]})
+dataloader.prepare()                                   # downloads; nothing else ever does
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
+X_fix, _, O_fix = dataloader.extract_fixtures_data()
+```
+
+`prepare` is incremental, so running it again before each betting session refreshes the fixtures and the current season without
+re-downloading the seasons that are already finished. Everything else on this page — the input horizon, the training and serving
+symmetry, the backtest — is unchanged. See [Preparing the data](dataloader.md#preparing-the-data).
+
+One honest limitation. The free feed carries **pre-match closing odds**, so the in-play flow above trains and predicts correctly
+but cannot be *backtested* against a real in-play price: nobody recorded what the odds were at minute 45. To backtest an in-play
+bet you need a source with time-stamped prices, injected as the dataloader's [odds source](dataloader.md#sources).

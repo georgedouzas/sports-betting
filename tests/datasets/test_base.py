@@ -11,20 +11,20 @@ class _TestDataLoader(BaseDataLoader):
     """A concrete test dataloader whose snapshots and schemas are supplied directly."""
 
     def _snapshots(self):
-        return self.stats, self.odds
+        return self.stats_, self.odds_
 
-    def _prepare(self, odds_type):
+    def _load(self, odds_type):
         """Skip snapshot preparation; the components are provided directly."""
 
 
 def _from_components(stats, odds, stats_schema, odds_schema, targets):
     """Build an engine loader directly from ready snapshots and schemas."""
     loader = _TestDataLoader()
-    loader.stats = stats
-    loader.odds = odds
-    loader.stats_schema = stats_schema
-    loader.odds_schema = odds_schema
-    loader.targets = targets
+    loader.stats_ = stats
+    loader.odds_ = odds
+    loader.stats_schema_ = stats_schema
+    loader.odds_schema_ = odds_schema
+    loader.targets_ = targets
     return loader
 
 
@@ -32,11 +32,11 @@ def test_base_dataloader_initialization(stats, odds, stats_schema, odds_schema):
     """Test BaseDataLoader initialization."""
     targets = ['home_goals', 'away_goals']
     dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
-    assert dataloader.stats is stats
-    assert dataloader.odds is odds
-    assert dataloader.stats_schema is stats_schema
-    assert dataloader.odds_schema is odds_schema
-    assert dataloader.targets is targets
+    assert dataloader.stats_ is stats
+    assert dataloader.odds_ is odds
+    assert dataloader.stats_schema_ is stats_schema
+    assert dataloader.odds_schema_ is odds_schema
+    assert dataloader.targets_ is targets
 
 
 def test_extract_train_data_fails_on_invalid_stats(stats, odds, stats_schema, odds_schema):

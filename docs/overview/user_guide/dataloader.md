@@ -9,13 +9,26 @@
 This section presents the dataloader object in details. The available dataloaders are the following:
 
 - [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader]: Soccer data loader with bundled sample data, for offline testing and the examples below.
-- [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]: Soccer data loader that downloads historical and fixtures data.
+- [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]: Soccer data loader that downloads historical and fixtures data from the sources you give it.
 
 We aim to include in the future more dataloaders for various sports and betting markets:
 
 - Basketball
 - NFL
 - Hockey
+
+## Code, not data
+
+This library ships the code that fetches the data, never the data itself. The odds published by bookmakers belong to whoever
+published them, and redistributing them is not ours to do — so `SoccerDataLoader` downloads
+[football-data.co.uk](https://www.football-data.co.uk) on **your** machine and runs the transform locally. Nothing is mirrored.
+
+Two consequences follow, and they shape the whole interface:
+
+- Data has to be **downloaded before it can be used**. That happens in an explicit [`prepare`](#preparing-the-data) step, never
+  as a side effect of asking for training data.
+- Where the data comes from is a **choice you make**, by injecting [sources](#sources). Free statistics and paid odds are
+  complementary rather than alternatives, so they are separate parameters.
 
 ## The event-snapshot data model
 
@@ -57,11 +70,11 @@ matrices of training and fixtures data have the same columns.
 
 ### Available parameters
 
-The available parameters and their values are provided from the class method `get_all_params`:
+The available parameters and their values are provided from the `get_all_params` method. What is available depends on the data source, so it belongs to the configured dataloader rather than to its class:
 
 ```python
 from sportsbet.datasets import DummySoccerDataLoader
-assert DummySoccerDataLoader.get_all_params() == [
+assert DummySoccerDataLoader().get_all_params() == [
     {'division': 1, 'league': 'England', 'year': 2025},
     {'division': 1, 'league': 'Spain', 'year': 2025}
 ]
@@ -71,7 +84,7 @@ Similarly, for [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]:
 
 ```python
 from sportsbet.datasets import SoccerDataLoader
-params = SoccerDataLoader.get_all_params()
+params = SoccerDataLoader().get_all_params()
 # The available combinations are discovered from the feed, so only the
 # league/division/year that actually exist are ever offered.
 assert {'division': 1, 'league': 'England', 'year': 2024} in params
@@ -108,7 +121,86 @@ Selecting two disjoint groups with a list of dictionaries:
 dataloader = DummySoccerDataLoader(param_grid=[{'league': ['England']}, {'league': ['Spain']}])
 ```
 
-Once the dataloader is initialized, the training and fixtures data can be extracted.
+Once the dataloader is initialized, the data has to be prepared before it can be extracted.
+
+## Sources
+
+A source is where the data comes from. `SoccerDataLoader` takes two of them, and each carries its own settings — so adding a
+source never widens the dataloader's signature:
+
+```python
+from sportsbet.datasets import SoccerDataLoader, FootballDataStats, FootballDataOdds
+
+dataloader = SoccerDataLoader(
+    param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
+    stats=FootballDataStats(),
+    odds=FootballDataOdds(),
+)
+```
+
+Both default to the free [football-data.co.uk](https://www.football-data.co.uk) feed, so the above is the same as
+`SoccerDataLoader(param_grid=...)`.
+
+The statistics and the odds are **separate parameters on purpose**. They are not two ways of getting the same thing: the free
+feed carries pre-match closing odds, which is enough to backtest a pre-match bet but not an in-play one, since it never tells you
+the price that was available at minute 45. A source with time-stamped prices does. Combining free statistics with your own paid
+odds is therefore the realistic configuration, and a single "free or paid" switch could not express it.
+
+A source declares *what* it needs and *how* to transform it. It never fetches — that is the store's job. This is what makes the
+guarantees below possible rather than merely intended.
+
+## Preparing the data
+
+Downloading happens in `prepare`, and nowhere else:
+
+```python
+dataloader.prepare()
+X_train, Y_train, O_train = dataloader.extract_train_data()
+```
+
+Extracting data from a dataloader that was not prepared raises
+[`NotPreparedError`][sportsbet.datasets.NotPreparedError] rather than quietly downloading:
+
+```python
+from sportsbet.datasets import NotPreparedError
+
+try:
+    SoccerDataLoader(param_grid={'league': ['England']}).extract_train_data()
+except NotPreparedError as error:
+    print(error)  # says what is missing and what obtaining it would cost
+```
+
+That is deliberate. A metered odds source turns an accidental call into money, and a large `param_grid` turns it into a long
+wait. Neither should be able to happen because you asked for a dataframe.
+
+`prepare` is **incremental**: it fetches only what the store does not already hold, so re-running it on a complete store fetches
+nothing. It is **resumable**: an interrupted run continues rather than starting over. And it can tell you what it *would* do,
+before it does anything:
+
+```python
+report = dataloader.prepare(dry_run=True)
+report.to_fetch        # the items that would be downloaded
+report.held            # the items already in the store
+report.estimated_cost  # what a metered source would charge, e.g. {'odds_api': 1240}
+report.unavailable     # requested parameters the source does not publish
+```
+
+A dry run downloads no data and spends nothing.
+
+### Where the data is kept
+
+The downloaded data lives in a [`LocalStore`][sportsbet.datasets.LocalStore], by default under `~/.sportsbet`:
+
+```python
+from sportsbet.datasets import SoccerDataLoader, LocalStore
+
+dataloader = SoccerDataLoader(param_grid={'league': ['England']}, store=LocalStore('/data/sportsbet'))
+```
+
+The store keeps the raw downloads **forever**, and everything derived from them is rebuilt from those raw payloads at no cost.
+This matters if you ever pay for odds: changing the feature engineering, or upgrading the library, never re-downloads and never
+re-charges you. It also knows the difference between data that is finished (a completed season) and data that can still change
+(fixtures, the current season) — so the first is never fetched twice and the second is always refreshed.
 
 ## Column-naming grammar
 

@@ -41,3 +41,8 @@ docs/generated/
 
 # OS
 .DS_Store
+
+# Captured reference data: third-party odds, never committed. Only the fingerprint is.
+tests/samples/reference_frames/
+tests/samples/football_data/
+tests/samples/store/

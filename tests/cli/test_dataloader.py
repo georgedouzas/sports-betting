@@ -92,3 +92,24 @@ def test_dataloader_fixtures(cli_runner, cli_config_path):
     assert 'Fixtures odds data' in result.output
     assert (data_path / 'X_fix.csv').exists()
     assert (data_path / 'O_fix.csv').exists()
+
+
+def test_dataloader_prepare_error(cli_runner):
+    """Test dataloader prepare command, missing configuration path."""
+    result = cli_runner.invoke(main, ['dataloader', 'prepare'])
+    assert result.exit_code != 0, result.output
+    assert 'Error: Missing option \'--config-path\' / \'-c\'.' in result.output
+
+
+def test_dataloader_prepare(cli_runner, cli_config_path):
+    """Test dataloader prepare command."""
+    result = cli_runner.invoke(main, ['dataloader', 'prepare', '-c', cli_config_path])
+    assert result.exit_code == 0, result.output
+    assert 'Preparation' in result.output
+
+
+def test_dataloader_prepare_dry_run(cli_runner, cli_config_path):
+    """Test dataloader prepare command reports what it would do without doing it."""
+    result = cli_runner.invoke(main, ['dataloader', 'prepare', '-c', cli_config_path, '--dry-run'])
+    assert result.exit_code == 0, result.output
+    assert 'dry run' in result.output

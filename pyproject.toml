@@ -36,6 +36,7 @@ dependencies = [
     "rich>=13.3.3",
     "aiohttp>=3.8.4",
     "pandera[pandas]>=0.27.0",
+    "pyarrow>=17.0.0",
 ]
 
 [project.urls]
@@ -166,8 +167,9 @@ show_error_codes = true
 skips = ["B101", "B404", "B603", "B607"]
 
 [tool.pytest.ini_options]
-addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "--ignore=src/sportsbet/gui"]
+addopts = ["--cov", "--doctest-modules", "--dist=loadgroup", "--ignore=src/sportsbet/gui", "-m", "not network"]
 testpaths = ["src", "tests"]
+markers = ["network: reads the live feed; deselected by default, run with `-m network`"]
 
 [tool.coverage.run]
 branch = true

@@ -79,11 +79,13 @@ Explore the functionality with guidance from the built-in bot, which streams hel
 
 ### API
 
-The `sports-betting` package makes it easy to download sports betting data:
+The `sports-betting` package makes it easy to download sports betting data. The data is downloaded onto your own machine by
+an explicit `prepare` step, and never as a side effect of asking for a dataframe:
 
 ```python
 from sportsbet.datasets import SoccerDataLoader
 dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
+dataloader.prepare()
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
@@ -206,6 +208,7 @@ divisions = [1, 2]
 years = [2021, 2022, 2023, 2024]
 odds_type = 'market_maximum'
 dataloader = SoccerDataLoader({'league': leagues, 'year': years, 'division': divisions})
+dataloader.prepare()
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type=odds_type)
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
