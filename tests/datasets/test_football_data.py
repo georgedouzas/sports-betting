@@ -114,3 +114,31 @@ def test_sources_perform_no_input_output(sources):
     assert stats.required_items(params)
     assert stats.to_snapshots(payloads()) is not None
     assert odds.to_snapshots(payloads()) is not None
+
+
+TIMED_FEED = (
+    'Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,HTHG,HTAG,AvgH,AvgD,AvgA\n'
+    'E0,10/08/2024,20:00,Arsenal,Chelsea,2,1,1,0,1.80,3.50,4.20\n'
+    'E0,26/12/2024,15:00,Liverpool,Everton,0,0,0,0,1.50,4.00,6.00\n'
+)
+
+
+def test_the_date_is_the_kickoff_instant_in_utc(sources):
+    """Test the feed's UK kick-off time becomes a UTC instant, so a snapshot has a wall-clock address.
+
+    The feed publishes every league's kick-off in UK time, so summer is an hour ahead of UTC and winter is not.
+    """
+    stats, _ = sources
+    snapshots = stats.to_snapshots(payloads(TIMED_FEED))
+    preplay = snapshots[snapshots['event_status'] == 'preplay'].set_index('home_team')
+    assert preplay.loc['Arsenal', 'date'] == pd.Timestamp('2024-08-10 19:00')
+    assert preplay.loc['Liverpool', 'date'] == pd.Timestamp('2024-12-26 15:00')
+
+
+def test_a_snapshot_is_addressable_in_wall_clock_time(sources):
+    """Test `date + event_time` is the instant of the snapshot, which is how an odds provider is asked for a price."""
+    stats, _ = sources
+    snapshots = stats.to_snapshots(payloads(TIMED_FEED))
+    inplay = snapshots[snapshots['event_status'] == 'inplay'].set_index('home_team')
+    moment = inplay.loc['Arsenal', 'date'] + pd.Timedelta(minutes=int(inplay.loc['Arsenal', 'event_time']))
+    assert moment == pd.Timestamp('2024-08-10 19:45')

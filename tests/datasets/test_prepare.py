@@ -180,10 +180,10 @@ def test_refresh_fetches_what_is_held(loader, offline):
     assert 'https://example.com/England.csv' in offline
 
 
-def test_an_upgrade_rebuilds_the_derived_data(loader, offline, tmp_path, monkeypatch):
-    """Test a release that changes the transform never serves what the previous one produced.
+def test_a_changed_transform_rebuilds_the_derived_data(loader, offline, tmp_path, monkeypatch):
+    """Test a change to the transform never serves what the previous one produced.
 
-    The snapshots are derived by code as well as from data, so the library is part of their identity.
+    The snapshots are derived by code as well as from data, so the code is part of their identity.
     """
     builds = []
     to_snapshots = _Feed.to_snapshots
@@ -196,6 +196,6 @@ def test_an_upgrade_rebuilds_the_derived_data(loader, offline, tmp_path, monkeyp
     SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
     assert len(builds) == BOTH_SOURCES
 
-    monkeypatch.setattr('sportsbet.datasets._store._library_version', lambda: '9.9.9')
+    monkeypatch.setattr(_Feed, 'transform_digest', lambda self: 'changed', raising=False)
     SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
     assert len(builds) == BOTH_SOURCES * 2
