@@ -254,6 +254,18 @@ class SourcedDataLoader(BaseDataLoader):
         self._downloaded = None
         return report
 
+    def _unprepared(self: Self) -> PreparationReport | None:
+        """Return what a preparation would need, when that can be known without fetching.
+
+        It cannot when the store does not hold the catalogue either, and finding out would mean downloading. Saying less
+        is better than downloading in order to say more, since an extraction that downloads is the one thing this must
+        never be.
+        """
+        try:
+            return self._report(fetch=False)
+        except KeyError:
+            return None
+
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the long `stats`/`odds` snapshots of the sources, read from the store.
 
@@ -267,7 +279,7 @@ class SourcedDataLoader(BaseDataLoader):
                 items = self._unique(stats_items + odds_items)
                 payloads = {(payload.item.source, payload.item.key): payload for payload in store.read(items)}
             except KeyError as error:
-                raise NotPreparedError(self._report(fetch=True)) from error
+                raise NotPreparedError(self._unprepared()) from error
             stats = self._derive(stats_source, [payloads[item.source, item.key] for item in stats_items], store)
             odds = self._derive(odds_source, [payloads[item.source, item.key] for item in odds_items], store)
             if stats_source.name != odds_source.name and not odds.empty:

@@ -37,17 +37,19 @@ from .datasets import (
     EuroLeagueStats,
     FootballDataOdds,
     FootballDataStats,
+    LocalStore,
     NBAStats,
     OddsApi,
     SoccerDataLoader,
 )
+from .datasets._base._sourced import SourcedDataLoader
 from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
 
-SPORTS: dict[str, type[BaseDataLoader]] = {
+SOURCED: dict[str, type[SourcedDataLoader]] = {
     'soccer': SoccerDataLoader,
     'basketball': BasketballDataLoader,
-    'dummy': DummySoccerDataLoader,
 }
+SPORTS: dict[str, type[BaseDataLoader]] = {**SOURCED, 'dummy': DummySoccerDataLoader}
 STATS_SOURCES: dict[str, type[BaseStatsSource]] = {
     'football-data': FootballDataStats,
     'euroleague': EuroLeagueStats,
@@ -61,6 +63,9 @@ MODELS = ['odds-comparison', 'logistic']
 KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
 SPORTLESS = {'dummy'}
+STATUSES = ['preplay', 'inplay', 'postplay']
+LEARNING_TYPES = ['supervised', 'unsupervised']
+MOMENT_PARTS = 2
 
 
 class SelectionError(ValueError):
@@ -88,7 +93,41 @@ def _load_object(reference: str) -> object:
     return getattr(mod, name)
 
 
-def _odds_source(odds: str, key_env: str, markets: list[str] | None, regions: list[str] | None) -> BaseOddsSource:
+def _moments(moments: list[str] | None) -> list[tuple[str, int]] | None:
+    """Return the moments to price, each of them a status and how many minutes into the match it is."""
+    if not moments:
+        return None
+    parsed = []
+    for moment in moments:
+        status, _, minutes = moment.partition(':')
+        if status not in STATUSES or not minutes.isdigit():
+            msg = f'`{moment}` should be a status and a minute, as in `inplay:45`.'
+            raise SelectionError(msg)
+        parsed.append((status, int(minutes)))
+    return parsed
+
+
+def _aliases(aliases: list[str] | None) -> dict[str, str] | None:
+    """Return the teams the two sources spell differently, each of them a name and the other name."""
+    if not aliases:
+        return None
+    paired = {}
+    for alias in aliases:
+        stats_name, sep, odds_name = alias.partition('=')
+        if not sep or not stats_name or not odds_name:
+            msg = f'`{alias}` should be the two names, as in `Olimpia Milano=EA7 Emporio Armani Milan`.'
+            raise SelectionError(msg)
+        paired[stats_name] = odds_name
+    return paired
+
+
+def _odds_source(
+    odds: str,
+    key_env: str,
+    markets: list[str] | None,
+    regions: list[str] | None,
+    moments: list[str] | None,
+) -> BaseOddsSource:
     """Return the odds source a name asks for, reading a key from the environment when it needs one."""
     if odds not in ODDS_SOURCES:
         msg = f'`{odds}` is not an odds source. The ones there are: {", ".join(sorted(ODDS_SOURCES))}.'
@@ -102,7 +141,7 @@ def _odds_source(odds: str, key_env: str, markets: list[str] | None, regions: li
             f'shell history, or name another variable with `--odds-key-env`.'
         )
         raise SelectionError(msg)
-    return OddsApi(key=key, markets=markets or None, regions=regions or None)
+    return OddsApi(key=key, markets=markets or None, regions=regions or None, moments=_moments(moments))
 
 
 def build_dataloader(
@@ -115,6 +154,10 @@ def build_dataloader(
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
 ) -> BaseDataLoader:
     """Return the dataloader a selection describes.
 
@@ -136,11 +179,14 @@ def build_dataloader(
     if stats is not None and stats not in STATS_SOURCES:
         msg = f'`{stats}` is not a statistics source. The ones there are: {", ".join(sorted(STATS_SOURCES))}.'
         raise SelectionError(msg)
-    sources = {
-        'stats': STATS_SOURCES[stats]() if stats else None,
-        'odds': _odds_source(odds, odds_key_env, odds_markets, odds_regions) if odds else None,
-    }
-    return SPORTS[sport](param_grid=param_grid, **sources)
+    return SOURCED[sport](
+        param_grid=param_grid,
+        stats=STATS_SOURCES[stats]() if stats else None,
+        odds=_odds_source(odds, odds_key_env, odds_markets, odds_regions, odds_moments) if odds else None,
+        store=LocalStore(store) if store else None,
+        aliases=_aliases(aliases),
+        max_unmatched_rate=max_unmatched_rate,
+    )
 
 
 def build_bettor(
@@ -149,6 +195,7 @@ def build_bettor(
     init_cash: float | None = None,
     stake: float | None = None,
     betting_markets: list[str] | None = None,
+    model_odds_types: list[str] | None = None,
 ) -> BaseBettor:
     """Return the betting model a selection describes.
 
@@ -163,7 +210,13 @@ def build_bettor(
             raise SelectionError(msg)
         return built
     if model == 'odds-comparison':
-        return OddsComparisonBettor(alpha=alpha, betting_markets=markets, init_cash=init_cash, stake=stake)
+        return OddsComparisonBettor(
+            odds_types=model_odds_types or None,
+            alpha=alpha,
+            betting_markets=markets,
+            init_cash=init_cash,
+            stake=stake,
+        )
     if model == 'logistic':
         classifier = make_pipeline(
             make_column_transformer(

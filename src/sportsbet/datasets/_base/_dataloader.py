@@ -229,7 +229,12 @@ class BaseDataLoader(ABC):
         self.param_grid_ = stats[PARAM_COLS].drop_duplicates().to_dict('records')
 
     def _apply_drop_na(self: Self, X: pd.DataFrame, drop_na_thres: float) -> pd.DataFrame:
-        """Drop feature columns whose missingness exceeds `drop_na_thres`."""
+        """Drop feature columns whose missingness exceeds `drop_na_thres`.
+
+        It is a proportion, so it lies between none and all of them. Anything above one asks for columns that are more
+        than complete, and dropped every column instead of saying so.
+        """
+        check_scalar(drop_na_thres, 'drop_na_thres', (int, float), min_val=0.0, max_val=1.0)
         if not X.empty:
             keep = X.columns[X.isna().mean() <= (1.0 - drop_na_thres)]
             X = X[keep]

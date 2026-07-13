@@ -15,7 +15,7 @@ from sklearn.model_selection import TimeSeriesSplit
 
 from ..evaluation import backtest as run_backtest
 from ._options import EXTRACTION, MODEL, OUTPUT, SELECTION, options
-from ._utils import extraction, modelled, print_console, selected
+from ._utils import extraction, modelled, print_console, reported, selected
 
 
 @click.group()
@@ -28,10 +28,9 @@ def model() -> None:
 @options(SELECTION, EXTRACTION, MODEL, OUTPUT)
 def backtest(cv: int, n_jobs: int, verbose: int, data_path: str | None, **selection: object) -> None:
     """Backtest a betting model."""
-    with selected(selection) as dataloader, modelled(selection) as bettor:
+    with reported(), selected(selection) as dataloader, modelled(selection) as bettor:
         if dataloader is None or bettor is None:
             return
-        dataloader.prepare()
         X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection))
         if O_train is None or O_train.empty:
             Console().print(Panel.fit('[bold red]There are no odds, so there is nothing to backtest against.'))
@@ -56,10 +55,9 @@ def backtest(cv: int, n_jobs: int, verbose: int, data_path: str | None, **select
 @options(SELECTION, EXTRACTION, MODEL, OUTPUT)
 def bet(cv: int, n_jobs: int, verbose: int, data_path: str | None, **selection: object) -> None:
     """Predict the value bets of the games that have not been played yet."""
-    with selected(selection) as dataloader, modelled(selection) as bettor:
+    with reported(), selected(selection) as dataloader, modelled(selection) as bettor:
         if dataloader is None or bettor is None:
             return
-        dataloader.prepare()
         X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection))
         X_fix, _, O_fix = dataloader.extract_fixtures_data()
         if X_fix.empty or O_fix is None or O_fix.empty:

@@ -14,12 +14,35 @@ from rich.console import Console
 from rich.panel import Panel
 
 from .._selection import SelectionError, build_bettor, build_dataloader
-from ..datasets import BaseDataLoader
+from ..datasets import BaseDataLoader, NotPreparedError
 from ..evaluation import BaseBettor
 
-SELECTED = ('sport', 'leagues', 'divisions', 'years', 'stats', 'odds', 'odds_key_env', 'odds_markets', 'odds_regions')
-EXTRACTED = ('drop_na_thres', 'odds_type', 'target_event_status', 'target_event_time')
-MODELLED = ('model', 'alpha', 'init_cash', 'stake', 'betting_markets')
+SELECTED = (
+    'sport',
+    'leagues',
+    'divisions',
+    'years',
+    'stats',
+    'odds',
+    'odds_key_env',
+    'odds_markets',
+    'odds_regions',
+    'odds_moments',
+    'store',
+    'aliases',
+    'max_unmatched_rate',
+)
+EXTRACTED = (
+    'drop_na_thres',
+    'odds_type',
+    'learning_type',
+    'target_event_status',
+    'target_event_time',
+    'input_event_status',
+    'input_event_time',
+)
+MODELLED = ('model', 'alpha', 'init_cash', 'stake', 'betting_markets', 'model_odds_types')
+TIMED = ('target_event_time', 'input_event_time')
 
 
 def _listed(value: object) -> object:
@@ -54,11 +77,33 @@ def modelled(selection: dict[str, object]) -> Iterator[BaseBettor | None]:
 
 def extraction(selection: dict[str, object]) -> dict[str, Any]:
     """Return how a command was told to extract."""
-    settings = _told(selection, EXTRACTED)
-    event_time = settings.get('target_event_time')
-    if event_time is not None:
-        settings['target_event_time'] = pd.Timedelta(event_time)
+    settings = {name: value for name, value in _told(selection, EXTRACTED).items() if value is not None}
+    for name in TIMED:
+        if settings.get(name) is not None:
+            settings[name] = pd.Timedelta(settings[name])
     return settings
+
+
+@contextmanager
+def reported() -> Iterator[None]:
+    """Say what went wrong, rather than showing where.
+
+    A stack trace is what the library tells a programmer. A command is not talking to one.
+    """
+    try:
+        yield
+    except NotPreparedError:
+        Console().print(
+            Panel.fit(
+                '[bold red]The data has not been downloaded.\n\n[/bold red]Run `sportsbet data prepare` first. It is '
+                'a separate step because it is the only one that costs anything, and nothing should spend your money '
+                'without being asked to.',
+            ),
+        )
+        raise SystemExit(1) from None
+    except (SelectionError, ValueError) as error:
+        Console().print(Panel.fit(f'[bold red]{error}'))
+        raise SystemExit(1) from None
 
 
 def print_console(dfs: list[pd.DataFrame], titles: list[str]) -> None:

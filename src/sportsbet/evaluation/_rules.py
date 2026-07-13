@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Self
 
+import numpy as np
 import pandas as pd
 from sklearn.utils import check_scalar
 
@@ -131,8 +132,7 @@ class OddsComparisonBettor(BaseBettor):
             ]
             proba_cont.append(1 / X[odds_cols].mean(axis=1))
         proba = (pd.concat(proba_cont, axis=1) - self.alpha_).fillna(0.0).to_numpy()
-        proba[proba < 0] = 0.0
-        return proba
+        return np.clip(proba, 0.0, None)
 
     def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
         """Fit the bettor to the input data and multi-output targets.

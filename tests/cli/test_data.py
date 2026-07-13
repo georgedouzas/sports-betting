@@ -76,3 +76,61 @@ def test_data_fixtures(cli_runner, tmp_path):
     assert result.exit_code == 0, result.output
     assert 'Fixtures input data' in result.output
     assert (tmp_path / 'sports-betting-data' / 'X_fix.csv').exists()
+
+
+def test_a_moment_that_is_not_one_says_how_to_spell_one(cli_runner, monkeypatch):
+    """Test a moment that cannot be read is answered with how a moment is written."""
+    monkeypatch.setenv('ODDS_API_KEY', 'not-used-offline')
+    result = cli_runner.invoke(
+        main,
+        [
+            'data',
+            'prepare',
+            '--sport',
+            'basketball',
+            '--stats',
+            'nba',
+            '--odds',
+            'odds-api',
+            '--odds-moment',
+            'halftime',
+        ],
+    )
+    assert 'inplay:45' in result.output
+
+
+def test_an_alias_that_is_not_one_says_how_to_spell_one(cli_runner, monkeypatch):
+    """Test an alias that cannot be read is answered with how an alias is written."""
+    monkeypatch.setenv('ODDS_API_KEY', 'not-used-offline')
+    result = cli_runner.invoke(
+        main,
+        ['data', 'prepare', '--sport', 'basketball', '--stats', 'nba', '--odds', 'odds-api', '--alias', 'nonsense'],
+    )
+    assert 'Olimpia Milano' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_an_extraction_never_downloads(cli_runner, tmp_path):
+    """Test an extraction says the data is missing rather than quietly going and buying it.
+
+    Downloading is a separate step because it is the only one that costs anything. A command that extracted and
+    downloaded in the same breath could spend thousands of credits on an odds vendor without anyone asking for it.
+    """
+    result = cli_runner.invoke(
+        main,
+        ['data', 'training', '--sport', 'soccer', '--league', 'England', '--year', '2025', '--store', str(tmp_path)],
+    )
+    exit_code = 1
+    assert result.exit_code == exit_code
+    assert 'has not been downloaded' in result.output
+    assert 'sportsbet data prepare' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_an_odds_type_that_does_not_exist_says_what_there_is(cli_runner):
+    """Test what the library says is what the user reads, rather than a stack trace."""
+    result = cli_runner.invoke(main, ['data', 'training', *DUMMY, '--odds-type', 'nonexistent'])
+    exit_code = 1
+    assert result.exit_code == exit_code
+    assert 'market_average' in result.output
+    assert 'Traceback' not in result.output

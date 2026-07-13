@@ -6,6 +6,7 @@ import pytest
 from sportsbet.datasets import (
     BaseOddsSource,
     BaseStatsSource,
+    DummySoccerDataLoader,
     LocalStore,
     NotPreparedError,
     OddsApi,
@@ -105,8 +106,21 @@ def test_extraction_without_preparation_fails(loader, offline):
         loader.extract_train_data()
 
 
-def test_the_failure_says_what_is_missing(loader, offline):
-    """Test the failure names what is missing, rather than leaving the user to guess."""
+def test_the_failure_itself_never_fetches(loader, offline):
+    """Test the failure does not download in order to describe itself.
+
+    Saying what is missing means reading the catalogue, and reading the catalogue means downloading it. An extraction
+    that downloads is the one thing this must never be, so it says less rather than fetching in order to say more.
+    """
+    with pytest.raises(NotPreparedError):
+        loader.extract_train_data()
+    assert not offline
+
+
+def test_the_failure_says_what_is_missing_when_it_can(loader, offline):
+    """Test the failure names what is missing, when it can know without downloading to find out."""
+    stats_source, _ = loader.sources
+    stats_source.available_params(store=loader.store)
     with pytest.raises(NotPreparedError) as failure:
         loader.extract_train_data()
     assert [item.key for item in failure.value.report.to_fetch] == ['England_1_2024']
@@ -276,3 +290,15 @@ def test_the_key_is_never_written_to_the_store(tmp_path, offline):
     report = loader.prepare(dry_run=True)
     assert not [item for item in report.to_fetch if 'secret-key' in item.url]
     assert not [path for path in tmp_path.rglob('*') if path.is_file() and b'secret-key' in path.read_bytes()]
+
+
+@pytest.mark.parametrize('drop_na_thres', [1.5, -0.5])
+def test_a_threshold_that_is_not_a_proportion_is_refused(drop_na_thres):
+    """Test a threshold outside nought and one says so.
+
+    It is a proportion of the values that may be missing. Above one it asked for columns that are more than complete,
+    and dropped every one of them instead of saying so; below nought it was accepted and meant nothing.
+    """
+    dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
+    with pytest.raises(ValueError, match='drop_na_thres'):
+        dataloader.extract_train_data(drop_na_thres=drop_na_thres)

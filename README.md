@@ -231,6 +231,9 @@ sportsbet data training --sport soccer --league England --year 2025 --odds-type 
 sportsbet data fixtures --sport soccer --league England --year 2025 --odds-type market_maximum -o ./data
 ```
 
+Downloading is a **separate step**, because it is the only one that costs anything. An extraction never downloads: if
+the data is not there it says so, rather than quietly going and buying it.
+
 Any sport, any data source, and any credential. A source that needs a key reads it from the **environment**, so the key
 never appears in the command, in your shell history, or in a file:
 
@@ -238,8 +241,13 @@ never appears in the command, in your shell history, or in a file:
 export ODDS_API_KEY=...
 
 sportsbet data prepare --sport basketball --league NBA --year 2026 \
-    --stats nba --odds odds-api --odds-market h2h --dry-run
+    --stats nba --odds odds-api --odds-market h2h --odds-moment preplay:0 --dry-run
 ```
+
+A source is configured from the command line exactly as it is from Python — which markets and regions to price
+(`--odds-market`, `--odds-region`), which moments (`--odds-moment inplay:45`), where the data is kept (`--store`), and
+how the two sources' team names are paired (`--alias 'Olimpia Milano=EA7 Emporio Armani Milan'`,
+`--max-unmatched-rate`).
 
 #### Models
 
