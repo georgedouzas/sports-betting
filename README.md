@@ -101,51 +101,51 @@ $$
 \mathbb{E}[\Pi] = p \, o - 1.
 $$
 
-The odds are *fair* when this is zero, that is when
+The odds are fair when this is zero, that is when
 
 $$
 o = \frac{1}{p}.
 $$
 
-At fair odds, neither side makes money in the long run.
+At fair odds, neither side makes profit in the long run.
 
 ### The bookmaker's margin
 
-Bookmakers do not offer fair odds. They shorten them, so that the *implied* probability $1/o$ of every outcome is a little
-higher than the probability they estimated. Across the $n$ mutually exclusive outcomes of an event, the implied probabilities
-therefore sum to more than one:
+Bookmakers do not offer fair odds. They shorten them, so that the implied probability $1/o$ of every outcome is a little higher
+than the probability they estimated. Across the $n$ mutually exclusive outcomes of an event, the implied probabilities therefore
+sum to more than one:
 
 $$
 \sum_{i=1}^{n} \frac{1}{o_i} = 1 + m, \qquad m > 0.
 $$
 
-The excess $m$ is the **over-round**, and it is the bookmaker's margin. Note what has *not* changed: the bookmaker still has to
-estimate $p$. The margin protects a good estimate; it does not replace one.
+The excess $m$ is the over-round, and it is the bookmaker's margin. Note what has *not* changed: the bookmaker still has to
+estimate $p$. The margin protects a good estimate, it does not replace one.
 
 ### Value bets
 
-The bettor can estimate the probabilities too. Write the bettor's estimate as $\hat{p}$. A bet is a **value bet** when the
-bettor's estimate exceeds the probability implied by the offered odds:
+The bettor can estimate the probabilities too. Write the bettor's estimate as $\hat{p}$. A bet is a value bet when the bettor's
+estimate exceeds the probability implied by the offered odds:
 
 $$
 \hat{p} > \frac{1}{o} \quad \Longleftrightarrow \quad \hat{p} \, o - 1 > 0,
 $$
 
-that is, when the bet has positive expected profit *under the bettor's own estimate*. Selecting value bets is the only betting
+that is, when the bet has positive expected profit under the bettor's own estimate. Selecting value bets is the only betting
 strategy that makes sense over the long run.
 
-The caveat matters: neither side observes the true $p$. A value bet is a claim that $\hat{p}$ is closer to the truth than
-$1/o$ is — and the bettor can be wrong, the bookmaker can be wrong, or both.
+The caveat matters: neither side observes the true $p$. A value bet is a claim that $\hat{p}$ is closer to the truth than $1/o$ is
+and the bettor can be wrong, the bookmaker can be wrong, or both.
 
 ### Is it hopeless?
 
 Bookmakers have more data, more computing power and teams of analysts. It is tempting to conclude that competing with them is
-pointless, but that does not follow. Bookmakers balance many concerns beyond accuracy — their exposure, their competitors, the
-weight of public money — which is why the odds offered on the *same* event vary noticeably from one bookmaker to another. That
+pointless, but that does not follow. Bookmakers balance many concerns beyond accuracy: their exposure, their competitors, the
+weight of public money, which is why the odds offered on the same event vary noticeably from one bookmaker to another. That
 variation is the opening.
 
-The goal is therefore not to build an arbitrarily accurate model of football. It is to **identify value bets systematically and
-backtest them honestly** — a realistic aim, and the one `sports-betting` is built to serve.
+The goal is therefore not to build an arbitrarily accurate model of football. It is to identify value bets systematically and
+backtest them honestly. A realistic aim, and the one `sports-betting` is built to serve.
 
 ## Installation
 
@@ -172,9 +172,9 @@ pdm install
 
 ## Usage
 
-You can access `sports-betting` through the Python API, the CLI, or an AI assistant via the MCP server. All three reach
-the same capabilities — every sport, every data source and every credential — and all three cover the common sports
-betting needs: fetching historical and fixtures data, backtesting betting strategies, and predicting value bets.
+You can access `sports-betting` through the Python API, the CLI, or an AI assistant via the MCP server. All three reach the same
+capabilities, every sport and every data source, while all three cover the common sports betting needs: fetching historical and
+fixtures data, backtesting betting strategies, and predicting value bets.
 
 ### API
 
@@ -237,16 +237,17 @@ bettor.bet(X_fix, O_fix)
 
 ### CLI
 
-The `sportsbet` command is told what to do in its own arguments. **There is no configuration file**, and nothing has to
-be written down before anything can be run. Add `--help` to any command to see what it takes.
+Everything the Python API does, the `sportsbet` command does. It has two groups of sub-commands: `data` selects, downloads and
+extracts data, and `model` backtests a betting model and predicts the value bets. Pass `--help` to any of them to see what it
+takes.
 
 #### Data
 
 ```bash
-# what can be selected, asked of the source itself
+# What can be selected, asked of the source itself
 sportsbet data params --sport soccer
 
-# what a download would fetch and cost, without doing it
+# What a download would fetch and cost, without doing it
 sportsbet data prepare --sport soccer --league England --year 2025 --dry-run
 
 # training data and fixtures, written as CSV
@@ -254,11 +255,15 @@ sportsbet data training --sport soccer --league England --year 2025 --odds-type 
 sportsbet data fixtures --sport soccer --league England --year 2025 --odds-type market_maximum -o ./data
 ```
 
-Downloading is a **separate step**, because it is the only one that costs anything. An extraction never downloads: if
-the data is not there it says so, rather than quietly going and buying it.
+`prepare` is the only command that downloads, and `--dry-run` reports what it would fetch and what it would cost without
+fetching it. The extraction commands read what is already there, so they never surprise you with a download.
 
-Any sport, any data source, and any credential. A source that needs a key reads it from the **environment**, so the key
-never appears in the command, in your shell history, or in a file:
+Data sources are selected and configured on the command line just as they are in Python. Choose the statistics and the
+odds with `--stats` and `--odds`, then configure the odds source: which markets and regions to price
+(`--odds-market`, `--odds-region`), at which moments (`--odds-moment inplay:45`), where to keep the data (`--store`),
+and how to reconcile team names that the two sources spell differently (`--alias`, `--max-unmatched-rate`).
+
+A source that needs an API key reads it from the environment, so the key never appears in a command or a shell history:
 
 ```bash
 export ODDS_API_KEY=...
@@ -266,11 +271,6 @@ export ODDS_API_KEY=...
 sportsbet data prepare --sport basketball --league NBA --year 2026 \
     --stats nba --odds odds-api --odds-market h2h --odds-moment preplay:0 --dry-run
 ```
-
-A source is configured from the command line exactly as it is from Python — which markets and regions to price
-(`--odds-market`, `--odds-region`), which moments (`--odds-moment inplay:45`), where the data is kept (`--store`), and
-how the two sources' team names are paired (`--alias 'Olimpia Milano=EA7 Emporio Armani Milan'`,
-`--max-unmatched-rate`).
 
 #### Models
 
@@ -282,9 +282,8 @@ sportsbet model bet --sport soccer --league England --year 2025 \
     --odds-type market_maximum --model logistic -o ./data
 ```
 
-`odds-comparison` and `logistic` are ready-made and cover the ordinary case. **A model of your own is a scikit-learn
-estimator, and no arrangement of flags can describe one** — inventing a syntax that tried would just be a worse Python.
-So you build it in Python and name it:
+`odds-comparison` and `logistic` are ready-made models with their hyperparameters as options. For anything else, build a
+bettor in Python and point the command at it:
 
 ```python
 # models.py
@@ -297,7 +296,8 @@ sportsbet model backtest --sport soccer --league England --year 2025 \
     --odds-type market_maximum --model models.py:BETTOR
 ```
 
-That is one object, not a bag of settings, and it is the only part of the library that cannot be a flag.
+A bettor wraps a scikit-learn estimator, which can be an arbitrary pipeline, so it is written as Python rather than
+squeezed into options.
 
 ### AI assistant
 
@@ -308,10 +308,10 @@ it spends anything, prepare it, backtest a model and return the value bets:
 pip install 'sports_betting[mcp]'
 ```
 
-Point your assistant at the `sportsbet-mcp` command. Its tools take the **same arguments the commands take**, so the two
-surfaces cannot drift apart, and there is no file to write first. Your key is never one of those arguments: what the
-assistant names is the *environment variable* holding it, so the key itself stays out of the transcript.
+Point your assistant at the `sportsbet-mcp` command. Its tools take the same arguments as the CLI, so anything you can
+ask for on the command line, you can ask for in plain language. Your API key is not one of those arguments: the
+assistant passes the *name* of the environment variable holding it, so the key itself stays out of the conversation.
 
-An assistant cannot spend your money by accident. Odds are bought per request, and a season of them can cost thousands
-of credits, so a preparation that costs anything is **refused** until the cost has been confirmed. The estimate is free
+Odds are bought per request, and a full season of them can cost thousands of credits. An assistant therefore cannot
+start a download that costs money until it has read the estimate and confirmed the amount. The estimate itself is free
 and exact.
