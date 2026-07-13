@@ -59,9 +59,8 @@ The main components of `sports-betting` are dataloaders and bettors objects:
 
 ## Quick start
 
-The `sports-betting` package makes it easy to download sports betting data. Soccer and basketball are supported today,
-and more sports are on the way: a sport is a data source, not an engine, so adding one adds no machinery. The data is
-downloaded onto your own machine by an explicit `prepare` step:
+The `sports-betting` package makes it easy to download sports betting data. Soccer and basketball are supported today, and more
+sports are on the way. The data is downloaded onto your own machine by an explicit `prepare` step:
 
 ```python
 from sportsbet.datasets import SoccerDataLoader

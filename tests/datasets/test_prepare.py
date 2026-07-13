@@ -302,3 +302,29 @@ def test_a_threshold_that_is_not_a_proportion_is_refused(drop_na_thres):
     dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
     with pytest.raises(ValueError, match='drop_na_thres'):
         dataloader.extract_train_data(drop_na_thres=drop_na_thres)
+
+
+def test_a_preparation_reads_the_catalogue_once(loader, offline):
+    """Test the index of a source is not read twice in the same preparation.
+
+    The items and the parameters that are unavailable each used to resolve the catalogue for themselves, and the index
+    is volatile and so is never held, so it was fetched twice and paid for twice. For a metered source that is the price
+    of the catalogue, twice, on every preparation.
+    """
+    loader.prepare()
+    catalogue = [url for url in offline if 'catalogue' in url]
+    assert len(catalogue) == 1
+
+
+def test_an_index_that_has_not_changed_is_not_written_down_again(loader, offline, tmp_path):
+    """Test the index of the store does not grow for as long as the store is used.
+
+    A volatile item is read again on every preparation, and a feed that has not changed answers with what it answered
+    before. Writing that down every time would append a line per volatile item per preparation, forever.
+    """
+    loader.prepare()
+    manifest = tmp_path / 'manifest.jsonl'
+    lines = manifest.read_text().splitlines()
+
+    SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path)).prepare()
+    assert manifest.read_text().splitlines() == lines
