@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
 
+from ... import ParamGrid
 from .._fetch import ENCODING, read_csv_content
 from .._utils import market_outcomes
 from ._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
@@ -855,6 +856,26 @@ def _year(season: str) -> int:
 
 
 MAIN_LEAGUES = [base_url.replace('.php', '')[:-1].capitalize() for base_url in BASE_URLS if base_url[0].islower()]
+
+
+def _selected_leagues(selection: ParamGrid | None) -> set[str] | None:
+    """Return the leagues a selection names, or `None` when it names none and so every one of them is wanted.
+
+    A selection is one grid or a list of them, and a grid that names no league names all of them, so one such grid is
+    enough for every league to be wanted. Answering with too few would leave a league that was asked for undownloaded,
+    which is the one mistake here that is worse than downloading too much.
+    """
+    if not selection:
+        return None
+    grids = selection if isinstance(selection, list) else [selection]
+    leagues: set[str] = set()
+    for grid in grids:
+        if 'league' not in grid:
+            return None
+        leagues.update(str(league) for league in grid['league'])
+    return leagues or None
+
+
 HISTORY_LEAGUES = [base_url.replace('.php', '') for base_url in BASE_URLS if not base_url[0].islower()]
 INDEX_PREFIX = 'index'
 
@@ -899,15 +920,27 @@ class _FootballDataSource(BaseSource):
     def __init__(self: Self) -> None:
         self._catalogue: list[tuple[str, int, int, str]] = []
 
-    def index_items(self: Self) -> list[RawItem]:
-        """Return the index pages and the whole-history files, from which the catalogue is read."""
+    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
+        """Return the index pages and the whole-history files, from which the catalogue is read.
+
+        A main league lists its seasons on an index page, which is small. A league published as one file of its whole
+        history has no index, so its seasons can only be read out of the file, and reading it means downloading it. All
+        sixteen of them together are twenty times the size of a season of the league that was actually asked for, and
+        the index is re-read on every preparation, so they were paid for again every time.
+
+        A league that was not selected is therefore not asked about. Discovery still asks about all of them, because
+        nothing can be selected before it is known what exists.
+        """
+        leagues = _selected_leagues(selection)
         items = [
             RawItem(source=self.name, key=f'{INDEX_PREFIX}_{league}', url=_index_url(league), volatile=True)
             for league in MAIN_LEAGUES
+            if leagues is None or league in leagues
         ]
         items.extend(
             RawItem(source=self.name, key=f'{league}_1', url=_history_url(league), volatile=True)
             for league in HISTORY_LEAGUES
+            if leagues is None or league in leagues
         )
         return items
 

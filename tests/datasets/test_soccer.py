@@ -34,7 +34,7 @@ class _Available:
 
     name = 'available'
 
-    def index_items(self):
+    def index_items(self, selection=None):
         return []
 
     def catalogue(self, payloads):

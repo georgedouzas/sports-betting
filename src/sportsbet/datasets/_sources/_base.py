@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, ClassVar, Self
 import pandas as pd
 
 if TYPE_CHECKING:
+    from ... import ParamGrid
     from .._store import BaseStore
 
 
@@ -80,8 +81,20 @@ class BaseSource(ABC):
     kind: ClassVar[str]
 
     @abstractmethod
-    def index_items(self: Self) -> list[RawItem]:
+    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the items needed to discover what the source publishes.
+
+        A feed that lists its seasons on an index page is cheap to ask. One that publishes a league as a single file of
+        every season it ever played has no index, so the file is the catalogue, and reading it means downloading it.
+        Asking such a feed what it publishes therefore costs as much as the data.
+
+        So a source is told what is being looked for, and answers with what it needs in order to place it. A selection
+        of one league has no business downloading another.
+
+        Args:
+            selection:
+                What is being looked for. `None` asks for everything the source publishes, which is what discovery
+                needs, since nothing can be selected before it is known what exists.
 
         Returns:
             items:

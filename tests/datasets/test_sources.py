@@ -25,7 +25,7 @@ class _TestSource(BaseSource):
 
     name = 'test'
 
-    def index_items(self):
+    def index_items(self, selection=None):
         return [RawItem(source=self.name, key='index', url='index.html')]
 
     def catalogue(self, payloads):

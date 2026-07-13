@@ -142,3 +142,46 @@ def test_a_snapshot_is_addressable_in_wall_clock_time(sources):
     inplay = snapshots[snapshots['event_status'] == 'inplay'].set_index('home_team')
     moment = inplay.loc['Arsenal', 'date'] + pd.Timedelta(minutes=int(inplay.loc['Arsenal', 'event_time']))
     assert moment == pd.Timestamp('2024-08-10 19:45')
+
+
+def test_a_league_that_was_not_selected_is_not_downloaded():
+    """Test asking for one league does not download another.
+
+    Sixteen leagues are published as a single file of their whole history, with no index, so their seasons can only be
+    read out of the file, and reading it means downloading it. They are twenty times the size of a season of the league
+    that was asked for, and the index is re-read on every preparation, so they were paid for again every time.
+    """
+    source = FootballDataStats()
+    selected = [item.key for item in source.index_items({'league': ['Italy'], 'year': [2020]})]
+    assert selected == ['index_Italy']
+
+
+def test_a_league_published_as_its_whole_history_is_downloaded_when_it_is_selected():
+    """Test a league whose file is its catalogue is still fetched when it is the one being asked for."""
+    source = FootballDataStats()
+    selected = [item.key for item in source.index_items({'league': ['Brazil']})]
+    assert selected == ['Brazil_1']
+
+
+def test_discovery_still_asks_about_every_league():
+    """Test nothing is skipped when nothing has been selected, since nothing can be selected before it is known."""
+    source = FootballDataStats()
+    assert len(source.index_items()) == len(source.index_items({'year': [2020]}))
+    assert len(source.index_items()) > 1
+
+
+def test_a_selection_of_several_grids_asks_about_every_league_any_of_them_names():
+    """Test a list of grids is read as a whole, so no league that was asked for is left undownloaded."""
+    source = FootballDataStats()
+    selected = [item.key for item in source.index_items([{'league': ['Italy']}, {'league': ['Brazil']}])]
+    assert sorted(selected) == ['Brazil_1', 'index_Italy']
+
+
+def test_a_grid_that_names_no_league_names_all_of_them():
+    """Test one grid without a league means every league, even beside a grid that names one.
+
+    Downloading too much is wasteful. Downloading too little leaves a league that was asked for missing, which is worse.
+    """
+    source = FootballDataStats()
+    selected = source.index_items([{'league': ['Italy']}, {'year': [2020]}])
+    assert len(selected) == len(source.index_items())
