@@ -4,11 +4,11 @@ import pytest
 
 from sportsbet.cli import main
 
-DUMMY = ['--sport', 'dummy', '--league', 'England']
+SELECTION = ['--sport', 'soccer', '--league', 'England']
 MARKET = ['--odds-type', 'market_average', '--target-event-status', 'postplay']
 
 
-def test_data(cli_runner):
+def test_data(cli_runner, offline_dataloader):
     """Test the data command."""
     result = cli_runner.invoke(main, ['data'])
     exit_code = 2
@@ -16,7 +16,7 @@ def test_data(cli_runner):
     assert 'Select, download and extract data.' in result.output
 
 
-def test_data_help(cli_runner):
+def test_data_help(cli_runner, offline_dataloader):
     """Test the data help command."""
     result = cli_runner.invoke(main, ['data', '--help'])
     assert result.exit_code == 0, result.output
@@ -37,42 +37,42 @@ def test_a_sport_nobody_plays_says_which_ones_there_are(cli_runner):
     assert 'soccer' in result.output
 
 
-def test_data_params(cli_runner):
+def test_data_params(cli_runner, offline_dataloader):
     """Test what can be selected is shown."""
-    result = cli_runner.invoke(main, ['data', 'params', *DUMMY])
+    result = cli_runner.invoke(main, ['data', 'params', *SELECTION])
     assert result.exit_code == 0, result.output
     assert 'Available parameters' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_data_odds_types(cli_runner):
+def test_data_odds_types(cli_runner, offline_dataloader):
     """Test the odds that can be extracted are shown."""
-    result = cli_runner.invoke(main, ['data', 'odds-types', *DUMMY])
+    result = cli_runner.invoke(main, ['data', 'odds-types', *SELECTION])
     assert result.exit_code == 0, result.output
     assert 'Available odds types' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_data_prepare_dry_run(cli_runner):
+def test_data_prepare_dry_run(cli_runner, offline_dataloader):
     """Test a preparation can be priced without being done."""
-    result = cli_runner.invoke(main, ['data', 'prepare', *DUMMY, '--dry-run'])
+    result = cli_runner.invoke(main, ['data', 'prepare', *SELECTION, '--dry-run'])
     assert result.exit_code == 0, result.output
     assert 'Preparation (dry run)' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_data_training(cli_runner, tmp_path):
+def test_data_training(cli_runner, offline_dataloader, tmp_path):
     """Test the training data is extracted and written."""
-    result = cli_runner.invoke(main, ['data', 'training', *DUMMY, *MARKET, '-o', str(tmp_path)])
+    result = cli_runner.invoke(main, ['data', 'training', *SELECTION, *MARKET, '-o', str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert 'Training input data' in result.output
     assert (tmp_path / 'sports-betting-data' / 'X_train.csv').exists()
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_data_fixtures(cli_runner, tmp_path):
+def test_data_fixtures(cli_runner, offline_dataloader, tmp_path):
     """Test the fixtures are extracted and written."""
-    result = cli_runner.invoke(main, ['data', 'fixtures', *DUMMY, *MARKET, '-o', str(tmp_path)])
+    result = cli_runner.invoke(main, ['data', 'fixtures', *SELECTION, *MARKET, '-o', str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert 'Fixtures input data' in result.output
     assert (tmp_path / 'sports-betting-data' / 'X_fix.csv').exists()
@@ -122,14 +122,14 @@ def test_an_extraction_never_downloads(cli_runner, tmp_path):
     )
     exit_code = 1
     assert result.exit_code == exit_code
-    assert 'has not been downloaded' in result.output
+    assert 'not prepared' in result.output
     assert 'sportsbet data prepare' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_an_odds_type_that_does_not_exist_says_what_there_is(cli_runner):
+def test_an_odds_type_that_does_not_exist_says_what_there_is(cli_runner, offline_dataloader):
     """Test what the library says is what the user reads, rather than a stack trace."""
-    result = cli_runner.invoke(main, ['data', 'training', *DUMMY, '--odds-type', 'nonexistent'])
+    result = cli_runner.invoke(main, ['data', 'training', *SELECTION, '--odds-type', 'nonexistent'])
     exit_code = 1
     assert result.exit_code == exit_code
     assert 'market_average' in result.output

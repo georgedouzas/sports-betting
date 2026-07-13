@@ -210,13 +210,6 @@ bettor.bet(X_fix, O_fix)
 The `sportsbet` command is told what to do in its own arguments. **There is no configuration file**, and nothing has to
 be written down before anything can be run. Add `--help` to any command to see what it takes.
 
-Try it with no downloads at all — `dummy` is a made-up soccer league:
-
-```bash
-sportsbet data params --sport dummy
-sportsbet model backtest --sport dummy --league England --odds-type market_average --model odds-comparison
-```
-
 #### Data
 
 ```bash

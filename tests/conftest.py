@@ -11,6 +11,7 @@ from click.testing import CliRunner
 from sportsbet.datasets import (
     BaseOddsSchema,
     BaseStatsSchema,
+    DummySoccerDataLoader,
     optional_col,
     required_col,
 )
@@ -45,6 +46,20 @@ def no_network(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) 
 def cli_runner() -> CliRunner:
     """Create a Click CLI runner."""
     return CliRunner()
+
+
+@pytest.fixture
+def offline_dataloader(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hand the surfaces a dataloader that carries its own data.
+
+    The commands are exercised without a network, and without the library shipping a fake sport to make that possible.
+    """
+
+    def build(sport: str, leagues: list[str] | None = None, **rest: object) -> DummySoccerDataLoader:
+        return DummySoccerDataLoader(param_grid={'league': list(leagues)} if leagues else None)
+
+    monkeypatch.setattr('sportsbet.cli._utils.build_dataloader', build)
+    monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', build)
 
 
 @pytest.fixture

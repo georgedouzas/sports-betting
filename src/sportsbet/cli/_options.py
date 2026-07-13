@@ -24,7 +24,7 @@ SELECTION: list[Callable[[FC], FC]] = [
         '--sport',
         required=True,
         type=click.Choice(sorted(SPORTS)),
-        help='The sport. `dummy` is a made-up soccer league, so the commands can be tried without downloading.',
+        help='The sport.',
     ),
     click.option('--league', 'leagues', multiple=True, help='A league to select. Repeat it to select more.'),
     click.option('--division', 'divisions', multiple=True, type=int, help='A division to select. Repeatable.'),
@@ -43,7 +43,7 @@ SELECTION: list[Callable[[FC], FC]] = [
         '--odds-key-env',
         default=DEFAULT_KEY_ENV,
         show_default=True,
-        help='The environment variable holding the odds key, so the key itself never appears in the command.',
+        help='The environment variable holding the odds key.',
     ),
     click.option('--odds-market', 'odds_markets', multiple=True, help='A market to price, e.g. `h2h`. Repeatable.'),
     click.option('--odds-region', 'odds_regions', multiple=True, help='A region to price, e.g. `eu`. Repeatable.'),
@@ -51,7 +51,7 @@ SELECTION: list[Callable[[FC], FC]] = [
         '--odds-moment',
         'odds_moments',
         multiple=True,
-        help='A moment to price, as `status:minutes`, e.g. `inplay:45`. The default is what the statistics carry.',
+        help='A moment to price, as `status:minutes`, e.g. `inplay:45`. Repeatable.',
     ),
     click.option(
         '--store',
@@ -62,14 +62,14 @@ SELECTION: list[Callable[[FC], FC]] = [
         '--alias',
         'aliases',
         multiple=True,
-        help='A team the two sources spell differently, as `stats name=odds name`. Repeatable.',
+        help='A team the sources spell differently, as `stats name=odds name`. Repeatable.',
     ),
     click.option(
         '--max-unmatched-rate',
         type=float,
         default=0.0,
         show_default=True,
-        help='How many teams may fail to pair before a preparation gives up.',
+        help='The share of teams that may fail to pair.',
     ),
 ]
 
