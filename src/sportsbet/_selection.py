@@ -29,11 +29,9 @@ from sklearn.preprocessing import OneHotEncoder
 
 from . import ParamGrid
 from .datasets import (
-    BaseDataLoader,
     BaseOddsSource,
     BaseStatsSource,
     BasketballDataLoader,
-    DummySoccerDataLoader,
     EuroLeagueStats,
     FootballDataOdds,
     FootballDataStats,
@@ -45,11 +43,10 @@ from .datasets import (
 from .datasets._base._sourced import SourcedDataLoader
 from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
 
-SOURCED: dict[str, type[SourcedDataLoader]] = {
+SPORTS: dict[str, type[SourcedDataLoader]] = {
     'soccer': SoccerDataLoader,
     'basketball': BasketballDataLoader,
 }
-SPORTS: dict[str, type[BaseDataLoader]] = {**SOURCED, 'dummy': DummySoccerDataLoader}
 STATS_SOURCES: dict[str, type[BaseStatsSource]] = {
     'football-data': FootballDataStats,
     'euroleague': EuroLeagueStats,
@@ -62,7 +59,6 @@ ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
 MODELS = ['odds-comparison', 'logistic']
 KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
-SPORTLESS = {'dummy'}
 STATUSES = ['preplay', 'inplay', 'postplay']
 LEARNING_TYPES = ['supervised', 'unsupervised']
 MOMENT_PARTS = 2
@@ -115,7 +111,7 @@ def _aliases(aliases: list[str] | None) -> dict[str, str] | None:
     for alias in aliases:
         stats_name, sep, odds_name = alias.partition('=')
         if not sep or not stats_name or not odds_name:
-            msg = f'`{alias}` should be the two names, as in `Olimpia Milano=EA7 Emporio Armani Milan`.'
+            msg = f'`{alias}` should be two names, as in `Olimpia Milano=EA7 Emporio Armani Milan`.'
             raise SelectionError(msg)
         paired[stats_name] = odds_name
     return paired
@@ -130,16 +126,13 @@ def _odds_source(
 ) -> BaseOddsSource:
     """Return the odds source a name asks for, reading a key from the environment when it needs one."""
     if odds not in ODDS_SOURCES:
-        msg = f'`{odds}` is not an odds source. The ones there are: {", ".join(sorted(ODDS_SOURCES))}.'
+        msg = f'`{odds}` is not an odds source. Available: {", ".join(sorted(ODDS_SOURCES))}.'
         raise SelectionError(msg)
     if odds not in KEYED_SOURCES:
         return ODDS_SOURCES[odds]()
     key = os.environ.get(key_env)
     if not key:
-        msg = (
-            f'`{odds}` needs a key, and the environment has no `{key_env}`. Put the key there and it stays out of your '
-            f'shell history, or name another variable with `--odds-key-env`.'
-        )
+        msg = f'`{odds}` needs a key. Set `{key_env}`, or name another variable with `--odds-key-env`.'
         raise SelectionError(msg)
     return OddsApi(key=key, markets=markets or None, regions=regions or None, moments=_moments(moments))
 
@@ -158,28 +151,23 @@ def build_dataloader(
     store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
-) -> BaseDataLoader:
+) -> SourcedDataLoader:
     """Return the dataloader a selection describes.
 
     A source that is not named is the sport's own, so the ordinary case needs nothing but the sport and what to select
     from it.
     """
     if sport not in SPORTS:
-        msg = f'`{sport}` is not a sport. The ones there are: {", ".join(sorted(SPORTS))}.'
+        msg = f'`{sport}` is not a sport. Available: {", ".join(sorted(SPORTS))}.'
         raise SelectionError(msg)
     selected: ParamGrid = {
         name: values for name, values in (('league', leagues), ('division', divisions), ('year', years)) if values
     }
     param_grid = selected or None
-    if sport in SPORTLESS:
-        if stats or odds:
-            msg = f'The `{sport}` sport carries its own data, so it takes no sources.'
-            raise SelectionError(msg)
-        return SPORTS[sport](param_grid=param_grid)
     if stats is not None and stats not in STATS_SOURCES:
-        msg = f'`{stats}` is not a statistics source. The ones there are: {", ".join(sorted(STATS_SOURCES))}.'
+        msg = f'`{stats}` is not a statistics source. Available: {", ".join(sorted(STATS_SOURCES))}.'
         raise SelectionError(msg)
-    return SOURCED[sport](
+    return SPORTS[sport](
         param_grid=param_grid,
         stats=STATS_SOURCES[stats]() if stats else None,
         odds=_odds_source(odds, odds_key_env, odds_markets, odds_regions, odds_moments) if odds else None,
@@ -227,8 +215,5 @@ def build_bettor(
             MultiOutputClassifier(LogisticRegression(solver='liblinear', random_state=7, class_weight='balanced')),
         )
         return ClassifierBettor(classifier, betting_markets=markets, init_cash=init_cash, stake=stake)
-    msg = (
-        f'`{model}` is not a model. The ready-made ones are: {", ".join(MODELS)}. Anything else is a scikit-learn '
-        f'estimator, so build it in Python and name it, as in `models.py:BETTOR`.'
-    )
+    msg = f'`{model}` is not a model. Ready-made: {", ".join(MODELS)}. For one of your own, use `models.py:BETTOR`.'
     raise SelectionError(msg)

@@ -93,13 +93,7 @@ def reported() -> Iterator[None]:
     try:
         yield
     except NotPreparedError:
-        Console().print(
-            Panel.fit(
-                '[bold red]The data has not been downloaded.\n\n[/bold red]Run `sportsbet data prepare` first. It is '
-                'a separate step because it is the only one that costs anything, and nothing should spend your money '
-                'without being asked to.',
-            ),
-        )
+        Console().print(Panel.fit('[bold red]The data is not prepared. Run `sportsbet data prepare` first.'))
         raise SystemExit(1) from None
     except (SelectionError, ValueError) as error:
         Console().print(Panel.fit(f'[bold red]{error}'))

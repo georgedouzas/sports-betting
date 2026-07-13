@@ -114,10 +114,7 @@ def _prepare(selection: Selection, confirm_cost: int | None) -> dict[str, Any]:
     dataloader, estimate = _report(selection)
     total = estimate['total_cost']
     if total and confirm_cost != total:
-        msg = (
-            f'This preparation costs {total}, and it has not been confirmed. Tell whoever is paying what it costs, '
-            f'then call this again with `confirm_cost={total}`.'
-        )
+        msg = f'This preparation costs {total}. Report the cost, then call this again with `confirm_cost={total}`.'
         raise ValueError(msg)
     report = dataloader.prepare()
     return {'fetched': len(report.to_fetch), 'held': len(report.held), 'cost': dict(report.estimated_cost)}

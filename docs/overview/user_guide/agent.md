@@ -46,8 +46,8 @@ model to be careful:
 estimate_preparation(sport='basketball', leagues=['NBA'], years=[2026], stats='nba', odds='odds-api')
     -> {to_fetch: 898, cost: {'odds_api': 17722}}
 
-prepare(...)                     -> REFUSED. The cost was never confirmed.
-prepare(..., confirm_cost=100)   -> REFUSED. It costs 17722, not 100.
+prepare(...)                     -> refused, the cost was not confirmed
+prepare(..., confirm_cost=100)   -> refused, it costs 17722
 prepare(..., confirm_cost=17722) -> runs
 ```
 

@@ -8,14 +8,14 @@ from sportsbet.cli import main
 from sportsbet.datasets import DummySoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
 
-DUMMY = ['--sport', 'dummy', '--league', 'England', '--league', 'Spain']
+SELECTION = ['--sport', 'soccer', '--league', 'England', '--league', 'Spain']
 MARKET = ['--odds-type', 'market_average', '--target-event-status', 'postplay']
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_the_training_data_matches_the_api(cli_runner, tmp_path):
+def test_the_training_data_matches_the_api(cli_runner, offline_dataloader, tmp_path):
     """Test the data the command line extracts is the data the API extracts."""
-    result = cli_runner.invoke(main, ['data', 'training', *DUMMY, *MARKET, '-o', str(tmp_path)])
+    result = cli_runner.invoke(main, ['data', 'training', *SELECTION, *MARKET, '-o', str(tmp_path)])
     assert result.exit_code == 0, result.output
     X_cli = pd.read_csv(tmp_path / 'sports-betting-data' / 'X_train.csv', index_col=0)
 
@@ -27,14 +27,14 @@ def test_the_training_data_matches_the_api(cli_runner, tmp_path):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_a_backtest_matches_the_api(cli_runner, tmp_path):
+def test_a_backtest_matches_the_api(cli_runner, offline_dataloader, tmp_path):
     """Test the backtest the command line runs is the backtest the API runs."""
     result = cli_runner.invoke(
         main,
         [
             'model',
             'backtest',
-            *DUMMY,
+            *SELECTION,
             *MARKET,
             '--model',
             'odds-comparison',
@@ -58,9 +58,9 @@ def test_a_backtest_matches_the_api(cli_runner, tmp_path):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_nothing_has_to_be_written_down_first(cli_runner):
+def test_nothing_has_to_be_written_down_first(cli_runner, offline_dataloader):
     """Test a command needs no file of any kind, only what it is told."""
-    result = cli_runner.invoke(main, ['data', 'params', '--sport', 'dummy'])
+    result = cli_runner.invoke(main, ['data', 'params', *SELECTION])
     assert result.exit_code == 0, result.output
     assert 'England' in result.output
 
@@ -101,7 +101,7 @@ def test_a_missing_key_says_which_one_is_missing(cli_runner, monkeypatch):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_a_model_of_your_own_is_named_by_where_it_lives(cli_runner, tmp_path):
+def test_a_model_of_your_own_is_named_by_where_it_lives(cli_runner, offline_dataloader, tmp_path):
     """Test a scikit-learn model built in Python reaches the command line.
 
     No arrangement of arguments can describe an estimator, and inventing a syntax that tried would be a worse Python. So
@@ -113,14 +113,14 @@ def test_a_model_of_your_own_is_named_by_where_it_lives(cli_runner, tmp_path):
     )
     result = cli_runner.invoke(
         main,
-        ['model', 'backtest', *DUMMY, *MARKET, '--model', f'{models}:BETTOR', '--cv', '2'],
+        ['model', 'backtest', *SELECTION, *MARKET, '--model', f'{models}:BETTOR', '--cv', '2'],
     )
     assert result.exit_code == 0, result.output
     assert 'Backtesting results' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_a_model_that_does_not_exist_says_what_there_is(cli_runner):
+def test_a_model_that_does_not_exist_says_what_there_is(cli_runner, offline_dataloader):
     """Test a model nobody has heard of is answered with the ones there are."""
-    result = cli_runner.invoke(main, ['model', 'backtest', *DUMMY, *MARKET, '--model', 'wishful-thinking'])
+    result = cli_runner.invoke(main, ['model', 'backtest', *SELECTION, *MARKET, '--model', 'wishful-thinking'])
     assert 'odds-comparison' in result.output
