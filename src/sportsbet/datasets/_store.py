@@ -185,7 +185,12 @@ class LocalStore(BaseStore):
         return entries
 
     def _record(self: Self, item: RawItem, content: bytes) -> None:
-        """Append an item to the index of the held items."""
+        """Append an item to the index of the held items, unless it says what the index already says.
+
+        A volatile item is read again on every preparation, and a feed that has not changed answers with what it
+        answered before. Writing that down again would grow the index for as long as the store is used, saying the same
+        thing every time.
+        """
         entry = {
             'source': item.source,
             'key': item.key,
@@ -193,6 +198,8 @@ class LocalStore(BaseStore):
             'digest': hashlib.sha256(content).hexdigest(),
             'bytes': len(content),
         }
+        if self._manifest().get((item.source, item.key)) == entry:
+            return
         path = self._manifest_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open('a') as manifest_file:

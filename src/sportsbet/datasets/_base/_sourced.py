@@ -181,22 +181,34 @@ class SourcedDataLoader(BaseDataLoader):
             return None
         return snapshots[[*IDENTITY_COLS, *EVENT_COLS]].drop_duplicates()
 
-    def _items(self: Self, fetch: bool, refresh: bool = False) -> tuple[list[RawItem], list[RawItem]]:
+    def _items(
+        self: Self,
+        fetch: bool,
+        refresh: bool = False,
+        available: list[dict] | None = None,
+    ) -> tuple[list[RawItem], list[RawItem]]:
         """Return the items the selected parameters need from each source.
 
         An odds source that has to be told when the matches are is planned only after the statistics have been read, so
         the schedule it is given is the real one rather than a guess.
         """
         stats_source, odds_source, _ = self._resolved()
-        params = self._filter_params(self._params(fetch, refresh))
+        available = self._params(fetch, refresh) if available is None else available
+        params = self._filter_params(available)
         stats_items = stats_source.required_items(params)
         schedule = self._schedule(stats_items, fetch, refresh) if odds_source.needs_schedule() else None
         return stats_items, odds_source.required_items(params, schedule)
 
     def _report(self: Self, fetch: bool, refresh: bool = False) -> PreparationReport:
-        """Return what a preparation would fetch, what is held, and what it would cost."""
+        """Return what a preparation would fetch, what is held, and what it would cost.
+
+        The catalogue is resolved once and handed to both the items and the unavailable parameters. Each used to resolve
+        it for itself, and the index of a source is volatile and so is never held, which meant a single preparation read
+        it twice and paid for it twice.
+        """
         stats_source, odds_source, store = self._resolved()
-        stats_items, odds_items = self._items(fetch, refresh)
+        available = self._params(fetch, refresh)
+        stats_items, odds_items = self._items(fetch, refresh, available)
         items = self._unique(stats_items + odds_items)
         held = [] if refresh else store.held(items)
         to_fetch = [item for item in items if item not in held]
@@ -208,14 +220,14 @@ class SourcedDataLoader(BaseDataLoader):
             to_fetch=to_fetch,
             held=held,
             estimated_cost={name: cost for name, cost in costs.items() if cost},
-            unavailable=self._unavailable(fetch, refresh),
+            unavailable=self._unavailable(available),
         )
 
-    def _unavailable(self: Self, fetch: bool, refresh: bool = False) -> list[dict]:
+    def _unavailable(self: Self, available: list[dict]) -> list[dict]:
         """Return the fully specified parameters the sources do not publish."""
         if self.param_grid is None:
             return []
-        available = {tuple(sorted(params.items())) for params in self._params(fetch, refresh)}
+        published = {tuple(sorted(params.items())) for params in available}
         grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
         requested = [
             dict(zip(grid, values, strict=True))
@@ -223,7 +235,7 @@ class SourcedDataLoader(BaseDataLoader):
             if sorted(grid) == sorted(PARAM_COLS)
             for values in product(*[grid[key] for key in grid])
         ]
-        return [params for params in requested if tuple(sorted(params.items())) not in available]
+        return [params for params in requested if tuple(sorted(params.items())) not in published]
 
     def prepare(self: Self, dry_run: bool = False, refresh: bool = False) -> PreparationReport:
         """Populate the store with the data the selected parameters need.
