@@ -89,29 +89,63 @@ bettor.bet(X_fix, O_fix)
 
 ## Sports betting in practice
 
-You can think of any sports betting event as a random experiment with unknown probabilities for the various outcomes. Even for the
-most unlikely outcome, for example scoring more than 10 goals in a soccer match, a small probability is still assigned. The
-bookmaker estimates this probability P and offers the corresponding odds O. In theory, if the bookmaker offers the so-called fair
-odds O = 1 / P in the long run, neither the bettor nor the bookmaker would make any money.
+A betting event is a random experiment. Every outcome has some probability of occurring, even an unlikely one, such as more than
+ten goals in a soccer match and nobody knows what those probabilities actually are.
 
-The bookmaker's strategy is to adjust the odds in their favor using the over-round of probabilities. In practice, it offers odds
-less than the estimated fair odds. The important point here is that the bookmaker still has to estimate the probabilities of
-outcomes and provide odds that guarantee them long-term profit.
+### Fair odds
 
-On the other hand, the bettor can also estimate the probabilities and compare them to the odds the bookmaker offers. If the
-estimated probability of an outcome is higher than the implied probability from the provided odds, then the bet is called a value
-bet.
+The bookmaker estimates the probability $p$ of an outcome and offers odds $o$ on it. A bet of one unit returns $o$ if the
+outcome occurs and nothing otherwise, so its expected profit is
 
-The only long-term betting strategy that makes sense is to select value bets. However, you have to remember that neither the
-bettor nor the bookmaker can access the actual probabilities of outcomes. Therefore, identifying a value bet from the side of the
-bettor is still an estimation. The bettor or the bookmaker might be wrong, or both of them.
+$$
+\mathbb{E}[\Pi] = p \, o - 1.
+$$
 
-Another essential point is that bookmakers can access resources that the typical bettor is rare to access. For instance, they have
-more data, computational power, and teams of experts working on predictive models. You may assume that trying to beat them is
-pointless, but this is not necessarily correct. The bookmakers have multiple factors to consider when they offer their adjusted
-odds. This is the reason there is a considerable variation among the offered odds. The bettor should aim to systematically
-estimate the value bets, backtest their performance, and not create arbitrarily accurate predictive models. This is a realistic
-goal, and `sports-betting` can help by providing appropriate tools.
+The odds are *fair* when this is zero, that is when
+
+$$
+o = \frac{1}{p}.
+$$
+
+At fair odds, neither side makes money in the long run.
+
+### The bookmaker's margin
+
+Bookmakers do not offer fair odds. They shorten them, so that the *implied* probability $1/o$ of every outcome is a little
+higher than the probability they estimated. Across the $n$ mutually exclusive outcomes of an event, the implied probabilities
+therefore sum to more than one:
+
+$$
+\sum_{i=1}^{n} \frac{1}{o_i} = 1 + m, \qquad m > 0.
+$$
+
+The excess $m$ is the **over-round**, and it is the bookmaker's margin. Note what has *not* changed: the bookmaker still has to
+estimate $p$. The margin protects a good estimate; it does not replace one.
+
+### Value bets
+
+The bettor can estimate the probabilities too. Write the bettor's estimate as $\hat{p}$. A bet is a **value bet** when the
+bettor's estimate exceeds the probability implied by the offered odds:
+
+$$
+\hat{p} > \frac{1}{o} \quad \Longleftrightarrow \quad \hat{p} \, o - 1 > 0,
+$$
+
+that is, when the bet has positive expected profit *under the bettor's own estimate*. Selecting value bets is the only betting
+strategy that makes sense over the long run.
+
+The caveat matters: neither side observes the true $p$. A value bet is a claim that $\hat{p}$ is closer to the truth than
+$1/o$ is — and the bettor can be wrong, the bookmaker can be wrong, or both.
+
+### Is it hopeless?
+
+Bookmakers have more data, more computing power and teams of analysts. It is tempting to conclude that competing with them is
+pointless, but that does not follow. Bookmakers balance many concerns beyond accuracy — their exposure, their competitors, the
+weight of public money — which is why the odds offered on the *same* event vary noticeably from one bookmaker to another. That
+variation is the opening.
+
+The goal is therefore not to build an arbitrarily accurate model of football. It is to **identify value bets systematically and
+backtest them honestly** — a realistic aim, and the one `sports-betting` is built to serve.
 
 ## Installation
 

@@ -43,6 +43,8 @@ extra_css:
 
 markdown_extensions:
   - admonition
+  - pymdownx.arithmatex:
+      generic: true
   - callouts
   - pymdownx.details
   - pymdownx.emoji
@@ -53,6 +55,10 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 plugins:
   - search
