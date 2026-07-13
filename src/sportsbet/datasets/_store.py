@@ -71,13 +71,14 @@ class NotPreparedError(Exception):
 
     Args:
         report:
-            The preparation the store would need.
+            The preparation the store would need, when that can be known without fetching. It cannot when the store
+            does not even hold the catalogue, and finding out would mean downloading, which extraction never does.
     """
 
-    def __init__(self: Self, report: PreparationReport) -> None:
+    def __init__(self: Self, report: PreparationReport | None = None) -> None:
         self.report = report
-        msg = f'The data is not prepared. Call `prepare` first. {report}'
-        super().__init__(msg)
+        msg = 'The data is not prepared. Call `prepare` first.'
+        super().__init__(f'{msg} {report}' if report is not None else msg)
 
 
 class BaseStore(ABC):

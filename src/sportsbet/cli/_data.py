@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ._options import EXTRACTION, OUTPUT, SELECTION, options
-from ._utils import extraction, print_console, selected
+from ._utils import extraction, print_console, reported, selected
 
 
 @click.group()
@@ -30,7 +30,7 @@ def params(**selection: object) -> None:
 
     It asks the source, since nothing can be selected before it is known what exists.
     """
-    with selected(selection) as dataloader:
+    with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
         stats_source, *_ = dataloader.sources
@@ -46,7 +46,7 @@ def params(**selection: object) -> None:
 @click.option('--refresh', is_flag=True, help='Fetch everything again, including what the store already holds.')
 def prepare(dry_run: bool, refresh: bool, **selection: object) -> None:
     """Download the data, so an extraction never has to."""
-    with selected(selection) as dataloader:
+    with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
         report = dataloader.prepare(dry_run=dry_run, refresh=refresh)
@@ -66,10 +66,9 @@ def prepare(dry_run: bool, refresh: bool, **selection: object) -> None:
 @options(SELECTION)
 def odds_types(**selection: object) -> None:
     """Show the odds that can be extracted."""
-    with selected(selection) as dataloader:
+    with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        dataloader.prepare()
         frame = pd.DataFrame(dataloader.get_odds_types(), columns=['Type'])
         print_console([frame], ['Available odds types'])
 
@@ -78,10 +77,9 @@ def odds_types(**selection: object) -> None:
 @options(SELECTION, EXTRACTION, OUTPUT)
 def training(data_path: str | None, **selection: object) -> None:
     """Extract the training data."""
-    with selected(selection) as dataloader:
+    with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        dataloader.prepare()
         X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection))
         Y_train = cast('pd.DataFrame', Y_train)
         has_odds = O_train is not None and not O_train.empty
@@ -102,10 +100,9 @@ def training(data_path: str | None, **selection: object) -> None:
 @options(SELECTION, EXTRACTION, OUTPUT)
 def fixtures(data_path: str | None, **selection: object) -> None:
     """Extract the games that have not been played yet."""
-    with selected(selection) as dataloader:
+    with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        dataloader.prepare()
         dataloader.extract_train_data(**extraction(selection))
         X_fix, _, O_fix = dataloader.extract_fixtures_data()
         if X_fix.empty:

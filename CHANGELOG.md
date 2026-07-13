@@ -43,9 +43,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   sportsbet data prepare --sport basketball --league NBA --year 2026 --stats nba --odds odds-api --dry-run
   ```
 
+  A data source is configured from the command line as it is from Python: its markets, regions and moments
+  (`--odds-market`, `--odds-region`, `--odds-moment inplay:45`), where the data is kept (`--store`), and how the two
+  sources' team names are paired (`--alias`, `--max-unmatched-rate`). A test now compares the commands against the
+  Python API's signatures, so the two cannot drift apart again without the suite saying so.
+
   A betting model is the one thing that cannot be a flag, because it is a scikit-learn estimator and no arrangement of
   arguments can describe one. `odds-comparison` and `logistic` are ready-made; a model of your own is built in Python
   and named as an object, with `--model models.py:BETTOR`.
+
+### Fixed
+
+- **A bettor betting on a single market crashed.** The probabilities were clipped in place, and the array they came
+  from is read-only when a single market produces it. The default has five markets, so nobody met it.
+
+- **An extraction fetched.** When the data was not prepared, the error that said so built its report by *downloading*
+  the catalogue — the one thing an extraction must never do. It now says less rather than fetching in order to say
+  more, and still names what is missing whenever it can know without going to the network.
+
+- **`drop_na_thres` was not a proportion.** Above one it asked for columns that are more than complete and silently
+  dropped every one of them; below nought it was accepted and meant nothing. It is now checked.
+
+- **The command line showed stack traces.** What the library says is now what the user reads.
 
 ### Added
 

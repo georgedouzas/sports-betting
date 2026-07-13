@@ -58,3 +58,51 @@ def test_a_ready_made_classifier_needs_no_python(cli_runner):
     result = cli_runner.invoke(main, ['model', 'backtest', *DUMMY, *MARKET, '--model', 'logistic', '--cv', '2'])
     assert result.exit_code == 0, result.output
     assert 'Backtesting results' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_a_model_can_bet_on_a_single_market(cli_runner):
+    """Test betting on one market works, as betting on all of them does.
+
+    The probabilities were clipped in an array that is read-only when a single market produces it, so this crashed and
+    the default never did.
+    """
+    result = cli_runner.invoke(
+        main,
+        [
+            'model',
+            'backtest',
+            *DUMMY,
+            *MARKET,
+            '--model',
+            'odds-comparison',
+            '--betting-market',
+            'home_win',
+            '--cv',
+            '2',
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert 'Backtesting results' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_the_odds_a_model_compares_can_be_chosen(cli_runner):
+    """Test the odds `odds-comparison` compares are chosen from the command line, as they are from Python."""
+    result = cli_runner.invoke(
+        main,
+        [
+            'model',
+            'backtest',
+            *DUMMY,
+            *MARKET,
+            '--model',
+            'odds-comparison',
+            '--model-odds-type',
+            'market_average',
+            '--cv',
+            '2',
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert 'Backtesting results' in result.output

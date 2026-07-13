@@ -59,6 +59,11 @@ def _selection(
     odds: str | None,
     odds_key_env: str,
     odds_markets: list[str] | None,
+    odds_regions: list[str] | None,
+    odds_moments: list[str] | None,
+    store: str | None,
+    aliases: list[str] | None,
+    max_unmatched_rate: float,
 ) -> Selection:
     """Return what a tool was told about the data to use."""
     return {
@@ -70,6 +75,11 @@ def _selection(
         'odds': odds,
         'odds_key_env': odds_key_env,
         'odds_markets': odds_markets,
+        'odds_regions': odds_regions,
+        'odds_moments': odds_moments,
+        'store': store,
+        'aliases': aliases,
+        'max_unmatched_rate': max_unmatched_rate,
     }
 
 
@@ -162,12 +172,31 @@ async def available_params(
     odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
 ) -> list[dict]:
     """Return the leagues, divisions and seasons that can be selected.
 
     Free, and downloads no data.
     """
-    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    selection = _selection(
+        sport,
+        leagues,
+        divisions,
+        years,
+        stats,
+        odds,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        store,
+        aliases,
+        max_unmatched_rate,
+    )
     result: list[dict] = await _offload(_available_params, selection)
     return result
 
@@ -182,13 +211,32 @@ async def estimate_preparation(
     odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
 ) -> dict[str, Any]:
     """Return what a preparation would fetch and exactly what it would cost, spending nothing.
 
     Call this before `prepare`. The cost is the real list of what would be bought rather than a guess, and asking is
     free.
     """
-    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    selection = _selection(
+        sport,
+        leagues,
+        divisions,
+        years,
+        stats,
+        odds,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        store,
+        aliases,
+        max_unmatched_rate,
+    )
     result: dict[str, Any] = await _offload(_estimate_preparation, selection)
     return result
 
@@ -203,6 +251,11 @@ async def prepare(
     odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
     confirm_cost: int | None = None,
 ) -> dict[str, Any]:
     """Download the data.
@@ -211,7 +264,21 @@ async def prepare(
     be the total that `estimate_preparation` reports, so whoever is paying has been told the price first. A preparation
     that costs nothing needs no confirmation.
     """
-    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    selection = _selection(
+        sport,
+        leagues,
+        divisions,
+        years,
+        stats,
+        odds,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        store,
+        aliases,
+        max_unmatched_rate,
+    )
     result: dict[str, Any] = await _offload(_prepare, selection, confirm_cost)
     return result
 
@@ -226,10 +293,29 @@ async def extract_train_data(
     odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
 ) -> dict[str, Any]:
     """Return the training data of the prepared data."""
-    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    selection = _selection(
+        sport,
+        leagues,
+        divisions,
+        years,
+        stats,
+        odds,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        store,
+        aliases,
+        max_unmatched_rate,
+    )
     result: dict[str, Any] = await _offload(_extract_train_data, selection, odds_type)
     return result
 
@@ -244,10 +330,29 @@ async def extract_fixtures_data(
     odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
 ) -> dict[str, Any]:
     """Return the games that have not been played yet."""
-    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    selection = _selection(
+        sport,
+        leagues,
+        divisions,
+        years,
+        stats,
+        odds,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        store,
+        aliases,
+        max_unmatched_rate,
+    )
     result: dict[str, Any] = await _offload(_extract_fixtures_data, selection, odds_type)
     return result
 
@@ -263,6 +368,11 @@ async def backtest(
     odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
     alpha: float = 0.05,
     cv: int = 3,
@@ -272,7 +382,21 @@ async def backtest(
     A ready-made model is named. A scikit-learn one built in Python is named by where it lives, as in
     `models.py:BETTOR`, since no set of arguments can describe an estimator.
     """
-    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    selection = _selection(
+        sport,
+        leagues,
+        divisions,
+        years,
+        stats,
+        odds,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        store,
+        aliases,
+        max_unmatched_rate,
+    )
     result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, model, alpha, cv)
     return result
 
@@ -288,11 +412,30 @@ async def bet(
     odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    store: str | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
     alpha: float = 0.05,
 ) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
-    selection = _selection(sport, leagues, divisions, years, stats, odds, odds_key_env, odds_markets)
+    selection = _selection(
+        sport,
+        leagues,
+        divisions,
+        years,
+        stats,
+        odds,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        store,
+        aliases,
+        max_unmatched_rate,
+    )
     result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, model, alpha)
     return result
 
