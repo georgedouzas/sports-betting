@@ -27,7 +27,7 @@ class _DummySoccerStats(BaseStatsSource):
 
     name: ClassVar[str] = 'dummy_soccer'
 
-    def index_items(self: Self) -> list[RawItem]:
+    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return no items, since nothing is downloaded."""
         return []
 

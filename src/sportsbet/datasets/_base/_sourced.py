@@ -126,9 +126,14 @@ class SourcedDataLoader(BaseDataLoader):
         return list(dict.fromkeys(items))
 
     def _catalogue(self: Self, fetch: bool, refresh: bool = False) -> list[RawPayload]:
-        """Return the payloads of the catalogue, fetching them only when allowed to."""
+        """Return the payloads of the catalogue, fetching them only when allowed to.
+
+        The sources are told what was selected, so a feed whose catalogue costs as much as its data reads only the part
+        of it that could hold what was asked for.
+        """
         stats_source, odds_source, store = self._resolved()
-        items = self._unique(stats_source.index_items() + odds_source.index_items())
+        selection = self.param_grid
+        items = self._unique(stats_source.index_items(selection) + odds_source.index_items(selection))
         if fetch:
             held = [] if refresh else store.held(items)
             store.fetch([item for item in items if item not in held], self._authorize)

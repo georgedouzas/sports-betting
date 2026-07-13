@@ -11,6 +11,7 @@ from typing import Any, ClassVar, Self
 import numpy as np
 import pandas as pd
 
+from ... import ParamGrid
 from .._utils import market_outcomes
 from ._base import BaseStatsSource, RawItem, RawPayload
 
@@ -148,8 +149,8 @@ class EuroLeagueStats(BaseStatsSource):
 
     name: ClassVar[str] = 'euroleague'
 
-    def index_items(self: Self) -> list[RawItem]:
-        """Return the seasons the competition publishes, which is free to read."""
+    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
+        """Return the seasons the competition publishes, which is one free request whatever is selected."""
         return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL, volatile=True)]
 
     def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:

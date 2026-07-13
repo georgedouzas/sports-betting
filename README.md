@@ -59,10 +59,9 @@ The main components of `sports-betting` are dataloaders and bettors objects:
 
 ## Quick start
 
-### API
-
-The `sports-betting` package makes it easy to download sports betting data, for soccer and for basketball. The data is downloaded onto your own machine by
-an explicit `prepare` step, and never as a side effect of asking for a dataframe:
+The `sports-betting` package makes it easy to download sports betting data. Soccer and basketball are supported today,
+and more sports are on the way: a sport is a data source, not an engine, so adding one adds no machinery. The data is
+downloaded onto your own machine by an explicit `prepare` step:
 
 ```python
 from sportsbet.datasets import SoccerDataLoader
@@ -140,11 +139,9 @@ pdm install
 
 ## Usage
 
-You can access `sports-betting` through the Python API, the CLI, or an AI assistant via the MCP server. It is worth
-getting familiar with the Python API either way, since a CLI configuration file *is* Python — it hands the CLI a
-dataloader you built yourself, which is what lets any sport, any data source and any credential reach every surface.
-`sports-betting` supports all common sports betting needs: fetching historical and fixtures data, backtesting betting
-strategies, and predicting value bets.
+You can access `sports-betting` through the Python API, the CLI, or an AI assistant via the MCP server. All three reach
+the same capabilities — every sport, every data source and every credential — and all three cover the common sports
+betting needs: fetching historical and fixtures data, backtesting betting strategies, and predicting value bets.
 
 ### API
 

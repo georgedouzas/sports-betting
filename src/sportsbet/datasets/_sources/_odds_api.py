@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 
 import pandas as pd
 
+from ... import ParamGrid
 from .._base._schema import EVENT_COLS
 from ._base import BaseOddsSource, RawItem, RawPayload
 
@@ -202,7 +203,7 @@ class OddsApi(BaseOddsSource):
         """
         return True
 
-    def index_items(self: Self) -> list[RawItem]:
+    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the catalogue of the vendor, which is free."""
         return [RawItem(source=self.name, key=SPORTS_KEY, url=f'{SPORTS_URL}?all=true', volatile=True)]
 
