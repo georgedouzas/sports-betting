@@ -241,77 +241,48 @@ Everything the Python API does, the `sportsbet` command does. It has two groups 
 extracts data, and `model` backtests a betting model and predicts the value bets. Pass `--help` to any of them to see what it
 takes.
 
-#### Data
+The same scenario, without writing any Python. The selection of the data is the same, and so is the betting strategy:
+`logistic` is exactly the classifier that was built by hand above.
 
 ```bash
-# What can be selected, asked of the source itself
-sportsbet data params --sport soccer
+# Selection of data
+sportsbet data prepare --sport soccer \
+  --league Germany --league Italy --league France \
+  --division 1 --division 2 \
+  --year 2021 --year 2022 --year 2023 --year 2024
 
-# What a download would fetch and cost, without doing it
-sportsbet data prepare --sport soccer --league England --year 2025 --dry-run
+# Apply backtesting and get results
+sportsbet model backtest --sport soccer \
+  --league Germany --league Italy --league France \
+  --division 1 --division 2 \
+  --year 2021 --year 2022 --year 2023 --year 2024 \
+  --odds-type market_maximum \
+  --model logistic \
+  --betting-market home_win --betting-market draw --betting-market away_win \
+  --init-cash 10000 --stake 50 --cv 5
 
-# training data and fixtures, written as CSV
-sportsbet data training --sport soccer --league England --year 2025 --odds-type market_maximum -o ./data
-sportsbet data fixtures --sport soccer --league England --year 2025 --odds-type market_maximum -o ./data
+# Get value bets for upcoming betting events
+sportsbet model bet --sport soccer \
+  --league Germany --league Italy --league France \
+  --division 1 --division 2 \
+  --year 2021 --year 2022 --year 2023 --year 2024 \
+  --odds-type market_maximum \
+  --model logistic \
+  --betting-market home_win --betting-market draw --betting-market away_win
 ```
-
-`prepare` is the only command that downloads, and `--dry-run` reports what it would fetch and what it would cost without
-fetching it. The extraction commands read what is already there, so they never surprise you with a download.
-
-Data sources are selected and configured on the command line just as they are in Python. Choose the statistics and the
-odds with `--stats` and `--odds`, then configure the odds source: which markets and regions to price
-(`--odds-market`, `--odds-region`), at which moments (`--odds-moment inplay:45`), where to keep the data (`--store`),
-and how to reconcile team names that the two sources spell differently (`--alias`, `--max-unmatched-rate`).
-
-A source that needs an API key reads it from the environment, so the key never appears in a command or a shell history:
-
-```bash
-export ODDS_API_KEY=...
-
-sportsbet data prepare --sport basketball --league NBA --year 2026 \
-    --stats nba --odds odds-api --odds-market h2h --odds-moment preplay:0 --dry-run
-```
-
-#### Models
-
-```bash
-sportsbet model backtest --sport soccer --league England --year 2025 \
-    --odds-type market_maximum --model odds-comparison --alpha 0.03 --cv 3 -o ./data
-
-sportsbet model bet --sport soccer --league England --year 2025 \
-    --odds-type market_maximum --model logistic -o ./data
-```
-
-`odds-comparison` and `logistic` are ready-made models with their hyperparameters as options. For anything else, build a
-bettor in Python and point the command at it:
-
-```python
-# models.py
-from sportsbet.evaluation import ClassifierBettor
-BETTOR = ClassifierBettor(my_pipeline, init_cash=10000.0, stake=50.0)
-```
-
-```bash
-sportsbet model backtest --sport soccer --league England --year 2025 \
-    --odds-type market_maximum --model models.py:BETTOR
-```
-
-A bettor wraps a scikit-learn estimator, which can be an arbitrary pipeline, so it is written as Python rather than
-squeezed into options.
 
 ### AI assistant
 
-Install the MCP server and an assistant can drive the library for you — find what data exists, price a download before
-it spends anything, prepare it, backtest a model and return the value bets:
+Install the MCP server and an assistant can drive the library for you:
 
 ```bash
 pip install 'sports_betting[mcp]'
 ```
 
-Point your assistant at the `sportsbet-mcp` command. Its tools take the same arguments as the CLI, so anything you can
-ask for on the command line, you can ask for in plain language. Your API key is not one of those arguments: the
-assistant passes the *name* of the environment variable holding it, so the key itself stays out of the conversation.
+Find what data exists, price a download before it spends anything, prepare it, backtest a model and return the value bets. Point
+your assistant at the `sportsbet-mcp` command. Its tools take the same arguments as the CLI, so anything you can ask for on the
+command line, you can ask for in plain language. Your API key is not one of those arguments: the assistant passes the *name* of
+the environment variable holding it, so the key itself stays out of the conversation.
 
-Odds are bought per request, and a full season of them can cost thousands of credits. An assistant therefore cannot
-start a download that costs money until it has read the estimate and confirmed the amount. The estimate itself is free
-and exact.
+Odds are bought per request, and a full season of them can cost thousands of credits. An assistant therefore cannot start a
+download that costs money until it has read the estimate and confirmed the amount. The estimate itself is free and exact.
