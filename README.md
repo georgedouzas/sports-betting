@@ -80,6 +80,19 @@ bettor = ClassifierBettor(DummyClassifier())
 backtest(bettor, X_train, Y_train, O_train)
 ```
 
+```text
+                                                       Number of betting days  Number of bets  Yield percentage per bet  ROI percentage  Final cash
+Training start Training end Testing start Testing end
+2019-08-23     2019-10-05   2019-10-06    2019-11-24                      61             243                     -20.6           -25.0      7502.5
+               2019-11-24   2019-11-25    2020-01-18                      72             248                      -8.7           -10.8      8922.0
+               2020-01-18   2020-01-18    2020-03-01                      72             246                       3.5             4.3     10430.5
+               2020-03-01   2020-03-01    2020-07-10                      63             242                      -4.3            -5.2      9479.0
+               2020-07-10   2020-07-10    2020-08-02                      49             241                       0.7             0.8     10082.0
+```
+
+The results are reported for each fold of the time ordered cross-validation, along with a breakdown per betting market
+that is not shown above. A model that bets at random loses money, as it should.
+
 We can use the trained bettor model to predict the value bets using the fixtures data:
 
 ```python
@@ -234,6 +247,16 @@ bettor.fit(X_train, Y_train)
 bettor.bet(X_fix, O_fix)
 ```
 
+```text
+                                                       Number of betting days  Number of bets  Yield percentage per bet  ROI percentage  Final cash
+Training start Training end Testing start Testing end
+2020-08-21     2021-02-27   2021-02-27    2021-11-06                     625            1407                      38.3           269.3     36934.0
+               2021-11-06   2021-11-06    2022-05-14                     645            1407                      54.5           383.2     48321.0
+               2022-05-14   2022-05-15    2023-02-25                     639            1408                      49.8           350.7     45075.0
+               2023-02-25   2023-02-26    2023-11-06                     637            1407                      51.5           362.4     46236.0
+               2023-11-06   2023-11-06    2024-06-02                     659            1408                      47.9           337.4     43741.0
+```
+
 ### CLI
 
 Everything the Python API does, the `sportsbet` command does. It has two groups of sub-commands: `data` selects, downloads and
@@ -268,6 +291,37 @@ sportsbet model bet --sport soccer \
   --model logistic \
   --betting-market home_win --betting-market draw --betting-market away_win
 ```
+
+`prepare` reports what it downloaded:
+
+```text
+Downloaded 25 items.
+```
+
+The backtesting results are the same as the ones above. They are shown as a table when the terminal is wide enough, and
+a fold at a time when it is not:
+
+```text
+Backtesting results
+Training start                        2020-08-21
+Training end                          2021-02-27
+Testing start                         2021-02-27
+Testing end                           2021-11-06
+Number of betting days                625
+Number of bets                        1407
+Yield percentage per bet              38.30
+ROI percentage                        269.30
+Final cash                            36,934.00
+Number of bets (home_win)             357
+Number of bets (draw)                 643
+Number of bets (away_win)             407
+Yield percentage per bet (home_win)   60.80
+Yield percentage per bet (draw)       10.40
+Yield percentage per bet (away_win)   62.60
+...
+```
+
+Add `-o ./data` to write the results as CSV files.
 
 ### AI assistant
 
