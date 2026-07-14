@@ -4,7 +4,7 @@ import pytest
 
 from sportsbet.cli import main
 
-SELECTION = ['--sport', 'soccer', '--league', 'England']
+SELECTION = ['--stats', 'football-data', '--odds', 'football-data', '--league', 'England']
 MARKET = ['--odds-type', 'market_average', '--target-event-status', 'postplay']
 
 
@@ -23,18 +23,22 @@ def test_data_help(cli_runner, offline_dataloader):
     assert 'Select, download and extract data.' in result.output
 
 
-def test_a_command_needs_to_be_told_the_sport(cli_runner):
-    """Test the one thing a command cannot guess is asked for."""
+def test_a_command_needs_to_be_told_where_the_data_comes_from(cli_runner):
+    """Test the one thing a command cannot guess is asked for.
+
+    The feed decides what is in the data, what it costs and who may redistribute it, and it decides the sport, so the
+    sport is never asked for either.
+    """
     result = cli_runner.invoke(main, ['data', 'params'])
     assert result.exit_code != 0, result.output
-    assert '--sport' in result.output
+    assert '--stats' in result.output
 
 
-def test_a_sport_nobody_plays_says_which_ones_there_are(cli_runner):
-    """Test a sport that does not exist is answered with the ones that do."""
-    result = cli_runner.invoke(main, ['data', 'params', '--sport', 'quidditch'])
+def test_a_source_nobody_publishes_says_which_ones_there_are(cli_runner):
+    """Test a source that does not exist is answered with the ones that do."""
+    result = cli_runner.invoke(main, ['data', 'params', '--stats', 'quidditch'])
     assert result.exit_code != 0, result.output
-    assert 'soccer' in result.output
+    assert 'football-data' in result.output
 
 
 def test_data_params(cli_runner, offline_dataloader):
@@ -94,8 +98,6 @@ def test_a_moment_that_is_not_one_says_how_to_spell_one(cli_runner, monkeypatch)
         [
             'data',
             'prepare',
-            '--sport',
-            'basketball',
             '--stats',
             'nba',
             '--odds',
@@ -112,7 +114,7 @@ def test_an_alias_that_is_not_one_says_how_to_spell_one(cli_runner, monkeypatch)
     monkeypatch.setenv('ODDS_API_KEY', 'not-used-offline')
     result = cli_runner.invoke(
         main,
-        ['data', 'prepare', '--sport', 'basketball', '--stats', 'nba', '--odds', 'odds-api', '--alias', 'nonsense'],
+        ['data', 'prepare', '--stats', 'nba', '--odds', 'odds-api', '--alias', 'nonsense'],
     )
     assert 'Olimpia Milano' in result.output
 
@@ -126,7 +128,20 @@ def test_an_extraction_never_downloads(cli_runner, tmp_path):
     """
     result = cli_runner.invoke(
         main,
-        ['data', 'training', '--sport', 'soccer', '--league', 'England', '--year', '2025', '--store', str(tmp_path)],
+        [
+            'data',
+            'training',
+            '--stats',
+            'football-data',
+            '--odds',
+            'football-data',
+            '--league',
+            'England',
+            '--year',
+            '2025',
+            '--store',
+            str(tmp_path),
+        ],
     )
     exit_code = 1
     assert result.exit_code == exit_code

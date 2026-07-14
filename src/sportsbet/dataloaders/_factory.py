@@ -9,9 +9,9 @@ from typing import Self
 
 import pandas as pd
 
-from ... import ParamGrid
-from ._dataloader import BaseDataLoader
-from ._schema import IDENTITY_COLS, odds_columns, parse_odds_column
+from .. import ParamGrid
+from ..sources._schema import IDENTITY_COLS, odds_columns, parse_odds_column
+from ._base import BaseDataLoader
 
 
 class _SnapshotsDataLoader(BaseDataLoader):
@@ -48,7 +48,7 @@ def _wide_to_snapshots(
 
 def from_snapshots(
     stats: pd.DataFrame,
-    odds: pd.DataFrame,
+    odds: pd.DataFrame | None = None,
     *,
     param_grid: ParamGrid | None = None,
 ) -> BaseDataLoader:
@@ -63,7 +63,8 @@ def from_snapshots(
         stats:
             Long statistics snapshots.
         odds:
-            Long odds snapshots.
+            Long odds snapshots. `None` gives a dataloader with no markets, whose features can still be extracted with
+            `learning_type='unsupervised'`.
         param_grid:
             Optional selection, mirroring the dataloader constructor.
 
@@ -72,7 +73,7 @@ def from_snapshots(
 
     Examples:
         >>> import pandas as pd
-        >>> from sportsbet.datasets import from_snapshots
+        >>> from sportsbet.dataloaders import from_snapshots
         >>> identity = dict(date='2024-08-16', league='England', division=1, year=2025,
         ...                 home_team='A', away_team='B')
         >>> stats = pd.DataFrame([
@@ -91,7 +92,7 @@ def from_snapshots(
         ['home_win__postplay__0min']
     """
     loader = _SnapshotsDataLoader(param_grid=param_grid)
-    loader._provided_snapshots = (stats, odds)
+    loader._provided_snapshots = (stats, BaseDataLoader.no_odds() if odds is None else odds)
     return loader
 
 
@@ -109,7 +110,7 @@ def from_dataframe(
     identity columns (`date`, `league`, `division`, `year`, `home_team`,
     `away_team`), any number of value columns (goals, market outcomes, features),
     and `{provider}__{market}` odds columns. For several moments, provide long
-    snapshots to [`from_snapshots`][sportsbet.datasets.from_snapshots] instead, or
+    snapshots to [`from_snapshots`][sportsbet.dataloaders.from_snapshots] instead, or
     call this per moment.
 
     Args:

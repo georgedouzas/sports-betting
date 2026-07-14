@@ -6,7 +6,7 @@ import json
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import LocalStore, NotPreparedError, PreparationReport, RawItem
+from sportsbet.sources import LocalStore, NotPreparedError, PreparationReport, RawItem
 
 ITEM = RawItem(source='test', key='England_1_2024', url='https://example.com/England.csv')
 VOLATILE = RawItem(source='test', key='fixtures', url='https://example.com/fixtures.csv', volatile=True)
@@ -22,7 +22,7 @@ def store(tmp_path):
 @pytest.fixture
 def fetched(store, monkeypatch):
     """A store already holding the item, fetched without the network."""
-    monkeypatch.setattr('sportsbet.datasets._store.read_urls_content', lambda urls: [CONTENT for _ in urls])
+    monkeypatch.setattr('sportsbet.sources._store.read_urls_content', lambda urls: [CONTENT for _ in urls])
     store.fetch([ITEM])
     return store
 
@@ -39,7 +39,7 @@ def test_a_fetched_item_is_held(fetched):
 
 def test_a_volatile_item_is_never_held(fetched, monkeypatch):
     """Test an item that can still change upstream is always refreshed, with no cache to invalidate by hand."""
-    monkeypatch.setattr('sportsbet.datasets._store.read_urls_content', lambda urls: [CONTENT for _ in urls])
+    monkeypatch.setattr('sportsbet.sources._store.read_urls_content', lambda urls: [CONTENT for _ in urls])
     fetched.fetch([VOLATILE])
     assert fetched.held([VOLATILE]) == []
 

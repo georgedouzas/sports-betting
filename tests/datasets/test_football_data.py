@@ -7,7 +7,7 @@ is checked by the `network` marked equivalence gate.
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import FootballDataOdds, FootballDataStats, RawItem, RawPayload
+from sportsbet.sources import FootballDataOdds, FootballDataStats, RawItem, RawPayload
 
 FEED = (
     'Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,HTHG,HTAG,HS,AS,HST,AST,HC,AC,HY,AY,HR,AR,'

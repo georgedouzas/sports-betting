@@ -12,10 +12,10 @@ import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from ... import ParamGrid
-from .._fetch import ENCODING, read_csv_content
-from .._utils import market_outcomes
+from .. import ParamGrid
 from ._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
+from ._fetch import ENCODING, read_csv_content
+from ._utils import market_outcomes
 
 URL = 'https://www.football-data.co.uk'
 BASE_URLS = [
@@ -915,6 +915,7 @@ class _FootballDataSource(BaseSource):
     downloaded once rather than twice.
     """
 
+    sport: ClassVar[str | None] = 'soccer'
     name: ClassVar[str] = 'football_data'
 
     def __init__(self: Self) -> None:

@@ -9,7 +9,7 @@ import json
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import NBAStats, RawPayload
+from sportsbet.sources import NBAStats, RawPayload
 
 SNAPSHOTS = 9
 MONTHS = 11

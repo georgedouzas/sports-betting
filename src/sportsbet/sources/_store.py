@@ -21,7 +21,7 @@ from ._fetch import read_urls_content
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ._sources._base import RawItem, RawPayload
+    from ._base import RawItem, RawPayload
 
     Authorize = Callable[[RawItem], str]
 
@@ -240,7 +240,7 @@ class LocalStore(BaseStore):
             payloads:
                 The fetched payloads.
         """
-        from ._sources._base import RawPayload  # noqa: PLC0415
+        from ._base import RawPayload  # noqa: PLC0415
 
         if not items:
             return []
@@ -264,7 +264,7 @@ class LocalStore(BaseStore):
             payloads:
                 The held payloads.
         """
-        from ._sources._base import RawPayload  # noqa: PLC0415
+        from ._base import RawPayload  # noqa: PLC0415
 
         payloads = []
         for item in items:

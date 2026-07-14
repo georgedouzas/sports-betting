@@ -8,13 +8,8 @@ import pandas as pd
 import pytest
 from click.testing import CliRunner
 
-from sportsbet.datasets import (
-    BaseOddsSchema,
-    BaseStatsSchema,
-    DummySoccerDataLoader,
-    optional_col,
-    required_col,
-)
+from sportsbet.dataloaders import DummySoccerDataLoader
+from sportsbet.sources import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
 
 @pytest.fixture(autouse=True, scope='session')
@@ -55,7 +50,7 @@ def offline_dataloader(monkeypatch: pytest.MonkeyPatch) -> None:
     The commands are exercised without a network, and without the library shipping a fake sport to make that possible.
     """
 
-    def build(sport: str, leagues: list[str] | None = None, **rest: object) -> DummySoccerDataLoader:
+    def build(stats: str, leagues: list[str] | None = None, **rest: object) -> DummySoccerDataLoader:
         return DummySoccerDataLoader(param_grid={'league': list(leagues)} if leagues else None)
 
     monkeypatch.setattr('sportsbet.cli._utils.build_dataloader', build)

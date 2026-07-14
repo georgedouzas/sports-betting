@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from sklearn.model_selection import TimeSeriesSplit
 
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
 from tests.evaluation import O_fix, O_train, X_fix, X_train, Y_train
 

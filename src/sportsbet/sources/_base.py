@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, ClassVar, Self
 import pandas as pd
 
 if TYPE_CHECKING:
-    from ... import ParamGrid
-    from .._store import BaseStore
+    from .. import ParamGrid
+    from ._store import BaseStore
 
 
 @dataclass(frozen=True)
@@ -69,6 +69,10 @@ class RawPayload:
 class BaseSource(ABC):
     """The abstract base class for data sources.
 
+    A source knows which sport it carries, since a feed of soccer matches is a feed of soccer matches whatever is done
+    with it. `sport` is `None` for a source that carries several, as a vendor of odds does, and such a source takes the
+    sport of the one it is paired with.
+
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
     Its planning and transform methods never fetch, so a preparation can always be planned and priced without spending
     anything, and an extraction can never download by accident.
@@ -79,6 +83,7 @@ class BaseSource(ABC):
 
     name: ClassVar[str]
     kind: ClassVar[str]
+    sport: ClassVar[str | None] = None
 
     @abstractmethod
     def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
@@ -134,7 +139,7 @@ class BaseSource(ABC):
             params:
                 The available `league`, `division` and `year` combinations.
         """
-        from .._store import LocalStore  # noqa: PLC0415
+        from ._store import LocalStore  # noqa: PLC0415
 
         store = store if store is not None else LocalStore()
         items = self.index_items()

@@ -7,13 +7,9 @@ import pandas as pd
 import pytest
 from sklearn.dummy import DummyClassifier
 
-from sportsbet.datasets import (
-    BasketballDataLoader,
-    EuroLeagueStats,
-    SoccerDataLoader,
-    from_snapshots,
-)
+from sportsbet.dataloaders import DataLoader, from_snapshots
 from sportsbet.evaluation import ClassifierBettor, complementary_events
+from sportsbet.sources import EuroLeagueStats, FootballDataOdds, NBAStats, OddsApi
 
 GAMES = [('Alba Berlin', 'Zalgiris', 77, 87), ('Zalgiris', 'Alba Berlin', 90, 80)]
 TWO_WAY = 2
@@ -49,16 +45,31 @@ def _snapshots():
     return pd.DataFrame(stats), pd.DataFrame(odds)
 
 
-def test_a_basketball_dataloader_is_its_default_sources():
-    """Test the sport is its sources and nothing else, so the engine never learns which sport it is looking at."""
-    assert BasketballDataLoader.DEFAULT_STATS is EuroLeagueStats
-    assert BasketballDataLoader.DEFAULT_ODDS is None
+def test_the_sport_is_the_source_s_and_not_the_dataloader_s():
+    """Test a feed of basketball is a feed of basketball, whatever it is handed to."""
+    assert EuroLeagueStats.sport == 'basketball'
+    assert NBAStats.sport == 'basketball'
+    assert DataLoader(stats=NBAStats(), odds=OddsApi(key='k')).sport == 'basketball'
 
 
-def test_basketball_has_no_free_odds_and_says_so():
-    """Test a sport with no free odds source says that, rather than failing somewhere deeper."""
-    with pytest.raises(ValueError, match='no free default'):
-        BasketballDataLoader().prepare()
+def test_statistics_and_odds_of_different_sports_are_refused():
+    """Test the statistics of one sport and the odds of another are not about the same matches, and are refused.
+
+    Nothing could pair them, and the failure would otherwise arrive much later, as a roster in which no team could be
+    found in the other.
+    """
+    with pytest.raises(ValueError, match='not about the same matches'):
+        _ = DataLoader(stats=NBAStats(), odds=FootballDataOdds()).sources
+
+
+def test_a_dataloader_will_not_choose_a_source_for_you():
+    """Test a dataloader with no statistics says so, rather than reading a feed nobody asked for.
+
+    Which feed the data came from decides what is in it, what it costs and whether anyone may redistribute it. A
+    dataloader that picked one on your behalf would be answering that for you, quietly.
+    """
+    with pytest.raises(ValueError, match='does not choose where its data comes from'):
+        DataLoader().prepare()
 
 
 def test_odds_that_carry_no_markets_say_so():
@@ -73,7 +84,7 @@ def test_odds_that_carry_no_markets_say_so():
         away_team=[],
         provider=[],
     )
-    with pytest.raises(ValueError, match='no betting markets'):
+    with pytest.raises(ValueError, match='no markets to predict'):
         from_snapshots(stats, empty).extract_train_data()
 
 
@@ -107,5 +118,5 @@ def test_soccer_keeps_its_draw():
 
 def test_both_sports_share_the_engine():
     """Test the two dataloaders differ only in their sources, so a fix to one is a fix to both."""
-    shared = set(dir(SoccerDataLoader)) - set(dir(BasketballDataLoader))
+    shared = set(dir(DataLoader)) - set(dir(DataLoader))
     assert not shared

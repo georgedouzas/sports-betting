@@ -9,8 +9,9 @@ import inspect
 import pytest
 
 from sportsbet.cli import main
-from sportsbet.datasets import BaseDataLoader, OddsApi, SoccerDataLoader
+from sportsbet.dataloaders import BaseDataLoader, DataLoader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
+from sportsbet.sources import OddsApi
 
 UNREACHABLE = {'self', 'param_grid', 'key', 'classifier', 'X', 'Y', 'O', 'bettor'}
 
@@ -36,7 +37,7 @@ def _parameters(callable_):
         (['model', 'backtest'], backtest, {}),
         (['model', 'backtest'], OddsComparisonBettor.__init__, {'odds_types': 'model_odds_types'}),
         (['data', 'prepare'], OddsApi.__init__, {name: f'odds_{name}' for name in ('markets', 'regions', 'moments')}),
-        (['data', 'prepare'], SoccerDataLoader.__init__, {}),
+        (['data', 'prepare'], DataLoader.__init__, {}),
     ],
 )
 def test_a_command_reaches_what_the_api_reaches(command, api, renamed):

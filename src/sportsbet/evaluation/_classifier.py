@@ -53,7 +53,7 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         >>> from sklearn.pipeline import make_pipeline
         >>> from sklearn.compose import make_column_transformer
         >>> from sportsbet.evaluation import ClassifierBettor, backtest
-        >>> from sportsbet.datasets import DummySoccerDataLoader
+        >>> from sportsbet.dataloaders import DummySoccerDataLoader
         >>> dataloader = DummySoccerDataLoader()
         >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> # Create a pipeline to handle categorical features and missing values

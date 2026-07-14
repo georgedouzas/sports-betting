@@ -63,8 +63,13 @@ The `sports-betting` package makes it easy to download sports betting data. Socc
 sports are on the way. The data is downloaded onto your own machine by an explicit `prepare` step:
 
 ```python
-from sportsbet.datasets import SoccerDataLoader
-dataloader = SoccerDataLoader(param_grid={'league': ['Italy'], 'year': [2020]})
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats
+dataloader = DataLoader(
+    param_grid={'league': ['Italy'], 'year': [2020]},
+    stats=FootballDataStats(),
+    odds=FootballDataOdds(),
+)
 dataloader.prepare()
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
@@ -205,13 +210,18 @@ Assume we would like to backtest the following scenario and use the bettor objec
 
 ```python
 # Selection of data
-from sportsbet.datasets import SoccerDataLoader
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats
 
 leagues = ['Germany', 'Italy', 'France']
 divisions = [1, 2]
 years = [2021, 2022, 2023, 2024]
 odds_type = 'market_maximum'
-dataloader = SoccerDataLoader({'league': leagues, 'year': years, 'division': divisions})
+dataloader = DataLoader(
+    {'league': leagues, 'year': years, 'division': divisions},
+    stats=FootballDataStats(),
+    odds=FootballDataOdds(),
+)
 dataloader.prepare()
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type=odds_type)
 X_fix, _, O_fix = dataloader.extract_fixtures_data()

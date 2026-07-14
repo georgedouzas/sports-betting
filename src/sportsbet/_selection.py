@@ -28,25 +28,19 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 from . import ParamGrid
-from .datasets import (
+from .dataloaders import DataLoader
+from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
+from .sources import (
     BaseOddsSource,
     BaseStatsSource,
-    BasketballDataLoader,
     EuroLeagueStats,
     FootballDataOdds,
     FootballDataStats,
     LocalStore,
     NBAStats,
     OddsApi,
-    SoccerDataLoader,
 )
-from .datasets._base._sourced import SourcedDataLoader
-from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
 
-SPORTS: dict[str, type[SourcedDataLoader]] = {
-    'soccer': SoccerDataLoader,
-    'basketball': BasketballDataLoader,
-}
 STATS_SOURCES: dict[str, type[BaseStatsSource]] = {
     'football-data': FootballDataStats,
     'euroleague': EuroLeagueStats,
@@ -138,12 +132,11 @@ def _odds_source(
 
 
 def build_dataloader(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -151,25 +144,25 @@ def build_dataloader(
     store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
-) -> SourcedDataLoader:
+) -> DataLoader:
     """Return the dataloader a selection describes.
 
-    A source that is not named is the sport's own, so the ordinary case needs nothing but the sport and what to select
-    from it.
+    The statistics have to be named. Which feed the data came from decides what is in it, what it costs and whether
+    anyone may redistribute it, so it is not something to be chosen on your behalf. It also decides the sport, which is
+    therefore never asked for.
+
+    The odds are optional. Without them there is nothing to bet on and no market to predict, so only the features can be
+    had, which is enough to explore the data or to learn from it without a target of ours.
     """
-    if sport not in SPORTS:
-        msg = f'`{sport}` is not a sport. Available: {", ".join(sorted(SPORTS))}.'
+    if stats not in STATS_SOURCES:
+        msg = f'`{stats}` is not a statistics source. Available: {", ".join(sorted(STATS_SOURCES))}.'
         raise SelectionError(msg)
     selected: ParamGrid = {
         name: values for name, values in (('league', leagues), ('division', divisions), ('year', years)) if values
     }
-    param_grid = selected or None
-    if stats is not None and stats not in STATS_SOURCES:
-        msg = f'`{stats}` is not a statistics source. Available: {", ".join(sorted(STATS_SOURCES))}.'
-        raise SelectionError(msg)
-    return SPORTS[sport](
-        param_grid=param_grid,
-        stats=STATS_SOURCES[stats]() if stats else None,
+    return DataLoader(
+        param_grid=selected or None,
+        stats=STATS_SOURCES[stats](),
         odds=_odds_source(odds, odds_key_env, odds_markets, odds_regions, odds_moments) if odds else None,
         store=LocalStore(store) if store else None,
         aliases=_aliases(aliases),

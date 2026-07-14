@@ -18,7 +18,8 @@ from typing import Any
 import aiohttp
 import pandas as pd
 
-from sportsbet.datasets import FootballDataOdds, FootballDataStats, LocalStore, SoccerDataLoader
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats, LocalStore
 
 PARAM_GRID = {'league': ['England'], 'division': [1], 'year': [2025]}
 RAW_URLS = {
@@ -51,7 +52,7 @@ def fingerprint(data: pd.DataFrame) -> dict[str, Any]:
 
 def extract_frames() -> dict[str, pd.DataFrame]:
     """Extract the reference frames from the current data source."""
-    loader = SoccerDataLoader(
+    loader = DataLoader(
         param_grid=PARAM_GRID,
         stats=FootballDataStats(),
         odds=FootballDataOdds(),

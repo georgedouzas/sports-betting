@@ -33,7 +33,8 @@ snapshots do not exist yet. We can see this directly: build an upcoming fixture 
 
 ```python
 import pandas as pd
-from sportsbet.datasets import from_snapshots, market_outcomes
+from sportsbet.dataloaders import from_snapshots
+from sportsbet.sources import market_outcomes
 
 # Two finished matches (with a half-time snapshot) and one upcoming fixture.
 def snapshot(status, minutes, date, home, away, hg, ag, home_avg, away_avg):
@@ -75,13 +76,13 @@ assert X_fix[['home_points_avg', 'away_points_avg']].notna().all().all()
 So a pre-match model should be trained on pre-match features only. Rather than filtering columns by hand, cap the features at the
 `preplay` [input horizon](dataloader.md#the-input-horizon) — the same horizon is then applied to the fixtures, keeping training and
 prediction in step. The full end-to-end flow, using the offline
-[`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader]:
+[`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader]:
 
 ```python
 from sklearn.impute import SimpleImputer
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor, backtest
 
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
@@ -102,7 +103,7 @@ value_bets = bettor.bet(X_fix[num], O_fix)                # value bets for upcom
 Once a match is live, the snapshots up to the current minute are available, so the model may use in-play features up to that
 minute — but not beyond it. To bet at half-time, train with the features up to 45 minutes and serve on the live match state.
 
-The upcoming match bundled in [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader] is a match already in progress
+The upcoming match bundled in [`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader] is a match already in progress
 at 30 minutes, so `extract_fixtures_data` returns its 30-minute snapshot populated:
 
 ```python
@@ -110,7 +111,7 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor
 
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
@@ -128,21 +129,26 @@ value_bets = bettor.bet(X_fix[num], O_fix)
 ```
 
 To predict a live match that is not part of the bundled feed, assemble its current state — the snapshots observed so far — and load
-it with [`from_snapshots`][sportsbet.datasets.from_snapshots] (or
-[`from_dataframe`][sportsbet.datasets.from_dataframe] for a single moment), leaving the result unresolved so it is treated as a
+it with [`from_snapshots`][sportsbet.dataloaders.from_snapshots] (or
+[`from_dataframe`][sportsbet.dataloaders.from_dataframe] for a single moment), leaving the result unresolved so it is treated as a
 fixture. See [Consuming your own data](dataloader.md#consuming-your-own-data).
 
 The key point is the same in both cases: keep the training features and the serving features in step with the moment you bet.
 
 ## Doing this on real data
 
-The examples above use the offline [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader] so they run anywhere. On
+The examples above use the offline [`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader] so they run anywhere. On
 real data the flow is identical, with one step in front of it: the data has to be downloaded before it can be used.
 
 ```python
-from sportsbet.datasets import SoccerDataLoader
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats
 
-dataloader = SoccerDataLoader(param_grid={'league': ['England'], 'division': [1], 'year': [2025]})
+dataloader = DataLoader(
+    param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
+    stats=FootballDataStats(),
+    odds=FootballDataOdds(),
+)
 dataloader.prepare()                                   # downloads; nothing else ever does
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, _, O_fix = dataloader.extract_fixtures_data()

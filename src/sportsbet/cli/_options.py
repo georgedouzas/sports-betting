@@ -17,27 +17,22 @@ from collections.abc import Callable
 import click
 from click.decorators import FC
 
-from .._selection import DEFAULT_KEY_ENV, LEARNING_TYPES, MODELS, ODDS_SOURCES, SPORTS, STATS_SOURCES, STATUSES
+from .._selection import DEFAULT_KEY_ENV, LEARNING_TYPES, MODELS, ODDS_SOURCES, STATS_SOURCES, STATUSES
 
 SELECTION: list[Callable[[FC], FC]] = [
-    click.option(
-        '--sport',
-        required=True,
-        type=click.Choice(sorted(SPORTS)),
-        help='The sport.',
-    ),
     click.option('--league', 'leagues', multiple=True, help='A league to select. Repeat it to select more.'),
     click.option('--division', 'divisions', multiple=True, type=int, help='A division to select. Repeatable.'),
     click.option('--year', 'years', multiple=True, type=int, help='A season, by the year it ends. Repeatable.'),
     click.option(
         '--stats',
+        required=True,
         type=click.Choice(sorted(STATS_SOURCES)),
-        help="Where the statistics come from. The default is the sport's own.",
+        help='Where the statistics come from.',
     ),
     click.option(
         '--odds',
         type=click.Choice(sorted(ODDS_SOURCES)),
-        help="Where the odds come from. The default is the sport's own, and basketball has no free one.",
+        help='Where the odds come from. Without it there is nothing to bet on, only features to explore.',
     ),
     click.option(
         '--odds-key-env',

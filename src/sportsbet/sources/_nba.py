@@ -1,25 +1,25 @@
-"""Implements the statistics source backed by the EuroLeague's official API."""
+"""Implements the statistics source of the NBA, backed by ESPN."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
 from __future__ import annotations
 
+import calendar
 import json
 from typing import Any, ClassVar, Self
 
 import numpy as np
 import pandas as pd
 
-from ... import ParamGrid
-from .._utils import market_outcomes
+from .. import ParamGrid
 from ._base import BaseStatsSource, RawItem, RawPayload
+from ._utils import market_outcomes
 
-URL = 'https://api-live.euroleague.net/v2/competitions/E'
-SEASONS_URL = f'{URL}/seasons'
-GAMES_URL = f'{URL}/seasons/E{{season}}/games'
+SEASONS_URL = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons?limit=100'
+GAMES_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start}-{end}&limit=1000'
 
-LEAGUE = 'Euroleague'
+LEAGUE = 'NBA'
 DIVISION = 1
 MARKETS = ['home_win', 'away_win']
 SEASONS_KEY = 'seasons'
@@ -27,31 +27,54 @@ ROLLING_GAMES = 3
 FEATURES = ['points_for', 'points_against', 'wins']
 IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
 
+PRESEASON = 1
+EXHIBITION = 'ALLSTAR'
+MONTHS = [(-1, month) for month in (9, 10, 11, 12)] + [(0, month) for month in (1, 2, 3, 4, 5, 6, 7)]
+
+
+def _wanted(event: dict[str, Any]) -> bool:
+    """Return whether an event is a game of the competition rather than an exhibition.
+
+    The two labels an event carries each lie on their own. The all-star games are filed under the regular season, and
+    their teams are inventions, so keeping the regular season keeps them. The play-off rounds are not filed as standard
+    games, so keeping the standard games drops every one of them.
+
+    It is written as an exclusion so an unfamiliar label is dropped rather than admitted. A missing game is a visible
+    gap; an invented team in the roster is a silent corruption that breaks the pairing with the odds for the whole
+    competition.
+    """
+    competitions = event.get('competitions') or [{}]
+    season_type = event.get('season', {}).get('type')
+    competition_type = competitions[0].get('type', {}).get('abbreviation')
+    return season_type != PRESEASON and competition_type != EXHIBITION
+
 
 def _games(content: bytes, year: int) -> pd.DataFrame:
-    """Return the games of a season, as the API publishes them.
+    """Return the games of a month, as the API publishes them.
 
-    The tip-off is taken from the field the API gives in UTC. The one it calls `date` is in its own head-office time,
-    whatever country the game is played in — a game in Istanbul reads 18:30 there and tips off at 20:30 locally — so
-    reading that one would be a guess, and a wrong guess would move every game by an hour or two without saying so.
+    The tip-off is the instant the API gives, which it gives in UTC. Whether a game was played is the flag it carries on
+    that game, never the season being over: a finished season still holds games that were postponed and never made up,
+    and those have no result to learn from.
     """
-    games: list[dict[str, Any]] = json.loads(content).get('data', [])
+    events = json.loads(content).get('events', [])
     records = []
-    for game in games:
-        home, away = game.get('local', {}), game.get('road', {})
-        home_name = home.get('club', {}).get('name')
-        away_name = away.get('club', {}).get('name')
-        if not home_name or not away_name or not game.get('utcDate'):
+    for event in events:
+        if not _wanted(event):
             continue
-        played = bool(game.get('played'))
+        competition = (event.get('competitions') or [{}])[0]
+        competitors = {side.get('homeAway'): side for side in competition.get('competitors', [])}
+        home, away = competitors.get('home'), competitors.get('away')
+        if home is None or away is None or not event.get('date'):
+            continue
+        played = bool(competition.get('status', {}).get('type', {}).get('completed'))
         records.append(
             {
-                'date': game['utcDate'],
+                'date': event['date'],
                 'league': LEAGUE,
                 'division': DIVISION,
                 'year': year,
-                'home_team': home_name,
-                'away_team': away_name,
+                'home_team': home.get('team', {}).get('displayName'),
+                'away_team': away.get('team', {}).get('displayName'),
                 'home_points': int(home.get('score', -1)) if played else -1,
                 'away_points': int(away.get('score', -1)) if played else -1,
             },
@@ -60,7 +83,7 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
     if frame.empty:
         return frame
     frame['date'] = pd.to_datetime(frame['date'], utc=True, format='ISO8601').dt.tz_localize(None)
-    return frame.sort_values('date').reset_index(drop=True)
+    return frame
 
 
 def _form(games: pd.DataFrame) -> pd.DataFrame:
@@ -100,7 +123,7 @@ def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
     """Return the long snapshots of a season.
 
     A game that has not been played gets a pre-play snapshot and nothing else, so it becomes a fixture and never a
-    training row with a result nobody knows.
+    training row.
     """
     if games.empty:
         return games
@@ -134,20 +157,23 @@ def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
     return snapshots.reindex(columns=[col for col in order if col in snapshots.columns])
 
 
-class EuroLeagueStats(BaseStatsSource):
-    """The statistics of the EuroLeague's official API.
+class NBAStats(BaseStatsSource):
+    """The statistics of the NBA, as ESPN publishes them.
 
     It is free and needs no key. It carries the schedule and the final score of every game, which is what the targets
-    and the form of a team are built from.
+    and the form of a team are built from, and it carries them while a season is being played rather than months after
+    it has ended.
 
     There is no draw in basketball, since a tie goes to overtime, so the outcome is two-way. There is no totals market
-    either: the total points of a game run from about 125 to 229 and a bookmaker sets a different line for every one of
-    them, and a market whose line moves is not a column.
+    either: a bookmaker sets a different line for every game, and a market whose line moves is not a column.
+
+    The odds are another source, and there is no free one for basketball anywhere.
 
     Read more in the [user guide][user-guide].
     """
 
-    name: ClassVar[str] = 'euroleague'
+    sport: ClassVar[str | None] = 'basketball'
+    name: ClassVar[str] = 'nba'
 
     def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the seasons the competition publishes, which is one free request whatever is selected."""
@@ -156,40 +182,56 @@ class EuroLeagueStats(BaseStatsSource):
     def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the seasons the competition publishes.
 
-        A season is named by the year it ends in, as everywhere else in the library, so the API's `E2024` is 2025.
+        A season is named by the year it ends in, as everywhere else in the library, and that is already the year the
+        feed gives. There is nothing to convert here, unlike the EuroLeague, whose `E2024` is the 2024-25 season.
         """
         if not payloads:
             return []
-        seasons = json.loads(payloads[0].content).get('data', [])
+        seasons = json.loads(payloads[0].content).get('items', [])
+        years = {int(season['$ref'].rsplit('/', 1)[-1].split('?')[0]) for season in seasons if '$ref' in season}
         return sorted(
-            ({'league': LEAGUE, 'division': DIVISION, 'year': int(season['year']) + 1} for season in seasons),
+            ({'league': LEAGUE, 'division': DIVISION, 'year': year} for year in years),
             key=lambda params: params['year'],
         )
 
     def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per selected season.
+        """Return one item per month of each selected season.
 
-        A whole season comes back in a single response, so a season costs one request rather than one per round.
+        The feed returns at most a thousand games and says nothing when it has more, so asking for a whole season, which
+        is about fourteen hundred, quietly loses a quarter of it. A month holds two hundred and forty at its busiest, so
+        a month is an answer the feed can give in full. Widening the window to save requests would lose games and raise
+        nothing.
         """
-        return [
-            RawItem(
-                source=self.name,
-                key=f'{LEAGUE}_{param["division"]}_{param["year"]}',
-                url=GAMES_URL.format(season=param['year'] - 1),
-                volatile=True,
-            )
-            for param in params
-            if param['league'] == LEAGUE
-        ]
+        items = []
+        for param in params:
+            if param['league'] != LEAGUE:
+                continue
+            year = param['year']
+            for offset, month in MONTHS:
+                start = pd.Timestamp(year=year + offset, month=month, day=1)
+                last = calendar.monthrange(start.year, month)[1]
+                items.append(
+                    RawItem(
+                        source=self.name,
+                        key=f'{LEAGUE}_{param["division"]}_{year}_{start.year}{month:02d}',
+                        url=GAMES_URL.format(start=f'{start.year}{month:02d}01', end=f'{start.year}{month:02d}{last}'),
+                        volatile=True,
+                    ),
+                )
+        return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Transform the seasons into the long statistics snapshots."""
-        frames = []
+        """Transform the months into the long statistics snapshots."""
+        seasons: dict[int, list[pd.DataFrame]] = {}
         for payload in payloads:
-            year = int(payload.item.key.rsplit('_', 1)[-1])
+            year = int(payload.item.key.split('_')[2])
             games = _games(payload.content, year)
             if not games.empty:
-                frames.append(_snapshots(games))
+                seasons.setdefault(year, []).append(games)
+        frames = []
+        for year in sorted(seasons):
+            games = pd.concat(seasons[year], ignore_index=True).sort_values('date').reset_index(drop=True)
+            frames.append(_snapshots(games))
         if not frames:
             return pd.DataFrame()
         return pd.concat(frames, ignore_index=True).replace({np.nan: None}).infer_objects()

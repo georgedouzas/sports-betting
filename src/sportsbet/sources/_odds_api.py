@@ -12,9 +12,9 @@ from urllib.parse import urlencode
 
 import pandas as pd
 
-from ... import ParamGrid
-from .._base._schema import EVENT_COLS
+from .. import ParamGrid
 from ._base import BaseOddsSource, RawItem, RawPayload
+from ._schema import EVENT_COLS
 
 URL = 'https://api.the-odds-api.com/v4'
 SPORTS_URL = f'{URL}/sports'

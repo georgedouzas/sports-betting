@@ -9,7 +9,7 @@ import json
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import EuroLeagueStats, RawPayload
+from sportsbet.sources import EuroLeagueStats, RawPayload
 
 
 def _game(code, utc, home, away, home_points, away_points, *, played):

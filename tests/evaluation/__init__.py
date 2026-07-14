@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from sportsbet import Data
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 from sportsbet.evaluation._base import BaseBettor
 
 _loader = DummySoccerDataLoader()
