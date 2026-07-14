@@ -49,13 +49,13 @@
 
 ## Introduction
 
-`sports-betting` is a set of tools for creating, testing and using sports betting models. You can drive it from an **AI
-agent**, from **Python**, or from the **command line** — all three reach the same library.
+`sports-betting` is a set of tools for creating, testing and using sports betting models. You can drive it from an AI
+agent, from Python, or from the command line.
 
-Its two components are **dataloaders** and **bettors**:
+Its two main components are dataloaders and bettors:
 
-- A dataloader downloads the data and shapes it for modelling. It is built from a **statistics source** and an **odds
-  source**, and you choose both, so you always know where your data came from.
+- A dataloader downloads the data and shapes it for modelling. It is built from a statistics source and an odds source, and you
+  choose both, so you always know where your data came from.
 - A bettor backtests a betting strategy and predicts the value bets of upcoming events. It wraps any scikit-learn
   estimator.
 
@@ -63,49 +63,46 @@ Its two components are **dataloaders** and **bettors**:
 
 ### AI agent
 
-The agent is a first-class way into the library. It reaches everything Python and the command line reach, and it can do
-one thing neither of them can: **write the model for you**. A betting model is a scikit-learn estimator, and no
-arrangement of flags can describe one — but an agent can write it, run it, and tell you whether it was any good.
+The agent is a first-class way into the library. It reaches everything Python and the command line reach, and it can do one thing
+neither of them can: write the model for you. A betting model is a scikit-learn estimator and an agent can write it, run it, and
+tell you whether it was any good.
 
 ```bash
 pip install 'sports_betting[mcp]'
 claude mcp add sportsbet -- sportsbet-mcp
 ```
 
----
+What follows is a chat with Claude, driving the library through the MCP server. Every figure in it is real output.
 
-**You:** *What soccer data can I work with?*
+> You: What soccer data can I work with?
 
-> **Claude:** **918 league–division–season combinations** across **27 leagues**, from 1994 to 2026.
+> Claude: 918 league–division–season combinations across 27 leagues, from 1994 to 2026.
 >
 > England goes deepest, with five divisions. Germany, Italy, France, Spain, Scotland, the Netherlands, Belgium,
 > Portugal, Turkey and Greece have one or two each, and there are single-division feeds for another sixteen countries,
 > from Argentina to the USA.
 >
 > Every one comes with historical odds from several bookmakers, so a backtest runs against real prices. I have not
-> downloaded anything — reading the catalogue is free.
+> downloaded anything, since reading the catalogue is free.
 
----
+> You: Find me a strategy that works on the top two divisions of Germany, Italy and France, 2021 to 2024.
 
-**You:** *Find me a strategy that works on the top two divisions of Germany, Italy and France, 2021 to 2024.*
-
-> **Claude:** Downloaded 25 files. Then I searched, rather than guessing.
+> Claude: Downloaded 25 files. Then I searched, rather than guessing.
 >
-> **First, which market is even worth betting.** A logistic model on each, at the best odds in the market:
+> First, which market is even worth betting. A logistic model on each, at the best odds in the market:
 >
 > | Market | Yield per bet | Bets per fold |
 > | --- | ---: | ---: |
 > | home_win | −3.8% | 901 |
-> | **draw** | **+3.9%** | 1,319 |
+> | draw | +3.9% | 1,319 |
 > | away_win | −3.6% | 1,217 |
 > | over_2.5 | +0.3% | 642 |
 > | under_2.5 | −2.2% | 702 |
 >
-> Only the **draw** pays. That is not a surprise: the draw is the outcome punters least like backing, so the price
-> drifts.
+> Only the draw pays. That is not a surprise: the draw is the outcome punters least like backing, so the price drifts.
 >
-> **Then, whether the market is worth searching over.** The markets to bet on are a hyperparameter like any other, so I
-> put them in the grid alongside the model's regularisation and let the search pick:
+> Then, whether the market is worth searching over. The markets to bet on are a hyperparameter like any other, so I put
+> them in the grid alongside the model's regularisation and let the search pick:
 >
 > ```python
 > BettorGridSearchCV(
@@ -123,41 +120,37 @@ claude mcp add sportsbet -- sportsbet-mcp
 > | Testing period | Bets | Yield per bet | Final cash |
 > | --- | ---: | ---: | ---: |
 > | Feb 2021 – Nov 2021 | 1,407 | +1.0% | £10,715 |
-> | Nov 2021 – May 2022 | 1,406 | **+8.3%** | £15,812 |
+> | Nov 2021 – May 2022 | 1,406 | +8.3% | £15,812 |
 > | May 2022 – Feb 2023 | 1,406 | −0.5% | £9,675 |
 > | Feb 2023 – Nov 2023 | 1,406 | +4.5% | £13,161 |
 > | Nov 2023 – Jun 2024 | 1,407 | −0.2% | £9,858 |
 >
-> **Mean yield +2.6%**, positive in three folds of five. Better than the fixed model, which managed +1.2%.
+> Mean yield +2.6%, positive in three folds of five. Better than the fixed model, which managed +1.2%.
 >
 > Worth being honest about: I have now tried a dozen configurations on this data. Some of that +2.6% is me searching,
 > not the model knowing. Before you stake anything, hold a season back and check it there.
 
----
+> You: Which league is that draw edge actually in?
 
-**You:** *Which league is that draw edge actually in?*
-
-> **Claude:** Almost entirely Italy.
+> Claude: Almost entirely Italy.
 >
 > | League | Yield per bet on the draw |
 > | --- | ---: |
-> | **Italy** | **+9.0%** |
+> | Italy | +9.0% |
 > | Germany | +2.9% |
 > | France | −0.6% |
 >
-> That is a big number and I would treat it with suspicion rather than excitement — one league, four seasons, found
-> after I had already looked at several splits.
+> That is a big number and I would treat it with suspicion rather than excitement. It is one league over four seasons,
+> found after I had already looked at several splits.
 
----
+> You: Fine. Any value bets in the upcoming fixtures?
 
-**You:** *Fine. Any value bets in the upcoming fixtures?*
-
-> **Claude:** Not today — the European season is over, so there is nothing anywhere that has not been played. But the
+> Claude: Not today, since the European season is over and there is nothing anywhere that has not been played. But the
 > relationship between what you trained on and what you can bet on is worth getting straight, because it is not the one
 > people expect.
 >
-> **They are unrelated.** `param_grid` selects what you *train* on. A fixture is a match that has not been played, so it
-> is never a match you could have trained on. The two frames share their **columns**, not their contents:
+> They are unrelated. `param_grid` selects what you train on. A fixture is a match that has not been played, so it is
+> never a match you could have trained on. The two frames share their columns, not their contents:
 >
 > ```python
 > dataloader = DataLoader(
@@ -174,16 +167,14 @@ claude mcp add sportsbet -- sportsbet-mcp
 > same columns, so the same model consumes both
 > ```
 >
-> So train on the Premier League and bet on Serie A if you like. Whether that is a *good* idea is your call — the model
-> has never seen those teams — but the library will not stop you, and it will not silently hide the fixtures either.
+> So train on the Premier League and bet on Serie A if you like. Whether that is a good idea is your call, since the
+> model has never seen those teams, but the library will not stop you and it will not silently hide the fixtures either.
 >
-> Given what we found, I would not: the edge we located is in **Italy**, and it is four seasons of one league found
-> after a dozen tries. Hold a season back and check it there before staking anything.
+> Given what we found, I would not: the edge we located is in Italy, and it is four seasons of one league found after a
+> dozen tries. Hold a season back and check it there before staking anything.
 
----
-
-Every figure above is real output. The agent passes the *name* of the environment variable holding your API key, never
-the key, and downloads nothing unless you ask it to.
+The agent passes the name of the environment variable holding your API key, never the key itself, and it downloads
+nothing unless you ask it to.
 
 ### Python API
 
@@ -253,8 +244,9 @@ bettor.fit(X_train, Y_train, O_train)
 bettor.bet(X_fix, O_fix)
 ```
 
-**The fixtures follow the selection.** A `param_grid` of finished seasons has no upcoming matches in it, so there is
-nothing to bet on. Select the current season — or leave `year` out altogether — if you mean to place a bet.
+The fixtures are not restricted by `param_grid`. It selects what to train on, and a match you could have trained on has
+by definition already been played, so the two never overlap. You may train on one league and bet on another: what the
+two frames share is their columns, not their contents.
 
 ### CLI
 
