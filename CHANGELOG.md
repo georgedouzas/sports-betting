@@ -54,6 +54,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- **The features could be taken from after the odds were quoted, so every backtest was a fantasy.** A bet is placed at
+  the moment its odds are quoted, and the features ran on to the whistle. With a free soccer feed, whose odds are the
+  ones offered before kick-off, a model was handed the **score at half time** and asked to bet at the price offered
+  **before the match** — which is not an edge, it is knowledge of the future. The worked example in the README
+  backtested at a 38% yield per bet and a 269% return. It now reports 1.9%, which is what the same model is really
+  worth.
+
+  The features now stop where the odds do. Asking for a later moment on purpose is refused and told why. In-play
+  betting is unaffected: buy a price at half time and the half-time score is yours to use.
+
+- **A match with no features was silently dropped.** The first round of a season has no form behind it, so every one of
+  its features is missing, and a pivot drops a row it has nothing to put in. Ten Premier League matches a season
+  disappeared with nothing said, though each of them has two teams, a date and a price. Only the in-play columns above
+  had been keeping them alive, which is how the two bugs hid each other.
+
 - **A bettor betting on a single market crashed.** The probabilities were clipped in place, and the array they came
   from is read-only when a single market produces it. The default has five markets, so nobody met it.
 
