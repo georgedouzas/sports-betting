@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ._options import EXTRACTION, OUTPUT, SELECTION, options
-from ._utils import extraction, print_console, reported, selected
+from ._utils import counted, extraction, print_console, reported, selected
 
 
 @click.group()
@@ -37,7 +37,7 @@ def params(**selection: object) -> None:
         available = stats_source.available_params()
         cols = list({param for params in available for param in params})
         frame = pd.DataFrame({col: [params.get(col, '-') for params in available] for col in cols})
-        print_console([frame], ['Available parameters'])
+        print_console([frame], ['Available parameters'], index=False)
 
 
 @data.command()
@@ -50,16 +50,18 @@ def prepare(dry_run: bool, refresh: bool, **selection: object) -> None:
         if dataloader is None:
             return
         report = dataloader.prepare(dry_run=dry_run, refresh=refresh)
-        summary = pd.DataFrame(
-            {
-                'To fetch': [len(report.to_fetch)],
-                'Held': [len(report.held)],
-                'Estimated cost': [', '.join(f'{name}: {cost}' for name, cost in report.estimated_cost.items()) or '-'],
-            },
-        )
-        print_console([summary], ['Preparation (dry run)' if dry_run else 'Preparation'])
+        console = Console()
+        cost = ', '.join(f'{name} {units:,}' for name, units in report.estimated_cost.items())
+        if dry_run:
+            console.print(f'Would download [bold]{counted(len(report.to_fetch), "item")}[/bold].')
+            if cost:
+                console.print(f'Cost: [bold yellow]{cost}[/bold yellow]. Nothing has been spent.')
+        elif report.to_fetch:
+            console.print(f'Downloaded [bold green]{counted(len(report.to_fetch), "item")}[/bold green].')
+        else:
+            console.print('Already downloaded.')
         if report.unavailable:
-            print_console([pd.DataFrame(report.unavailable)], ['Unavailable parameters'])
+            print_console([pd.DataFrame(report.unavailable)], ['Unavailable parameters'], index=False)
 
 
 @data.command(name='odds-types')
@@ -70,7 +72,7 @@ def odds_types(**selection: object) -> None:
         if dataloader is None:
             return
         frame = pd.DataFrame(dataloader.get_odds_types(), columns=['Type'])
-        print_console([frame], ['Available odds types'])
+        print_console([frame], ['Available odds types'], index=False)
 
 
 @data.command()

@@ -49,8 +49,8 @@
 
 ## Introduction
 
-The `sports-betting` package is a handy set of tools for creating, testing, and using sports betting models. It comes
-with a Python API, a CLI, and an MCP server, so you can drive it from code, from a terminal, or from an AI assistant.
+The `sports-betting` package is a handy set of tools for creating, testing, and using sports betting models. It comes with a
+Python API, a CLI, and an MCP server, so you can drive it from code, from a terminal, or from an AI assistant.
 
 The main components of `sports-betting` are dataloaders and bettors objects:
 
@@ -94,8 +94,8 @@ ten goals in a soccer match and nobody knows what those probabilities actually a
 
 ### Fair odds
 
-The bookmaker estimates the probability $p$ of an outcome and offers odds $o$ on it. A bet of one unit returns $o$ if the
-outcome occurs and nothing otherwise, so its expected profit is
+The bookmaker estimates the probability $p$ of an outcome and offers odds $o$ on it. A bet of one unit returns $o$ if the outcome
+occurs and nothing otherwise, so its expected profit is
 
 $$
 \mathbb{E}[\Pi] = p \, o - 1.
@@ -178,8 +178,7 @@ fixtures data, backtesting betting strategies, and predicting value bets.
 
 ### API
 
-Assume we would like to backtest the following scenario and use the bettor object
-to predict value bets:
+Assume we would like to backtest the following scenario and use the bettor object to predict value bets:
 
 - Selection of data
   - First and second division of German, Italian and French leagues for the years 2021-2024
@@ -242,7 +241,6 @@ extracts data, and `model` backtests a betting model and predicts the value bets
 takes.
 
 The same scenario, without writing any Python. The selection of the data is the same, and so is the betting strategy:
-`logistic` is exactly the classifier that was built by hand above.
 
 ```bash
 # Selection of data
@@ -279,10 +277,7 @@ Install the MCP server and an assistant can drive the library for you:
 pip install 'sports_betting[mcp]'
 ```
 
-Find what data exists, price a download before it spends anything, prepare it, backtest a model and return the value bets. Point
-your assistant at the `sportsbet-mcp` command. Its tools take the same arguments as the CLI, so anything you can ask for on the
-command line, you can ask for in plain language. Your API key is not one of those arguments: the assistant passes the *name* of
-the environment variable holding it, so the key itself stays out of the conversation.
+Point your assistant at the `sportsbet-mcp` command. Find what data exists, price a download before it spends anything, prepare
+it, backtest a model and return the value bets. Its tools take the same arguments as the CLI, so anything you can ask for on the
+command line, you can ask for in plain language.
 
-Odds are bought per request, and a full season of them can cost thousands of credits. An assistant therefore cannot start a
-download that costs money until it has read the estimate and confirmed the amount. The estimate itself is free and exact.
