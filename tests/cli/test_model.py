@@ -44,7 +44,7 @@ def test_model_backtest(cli_runner, offline_dataloader, tmp_path):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_model_bet(cli_runner, offline_dataloader, tmp_path):
+def test_model_bet(cli_runner, offline_fixtures_dataloader, tmp_path):
     """Test the value bets are predicted and written."""
     result = cli_runner.invoke(main, ['model', 'bet', *SELECTION, *MARKET, *ODDS_COMPARISON, '-o', str(tmp_path)])
     assert result.exit_code == 0, result.output

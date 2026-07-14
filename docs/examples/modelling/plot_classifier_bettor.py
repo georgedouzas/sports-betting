@@ -9,6 +9,7 @@ and evaluate its performance on soccer historical data.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
+import matplotlib.pyplot as plt
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
@@ -108,3 +109,16 @@ assert Odds_fix is not None
 # We can estimate the value bets by using the fitted classifier.
 
 _ = bettor.bet(X_fix, Odds_fix)
+
+# %%
+# A picture of it
+# ---------------
+
+yields = backtesting_results['Yield percentage per bet'].to_numpy()
+
+fig, ax = plt.subplots()
+ax.bar(range(1, len(yields) + 1), yields)
+ax.axhline(0, color='black', linewidth=0.8)
+ax.set_title('Classifier bettor: yield per bet, by fold')
+ax.set_xlabel('fold')
+ax.set_ylabel('yield %')

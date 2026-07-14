@@ -967,8 +967,30 @@ class _FootballDataSource(BaseSource):
         params = [{'league': league, 'division': division, 'year': year} for league, division, year, _ in catalogue]
         return sorted(params, key=lambda param: (param['league'], param['division'], param['year']))
 
+    def _season_item(self: Self, league: str, division: int, year: int, url: str) -> RawItem:
+        """Return the item of a season file."""
+        if league in HISTORY_LEAGUES:
+            return RawItem(source=self.name, key=f'{league}_{division}', url=url, volatile=True)
+        return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url, volatile=year >= _current_year())
+
+    def _current_items(self: Self) -> list[RawItem]:
+        """Return the item of the season in progress of every league the feed publishes.
+
+        An upcoming match is described by the form of its two teams, and their form is the season it belongs to. That
+        season is the one in progress, whatever season the user chose to train on, so it is read whether or not it was
+        selected. Without it a fixture arrives with every feature missing, which is not a fixture anyone can bet on.
+        """
+        latest: dict[tuple[str, int], tuple[int, str]] = {}
+        for league, division, year, url in self._catalogue:
+            current = latest.get((league, division))
+            if current is None or year > current[0]:
+                latest[league, division] = (year, url)
+        return [
+            self._season_item(league, division, year, url) for (league, division), (year, url) in sorted(latest.items())
+        ]
+
     def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per selected season file, plus the fixtures of the feed.
+        """Return one item per selected season file, plus every season in progress and the fixtures of the feed.
 
         The URLs are looked up in the catalogue rather than constructed, so a combination the feed does not publish is
         never fabricated. A whole-history league yields the same item for each of its seasons, so it is downloaded once
@@ -981,11 +1003,10 @@ class _FootballDataSource(BaseSource):
             url = seasons.get((league, division, year))
             if url is None:
                 continue
-            if league in HISTORY_LEAGUES:
-                item = RawItem(source=self.name, key=f'{league}_{division}', url=url, volatile=True)
-            else:
-                key = f'{league}_{division}_{year}'
-                item = RawItem(source=self.name, key=key, url=url, volatile=year >= _current_year())
+            item = self._season_item(league, division, year, url)
+            if item not in items:
+                items.append(item)
+        for item in self._current_items():
             if item not in items:
                 items.append(item)
         items.append(RawItem(source=self.name, key=FIXTURES_KEY, url=f'{URL}/fixtures.csv', volatile=True))

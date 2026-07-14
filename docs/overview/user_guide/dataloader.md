@@ -446,6 +446,14 @@ dataloader = DataLoader(
 )
 ```
 
+### A target that does not exist
+
+A feed loses a result now and then, and a match whose outcome it never recorded has nothing to learn from. scikit-learn does not
+accept a missing value in `y`, so those rows are **dropped** from the training data rather than imputed: an invented outcome is a
+match that never happened. `X`, `Y` and `O` are dropped together, so they stay aligned.
+
+This is about the **targets**. Missing *features* are a different question, and they are handled by `drop_na_thres` below.
+
 ### The `drop_na_thres` parameter
 
 Parameter `drop_na_thres` adjusts the threshold of a column with missing values to be removed from the input matrix `X_train`. It
@@ -569,31 +577,57 @@ assert Y_train is None
 
 ## Fixtures data
 
-Once the training data are extracted, it is straightforward to extract the corresponding fixtures data using the method
-`extract_fixtures_data`:
+A **fixture** is a match that has not been played yet. Once the training data has been extracted — which is what fixes the columns
+— the fixtures are extracted with `extract_fixtures_data`:
 
 ```python
 from sportsbet.dataloaders import DataLoader
-from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+from sportsbet.sources import FootballDataOdds, FootballDataStats
 dataloader = DataLoader(
-    param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+    param_grid={'league': ['England'], 'division': [1], 'year': [2022, 2023]},
+    stats=FootballDataStats(),
+    odds=FootballDataOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', download=True)
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
-!!! warning
+### The fixtures are not what you selected
 
-    The `extract_train_data` method should be called before `extract_fixtures_data`, in order to fix the columns of the input and
-    odds data.
+This is the part that surprises people, so it is worth being blunt about.
 
-The method accepts no parameters and the extracted fixtures input and odds matrices have the same columns as the latest extracted
-input and odds matrices for the training data:
+**`param_grid` does not restrict the fixtures.** It selects what to *train* on, and a match you could have trained on is, by
+definition, one that has already been played. A fixture has not been played. The two sets never overlap, so filtering one by the
+other would be meaningless — it would only ever remove fixtures, never select them.
+
+So you may **train on England and bet on Italy**:
+
+```text
+X       760 matches   England, 2022-2023   <- param_grid
+X_fix     2 matches   Brazil, France       <- every league, whatever has not been played
+```
+
+What the two frames share is their **columns**, not their contents. That is the whole contract: the same model consumes both.
 
 ```python
 assert X_train.columns.tolist() == X_fix.columns.tolist()
 assert O_train.columns.tolist() == O_fix.columns.tolist()
 ```
+
+Whether betting on a league your model has never seen is a *good* idea is your business — it has never met those teams. The
+library will not stop you, and it will not silently drop the fixtures either.
+
+Two consequences follow, and they are not free:
+
+- **The season in progress of every league is downloaded**, whatever you selected. A fixture is described by the form of its two
+  teams, and their form is the season it belongs to. Without it, a fixture arrives with every feature missing, which is not
+  something anyone can bet on.
+- **A finished season has no fixtures.** There is nothing left in it that has not been played. Out of season, every league is in
+  that state, and `extract_fixtures_data` correctly returns nothing. The bundled
+  [`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] is a frozen finished season, so it never has any.
+
+A match with **no result whose date has passed** is not a fixture either. It is a hole in the feed — an abandoned game, a season
+it never finished recording — and it is excluded rather than offered to you as a bet on a match that is already over.
 
 Since we are extracting the fixtures data, there is no target matrix:
 
