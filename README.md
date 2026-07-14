@@ -328,13 +328,102 @@ Add `-o ./data` to write the results as CSV files.
 
 ### AI assistant
 
-Install the MCP server and an assistant can drive the library for you:
+The assistant is a first-class way into the library, alongside the Python API and the CLI. It reaches everything they
+reach — every sport, every league, every data source, every model — because all three are told the same things in the
+same way.
 
 ```bash
 pip install 'sports_betting[mcp]'
 ```
 
-Point your assistant at the `sportsbet-mcp` command. Find what data exists, price a download before it spends anything, prepare
-it, backtest a model and return the value bets. Its tools take the same arguments as the CLI, so anything you can ask for on the
-command line, you can ask for in plain language.
+Register the `sportsbet-mcp` command with your assistant. With [Claude Code](https://claude.com/claude-code):
 
+```bash
+claude mcp add sportsbet -- sportsbet-mcp
+```
+
+Or add it to Claude Desktop's `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "sportsbet": {
+      "command": "sportsbet-mcp"
+    }
+  }
+}
+```
+
+Now ask for what you want.
+
+---
+
+**You:** *What soccer data can I work with?*
+
+> **Claude:** There are **918 league–division–season combinations** across **27 leagues**, from 1994 to 2026.
+>
+> The big European leagues go deepest. England has five divisions covering 1994–2026; Germany, Italy, France, Spain,
+> Scotland, Netherlands, Belgium, Portugal, Turkey and Greece have one or two divisions each. There are also
+> single-division feeds for Argentina, Austria, Brazil, China, Denmark, Finland, Ireland, Japan, Mexico, Norway,
+> Poland, Romania, Russia, Sweden, Switzerland and the USA.
+>
+> Every one of them comes with historical odds from several bookmakers, so you can backtest against real prices.
+> Nothing has been downloaded yet — I only read the catalogue, which is free.
+
+---
+
+**You:** *Backtest a logistic model on the top two divisions of Germany, Italy and France, 2021 to 2024. Bet the match
+outcome at the best odds in the market, £50 a bet from a £10,000 bank.*
+
+> **Claude:** Downloaded 25 files, then backtested over five time-ordered folds. The model bets on every match, so
+> roughly 1,400 bets a fold.
+>
+> | Testing period | Bets | Yield per bet | Final cash |
+> | --- | ---: | ---: | ---: |
+> | Feb 2021 – Nov 2021 | 1,407 | −0.1% | £9,957 |
+> | Nov 2021 – May 2022 | 1,407 | **+8.7%** | £16,137 |
+> | May 2022 – Feb 2023 | 1,408 | +1.7% | £11,186 |
+> | Feb 2023 – Nov 2023 | 1,407 | −0.4% | £9,703 |
+> | Nov 2023 – Jun 2024 | 1,404 | **−4.0%** | £7,204 |
+>
+> **It is not a winning strategy.** One period is strongly positive and the last is clearly negative, which is what an
+> edge of roughly zero looks like when you slice it five ways. The model is betting indiscriminately — 1,400 bets a
+> fold is nearly every match, in every market.
+>
+> Two things worth trying: raise the threshold so it only bets where it disagrees with the market, or restrict it to
+> the market it is least bad at. On this run the draw was the only outcome it was ahead on.
+
+---
+
+**You:** *Are there any value bets in the upcoming fixtures?*
+
+> **Claude:** One fixture is currently published, and the model does like it:
+>
+> | Date | Match | Bet | Odds |
+> | --- | --- | --- | ---: |
+> | 5 Dec, 19:00 | Bastia vs Red Star (France) | **Away win** | 2.90 |
+>
+> The model puts Red Star's chance above the 34.5% the price implies. The other outcomes are not value: home win at
+> 2.60 and the draw at 3.13 are both priced above what the model thinks they are worth.
+>
+> Bear in mind the backtest above: this model's edge over five years was about zero. I would not stake real money on
+> one of its picks without first finding a version that actually beats the market.
+
+---
+
+**You:** *What about the NBA?*
+
+> **Claude:** NBA statistics are free, but nobody gives basketball odds away, so you would need a paid key from The
+> Odds API.
+>
+> With one, a full 2025–26 season of pre-match head-to-head prices would cost **8,861 credits** and fetch 898 items. I
+> have not started it — that is the estimate, and the estimate is free.
+>
+> Say the word and I will download it. Soccer, by contrast, costs nothing at all.
+
+---
+
+Every number above is real output from the library. The assistant never spends money without telling you the price
+first: a download that costs anything is refused until the cost has been reported back to you. Your API key is not one
+of the arguments it passes — it names the *environment variable* holding the key, so the key itself stays out of the
+conversation.

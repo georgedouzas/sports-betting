@@ -29,6 +29,7 @@ server: FastMCP = FastMCP('sportsbet')
 
 Answer = TypeVar('Answer')
 Selection = dict[str, Any]
+Strategy = dict[str, Any]
 
 
 async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
@@ -80,6 +81,25 @@ def _selection(
         'store': store,
         'aliases': aliases,
         'max_unmatched_rate': max_unmatched_rate,
+    }
+
+
+def _strategy(
+    model: str,
+    alpha: float,
+    betting_markets: list[str] | None,
+    init_cash: float | None,
+    stake: float | None,
+    model_odds_types: list[str] | None,
+) -> Strategy:
+    """Return what a tool was told about the betting model to use."""
+    return {
+        'model': model,
+        'alpha': alpha,
+        'betting_markets': betting_markets,
+        'init_cash': init_cash,
+        'stake': stake,
+        'model_odds_types': model_odds_types,
     }
 
 
@@ -139,16 +159,16 @@ def _extract_fixtures_data(selection: Selection, odds_type: str | None) -> dict[
     return {'X': _records(X), 'O': _records(O)}
 
 
-def _backtest(selection: Selection, odds_type: str | None, model: str, alpha: float, cv: int) -> list[dict[str, Any]]:
+def _backtest(selection: Selection, odds_type: str | None, strategy: Strategy, cv: int) -> list[dict[str, Any]]:
     """Return the backtesting results of a model."""
-    dataloader, bettor = build_dataloader(**selection), build_bettor(model, alpha=alpha)
+    dataloader, bettor = build_dataloader(**selection), build_bettor(**strategy)
     X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
     return _records(run_backtest(bettor, X, Y, O, cv=TimeSeriesSplit(cv)))
 
 
-def _bet(selection: Selection, odds_type: str | None, model: str, alpha: float) -> list[dict[str, Any]]:
+def _bet(selection: Selection, odds_type: str | None, strategy: Strategy) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
-    dataloader, bettor = build_dataloader(**selection), build_bettor(model, alpha=alpha)
+    dataloader, bettor = build_dataloader(**selection), build_bettor(**strategy)
     X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
     bettor.fit(X, Y, O)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
@@ -372,6 +392,10 @@ async def backtest(
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
     alpha: float = 0.05,
+    betting_markets: list[str] | None = None,
+    init_cash: float | None = None,
+    stake: float | None = None,
+    model_odds_types: list[str] | None = None,
     cv: int = 3,
 ) -> list[dict[str, Any]]:
     """Return the backtesting results of a betting model.
@@ -394,7 +418,8 @@ async def backtest(
         aliases,
         max_unmatched_rate,
     )
-    result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, model, alpha, cv)
+    strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
+    result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, strategy, cv)
     return result
 
 
@@ -416,6 +441,10 @@ async def bet(
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
     alpha: float = 0.05,
+    betting_markets: list[str] | None = None,
+    init_cash: float | None = None,
+    stake: float | None = None,
+    model_odds_types: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
     selection = _selection(
@@ -433,7 +462,8 @@ async def bet(
         aliases,
         max_unmatched_rate,
     )
-    result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, model, alpha)
+    strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
+    result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, strategy)
     return result
 
 
