@@ -65,11 +65,12 @@ class SampleSoccerStats(_SampleSource, BaseStatsSource):
 
     It is a real season of the English and Spanish first divisions, taken from
     [football-data.co.uk](https://www.football-data.co.uk) and frozen, carrying the identity of every match, the form of
-    the two teams before it, the score at half time and the result. It needs no key and it downloads nothing, so it runs
-    offline, which is what makes it the data of the examples and the tests.
+    the two teams before it, the score at half time and the result. It needs no key and it reaches no network, so it
+    runs offline, which is what makes it the data of the examples and the tests.
 
-    The results of the last matchday are withheld, so those matches have no outcome to learn from and are the fixtures:
-    there is something to bet on, as there is in a season that is still being played.
+    The season is finished, so it has **no fixtures**. A fixture is a match that has not been played, and there are none
+    left in a season that is over. To bet on something, use a live source such as
+    [`FootballDataStats`][sportsbet.sources.FootballDataStats].
 
     Examples:
         >>> from sportsbet.dataloaders import DataLoader
@@ -86,9 +87,9 @@ class SampleSoccerStats(_SampleSource, BaseStatsSource):
         ...     odds=SampleSoccerOdds(),
         ... )
         >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
-        >>> # A whole season of the Premier League, less the matchday that is still to be played.
+        >>> # A whole season of the Premier League.
         >>> len(X)
-        370
+        380
     """
 
     kind: ClassVar[str] = 'stats'

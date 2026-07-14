@@ -66,7 +66,7 @@ def test_data_training(cli_runner, offline_dataloader, tmp_path):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_data_fixtures(cli_runner, offline_dataloader, tmp_path):
+def test_data_fixtures(cli_runner, offline_fixtures_dataloader, tmp_path):
     """Test the fixtures are extracted and written."""
     result = cli_runner.invoke(main, ['data', 'fixtures', *SELECTION, *MARKET, '-o', str(tmp_path)])
     assert result.exit_code == 0, result.output

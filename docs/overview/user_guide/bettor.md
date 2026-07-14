@@ -74,12 +74,15 @@ dataloader = DataLoader(
     odds=SampleSoccerOdds(),
 )
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
-X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
-It is a real Premier League season, frozen, with the results of the last matchday withheld — so those ten matches are
-the fixtures, and there is something to bet on. `download=True` copies it out of the package and into the store; it
-reaches no network and costs nothing.
+It is a real Premier League season, frozen. `download=True` copies it out of the package and into the store; it reaches
+no network and costs nothing.
+
+The season is finished, so it has **no fixtures** — a fixture is a match that has not been played. Everything below is
+shown on the training data. To bet on matches that have not happened, point the same bettor at
+`extract_fixtures_data()` of a live source such as
+[`FootballDataStats`][sportsbet.sources.FootballDataStats].
 
 ## Implementation
 
@@ -152,8 +155,8 @@ assert bettor.betting_markets_.tolist() == ['home_win', 'draw', 'away_win']
 Once the model is fitted, predicting class labels is straightforward:
 
 ```python
-predictions = bettor.predict(X_fix)
-assert predictions.shape == (1, 3)
+predictions = bettor.predict(X_train)
+assert predictions.shape == (380, 3)
 ```
 
 There is a single upcoming betting event and three selected markets, hence a `(1, 3)` result. The target columns of the training
@@ -170,7 +173,7 @@ assert Y_train.columns.tolist() == [
 ```
 
 Predicting class labels is not directly useful, since value bets should be based on the comparison of predicted probabilities to
-the `O_fix` matrix, not on the labels.
+the odds matrix `O`, not on the labels.
 
 ## Class probabilities predictions
 
@@ -178,7 +181,7 @@ Predicting positive class probabilities is also simple. There is one probability
 markets like `home_win`/`draw`/`away_win`, the probabilities are normalized to sum to one:
 
 ```python
-probabilities = bettor.predict_proba(X_fix)
+probabilities = bettor.predict_proba(X_train)
 assert probabilities.shape == (1, 3)
 assert abs(probabilities.sum(axis=1)[0] - 1.0) < 1e-6
 ```
@@ -214,15 +217,15 @@ A bettor can still override it by setting `COMPLEMENTARY_EVENTS` on its class, b
 ## Value bets prediction
 
 The fitted bettor predicts the value bets with the `bet` method, which returns one boolean column per selected market. We can join
-these with the identity columns of `X_fix`:
+these with the identity columns of `X_train`:
 
 ```python
 import pandas as pd
 markets = bettor.betting_markets_.tolist()
 value_bets = pd.concat(
     [
-        X_fix.reset_index()[['date', 'home_team', 'away_team']],
-        pd.DataFrame(bettor.bet(X_fix, O_fix), columns=markets),
+        X_train.reset_index()[['date', 'home_team', 'away_team']],
+        pd.DataFrame(bettor.bet(X_train, O_train), columns=markets),
     ],
     axis=1,
 ).set_index('date')
@@ -294,8 +297,8 @@ the `odds_types` providers and subtracting `alpha`. It therefore requires the od
 from sportsbet.evaluation import OddsComparisonBettor
 odds_bettor = OddsComparisonBettor(odds_types=['market_average'], alpha=0.03, betting_markets=['home_win', 'draw', 'away_win'])
 odds_bettor.fit(X_train, Y_train, O_train)
-value_bets = odds_bettor.bet(X_fix, O_fix)
-assert value_bets.shape == (1, 3)
+value_bets = odds_bettor.bet(X_train, O_train)
+assert value_bets.shape == (380, 3)
 ```
 
 ## Hyperparameter search
@@ -329,5 +332,5 @@ from sportsbet.evaluation import save_bettor, load_bettor
 path = str(Path(tempfile.mkdtemp()) / 'bettor.pkl')
 save_bettor(bettor, path)
 reloaded = load_bettor(path)
-assert reloaded.predict(X_fix).shape == (1, 3)
+assert reloaded.predict(X_train).shape == (380, 3)
 ```

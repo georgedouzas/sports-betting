@@ -152,30 +152,33 @@ claude mcp add sportsbet -- sportsbet-mcp
 
 **You:** *Fine. Any value bets in the upcoming fixtures?*
 
-> **Claude:** Careful — **you cannot bet on what you did not select.** The fixtures come from the same selection as the
-> training data, and you selected 2021 to 2024, which are all finished. So there is **nothing to bet on**:
+> **Claude:** Not today — the European season is over, so there is nothing anywhere that has not been played. But the
+> relationship between what you trained on and what you can bet on is worth getting straight, because it is not the one
+> people expect.
 >
-> ```text
-> DataLoader(param_grid={'league': [...], 'year': [2021, 2022, 2023, 2024], ...})
->   -> 0 upcoming fixtures
+> **They are unrelated.** `param_grid` selects what you *train* on. A fixture is a match that has not been played, so it
+> is never a match you could have trained on. The two frames share their **columns**, not their contents:
+>
+> ```python
+> dataloader = DataLoader(
+>     param_grid={'league': ['England'], 'year': [2022, 2023]},   # train on this
+>     stats=FootballDataStats(), odds=FootballDataOdds(),
+> )
+> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+> X_fix, _, O_fix = dataloader.extract_fixtures_data()            # bet on whatever is unplayed, anywhere
 > ```
 >
-> Drop the `year` and you get the current season too:
->
 > ```text
-> DataLoader(param_grid={'league': ['Germany', 'Italy', 'France'], 'division': [1, 2]})
->   -> 1 upcoming fixture
+> X      760 matches   England, 2022-2023
+> X_fix    2 matches   Brazil, France        <- leagues you never trained on
+> same columns, so the same model consumes both
 > ```
 >
-> | Date | Match | Bet | Odds |
-> | --- | --- | --- | ---: |
-> | 5 Dec, 19:00 | Bastia vs Red Star (France, div 2) | **Away win** | 2.90 |
+> So train on the Premier League and bet on Serie A if you like. Whether that is a *good* idea is your call — the model
+> has never seen those teams — but the library will not stop you, and it will not silently hide the fixtures either.
 >
-> The model puts Red Star above the 34.5% the price implies. The home win at 2.60 and the draw at 3.13 it thinks are
-> both too short.
->
-> One caveat, given what we just found: this edge lives in **Italy**, and this is a **French** fixture. I would not
-> take it.
+> Given what we found, I would not: the edge we located is in **Italy**, and it is four seasons of one league found
+> after a dozen tries. Hold a season back and check it there before staking anything.
 
 ---
 

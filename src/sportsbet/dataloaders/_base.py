@@ -201,6 +201,32 @@ class BaseDataLoader(ABC):
         return self._filter_params(self._all_params())
 
     @staticmethod
+    def _upcoming(data: pd.DataFrame) -> pd.Series:
+        """Return which snapshots belong to a match that has not been played yet.
+
+        A missing result is not the same thing as an unplayed match. A feed loses one now and then — an abandoned game,
+        a season it never finished recording — and those matches have no result and never will. They are in the past, so
+        they are not bettable, and offering them as fixtures would be offering a bet on a match that is already over.
+        """
+        return data['date'] >= pd.Timestamp.now(tz='UTC')
+
+    def _selected_mask(self: Self, stats: pd.DataFrame) -> pd.Series:
+        """Return which snapshots belong to a league, division and season the `param_grid` selects.
+
+        `param_grid` selects what to *train* on. It does not select what to bet on: a match that has not been played is
+        never one you could have trained on, whatever season you chose, so the fixtures are not filtered by it. The two
+        frames share their columns, not their contents.
+        """
+        if self.param_grid is None:
+            return pd.Series(data=True, index=stats.index)
+        available = stats[PARAM_COLS].drop_duplicates().to_dict('records')
+        selected = self._filter_params(available)
+        if not selected:
+            return pd.Series(data=False, index=stats.index)
+        allowed = pd.MultiIndex.from_frame(pd.DataFrame(selected)[PARAM_COLS])
+        return pd.Series(data=pd.MultiIndex.from_frame(stats[PARAM_COLS]).isin(allowed), index=stats.index)
+
+    @staticmethod
     def _finalize(data: pd.DataFrame) -> pd.DataFrame:
         """Normalize the `date` and `event_time` dtypes of a snapshot frame."""
         data = data.reset_index(drop=True)
@@ -569,12 +595,16 @@ class BaseDataLoader(ABC):
             input_event_time,
         )
 
-        # Split matches into those resolvable at the target moment (training) and the rest (fixtures)
+        # A match is trained on when it is resolvable at the target moment and its season was selected. It is a fixture
+        # when it is not resolvable at all: a match that was played but not selected is neither.
         index_cols = self._identity_cols()
         target_mask = (self.stats_['event_status'] == target_event_status) & (
             self.stats_['event_time'] == target_event_time
         )
-        train_ids = pd.MultiIndex.from_frame(self.stats_.loc[target_mask, index_cols])
+        self._played_ids = pd.MultiIndex.from_frame(self.stats_.loc[target_mask, index_cols])
+        train_ids = pd.MultiIndex.from_frame(
+            self.stats_.loc[target_mask & self._selected_mask(self.stats_), index_cols],
+        )
         if train_ids.empty:
             msg = 'No resolvable events were found for the requested target moment.'
             raise ValueError(msg)
@@ -606,17 +636,25 @@ class BaseDataLoader(ABC):
         )
         Y.index = X.index
         self.output_cols_ = Y.columns
-        return X, Y, O
+
+        # A supervised model cannot be fitted on a target it does not have. scikit-learn does not accept a missing
+        # value in `y`, and a match whose outcome the feed never recorded has no target to learn from, so it is dropped
+        # rather than imputed: an invented outcome is a match that never happened.
+        labelled = Y.notna().all(axis=1)
+        return X[labelled], Y[labelled], O[labelled]
 
     def extract_fixtures_data(self: Self, download: bool | str = False) -> FixturesData:
         """Extract the fixtures data.
 
         Read more in the [user guide][user-guide].
 
-        It returns fixtures data that can be used to make predictions for upcoming
-        matches. Before calling this method, `extract_train_data` must have been
-        called to fix the columns of the input and odds data. The multi-output
-        targets `Y` are always `None` and only included for consistency.
+        A fixture is a match that has not been played yet, in any league the sources publish. It is **not** restricted
+        by `param_grid`: that selects what to train on, and a match you could have trained on is by definition one that
+        has already been played. So you may train on England and bet on Italy. What the two frames share is their
+        columns, not their contents.
+
+        `extract_train_data` must have been called first, since it is what fixes those columns. The multi-output targets
+        `Y` are always `None`, and are returned only for consistency.
 
         Returns:
             (X, None, O):
@@ -628,8 +666,11 @@ class BaseDataLoader(ABC):
             raise ValueError(msg)
         self._fetched(download)
         index_cols = self._identity_cols()
-        fixtures_mask = ~pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._train_ids)
-        fixtures_odds_mask = ~pd.MultiIndex.from_frame(self.odds_[index_cols]).isin(self._train_ids)
+        upcoming = self._upcoming(self.stats_)
+        fixtures_mask = ~pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._played_ids) & upcoming
+        fixtures_odds_mask = ~pd.MultiIndex.from_frame(self.odds_[index_cols]).isin(self._played_ids) & self._upcoming(
+            self.odds_,
+        )
         if not fixtures_mask.any():
             X = pd.DataFrame(columns=self.input_cols_, index=pd.DatetimeIndex([], name='date'))
             O = pd.DataFrame(columns=self.odds_cols_, index=pd.DatetimeIndex([], name='date'))

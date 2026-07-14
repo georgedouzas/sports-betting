@@ -102,6 +102,21 @@ def offline_dataloader(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def offline_fixtures_dataloader(long_snapshots: tuple, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hand the surfaces a dataloader that has a match still to be played.
+
+    The sample season is finished, so it has no fixtures, and a command that predicts value bets needs one to predict.
+    """
+    stats, odds = long_snapshots
+
+    def build(**rest: object) -> BaseDataLoader:
+        return SnapshotsDataLoader(stats, odds)
+
+    monkeypatch.setattr('sportsbet.cli._utils.build_dataloader', build)
+    monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', build)
+
+
+@pytest.fixture
 def stats() -> pd.DataFrame:
     """Load statistics data."""
     stats_file = files('tests') / 'samples' / 'stats.csv'
@@ -252,6 +267,17 @@ _MATCHES: list[dict] = [
 ]
 
 
+def _kick_off(match: dict) -> str:
+    """Return the kick-off of a match, putting the one that has not been played in the future.
+
+    A fixture is a match that has not been played, so its kick-off has not happened. A date written into the file would
+    stop being a fixture the moment it went past, and the test would begin failing on a Tuesday for no reason.
+    """
+    if match['score'] is not None:
+        return str(match['date'])
+    return (pd.Timestamp.now(tz='UTC') + pd.Timedelta('7D')).strftime('%Y-%m-%d')
+
+
 def _timeline(match: dict) -> list[tuple[str, int, int, int]]:
     """Return the `(event_status, minutes, home_goals, away_goals)` snapshots of a match."""
     if match['score'] is None:
@@ -278,7 +304,7 @@ def long_snapshots() -> tuple[pd.DataFrame, pd.DataFrame]:
     odds_records: list[dict] = []
     for match in _MATCHES:
         identity = {
-            'date': match['date'],
+            'date': _kick_off(match),
             'league': match['league'],
             'division': 1,
             'year': 2025,

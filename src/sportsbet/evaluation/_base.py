@@ -145,10 +145,10 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         >>> results = backtest(bettor, X, Y, O)
         >>> 'Yield percentage per bet' in results.columns
         True
-        >>> # The value bets of the upcoming matches, one column per market.
-        >>> X_fix, _, O_fix = dataloader.extract_fixtures_data()
-        >>> bettor.fit(X, Y, O).bet(X_fix, O_fix).shape
-        (10, 3)
+        >>> # `bet` gives the value bets, one row per match and one column per market. Point it at the fixtures of a
+        >>> # live source to bet on what has not been played; the sample season is finished, so it has none.
+        >>> bettor.fit(X, Y, O).bet(X, O).shape
+        (380, 3)
     """
 
     TOL = 1e-6
@@ -528,11 +528,9 @@ def load_bettor(path: str) -> BaseBettor:
         >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
         >>> save_bettor(OddsComparisonBettor(betting_markets=['home_win']).fit(X, Y, O), path)
         >>> bettor = load_bettor(path)
-        >>> # It is ready to bet on the fixtures, without being fitted again.
-        >>> X_fix, _, O_fix = dataloader.extract_fixtures_data()
-        >>> # One row per upcoming match, one column per market it was told to bet.
-        >>> bettor.bet(X_fix, O_fix).shape
-        (10, 1)
+        >>> # It is ready to bet without being fitted again: one row per match, one column per market.
+        >>> bettor.bet(X, O).shape
+        (380, 1)
     """
     with Path(path).open('rb') as file:
         bettor = cloudpickle.load(file)

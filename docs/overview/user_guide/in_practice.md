@@ -45,12 +45,13 @@ dataloader = DataLoader(
     odds=SampleSoccerOdds(),
 )
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
-X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
 # The sample carries the half-time score, and none of it reached the features: the odds are pre-match.
 assert not [col for col in X_train.columns if '__inplay__' in col]
-assert list(X_train.columns) == list(X_fix.columns)
 ```
+
+The sample season is finished, so it has no fixtures of its own. `extract_fixtures_data` still returns the same columns,
+which is the point: what training and fixtures share is their **shape**, never their contents.
 
 Ask for a later moment on purpose and it says no:
 
@@ -77,8 +78,10 @@ num = X_train.columns[X_train.dtypes == float]   # numeric features for the clas
 bettor = ClassifierBettor(classifier=make_pipeline(SimpleImputer(), KNeighborsClassifier(3)))
 backtest(bettor, X_train[num], Y_train, O_train)          # evaluate on history
 bettor.fit(X_train[num], Y_train)
-value_bets = bettor.bet(X_fix[num], O_fix)                # value bets for upcoming matches
 ```
+
+Point the fitted bettor at the fixtures of a **live** source and it returns the value bets of the matches that have not
+been played. See [doing this on real data](#doing-this-on-real-data).
 
 ## Betting in-play
 

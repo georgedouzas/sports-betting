@@ -148,13 +148,14 @@ class DataLoader(BaseDataLoader):
     def _catalogue(self: Self, fetch: bool, refresh: bool = False) -> list[RawPayload]:
         """Return the payloads of the catalogue, fetching them only when allowed to.
 
-        The sources are told what was selected, so a feed whose catalogue costs as much as its data reads only the part
-        of it that could hold what was asked for.
+        The whole catalogue is read, not just the selected part of it. `param_grid` says what to train on, and the
+        matches that have not been played are not restricted by it: they are in the season in progress of whatever
+        league they belong to, and the catalogue is what says which season that is. A feed that only knew about the
+        leagues you selected could not offer you a fixture in any other one.
         """
         stats_source, odds_source, store = self._resolved()
-        selection = self.param_grid
-        odds_items = odds_source.index_items(selection) if odds_source is not None else []
-        items = self._unique(stats_source.index_items(selection) + odds_items)
+        odds_items = odds_source.index_items() if odds_source is not None else []
+        items = self._unique(stats_source.index_items() + odds_items)
         if fetch:
             held = [] if refresh else store.held(items)
             store.fetch([item for item in items if item not in held], self._authorize)
@@ -186,15 +187,19 @@ class DataLoader(BaseDataLoader):
         return self._params(fetch=True)
 
     def _schedule(self: Self, stats_items: list[RawItem], fetch: bool, refresh: bool) -> pd.DataFrame | None:
-        """Return the matches of the selected parameters, with their kick-off instants.
+        """Return the matches an odds source has to price, with their kick-off instants.
 
         An odds source that addresses its prices by instant needs it, since a season alone does not say when its matches
-        are played. It comes from the statistics, which are read first, so a metered odds source can be priced exactly
+        are played. It comes from the statistics, which are read first, so a metered odds source can be counted exactly
         without spending anything.
 
         It carries the moments of the statistics as well as their kick-offs, so an odds source never buys a price for a
         moment there is nothing to pair it with. A sport whose statistics stop at the whistle has no use for the odds at
         half time, and those cost as much as the ones it can use.
+
+        The statistics carry the season in progress of every league, since that is what a fixture's form is made of. A
+        price is not needed for all of it: what is bet on is the matches selected for training and the matches not yet
+        played. Anything else would be a price bought for a match nobody asked about.
         """
         stats_source, _, store = self._resolved()
         if fetch:
@@ -203,7 +208,12 @@ class DataLoader(BaseDataLoader):
         snapshots = self._derive(stats_source, store.read(stats_items), store)
         if snapshots.empty:
             return None
-        return snapshots[[*IDENTITY_COLS, *EVENT_COLS]].drop_duplicates()
+        played = pd.MultiIndex.from_frame(
+            snapshots.loc[snapshots['event_status'].eq('postplay'), list(IDENTITY_COLS)],
+        )
+        matches = pd.MultiIndex.from_frame(snapshots[list(IDENTITY_COLS)])
+        wanted = self._selected_mask(snapshots) | ~pd.Series(data=matches.isin(played), index=snapshots.index)
+        return snapshots.loc[wanted, [*IDENTITY_COLS, *EVENT_COLS]].drop_duplicates()
 
     def _items(
         self: Self,

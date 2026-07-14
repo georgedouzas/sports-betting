@@ -19,6 +19,42 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   it reached one sport of two. What it offered, using the library without writing Python, is now offered by the CLI and
   by an AI agent, both of which reach *all* of the library and are tested.
 
+- **BREAKING: the fixtures are no longer restricted by `param_grid`.** It selects what to *train* on, and a match you
+  could have trained on is by definition one that has already been played. A fixture has not been played, so the two
+  sets never overlap and filtering one by the other only ever threw fixtures away.
+
+  You can now **train on England and bet on Italy**. What the two frames share is their columns, not their contents.
+
+  ```python
+  dataloader = DataLoader(
+      param_grid={'league': ['England'], 'year': [2022, 2023]},
+      stats=FootballDataStats(), odds=FootballDataOdds(),
+  )
+  X, Y, O = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+  X_fix, _, O_fix = dataloader.extract_fixtures_data()
+
+  # before:  0 fixtures, always, whenever you trained on a finished season
+  # after:   every unplayed match the feed publishes, in any league
+  ```
+
+  Selecting a past season used to leave you with **no fixtures at all**, which is the normal case — you train on
+  history and bet on what is next. The library quietly returned an empty frame and said nothing.
+
+  Two things this costs. The season in progress of **every** league is now downloaded, because a fixture is described
+  by the form of its two teams and their form is the season they are in; without it a fixture arrives with every
+  feature missing. And the whole catalogue is read rather than the selected part of it, since a feed that only knew
+  about the leagues you selected could not offer you a fixture in any other one.
+
+- **A match whose outcome the feed never recorded was handed to a supervised model as training data.** scikit-learn
+  does not accept a missing value in `y`, and there is nothing to learn from a target that does not exist. Those rows
+  are now dropped, rather than imputed — an invented outcome is a match that never happened. `X`, `Y` and `O` stay
+  aligned.
+
+- **A match with no result whose date had passed was offered as a fixture.** A feed loses one now and then — an
+  abandoned game, a season it never finished recording. Those matches have no result and never will, and they were
+  being handed back as upcoming: the README's own worked example was betting on `Bastia vs Red Star`, a match played
+  eight months earlier. A fixture must also be in the future.
+
 - **BREAKING: `from_snapshots`, `from_dataframe` and `DummySoccerDataLoader` are gone.** There is one way to build a
   dataloader, and it is `DataLoader(param_grid, stats, odds)`. A second way to build one was a second set of
   capabilities to keep in step, and it let a dataloader exist whose data came from nowhere in particular — the one
@@ -40,9 +76,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   ```
 
   The sample also stopped being made up. It is a real season of the English and Spanish first divisions, frozen from
-  football-data.co.uk, with the results of the last matchday withheld so that there are fixtures to bet on. The old one
-  invented **in-play odds**, which no free feed publishes, so every example built on it was an example of something that
-  does not exist. Its items are files rather than URLs, so `download=True` reaches no network and costs nothing.
+  football-data.co.uk. The old one invented **in-play odds**, which no free feed publishes, so every example built on it
+  was an example of something that does not exist. Its items are files rather than URLs, so `download=True` reaches no
+  network and costs nothing. The season is finished, so it has **no fixtures**: betting is shown against a live feed.
 
 - **BREAKING: `prepare`, `dry_run` and `estimate` are gone.** Downloading is not a step of its own any more, it is a
   parameter of the extraction, and it is `False`:
