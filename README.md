@@ -250,12 +250,15 @@ bettor.bet(X_fix, O_fix)
 ```text
                                                        Number of betting days  Number of bets  Yield percentage per bet  ROI percentage  Final cash
 Training start Training end Testing start Testing end
-2020-08-21     2021-02-27   2021-02-27    2021-11-06                     625            1407                      38.3           269.3     36934.0
-               2021-11-06   2021-11-06    2022-05-14                     645            1407                      54.5           383.2     48321.0
-               2022-05-14   2022-05-15    2023-02-25                     639            1408                      49.8           350.7     45075.0
-               2023-02-25   2023-02-26    2023-11-06                     637            1407                      51.5           362.4     46236.0
-               2023-11-06   2023-11-06    2024-06-02                     659            1408                      47.9           337.4     43741.0
+2020-08-21     2021-02-27   2021-02-27    2021-11-06                     625            1407                      -0.1            -0.4      9957.5
+               2021-11-06   2021-11-06    2022-05-14                     645            1407                       8.7            61.4     16137.0
+               2022-05-14   2022-05-15    2023-02-25                     639            1408                       1.7            11.9     11186.5
+               2023-02-25   2023-02-26    2023-11-06                     637            1407                      -0.4            -3.0      9703.5
+               2023-11-06   2023-11-06    2024-06-02                     659            1404                      -4.0           -28.0      7204.5
 ```
+
+The model wins on some periods and loses on others, which is what a betting model does. A backtest that reports a yield
+of tens of percent is telling you about a mistake in the data, not about an edge.
 
 ### CLI
 
@@ -309,15 +312,15 @@ Testing start                         2021-02-27
 Testing end                           2021-11-06
 Number of betting days                625
 Number of bets                        1407
-Yield percentage per bet              38.30
-ROI percentage                        269.30
-Final cash                            36,934.00
-Number of bets (home_win)             357
-Number of bets (draw)                 643
-Number of bets (away_win)             407
-Yield percentage per bet (home_win)   60.80
-Yield percentage per bet (draw)       10.40
-Yield percentage per bet (away_win)   62.60
+Yield percentage per bet              -0.10
+ROI percentage                        -0.40
+Final cash                            9,957.50
+Number of bets (home_win)             238
+Number of bets (draw)                 709
+Number of bets (away_win)             460
+Yield percentage per bet (home_win)   -0.40
+Yield percentage per bet (draw)       4.20
+Yield percentage per bet (away_win)   -6.40
 ...
 ```
 

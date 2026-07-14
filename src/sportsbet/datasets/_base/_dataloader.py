@@ -26,6 +26,7 @@ LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
 INPUT_EVENT_STATUSES = ('preplay', 'inplay', 'postplay')
 STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
+DAY = pd.Timedelta('1D')
 PARAM_COLS = ['league', 'division', 'year']
 
 
@@ -270,7 +271,12 @@ class BaseDataLoader(ABC):
         return before_target & up_to_input
 
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
-        """Pivot long snapshots into wide, moment-aware feature columns."""
+        """Pivot long snapshots into wide, moment-aware feature columns.
+
+        A match whose features are all missing is still a match. The first round of a season has no form behind it, so
+        every one of its features is empty, and a pivot drops a row it has nothing to put in. The match would then
+        vanish from the data with nothing said, though it has two teams, a date and a price, and is perfectly bettable.
+        """
         index_cols = self._identity_cols()
         feature_cols = [col for col in stats.columns if col not in self.stats_schema_.snapshot_cols()]
         X = stats.pivot_table(values=feature_cols, index=index_cols, columns=EVENT_COLS, aggfunc='first')
@@ -289,7 +295,8 @@ class BaseDataLoader(ABC):
             col if self.stats_schema_.col_metadata(col)['fixed'] else feature_column(col, event_status, event_time)
             for col, event_status, event_time in X.columns
         ]
-        return X
+        matches = stats[index_cols].drop_duplicates().sort_values(index_cols).set_index(index_cols).index
+        return X.reindex(matches)
 
     def _pivot_odds(self: Self, odds: pd.DataFrame) -> pd.DataFrame:
         """Pivot long odds snapshots into wide, per-provider odds columns."""
@@ -319,6 +326,20 @@ class BaseDataLoader(ABC):
         ]
         return O
 
+    def _bet_moment(
+        self: Self,
+        odds: pd.DataFrame,
+        target_event_status: str,
+        target_event_time: pd.Timedelta,
+    ) -> tuple[str, pd.Timedelta] | None:
+        """Return the latest moment the odds price, which is the moment a bet is placed."""
+        priced = odds.loc[self._feature_mask(odds, target_event_status, target_event_time), list(EVENT_COLS)]
+        priced = priced.drop_duplicates()
+        if priced.empty:
+            return None
+        latest = priced.loc[priced['event_status'].map(STATUS_RANK).mul(DAY).add(priced['event_time']).idxmax()]
+        return str(latest['event_status']), pd.Timedelta(latest['event_time'])
+
     def _extract(
         self: Self,
         stats: pd.DataFrame,
@@ -328,7 +349,28 @@ class BaseDataLoader(ABC):
         input_event_status: str | None = None,
         input_event_time: pd.Timedelta | None = None,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Build aligned, date-indexed ``X`` and ``O`` for the given snapshots."""
+        """Build aligned, date-indexed ``X`` and ``O`` for the given snapshots.
+
+        A bet is placed at the moment its odds are quoted, so a feature from any later moment is one the bettor could
+        not have had. Left alone, the features would stretch all the way to the whistle: a model would be handed the
+        half-time score and asked to bet at the price offered before kick-off, which is not an edge but a way of
+        travelling in time. So the features stop where the odds do, unless a horizon says otherwise.
+        """
+        bet = self._bet_moment(odds, target_event_status, target_event_time)
+        if input_event_status is None:
+            if bet is not None:
+                input_event_status, input_event_time = bet
+        elif bet is not None:
+            wanted = (STATUS_RANK[input_event_status], input_event_time or pd.Timedelta('0min'))
+            priced = (STATUS_RANK[bet[0]], bet[1])
+            if wanted > priced:
+                msg = (
+                    f'The features would be taken at {input_event_status} {input_event_time or pd.Timedelta("0min")}, '
+                    f'and the odds are quoted at {bet[0]} {bet[1]}. A bet is placed when its odds are quoted, so a '
+                    f'feature from any later moment is one the bettor could not have had. Use odds that are quoted at '
+                    f'that moment, or take the features no later than the odds.'
+                )
+                raise ValueError(msg)
         horizon = (target_event_status, target_event_time, input_event_status, input_event_time)
         X = self._pivot_features(stats[self._feature_mask(stats, *horizon)])
         O = self._pivot_odds(odds[self._feature_mask(odds, *horizon)])
