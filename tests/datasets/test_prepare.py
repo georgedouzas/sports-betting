@@ -5,8 +5,17 @@ import contextlib
 import pandas as pd
 import pytest
 
-from sportsbet.dataloaders import DataLoader, DummySoccerDataLoader
-from sportsbet.sources import BaseOddsSource, BaseStatsSource, LocalStore, NotPreparedError, OddsApi, RawItem
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import (
+    BaseOddsSource,
+    BaseStatsSource,
+    LocalStore,
+    NotPreparedError,
+    OddsApi,
+    RawItem,
+    SampleSoccerOdds,
+    SampleSoccerStats,
+)
 
 PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}]
 SEASON = b'league,year\nEngland,2024\n'
@@ -284,7 +293,7 @@ def test_a_threshold_that_is_not_a_proportion_is_refused(drop_na_thres):
     It is a proportion of the values that may be missing. Above one it asked for columns that are more than complete,
     and dropped every one of them instead of saying so; below nought it was accepted and meant nothing.
     """
-    dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
+    dataloader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
     with pytest.raises(ValueError, match='drop_na_thres'):
         dataloader.extract_train_data(drop_na_thres=drop_na_thres)
 

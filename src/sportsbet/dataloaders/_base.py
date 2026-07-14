@@ -103,6 +103,37 @@ class BaseDataLoader(ABC):
 
         odds_cols_ (pd.Index):
             The columns of `O` for training and fixtures data.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.dataloaders import BaseDataLoader
+        >>>
+        >>> identity = {'date': pd.Timestamp('2024-08-16', tz='UTC'), 'league': 'England', 'division': 1,
+        ...             'year': 2025, 'home_team': 'A', 'away_team': 'B'}
+        >>>
+        >>> class MyDataLoader(BaseDataLoader):
+        ...     'A dataloader of data that is already on your machine.'
+        ...
+        ...     def _snapshots(self):
+        ...         stats = pd.DataFrame([
+        ...             {**identity, 'event_status': 'preplay', 'event_time': pd.Timedelta(0), 'home_form': 1.0},
+        ...             {**identity, 'event_status': 'postplay', 'event_time': pd.Timedelta(0), 'home_win': 1},
+        ...         ])
+        ...         odds = pd.DataFrame([
+        ...             {**identity, 'event_status': 'preplay', 'event_time': pd.Timedelta(0),
+        ...              'provider': 'acme', 'home_win': 2.5},
+        ...         ])
+        ...         return stats, odds
+        >>>
+        >>> dataloader = MyDataLoader()
+        >>> # The providers and the markets are derived from the data, so nothing has to be registered.
+        >>> dataloader.get_odds_types()
+        ['acme']
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='acme')
+        >>> list(Y.columns)
+        ['home_win__postplay__0min']
+        >>> list(O.columns)
+        ['acme__home_win__preplay__0min']
     """
 
     def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
@@ -641,6 +672,25 @@ def load_dataloader(path: str) -> BaseDataLoader:
     Returns:
         dataloader:
             The dataloader object.
+
+    Examples:
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> from sportsbet.dataloaders import DataLoader, load_dataloader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> _ = dataloader.save(path)
+        >>> # It comes back knowing what it was told, so the fixtures take the shape the training data took.
+        >>> loaded = load_dataloader(path)
+        >>> loaded.param_grid_ == dataloader.param_grid_
+        True
+        >>> X_fix, _, O_fix = loaded.extract_fixtures_data()
+        >>> list(X_fix.columns) == list(X.columns)
+        True
     """
     with Path(path).open('rb') as file:
         dataloader = cloudpickle.load(file)

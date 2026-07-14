@@ -8,11 +8,12 @@ import numpy as np
 import pandas as pd
 
 from sportsbet import Data
-from sportsbet.dataloaders import DummySoccerDataLoader
+from sportsbet.dataloaders import DataLoader
 from sportsbet.evaluation._base import BaseBettor
+from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
-_loader = DummySoccerDataLoader()
-X_train, Y_train, O_train = _loader.extract_train_data(odds_type='market_average')
+_loader = DataLoader(stats=SampleSoccerStats(), odds=SampleSoccerOdds())
+X_train, Y_train, O_train = _loader.extract_train_data(odds_type='market_average', download=True)
 X_fix, _, O_fix = _loader.extract_fixtures_data()
 
 

@@ -38,6 +38,23 @@ class RawItem:
 
         volatile:
             Whether the content can still change upstream.
+
+    Examples:
+        >>> from sportsbet.sources import RawItem
+        >>> item = RawItem(
+        ...     source='my_stats',
+        ...     key='England_1_2025',
+        ...     url='https://example.com/2025.csv',
+        ...     volatile=False,
+        ... )
+        >>> item.key
+        'England_1_2025'
+        >>> # A finished season cannot change, so it is fetched once and kept.
+        >>> item.volatile
+        False
+        >>> # The same source and key is the same item, so it is never fetched twice.
+        >>> item == RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
+        True
     """
 
     source: str
@@ -48,7 +65,7 @@ class RawItem:
 
 @dataclass(frozen=True)
 class RawPayload:
-    """What a source returned, kept verbatim.
+    r"""What a source returned, kept verbatim.
 
     Attributes:
         item:
@@ -56,6 +73,16 @@ class RawPayload:
 
         content:
             Exactly what came back.
+
+    Examples:
+        >>> from sportsbet.sources import RawItem, RawPayload
+        >>> item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
+        >>> payload = RawPayload(item=item, content=b'date,home_team,away_team\n2025-08-16,A,B\n')
+        >>> payload.item.key
+        'England_1_2025'
+        >>> # The bytes are exactly what the feed returned, so a transform can be changed and replayed for free.
+        >>> payload.content.splitlines()[0]
+        b'date,home_team,away_team'
     """
 
     item: RawItem
@@ -70,11 +97,24 @@ class BaseSource(ABC):
     sport of the one it is paired with.
 
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
-    Its planning and transform methods never fetch, so a preparation can always be planned and priced without spending
-    anything, and an extraction can never download by accident.
+    Its planning and transform methods never fetch, so what a download would take can always be counted without making
+    it, and an extraction can never download by accident.
 
     It also answers what it publishes, through `available_params`. That question has to be answerable before a
     `param_grid` is written, so it belongs here and not on a dataloader that is configured with one.
+
+    Examples:
+        >>> from sportsbet.sources import FootballDataStats, OddsApi
+        >>> stats = FootballDataStats()
+        >>> stats.name, stats.kind, stats.sport
+        ('football_data', 'stats', 'soccer')
+        >>> # A vendor selling every sport carries none of its own, and takes the sport it is paired with.
+        >>> OddsApi(key='...', markets=['h2h']).sport is None
+        True
+        >>> # Asking what a source publishes declares items rather than fetching them.
+        >>> items = stats.index_items()
+        >>> items[0].source, items[0].volatile
+        ('football_data', True)
     """
 
     name: ClassVar[str]
@@ -220,12 +260,100 @@ class BaseSource(ABC):
 
 
 class BaseStatsSource(BaseSource):
-    """The abstract base class for statistics sources."""
+    r"""The abstract base class for statistics sources.
+
+    Examples:
+        >>> import io
+        >>> import pandas as pd
+        >>> from sportsbet.sources import BaseStatsSource, RawItem, RawPayload, market_outcomes
+        >>> IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
+        >>>
+        >>> class MyStats(BaseStatsSource):
+        ...     '''Statistics from a feed of your own.'''
+        ...
+        ...     name = 'my_stats'
+        ...     sport = 'soccer'
+        ...
+        ...     def index_items(self, selection=None):
+        ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json',
+        ...                         volatile=True)]
+        ...
+        ...     def catalogue(self, payloads):
+        ...         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
+        ...
+        ...     def required_items(self, params, schedule=None):
+        ...         return [RawItem(source=self.name, key=f'Ruritania_1_{param["year"]}',
+        ...                         url=f'https://example.com/{param["year"]}.csv')
+        ...                 for param in params]
+        ...
+        ...     def to_snapshots(self, payloads):
+        ...         games = pd.read_csv(io.BytesIO(payloads[0].content))
+        ...         games['date'] = pd.to_datetime(games['date'], utc=True)
+        ...         preplay = games[IDENTITY].assign(event_status='preplay', event_time=0,
+        ...                                          home_form=games['home_form'])
+        ...         postplay = games[IDENTITY].assign(event_status='postplay', event_time=0)
+        ...         outcomes = market_outcomes(games['home_goals'], games['away_goals'], ['home_win', 'draw',
+        ...                                                                               'away_win'])
+        ...         postplay = pd.concat([postplay, outcomes], axis=1)
+        ...         return pd.concat([preplay, postplay], ignore_index=True)
+        >>>
+        >>> source = MyStats()
+        >>> # It never fetches. It says what it needs, and the store gets it.
+        >>> source.required_items([{'year': 2025}])[0].url
+        'https://example.com/2025.csv'
+        >>> csv = b'date,league,division,year,home_team,away_team,home_form,home_goals,away_goals\n'
+        >>> csv += b'2025-08-16,Ruritania,1,2025,A,B,0.5,2,1\n'
+        >>> snapshots = source.to_snapshots([RawPayload(item=source.required_items([{'year': 2025}])[0], content=csv)])
+        >>> sorted(snapshots['event_status'].unique())
+        ['postplay', 'preplay']
+        >>> snapshots.loc[snapshots['event_status'].eq('postplay'), 'home_win'].item()
+        1.0
+    """
 
     kind: ClassVar[str] = 'stats'
 
 
 class BaseOddsSource(BaseSource):
-    """The abstract base class for odds sources."""
+    r"""The abstract base class for odds sources.
+
+    Examples:
+        >>> import io
+        >>> import pandas as pd
+        >>> from sportsbet.sources import BaseOddsSource, RawItem, RawPayload
+        >>>
+        >>> class MyOdds(BaseOddsSource):
+        ...     '''Odds from a feed of your own.'''
+        ...
+        ...     name = 'my_odds'
+        ...     sport = 'soccer'
+        ...
+        ...     def index_items(self, selection=None):
+        ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json',
+        ...                         volatile=True)]
+        ...
+        ...     def catalogue(self, payloads):
+        ...         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
+        ...
+        ...     def required_items(self, params, schedule=None):
+        ...         return [RawItem(source=self.name, key=f'odds_{param["year"]}',
+        ...                         url=f'https://example.com/odds/{param["year"]}.csv')
+        ...                 for param in params]
+        ...
+        ...     def to_snapshots(self, payloads):
+        ...         odds = pd.read_csv(io.BytesIO(payloads[0].content))
+        ...         odds['date'] = pd.to_datetime(odds['date'], utc=True)
+        ...         return odds.assign(event_status='preplay', event_time=0)
+        >>>
+        >>> source = MyOdds()
+        >>> source.kind
+        'odds'
+        >>> csv = b'date,league,division,year,home_team,away_team,provider,home_win,draw,away_win\n'
+        >>> csv += b'2025-08-16,Ruritania,1,2025,A,B,acme,1.8,3.4,4.2\n'
+        >>> item = source.required_items([{'year': 2025}])[0]
+        >>> snapshots = source.to_snapshots([RawPayload(item=item, content=csv)])
+        >>> # The markets are the columns, and the provider is a column too, so nothing has to be registered.
+        >>> snapshots[['provider', 'home_win', 'event_status']].to_dict('records')
+        [{'provider': 'acme', 'home_win': 1.8, 'event_status': 'preplay'}]
+    """
 
     kind: ClassVar[str] = 'odds'

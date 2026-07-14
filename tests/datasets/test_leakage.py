@@ -7,7 +7,7 @@ knowledge of the future, and it shows up as a backtest that makes money no bookm
 import pandas as pd
 import pytest
 
-from sportsbet.dataloaders import from_snapshots
+from tests.conftest import SnapshotsDataLoader
 
 IDENTITY = {'league': 'England', 'division': 1, 'year': 2025, 'home_team': 'A', 'away_team': 'B'}
 LATER = {'league': 'England', 'division': 1, 'year': 2025, 'home_team': 'C', 'away_team': 'D'}
@@ -51,7 +51,7 @@ def test_a_feature_is_never_later_than_the_odds_it_is_bet_against():
     whistle. Left alone, a model was handed the score at half time and asked to bet at the price offered before kick-
     off, which is not a strategy but a way of travelling in time. It backtested at a yield no bookmaker would survive.
     """
-    dataloader = from_snapshots(_stats(), _odds([('preplay', KICK_OFF)]))
+    dataloader = SnapshotsDataLoader(_stats(), _odds([('preplay', KICK_OFF)]))
     X, _, _ = dataloader.extract_train_data(odds_type='book')
     assert not [col for col in X.columns if 'inplay' in col]
 
@@ -62,14 +62,14 @@ def test_a_feature_from_the_moment_of_the_odds_is_kept():
     The rule is not that the half-time score is forbidden. It is that a bet cannot use what was not known when its price
     was quoted. Buy a price at half time and the half-time score is yours to use.
     """
-    dataloader = from_snapshots(_stats(), _odds([('preplay', KICK_OFF), ('inplay', HALF_TIME)]))
+    dataloader = SnapshotsDataLoader(_stats(), _odds([('preplay', KICK_OFF), ('inplay', HALF_TIME)]))
     X, _, _ = dataloader.extract_train_data(odds_type='book')
     assert [col for col in X.columns if 'inplay' in col]
 
 
 def test_asking_for_a_feature_later_than_the_odds_is_refused():
     """Test asking for it on purpose is refused, and told why."""
-    dataloader = from_snapshots(_stats(), _odds([('preplay', KICK_OFF)]))
+    dataloader = SnapshotsDataLoader(_stats(), _odds([('preplay', KICK_OFF)]))
     with pytest.raises(ValueError, match='could not have had'):
         dataloader.extract_train_data(
             odds_type='book',
@@ -88,7 +88,7 @@ def test_a_match_with_no_features_is_not_dropped():
     formless = stats['event_status'].eq('preplay') & stats['date'].eq('2024-08-16')
     stats.loc[formless, 'home_form'] = None
 
-    dataloader = from_snapshots(stats, _odds([('preplay', KICK_OFF)]))
+    dataloader = SnapshotsDataLoader(stats, _odds([('preplay', KICK_OFF)]))
     X, Y, O = dataloader.extract_train_data(odds_type='book')
 
     matches = 2
@@ -103,7 +103,7 @@ def test_without_odds_there_is_nothing_to_predict_but_the_features_remain():
     The markets a model learns are the ones its odds price, so with no odds there is no market and no target. The
     features are still there, and exploring them, or learning from them without a target of ours, is still worth doing.
     """
-    dataloader = from_snapshots(_stats())
+    dataloader = SnapshotsDataLoader(_stats())
 
     with pytest.raises(ValueError, match='no markets to predict'):
         dataloader.extract_train_data()

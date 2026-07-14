@@ -25,7 +25,12 @@ if TYPE_CHECKING:
 
     Authorize = Callable[[RawItem], str]
 
-DEFAULT_PATH = Path.home() / '.sportsbet'
+STORE_ENV = 'SPORTSBET_HOME'
+
+
+def _default_path() -> Path:
+    """Return where the data is kept when nothing says otherwise."""
+    return Path(os.environ.get(STORE_ENV) or Path.home() / '.sportsbet')
 
 
 @dataclass
@@ -45,6 +50,22 @@ class PreparationReport:
 
         unavailable:
             The requested parameters the sources do not publish, reported instead of failing at fetch time.
+
+    Examples:
+        >>> from sportsbet.sources import PreparationReport, RawItem
+        >>> report = PreparationReport(
+        ...     to_fetch=[
+        ...         RawItem(source='football_data', key='Italy_1_2024', url='https://example.com/i1.csv'),
+        ...         RawItem(source='odds_api', key='snapshot_1', url='https://example.com/o1'),
+        ...         RawItem(source='odds_api', key='snapshot_2', url='https://example.com/o2'),
+        ...     ],
+        ...     held=[RawItem(source='football_data', key='Italy_1_2023', url='https://example.com/i0.csv')],
+        ... )
+        >>> # How many requests each source would make. Not what they cost: that is the vendor's business, not ours.
+        >>> report.requests
+        {'football_data': 1, 'odds_api': 2}
+        >>> print(report)
+        Requests to make: football_data 1, odds_api 2. Items held: 1.
     """
 
     to_fetch: list[RawItem] = field(default_factory=list)
@@ -79,6 +100,22 @@ class NotPreparedError(Exception):
         report:
             What a download would have to do, when that can be known without downloading. It cannot when the store does
             not even hold the catalogue, and finding out would mean downloading.
+
+    Examples:
+        >>> from sportsbet.sources import NotPreparedError, PreparationReport, RawItem
+        >>> report = PreparationReport(
+        ...     to_fetch=[RawItem(source='nba', key='NBA_2026_1', url='https://example.com/games')],
+        ... )
+        >>> try:
+        ...     raise NotPreparedError(report)
+        ... except NotPreparedError as error:
+        ...     print(error)
+        ...     error.report.requests
+        The data has not been downloaded. Pass `download=True` to get it. Requests to make: nba 1. Items held: 0.
+        {'nba': 1}
+        >>> # Against an empty store there is no count yet, because working one out would mean downloading.
+        >>> print(NotPreparedError())
+        The data has not been downloaded. Pass `download=True` to get it.
     """
 
     def __init__(self: Self, report: PreparationReport | None = None) -> None:
@@ -92,6 +129,41 @@ class BaseStore(ABC):
 
     A store fetches the raw items a source declares and persists them. It is the only place data is downloaded, so a
     source can never fetch by accident.
+
+    Examples:
+        >>> from sportsbet.sources import BaseStore, RawItem, RawPayload
+        >>>
+        >>> class MemoryStore(BaseStore):
+        ...     '''A store of your own, keeping the payloads in memory.'''
+        ...
+        ...     def __init__(self):
+        ...         self.kept = {}
+        ...
+        ...     def held(self, items):
+        ...         return [item for item in items if not item.volatile and (item.source, item.key) in self.kept]
+        ...
+        ...     def fetch(self, items, authorize=None):
+        ...         payloads = []
+        ...         for item in items:
+        ...             url = authorize(item) if authorize else item.url
+        ...             content = f'downloaded {url}'.encode()
+        ...             self.kept[(item.source, item.key)] = content
+        ...             payloads.append(RawPayload(item=item, content=content))
+        ...         return payloads
+        ...
+        ...     def read(self, items):
+        ...         return [RawPayload(item=item, content=self.kept[(item.source, item.key)]) for item in items]
+        >>>
+        >>> store = MemoryStore()
+        >>> item = RawItem(source='my_stats', key='Italy_1_2024', url='https://example.com/2024.csv')
+        >>> store.held([item])
+        []
+        >>> _ = store.fetch([item])
+        >>> # A finished season cannot change, so it is never fetched again.
+        >>> [held.key for held in store.held([item])]
+        ['Italy_1_2024']
+        >>> store.read([item])[0].content
+        b'downloaded https://example.com/2024.csv'
     """
 
     @abstractmethod
@@ -157,7 +229,24 @@ class LocalStore(BaseStore):
 
     Args:
         path:
-            Where to keep the data. The default `None` uses `~/.sportsbet`.
+            Where to keep the data. The default `None` uses `~/.sportsbet`, or whatever the `SPORTSBET_HOME`
+            environment variable names.
+
+    Examples:
+        >>> import tempfile
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import FootballDataOdds, FootballDataStats, LocalStore, RawItem
+        >>> store = LocalStore(tempfile.mkdtemp())
+        >>> # Nothing is held, so nothing is skipped, and asking costs no request.
+        >>> store.held([RawItem(source='football_data', key='Italy_1_2024', url='https://example.com/2024.csv')])
+        []
+        >>> # Give it to a dataloader to keep the data somewhere other than `~/.sportsbet`.
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['Italy'], 'division': [1], 'year': [2024]},
+        ...     stats=FootballDataStats(),
+        ...     odds=FootballDataOdds(),
+        ...     store=store,
+        ... )
     """
 
     def __init__(self: Self, path: str | Path | None = None) -> None:
@@ -165,7 +254,7 @@ class LocalStore(BaseStore):
 
     def _root(self: Self) -> Path:
         """Return the root of the store."""
-        return Path(self.path) if self.path is not None else DEFAULT_PATH
+        return Path(self.path) if self.path is not None else _default_path()
 
     def _raw_path(self: Self, item: RawItem) -> Path:
         """Return where the raw payload of an item is kept."""

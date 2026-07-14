@@ -1,8 +1,7 @@
-"""Implements the server that lets an assistant drive the library.
+"""Implements the server that lets an agent drive the library.
 
-The assistant lives outside the library. Nothing here calls a model, holds a model's key, or chooses one: the library
-stays a set of estimators that behave the same way every time they are run, and the assistant is one more consumer of
-it.
+The agent lives outside the library. Nothing here calls a model, holds a model's key, or chooses one: the library stays
+a set of estimators that behave the same way every time they are run, and the agent is one more consumer of it.
 
 A tool is told what to do in its arguments, exactly as a command is, so there is no file to write first and nothing left
 behind to fall out of date. A key is never one of those arguments: what is named is the environment variable holding it,
@@ -42,7 +41,7 @@ async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
 
 
 def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
-    """Return a frame as records, since an assistant cannot read a dataframe."""
+    """Return a frame as records, since an agent cannot read a dataframe."""
     if frame is None or frame.empty:
         return []
     return [

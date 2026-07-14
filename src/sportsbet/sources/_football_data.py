@@ -1003,6 +1003,24 @@ class FootballDataStats(_FootballDataSource, BaseStatsSource):
     It downloads the feed on your own machine and transforms it locally, so no data is redistributed. It needs no key.
 
     Read more in the [user guide][user-guide].
+
+    Examples:
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import FootballDataOdds, FootballDataStats
+        >>> source = FootballDataStats()
+        >>> source.name, source.kind, source.sport
+        ('football_data', 'stats', 'soccer')
+        >>> # It declares what it would read to learn what it publishes, and reads nothing.
+        >>> [item.key for item in source.index_items({'league': ['Italy']})]
+        ['index_Italy']
+        >>> # Hand it to a dataloader, together with wherever the odds come from.
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['Italy'], 'division': [1], 'year': [2024]},
+        ...     stats=source,
+        ...     odds=FootballDataOdds(),
+        ... )
+        >>> dataloader.sport
+        'soccer'
     """
 
 
@@ -1013,4 +1031,14 @@ class FootballDataOdds(_FootballDataSource, BaseOddsSource):
     bet cannot be backtested against them; a source with time-stamped prices is needed for that.
 
     Read more in the [user guide][user-guide].
+
+    Examples:
+        >>> from sportsbet.sources import FootballDataOdds
+        >>> source = FootballDataOdds()
+        >>> source.name, source.kind, source.sport
+        ('football_data', 'odds', 'soccer')
+        >>> # It reads the same upstream files as the statistics, so declaring the same items means fetching them once.
+        >>> from sportsbet.sources import FootballDataStats
+        >>> source.index_items({'league': ['Italy']}) == FootballDataStats().index_items({'league': ['Italy']})
+        True
     """

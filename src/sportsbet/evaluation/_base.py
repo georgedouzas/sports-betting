@@ -83,6 +83,18 @@ def complementary_events(markets: list[str]) -> list[list[str]]:
     Returns:
         events:
             The groups of markets whose probabilities sum to one.
+
+    Examples:
+        >>> from sportsbet.evaluation import complementary_events
+        >>> # The outcome of a soccer match is one of three, and a total is over or under whatever the line is.
+        >>> complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5'])
+        [['home_win', 'draw', 'away_win'], ['over_2.5', 'under_2.5']]
+        >>> # A sport that cannot be drawn simply has two of them. Nothing had to be told which sport this is.
+        >>> complementary_events(['home_win', 'away_win'])
+        [['home_win', 'away_win']]
+        >>> # A market with nothing to be complementary to stands alone.
+        >>> complementary_events(['draw'])
+        []
     """
     groups = []
     outcomes = [market for market in OUTCOME_MARKETS if market in markets]
@@ -100,8 +112,43 @@ def complementary_events(markets: list[str]) -> list[list[str]]:
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
     """The base class for bettors.
 
+    A bettor turns probabilities into bets. Implement `_fit` and `_predict_proba`, and the value bets, the backtest and
+    the bankroll follow: a bet is placed when the probability the model gives an outcome is higher than the one the
+    price implies.
+
     Warning: This class should not be used directly. Use the derive classes
     instead.
+
+    Examples:
+        >>> import numpy as np
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.evaluation import BaseBettor, backtest
+        >>>
+        >>> class BaseRateBettor(BaseBettor):
+        ...     'A bettor of your own, knowing only how often each outcome has happened.'
+        ...
+        ...     def _fit(self, X, Y, O):
+        ...         # `Y` carries the markets it was told to bet, in the order it was told them.
+        ...         self.rates_ = Y.mean().to_numpy()
+        ...         return self
+        ...
+        ...     def _predict_proba(self, X):
+        ...         rates = np.tile(self.rates_, (len(X), 1))
+        ...         return rates / rates.sum(axis=1, keepdims=True)
+        >>>
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> bettor = BaseRateBettor(betting_markets=['home_win', 'draw', 'away_win'])
+        >>> results = backtest(bettor, X, Y, O)
+        >>> 'Yield percentage per bet' in results.columns
+        True
+        >>> # The value bets of the upcoming matches, one column per market.
+        >>> X_fix, _, O_fix = dataloader.extract_fixtures_data()
+        >>> bettor.fit(X, Y, O).bet(X_fix, O_fix).shape
+        (10, 3)
     """
 
     TOL = 1e-6
@@ -435,6 +482,23 @@ def save_bettor(bettor: BaseBettor, path: str) -> None:
     Returns:
         self:
             The bettor object.
+
+    Examples:
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.evaluation import OddsComparisonBettor, load_bettor, save_bettor
+        >>> path = str(Path(tempfile.mkdtemp()) / 'bettor.pkl')
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> bettor = OddsComparisonBettor(betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
+        >>> save_bettor(bettor, path)
+        >>> # A fitted bettor comes back fitted, so the model that was backtested is the model that bets.
+        >>> load_bettor(path).betting_markets_.tolist()
+        ['home_win', 'draw', 'away_win']
     """
     with Path(path).open('wb') as file:
         cloudpickle.dump(bettor, file)
@@ -450,6 +514,25 @@ def load_bettor(path: str) -> BaseBettor:
     Returns:
         bettor:
             The bettor object.
+
+    Examples:
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.evaluation import OddsComparisonBettor, load_bettor, save_bettor
+        >>> path = str(Path(tempfile.mkdtemp()) / 'bettor.pkl')
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> save_bettor(OddsComparisonBettor(betting_markets=['home_win']).fit(X, Y, O), path)
+        >>> bettor = load_bettor(path)
+        >>> # It is ready to bet on the fixtures, without being fitted again.
+        >>> X_fix, _, O_fix = dataloader.extract_fixtures_data()
+        >>> # One row per upcoming match, one column per market it was told to bet.
+        >>> bettor.bet(X_fix, O_fix).shape
+        (10, 1)
     """
     with Path(path).open('rb') as file:
         bettor = cloudpickle.load(file)

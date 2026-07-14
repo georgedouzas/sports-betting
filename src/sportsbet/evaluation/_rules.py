@@ -59,9 +59,12 @@ class OddsComparisonBettor(BaseBettor):
 
     Examples:
         >>> from sportsbet.evaluation import OddsComparisonBettor, backtest
-        >>> from sportsbet.dataloaders import DummySoccerDataLoader
-        >>> dataloader = DummySoccerDataLoader()
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
         >>> bettor = OddsComparisonBettor(alpha=0.03)
         >>> results = backtest(bettor, X, Y, O)
         >>> 'Number of bets' in results.columns

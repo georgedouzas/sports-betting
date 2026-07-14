@@ -14,6 +14,7 @@ from ._football_data import FootballDataOdds, FootballDataStats
 from ._nba import NBAStats
 from ._odds_api import OddsApi
 from ._resolver import ReconciliationReport, UnmatchedError, resolve
+from ._sample import SampleSoccerOdds, SampleSoccerStats
 from ._schema import (
     BaseOddsSchema,
     BaseStatsSchema,
@@ -41,6 +42,8 @@ __all__: list[str] = [
     'RawItem',
     'RawPayload',
     'ReconciliationReport',
+    'SampleSoccerOdds',
+    'SampleSoccerStats',
     'UnmatchedError',
     'market_outcomes',
     'optional_col',

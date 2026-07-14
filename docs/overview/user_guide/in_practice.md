@@ -27,69 +27,51 @@ match once it has actually reached half-time. You express the betting moment wit
 
 ## Betting before kick-off
 
-Before a match starts, the only information available is the fixed identity of the match and its pre-match features. In-play
-snapshots do not exist yet. We can see this directly: build an upcoming fixture with `from_snapshots` and inspect what
-`extract_fixtures_data` returns for it.
+Before a match starts, the only thing known about it is its identity and its pre-match features. The in-play snapshots do not
+exist yet.
+
+You do not have to arrange that, and this is the part worth understanding: **the odds decide it**. A bet is placed at the moment
+its price is quoted, so the features are capped at that moment automatically. The free feed publishes the price offered before
+kick-off, so a model trained on it is handed pre-match features and nothing else — the half-time score is not available to a bet
+struck before the match, and asking for it is refused rather than quietly granted.
 
 ```python
-import pandas as pd
-from sportsbet.dataloaders import from_snapshots
-from sportsbet.sources import market_outcomes
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
-# Two finished matches (with a half-time snapshot) and one upcoming fixture.
-def snapshot(status, minutes, date, home, away, hg, ag, home_avg, away_avg):
-    return dict(event_status=status, event_time=minutes, date=date, league='England', division=1, year=2025,
-                home_team=home, away_team=away, home_goals=hg, away_goals=ag,
-                home_points_avg=home_avg, away_points_avg=away_avg)
-
-stats = pd.DataFrame([
-    snapshot('preplay', 0, '2024-08-16', 'Arsenal', 'Chelsea', None, None, 2.1, 1.5),
-    snapshot('inplay', 45, '2024-08-16', 'Arsenal', 'Chelsea', 1, 0, None, None),
-    snapshot('postplay', 0, '2024-08-16', 'Arsenal', 'Chelsea', 2, 0, None, None),
-    snapshot('preplay', 0, '2024-08-23', 'Everton', 'Spurs', None, None, 1.2, 1.9),
-    snapshot('inplay', 45, '2024-08-23', 'Everton', 'Spurs', 0, 1, None, None),
-    snapshot('postplay', 0, '2024-08-23', 'Everton', 'Spurs', 1, 2, None, None),
-    snapshot('preplay', 0, '2025-09-01', 'Liverpool', 'Wolves', None, None, 2.4, 1.0),  # upcoming fixture
-])
-markets = ['home_win', 'draw', 'away_win']
-played = stats['home_goals'].notna()
-stats.loc[played, markets] = market_outcomes(stats.loc[played, 'home_goals'], stats.loc[played, 'away_goals'], markets).to_numpy()
-odds = pd.DataFrame([
-    dict(event_status='preplay', event_time=0, date='2024-08-16', league='England', division=1, year=2025,
-         home_team='Arsenal', away_team='Chelsea', provider='market_average', home_win=1.7, draw=3.6, away_win=4.8),
-    dict(event_status='preplay', event_time=0, date='2024-08-23', league='England', division=1, year=2025,
-         home_team='Everton', away_team='Spurs', provider='market_average', home_win=2.6, draw=3.3, away_win=2.5),
-    dict(event_status='preplay', event_time=0, date='2025-09-01', league='England', division=1, year=2025,
-         home_team='Liverpool', away_team='Wolves', provider='market_average', home_win=1.4, draw=4.5, away_win=7.0),
-])
-
-dataloader = from_snapshots(stats, odds)
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
+dataloader = DataLoader(
+    param_grid={'league': ['England']},
+    stats=SampleSoccerStats(),
+    odds=SampleSoccerOdds(),
+)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 
-# For the upcoming fixture the in-play columns are unknown, the pre-match ones are populated.
-inplay_cols = [col for col in X_fix.columns if '__inplay__' in col]
-assert X_fix[inplay_cols].isna().all().all()
-assert X_fix[['home_points_avg', 'away_points_avg']].notna().all().all()
+# The sample carries the half-time score, and none of it reached the features: the odds are pre-match.
+assert not [col for col in X_train.columns if '__inplay__' in col]
+assert list(X_train.columns) == list(X_fix.columns)
 ```
 
-So a pre-match model should be trained on pre-match features only. Rather than filtering columns by hand, cap the features at the
-`preplay` [input horizon](dataloader.md#the-input-horizon) — the same horizon is then applied to the fixtures, keeping training and
-prediction in step. The full end-to-end flow, using the offline
-[`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader]:
+Ask for a later moment on purpose and it says no:
+
+```python
+dataloader.extract_train_data(
+    odds_type='market_average', input_event_status='inplay', input_event_time=pd.Timedelta('45min'),
+)
+# ValueError: ... could not have had ...
+```
+
+That is not pedantry. The library used to allow it, and the worked example in the README backtested at a 269% return, because
+the model was being shown the score at half time and asked to bet at the price offered before the match.
+
+The rest is ordinary scikit-learn:
 
 ```python
 from sklearn.impute import SimpleImputer
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
-from sportsbet.dataloaders import DummySoccerDataLoader
 from sportsbet.evaluation import ClassifierBettor, backtest
 
-dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-X_train, Y_train, O_train = dataloader.extract_train_data(
-    odds_type='market_average', input_event_status='preplay', input_event_time=pd.Timedelta('0min'),
-)
-X_fix, _, O_fix = dataloader.extract_fixtures_data()
 num = X_train.columns[X_train.dtypes == float]   # numeric features for the classifier
 
 bettor = ClassifierBettor(classifier=make_pipeline(SimpleImputer(), KNeighborsClassifier(3)))
@@ -100,45 +82,64 @@ value_bets = bettor.bet(X_fix[num], O_fix)                # value bets for upcom
 
 ## Betting in-play
 
-Once a match is live, the snapshots up to the current minute are available, so the model may use in-play features up to that
-minute — but not beyond it. To bet at half-time, train with the features up to 45 minutes and serve on the live match state.
+Once a match is live, the snapshots up to the current minute exist, so a model may use the in-play features up to that minute —
+but not beyond it. To bet at half time, train on the features up to 45 minutes and serve on the live state of the match.
 
-The upcoming match bundled in [`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader] is a match already in progress
-at 30 minutes, so `extract_fixtures_data` returns its 30-minute snapshot populated:
+**This needs odds that were quoted in play**, and no free feed has them: nobody recorded what the price was at minute 45. The
+sample above cannot do it, and neither can football-data. A source with time-stamped prices can —
+[`OddsApi`][sportsbet.sources.OddsApi] is one, and it is a paid one.
+
+To show the mechanism without buying anything, here is a dataloader carrying its own snapshots, with a price quoted at half time:
 
 ```python
 import pandas as pd
-from sklearn.impute import SimpleImputer
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import make_pipeline
-from sportsbet.dataloaders import DummySoccerDataLoader
-from sportsbet.evaluation import ClassifierBettor
+from sportsbet.dataloaders import BaseDataLoader
+from sportsbet.sources import market_outcomes
 
-dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-# Cap the features at the 30th minute: pre-match plus the 30-minute snapshot, nothing later.
-X_train, Y_train, O_train = dataloader.extract_train_data(
-    odds_type='market_average', input_event_status='inplay', input_event_time=pd.Timedelta('30min'),
+MATCHES = [('2024-08-16', 'Arsenal', 'Chelsea', 2, 0), ('2024-08-23', 'Everton', 'Spurs', 1, 2)]
+
+
+class LiveDataLoader(BaseDataLoader):
+    """Two matches, each priced before kick-off and again at half time."""
+
+    def _snapshots(self):
+        stats, odds = [], []
+        for date, home, away, home_goals, away_goals in MATCHES:
+            identity = dict(date=date, league='England', division=1, year=2025, home_team=home, away_team=away)
+            outcomes = market_outcomes(
+                pd.Series([home_goals]), pd.Series([away_goals]), ['home_win', 'draw', 'away_win'],
+            ).iloc[0]
+            stats += [
+                dict(**identity, event_status='preplay', event_time=pd.Timedelta('0min'), home_points_avg=2.1),
+                dict(**identity, event_status='inplay', event_time=pd.Timedelta('45min'), home_goals=1),
+                dict(**identity, event_status='postplay', event_time=pd.Timedelta('0min'),
+                     home_goals=home_goals, **outcomes),
+            ]
+            for status, minutes, price in (('preplay', '0min', 1.7), ('inplay', '45min', 2.4)):
+                odds.append(dict(**identity, event_status=status, event_time=pd.Timedelta(minutes),
+                                 provider='live', home_win=price, draw=3.6, away_win=4.8))
+        return pd.DataFrame(stats), pd.DataFrame(odds)
+
+
+dataloader = LiveDataLoader()
+X, Y, O = dataloader.extract_train_data(
+    odds_type='live', input_event_status='inplay', input_event_time=pd.Timedelta('45min'),
 )
-X_fix, _, O_fix = dataloader.extract_fixtures_data()
-assert X_fix['home_goals__inplay__30min'].notna().all()   # the live match has reached 30 minutes
-num = X_train.columns[X_train.dtypes == float]
 
-bettor = ClassifierBettor(classifier=make_pipeline(SimpleImputer(), KNeighborsClassifier(3)))
-bettor.fit(X_train[num], Y_train)
-value_bets = bettor.bet(X_fix[num], O_fix)
+# Buy a price at half time and the half-time score is yours to use.
+assert [col for col in X.columns if '__inplay__45min' in col]
 ```
 
-To predict a live match that is not part of the bundled feed, assemble its current state — the snapshots observed so far — and load
-it with [`from_snapshots`][sportsbet.dataloaders.from_snapshots] (or
-[`from_dataframe`][sportsbet.dataloaders.from_dataframe] for a single moment), leaving the result unresolved so it is treated as a
-fixture. See [Consuming your own data](dataloader.md#consuming-your-own-data).
+The score has to be carried at more than one moment for it to *be* a moment-varying feature — here at half time and again at
+the whistle. A column that appears at one moment only is time-invariant, and it keeps its bare name.
 
-The key point is the same in both cases: keep the training features and the serving features in step with the moment you bet.
+The rule has not changed, and it is the same rule as before: a bet may use whatever was known when its price was quoted, and
+nothing later. Pre-match odds cap the features at kick-off; half-time odds cap them at half time.
 
 ## Doing this on real data
 
-The examples above use the offline [`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader] so they run anywhere. On
-real data the flow is identical, with one step in front of it: the data has to be downloaded before it can be used.
+The sample above is a real season, but a frozen one, and it never grows a new fixture. A live feed does, and the flow is
+identical — the only difference is that its data comes over the network, and it only does so when you say so.
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -149,17 +150,17 @@ dataloader = DataLoader(
     stats=FootballDataStats(),
     odds=FootballDataOdds(),
 )
-dataloader.prepare()                                   # downloads; nothing else ever does
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
-X_fix, _, O_fix = dataloader.extract_fixtures_data()
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_fix, _, O_fix = dataloader.extract_fixtures_data(download=True)
 ```
 
-`prepare` is incremental, so running it again before each betting session refreshes the fixtures and the current season without
-re-downloading the seasons that are already finished. Everything else on this page — the input horizon, the training and serving
-symmetry, the backtest — is unchanged. See [Preparing the data](dataloader.md#preparing-the-data).
+`download` is the only thing that reaches the network, and it is `False` unless you pass it. It is incremental, so running it
+again before each betting session refreshes the fixtures and the current season without re-downloading the seasons that are
+already finished. Everything else on this page — the input horizon, the training and serving symmetry, the backtest — is
+unchanged. See [Downloading the data](dataloader.md#downloading-the-data).
 
 If the upstream feed corrects a season that has already finished, that will not be picked up on its own — the store has no
-reason to look at data it considers done. Ask it to, with `dataloader.prepare(refresh=True)`. See
+reason to look at data it considers done. Ask it to, with `download='refresh'`. See
 [What happens when the upstream data changes](dataloader.md#what-happens-when-the-upstream-data-changes).
 
 One honest limitation. The free feed carries **pre-match closing odds**, so the in-play flow above trains and predicts correctly

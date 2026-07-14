@@ -108,8 +108,8 @@ class OddsApi(BaseOddsSource):
     It needs your own key, and the data it buys never leaves your machine. The key is added to a request when the
     request is made, so it is never written to the store.
 
-    Historical prices are a paid tier and begin on 6 June 2020. A historical snapshot costs ten times a live one, so the
-    preparation prices the work before it is done: run it with `dry_run=True` first.
+    Historical prices are a paid tier and begin on 6 June 2020. Every market, region and moment is a separate request,
+    so extract without `download` first and see how many it would take.
 
     Read more in the [user guide][user-guide].
 
@@ -129,7 +129,22 @@ class OddsApi(BaseOddsSource):
             The default `None` prices the moments the statistics carry, and no
             others: a price for a moment there is nothing to pair with can never
             be used, and it costs the same as one that can. Every moment is a
-            separate snapshot, so it multiplies the cost.
+            separate snapshot, so it multiplies the requests.
+
+    Examples:
+        >>> from sportsbet.sources import OddsApi, RawItem
+        >>> source = OddsApi(key='secret', markets=['h2h'], regions=['eu'])
+        >>> source.name, source.kind
+        ('odds_api', 'odds')
+        >>> # It sells every sport, so it carries none of its own and takes the sport it is paired with.
+        >>> source.sport is None
+        True
+        >>> # The key is added when the request is made, so it never reaches a stored item.
+        >>> item = RawItem(source='odds_api', key='snapshot', url='https://api.the-odds-api.com/v4/sports?all=true')
+        >>> 'secret' in item.url
+        False
+        >>> source.request_url(item)
+        'https://api.the-odds-api.com/v4/sports?all=true&apiKey=secret'
     """
 
     name: ClassVar[str] = 'odds_api'

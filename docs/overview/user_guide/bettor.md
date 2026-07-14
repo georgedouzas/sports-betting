@@ -63,14 +63,23 @@ classifier = make_pipeline(
 bettor = ClassifierBettor(classifier=classifier, betting_markets=['home_win', 'draw', 'away_win'])
 ```
 
-We also use the offline dummy training and fixtures data, so everything runs without any network access:
+We use the sample data the library ships with, so everything runs offline:
 
 ```python
-from sportsbet.dataloaders import DummySoccerDataLoader
-dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+dataloader = DataLoader(
+    param_grid={'league': ['England']},
+    stats=SampleSoccerStats(),
+    odds=SampleSoccerOdds(),
+)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
+
+It is a real Premier League season, frozen, with the results of the last matchday withheld — so those ten matches are
+the fixtures, and there is something to bet on. `download=True` copies it out of the package and into the store; it
+reaches no network and costs nothing.
 
 ## Implementation
 

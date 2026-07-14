@@ -124,6 +124,23 @@ def backtest(
     Returns:
         results:
             The backtesting results.
+
+    Examples:
+        >>> from sklearn.model_selection import TimeSeriesSplit
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.evaluation import OddsComparisonBettor, backtest
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> bettor = OddsComparisonBettor(betting_markets=['home_win', 'draw', 'away_win'])
+        >>> results = backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2))
+        >>> # The folds run forward in time, so a model is never tested on a match it was trained on.
+        >>> list(results.index.names)
+        ['Training start', 'Training end', 'Testing start', 'Testing end']
+        >>> 'Yield percentage per bet' in results.columns
+        True
     """
     # Check data
     check_consistent_length(X, Y, O)
@@ -339,10 +356,13 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
 
     Examples:
         >>> from sportsbet.evaluation import BettorGridSearchCV, OddsComparisonBettor, backtest
-        >>> from sportsbet.dataloaders import DummySoccerDataLoader
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
         >>> from sklearn.model_selection import TimeSeriesSplit
-        >>> dataloader = DummySoccerDataLoader()
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
         >>> bettor = BettorGridSearchCV(
         ...     estimator=OddsComparisonBettor(),
         ...     param_grid={'alpha': [0.02, 0.05, 0.1]},

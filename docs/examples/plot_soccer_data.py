@@ -29,17 +29,6 @@ param_grid = {'league': ['Spain', 'Italy'], 'division': [1], 'year': [2021]}
 dataloader = DataLoader(param_grid=param_grid, stats=FootballDataStats(), odds=FootballDataOdds())
 
 # %%
-# Preparing the data
-# ------------------
-#
-# The data is downloaded onto your own machine by the `prepare` method, and never as a
-# side effect of asking for it. Extracting from a dataloader that was not prepared raises
-# rather than quietly downloading, so no data request can cost time or money by surprise.
-# It is incremental, so re-running it only fetches what changed upstream.
-
-dataloader.prepare()
-
-# %%
 # Extracting the training data
 # ----------------------------
 #
@@ -59,9 +48,16 @@ odds_type = 'market_average'
 drop_na_thres = 1.0
 
 # %%
-# We extract the training data:
+# We extract the training data. Nothing is downloaded unless `download` says so, and never
+# as a side effect of asking for the data, so no request can cost time or money by
+# surprise. The download is incremental, so re-running it only fetches what changed
+# upstream.
 
-X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=drop_na_thres, odds_type=odds_type)
+X_train, Y_train, O_train = dataloader.extract_train_data(
+    drop_na_thres=drop_na_thres,
+    odds_type=odds_type,
+    download=True,
+)
 
 # %%
 # The input data:

@@ -29,12 +29,28 @@ def required_col(alias: str | None = None) -> Any:  # noqa: ANN401
         alias:
             The column name to use when it differs from the field's Python
             identifier (e.g. a dotted market name).
+
+    Examples:
+        >>> from sportsbet.sources import BaseStatsSchema, required_col
+        >>>
+        >>> class MyStatsSchema(BaseStatsSchema):
+        ...     'The columns a statistics feed of your own must always carry.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        >>>
+        >>> # A required column may not be missing, so an identity is never half of one.
+        >>> MyStatsSchema.to_schema().columns['home_team'].nullable
+        False
     """
     return pa.Field(nullable=False, metadata={'snapshot': True}, alias=alias)
 
 
 def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> Any:  # noqa: ANN401
     """Define an optional (feature/odds) column.
+
+    A column declares the moments at which it means anything. The score at half time belongs to a match in play and to
+    nothing before it, and saying so is what lets a bet use only what was known when its price was quoted.
 
     Args:
         include:
@@ -44,6 +60,24 @@ def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> A
         alias:
             The column name to use when it differs from the field's Python
             identifier (e.g. a dotted market name).
+
+    Examples:
+        >>> from sportsbet.sources import BaseStatsSchema, optional_col, required_col
+        >>>
+        >>> class MyStatsSchema(BaseStatsSchema):
+        ...     'The columns a statistics feed of your own may carry.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        ...     home_goals: float = optional_col(include=['inplay', 'postplay'], fixed=False)
+        ...     stadium_capacity: float = optional_col(include=['preplay'], fixed=True)
+        >>>
+        >>> # There is no score before the match starts.
+        >>> MyStatsSchema.to_schema().columns['home_goals'].metadata['include']
+        ['inplay', 'postplay']
+        >>> # A stadium does not change size at half time, so it is carried once rather than per moment.
+        >>> MyStatsSchema.to_schema().columns['stadium_capacity'].metadata['fixed']
+        True
     """
     return pa.Field(nullable=True, metadata={'include': include, 'fixed': fixed}, alias=alias)
 
@@ -91,11 +125,48 @@ class BaseSchema(pa.DataFrameModel):
 
 
 class BaseStatsSchema(BaseSchema):
-    """Base schema for statistics snapshots."""
+    """Base schema for statistics snapshots.
+
+    Every snapshot says which match it is about and when it was taken, so a feature can always be placed in time.
+
+    Examples:
+        >>> from sportsbet.sources import BaseStatsSchema, optional_col, required_col
+        >>>
+        >>> class MyStatsSchema(BaseStatsSchema):
+        ...     'The statistics of a feed of your own.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        ...     home_goals: float = optional_col(include=['inplay', 'postplay'], fixed=False)
+        >>>
+        >>> # Every snapshot states its own moment, so nothing has to be assumed about when it was taken.
+        >>> sorted(BaseStatsSchema.snapshot_cols())
+        ['event_status', 'event_time']
+    """
 
 
 class BaseOddsSchema(BaseSchema):
-    """Base schema for odds snapshots."""
+    """Base schema for odds snapshots.
+
+    An odds snapshot is a price a named provider offered on a named market at a stated moment. The markets are the
+    columns, so a sport that cannot be drawn simply has no `draw` column and nothing has to be told about it.
+
+    Examples:
+        >>> from sportsbet.sources import BaseOddsSchema, optional_col, required_col
+        >>>
+        >>> class MyOddsSchema(BaseOddsSchema):
+        ...     'The odds of a feed of your own.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        ...     provider: str = required_col()
+        ...     home_win: float = optional_col(include=['preplay', 'inplay'], fixed=False)
+        ...     away_win: float = optional_col(include=['preplay', 'inplay'], fixed=False)
+        >>>
+        >>> # The markets are read from the columns rather than registered anywhere.
+        >>> sorted(MyOddsSchema.odds_cols())
+        ['away_win', 'home_win']
+    """
 
     @classmethod
     def odds_cols(cls) -> list[str]:

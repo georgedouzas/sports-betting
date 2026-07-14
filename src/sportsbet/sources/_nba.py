@@ -170,6 +170,25 @@ class NBAStats(BaseStatsSource):
     The odds are another source, and there is no free one for basketball anywhere.
 
     Read more in the [user guide][user-guide].
+
+    Examples:
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import NBAStats, OddsApi
+        >>> source = NBAStats()
+        >>> source.name, source.kind, source.sport
+        ('nba', 'stats', 'basketball')
+        >>> # A season is named by the year it ends in, so 2026 is the 2025-26 season.
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['NBA'], 'year': [2026]},
+        ...     stats=source,
+        ...     odds=OddsApi(key='...', markets=['h2h']),
+        ... )
+        >>> dataloader.sport
+        'basketball'
+        >>> # The same sport is the same dataloader. A league is a source, not a dataloader.
+        >>> from sportsbet.sources import EuroLeagueStats
+        >>> NBAStats().sport == EuroLeagueStats().sport
+        True
     """
 
     sport: ClassVar[str | None] = 'basketball'

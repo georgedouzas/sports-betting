@@ -7,9 +7,10 @@ import pandas as pd
 import pytest
 from sklearn.dummy import DummyClassifier
 
-from sportsbet.dataloaders import DataLoader, from_snapshots
+from sportsbet.dataloaders import DataLoader
 from sportsbet.evaluation import ClassifierBettor, complementary_events
 from sportsbet.sources import EuroLeagueStats, FootballDataOdds, NBAStats, OddsApi
+from tests.conftest import SnapshotsDataLoader
 
 GAMES = [('Alba Berlin', 'Zalgiris', 77, 87), ('Zalgiris', 'Alba Berlin', 90, 80)]
 TWO_WAY = 2
@@ -85,13 +86,13 @@ def test_odds_that_carry_no_markets_say_so():
         provider=[],
     )
     with pytest.raises(ValueError, match='no markets to predict'):
-        from_snapshots(stats, empty).extract_train_data()
+        SnapshotsDataLoader(stats, empty).extract_train_data()
 
 
 def test_the_targets_of_a_game_that_cannot_be_drawn():
     """Test basketball has no draw, and nothing is configured to make that so."""
     stats, odds = _snapshots()
-    _, Y, _ = from_snapshots(stats, odds).extract_train_data(odds_type='pinnacle')
+    _, Y, _ = SnapshotsDataLoader(stats, odds).extract_train_data(odds_type='pinnacle')
     markets = {col.split('__')[0] for col in Y.columns}
     assert markets == {'home_win', 'away_win'}
     assert 'draw' not in markets
@@ -103,7 +104,7 @@ def test_a_two_way_outcome_sums_to_one():
     They are not in a sport that can, and only the data knows which sport it is.
     """
     stats, odds = _snapshots()
-    X, Y, O = from_snapshots(stats, odds).extract_train_data(odds_type='pinnacle')
+    X, Y, O = SnapshotsDataLoader(stats, odds).extract_train_data(odds_type='pinnacle')
     numeric = X.select_dtypes(float).columns
     bettor = ClassifierBettor(DummyClassifier(strategy='prior')).fit(X[numeric], Y, O)
     assert bettor.predict_proba(X[numeric]).sum(axis=1) == pytest.approx(1.0)

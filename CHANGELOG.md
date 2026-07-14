@@ -17,9 +17,83 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
   It was a quarter of the codebase and nothing tested it — `pyproject.toml` excluded it from the test run by name — and
   it reached one sport of two. What it offered, using the library without writing Python, is now offered by the CLI and
-  by an AI assistant, both of which reach *all* of the library and are tested.
+  by an AI agent, both of which reach *all* of the library and are tested.
+
+- **BREAKING: `from_snapshots`, `from_dataframe` and `DummySoccerDataLoader` are gone.** There is one way to build a
+  dataloader, and it is `DataLoader(param_grid, stats, odds)`. A second way to build one was a second set of
+  capabilities to keep in step, and it let a dataloader exist whose data came from nowhere in particular — the one
+  question every dataset should have to answer.
+
+  Data of your own is a **source**, which is four methods and no fetching. If it never came from anywhere, implement
+  `BaseDataLoader._snapshots`, which is the seam every dataloader already sits on.
+
+  The offline sample is now a pair of ordinary **sources**, not a dataloader of its own:
+
+  ```python
+  # before
+  dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
+  X, Y, O = dataloader.extract_train_data(odds_type='market_average')
+
+  # after
+  dataloader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
+  X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+  ```
+
+  The sample also stopped being made up. It is a real season of the English and Spanish first divisions, frozen from
+  football-data.co.uk, with the results of the last matchday withheld so that there are fixtures to bet on. The old one
+  invented **in-play odds**, which no free feed publishes, so every example built on it was an example of something that
+  does not exist. Its items are files rather than URLs, so `download=True` reaches no network and costs nothing.
+
+- **BREAKING: `prepare`, `dry_run` and `estimate` are gone.** Downloading is not a step of its own any more, it is a
+  parameter of the extraction, and it is `False`:
+
+  ```python
+  # before
+  dataloader.prepare()
+  X, Y, O = dataloader.extract_train_data()
+
+  # after
+  X, Y, O = dataloader.extract_train_data(download=True)          # or download='refresh'
+  ```
+
+  Nothing else reaches the network. Extract without `download` and you get a `NotPreparedError` carrying the number of
+  requests getting the data would take, and not one of them is made.
+
+  The library no longer quotes a **cost**. It used to multiply an invented constant by the number of snapshots and call
+  the answer credits. A vendor sets its own prices, changes them, and prices its endpoints differently, so that number
+  was made up. What is reported now is the number of requests, which is a fact. What they are worth is between you and
+  whoever you buy them from.
 
 ### Changed
+
+- **BREAKING: one `DataLoader` for every sport.** `SoccerDataLoader` and `BasketballDataLoader` are replaced by a single
+  `DataLoader`. A dataloader never knew what sport it was looking at — the sport is a property of the **source**, and it
+  is read from there:
+
+  ```python
+  # before
+  dataloader = SoccerDataLoader(param_grid={'league': ['England']})
+
+  # after
+  dataloader = DataLoader(param_grid={'league': ['England']}, stats=FootballDataStats(), odds=FootballDataOdds())
+  ```
+
+  **The sources have no defaults.** A dataloader does not choose where its data comes from; you do, so that you always
+  know what you are modelling. `stats` is required. `odds` is optional, but with no odds there are no markets and so
+  nothing to predict — the extraction says exactly that, and offers `learning_type='unsupervised'` if the features are
+  what you are after.
+
+- **BREAKING: `sportsbet.datasets` is split into `sportsbet.dataloaders` and `sportsbet.sources`.** A dataloader shapes
+  data for modelling; a source says where it comes from. They were two things in one package.
+
+  ```python
+  # before
+  from sportsbet.datasets import SoccerDataLoader, FootballDataStats
+
+  # after
+  from sportsbet.dataloaders import DataLoader
+  from sportsbet.sources import FootballDataStats
+  ```
 
 - **BREAKING: the CLI takes no configuration file.** The `--config-path` option, the `DATALOADER_CLASS`/`PARAM_GRID`
   variables and the `configs/` examples are all gone. A command is told what to do in its own arguments, and the
@@ -30,17 +104,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   sportsbet dataloader training -c config.py
 
   # after
-  sportsbet data training --sport soccer --league England --year 2025 --odds-type market_maximum
+  sportsbet data training --stats football-data --odds football-data --league England --year 2025 \
+    --odds-type market_maximum --download
   ```
 
   The old contract handed the CLI a dataloader *class*, and a class carries no sources, and a source is what carries a
   key — so the command line could express exactly one configuration in the whole library, soccer with the free feed.
-  Now every sport, every source and every credential reaches it, and a key is read from the environment, so it never
+  Now every sport, every source and every credential reaches it. `--stats` and `--odds` say where the data comes from,
+  and so they also say what the sport is: there is no `--sport`. A key is read from the environment, so it never
   appears in a command or in a shell's history:
 
   ```bash
   export ODDS_API_KEY=...
-  sportsbet data prepare --sport basketball --league NBA --year 2026 --stats nba --odds odds-api --dry-run
+  sportsbet data training --stats nba --odds odds-api --league NBA --year 2026
   ```
 
   A data source is configured from the command line as it is from Python: its markets, regions and moments
@@ -69,36 +145,46 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   disappeared with nothing said, though each of them has two teams, a date and a price. Only the in-play columns above
   had been keeping them alive, which is how the two bugs hid each other.
 
+- **A whole feed was downloaded to satisfy a selection of three leagues.** The catalogue was read for every league the
+  source publishes, whatever had been asked for. Selecting Germany, Italy and France fetched 1.7 MB of index pages
+  instead of 104 KB.
+
 - **A bettor betting on a single market crashed.** The probabilities were clipped in place, and the array they came
   from is read-only when a single market produces it. The default has five markets, so nobody met it.
 
-- **An extraction fetched.** When the data was not prepared, the error that said so built its report by *downloading*
-  the catalogue — the one thing an extraction must never do. It now says less rather than fetching in order to say
-  more, and still names what is missing whenever it can know without going to the network.
+- **An extraction fetched.** When the data was not held, the error that said so built its report by *downloading* the
+  catalogue — the one thing an extraction must never do. It now says less rather than fetching in order to say more,
+  and still names what is missing whenever it can know without going to the network.
 
 - **`drop_na_thres` was not a proportion.** Above one it asked for columns that are more than complete and silently
   dropped every one of them; below nought it was accepted and meant nothing. It is now checked.
 
 - **The command line showed stack traces.** What the library says is now what the user reads.
 
+- **The download progress bar was written to standard output**, so it landed in the middle of anything being piped. It
+  goes to standard error, where progress belongs.
+
 ### Added
 
-- An **MCP server**, so an AI assistant can drive the library: `pip install 'sports-betting[mcp]'`, then point the
-  assistant at `sportsbet-mcp`. It finds what data exists, prices a download before spending anything, prepares it,
-  backtests a model and returns the value bets.
+- An **MCP server**, so an AI agent can drive the library: `pip install 'sports-betting[mcp]'`, then point the agent at
+  `sportsbet-mcp`. It finds what data exists, downloads it, backtests a model and returns the value bets.
 
   Its tools take the *same* arguments the commands take, so the two surfaces cannot drift and there is no file to write
-  first. A key is never one of those arguments: what is named is the environment variable holding it. **An assistant
-  cannot spend by surprise**: a preparation that costs anything is refused until the cost is confirmed, and the estimate
-  is exact and free.
+  first. A key is never one of those arguments: what is named is the environment variable holding it. **An agent cannot
+  fetch by surprise**: `download` is `False` on every tool, and asking for data that is not held reports how many
+  requests getting it would take rather than making them.
 
-  No model, no model key and no model call is added to the library. The assistant stays outside it.
+  No model, no model key and no model call is added to the library. The agent stays outside it.
+
+- `SPORTSBET_HOME`, an environment variable naming where the store keeps its data. It defaults to `~/.sportsbet`, as
+  before.
+
+- `SampleSoccerStats` and `SampleSoccerOdds`, the sample data as sources. See the breaking change above.
 
 - `NBAStats`, a free, key-less statistics source for the **NBA**, backed by ESPN. It carries the regular season, the
   play-in and the play-offs, with the tip-off as a UTC instant, and it is live: the games played this week carry their
-  scores this week. Use it as the statistics of the existing basketball dataloader —
-  `BasketballDataLoader(stats=NBAStats(), odds=OddsApi(key=...))`. As with the EuroLeague, the odds need your own key,
-  because no free basketball odds feed exists.
+  scores this week. Pair it with your own odds — `DataLoader(stats=NBAStats(), odds=OddsApi(key=...))` — because, as
+  with the EuroLeague, no free basketball odds feed exists.
 
 ## [0.13.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.13.1) - 2026-07-10
 
