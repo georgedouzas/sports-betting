@@ -65,6 +65,31 @@ class UnmatchedError(Exception):
     Args:
         report:
             What was reconciled and what was not.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.sources import resolve
+        >>> identity = {'league': 'England', 'division': 1, 'year': 2025}
+        >>> moment = {'event_status': 'preplay', 'event_time': pd.Timedelta(0)}
+        >>> stats = pd.DataFrame([
+        ...     {'date': pd.Timestamp('2025-08-16', tz='UTC'), **identity, **moment,
+        ...      'home_team': 'Man United', 'away_team': 'Arsenal'},
+        ... ])
+        >>> odds = pd.DataFrame([
+        ...     {'date': pd.Timestamp('2025-08-16', tz='UTC'), **identity, **moment,
+        ...      'home_team': 'Manchester United', 'away_team': 'Arsenal',
+        ...      'provider': 'acme', 'home_win': 1.8},
+        ... ])
+        >>> from sportsbet.sources import UnmatchedError
+        >>> # A club the pairing cannot place leaves its match without odds, so it is raised rather than dropped.
+        >>> try:
+        ...     resolve(stats, odds.assign(home_team='Real Madrid'))
+        ... except UnmatchedError as error:
+        ...     error.report.matched
+        ...     error.report.suggestions
+        0
+        {'Real Madrid': ['Man United']}
+        >>> # A suggestion is never applied on its own: a wrong alias attaches one club's odds to another silently.
     """
 
     def __init__(self: Self, report: ReconciliationReport) -> None:
@@ -93,6 +118,26 @@ class ReconciliationReport:
         suggestions:
             For every team name that was not found, the names it most resembles. A suggestion is never applied on its
             own, since a wrong alias attaches the odds of one club to another and says nothing about it.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.sources import resolve
+        >>> identity = {'league': 'England', 'division': 1, 'year': 2025}
+        >>> moment = {'event_status': 'preplay', 'event_time': pd.Timedelta(0)}
+        >>> stats = pd.DataFrame([
+        ...     {'date': pd.Timestamp('2025-08-16', tz='UTC'), **identity, **moment,
+        ...      'home_team': 'Man United', 'away_team': 'Arsenal'},
+        ... ])
+        >>> odds = pd.DataFrame([
+        ...     {'date': pd.Timestamp('2025-08-16', tz='UTC'), **identity, **moment,
+        ...      'home_team': 'Manchester United', 'away_team': 'Arsenal',
+        ...      'provider': 'acme', 'home_win': 1.8},
+        ... ])
+        >>> _, report = resolve(stats, odds)
+        >>> report.matched, report.unmatched_rate
+        (1, 0.0)
+        >>> report.unmatched_stats.empty
+        True
     """
 
     matched: int = 0
@@ -290,6 +335,32 @@ def resolve(
     Raises:
         UnmatchedError:
             If more matches went without odds than the tolerance allows.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.sources import resolve
+        >>> identity = {'league': 'England', 'division': 1, 'year': 2025}
+        >>> moment = {'event_status': 'preplay', 'event_time': pd.Timedelta(0)}
+        >>> stats = pd.DataFrame([
+        ...     {'date': pd.Timestamp('2025-08-16', tz='UTC'), **identity, **moment,
+        ...      'home_team': 'Man United', 'away_team': 'Arsenal'},
+        ... ])
+        >>> odds = pd.DataFrame([
+        ...     {'date': pd.Timestamp('2025-08-16', tz='UTC'), **identity, **moment,
+        ...      'home_team': 'Manchester United', 'away_team': 'Arsenal',
+        ...      'provider': 'acme', 'home_win': 1.8},
+        ... ])
+        >>> paired, report = resolve(stats, odds)
+        >>> # The odds carry the identity of the statistics, so `Manchester United` becomes `Man United`.
+        >>> paired[['home_team', 'away_team', 'home_win']].to_dict('records')
+        [{'home_team': 'Man United', 'away_team': 'Arsenal', 'home_win': 1.8}]
+        >>> report.matched, report.unmatched_rate
+        (1, 0.0)
+        >>> # A club the pairing cannot place is named, and can be given as an alias.
+        >>> paired, report = resolve(stats, odds.assign(home_team='Utd of Manchester'),
+        ...                          aliases={'Utd of Manchester': 'Man United'})
+        >>> report.matched
+        1
     """
     mapping, suggestions = _mapping(stats, odds, {**ALIASES, **(aliases or {})})
     matches = stats[[*MATCH_COLS, 'date']].drop_duplicates(subset=MATCH_COLS)

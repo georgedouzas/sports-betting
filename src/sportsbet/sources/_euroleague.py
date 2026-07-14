@@ -145,6 +145,24 @@ class EuroLeagueStats(BaseStatsSource):
     them, and a market whose line moves is not a column.
 
     Read more in the [user guide][user-guide].
+
+    Examples:
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import EuroLeagueStats, OddsApi
+        >>> source = EuroLeagueStats()
+        >>> source.name, source.kind, source.sport
+        ('euroleague', 'stats', 'basketball')
+        >>> # A whole season arrives in one request, and asking what it publishes costs one more.
+        >>> len(source.index_items())
+        1
+        >>> # The statistics are free; nobody gives basketball odds away, so those are yours to buy.
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
+        ...     stats=source,
+        ...     odds=OddsApi(key='...', markets=['h2h']),
+        ... )
+        >>> dataloader.sport
+        'basketball'
     """
 
     sport: ClassVar[str | None] = 'basketball'

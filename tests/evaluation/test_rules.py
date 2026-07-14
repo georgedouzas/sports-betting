@@ -6,8 +6,9 @@ import numpy as np
 import pytest
 from sklearn.model_selection import TimeSeriesSplit
 
-from sportsbet.dataloaders import DummySoccerDataLoader
+from sportsbet.dataloaders import DataLoader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
+from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 from tests.evaluation import O_fix, O_train, X_fix, X_train, Y_train
 
 
@@ -86,7 +87,7 @@ def test_a_bettor_with_any_number_of_markets_can_be_backtested(betting_markets):
     The probabilities were being clipped in place, and the array they were clipped in is read-only when the frame they
     came from holds a single block, which is what one market produces. Nobody met it because the default is five.
     """
-    dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-    X, Y, O = dataloader.extract_train_data(odds_type='market_average')
+    dataloader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
+    X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
     bettor = OddsComparisonBettor(alpha=0.03, betting_markets=betting_markets)
     assert not backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2)).empty

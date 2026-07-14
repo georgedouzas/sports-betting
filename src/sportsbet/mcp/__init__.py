@@ -1,4 +1,4 @@
-"""It provides the server that lets an assistant drive the library."""
+"""It provides the server that lets an agent drive the library."""
 
 from __future__ import annotations
 

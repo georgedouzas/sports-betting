@@ -3,8 +3,9 @@
 import pandas as pd
 import pytest
 
-from sportsbet.dataloaders import DataLoader, from_snapshots
+from sportsbet.dataloaders import DataLoader
 from sportsbet.sources import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
+from tests.conftest import SnapshotsDataLoader
 
 PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}, {'league': 'Spain', 'division': 1, 'year': 2024}]
 ITEM_COST = 2
@@ -90,4 +91,4 @@ def test_sources_are_stored_unmodified():
 
 def test_a_dataloader_with_its_own_data_downloads_nothing(stats, odds):
     """Test a dataloader that is not backed by a source has nothing to download."""
-    assert from_snapshots(stats, odds)._download(refresh=False) is None
+    assert SnapshotsDataLoader(stats, odds)._download(refresh=False) is None

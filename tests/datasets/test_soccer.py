@@ -3,16 +3,11 @@
 import pandas as pd
 import pytest
 
-from sportsbet.dataloaders import BaseDataLoader, DataLoader, DummySoccerDataLoader, from_dataframe, from_snapshots
+from sportsbet.dataloaders import BaseDataLoader, DataLoader
 from sportsbet.sources import BaseOddsSource, BaseStatsSource, FootballDataOdds, FootballDataStats
+from tests.conftest import SnapshotsDataLoader
 
 PROVIDERS = ['market_average', 'market_maximum']
-
-
-@pytest.fixture
-def long_snapshots():
-    """A long ``(stats, odds)`` sample reused from the offline dummy data."""
-    return DummySoccerDataLoader(param_grid={'league': ['England']})._snapshots()
 
 
 @pytest.fixture
@@ -151,10 +146,10 @@ def test_extract_fixtures_data_matches_columns(loader):
     pd.testing.assert_index_equal(O_train.columns, O_fix.columns)
 
 
-def test_from_snapshots_consumes_long_data(long_snapshots):
-    """Test canonical long snapshots are consumed without downloading."""
+def test_long_snapshots_are_consumed_without_downloading(long_snapshots):
+    """Test a dataloader of snapshots provided directly needs no store and no network."""
     stats, odds = long_snapshots
-    loader = from_snapshots(stats, odds)
+    loader = SnapshotsDataLoader(stats, odds)
     assert loader.get_odds_types() == PROVIDERS
     _, Y, O = loader.extract_train_data(odds_type='market_average')
     assert 'home_win__postplay__0min' in Y.columns
@@ -164,7 +159,7 @@ def test_from_snapshots_consumes_long_data(long_snapshots):
 def test_input_event_status_caps_features(long_snapshots):
     """Test the input horizon restricts the features to snapshots up to that moment."""
     stats, odds = long_snapshots
-    loader = from_snapshots(stats, odds)
+    loader = SnapshotsDataLoader(stats, odds)
     X_pre, *_ = loader.extract_train_data(
         odds_type='market_average',
         input_event_status='preplay',
@@ -181,35 +176,6 @@ def test_input_event_status_caps_features(long_snapshots):
     # The default keeps every in-play snapshot before the target.
     X_all, *_ = loader.extract_train_data(odds_type='market_average')
     assert any('__inplay__90min' in col for col in X_all.columns)
-
-
-def test_from_dataframe_single_moment_splits_stats_and_odds():
-    """Test a user's wide single-moment frame is split into long stats/odds at that moment."""
-    wide = pd.DataFrame(
-        [
-            {
-                'date': '2025-09-01',
-                'league': 'England',
-                'division': 1,
-                'year': 2025,
-                'home_team': 'Arsenal',
-                'away_team': 'Chelsea',
-                'home_points_avg': 2.0,
-                'away_points_avg': 1.7,
-                'market_average__home_win': 1.8,
-                'market_average__draw': 3.4,
-                'market_maximum__home_win': 1.9,
-                'market_maximum__draw': 3.5,
-            },
-        ],
-    )
-    loader = from_dataframe(wide, event_status='preplay', event_time=pd.Timedelta('0min'))
-    stats, odds = loader._snapshots()
-    assert (stats['event_status'] == 'preplay').all()
-    assert not [col for col in stats.columns if '__' in col]
-    assert set(odds['provider']) == set(PROVIDERS)
-    assert set(odds.loc[odds['provider'] == 'market_average', 'home_win']) == {1.8}
-    assert loader.get_odds_types() == PROVIDERS
 
 
 def test_base_dataloader_requires_snapshots():

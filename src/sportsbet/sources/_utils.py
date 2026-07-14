@@ -27,6 +27,20 @@ def market_outcomes(home_goals: pd.Series, away_goals: pd.Series, markets: list[
 
     Returns:
         A dataframe with one integer 0/1 column per requested market.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.sources import market_outcomes
+        >>> home_goals = pd.Series([2, 1, 0])
+        >>> away_goals = pd.Series([1, 1, 3])
+        >>> market_outcomes(home_goals, away_goals, ['home_win', 'draw', 'away_win', 'over_2.5'])
+           home_win  draw  away_win  over_2.5
+        0         1     0         0         1
+        1         0     1         0         0
+        2         0     0         1         1
+        >>> # A sport that cannot be drawn simply does not ask for a draw, and the outcome comes out two-way.
+        >>> list(market_outcomes(home_goals, away_goals, ['home_win', 'away_win']).columns)
+        ['home_win', 'away_win']
     """
     total = home_goals + away_goals
     outcomes = {}

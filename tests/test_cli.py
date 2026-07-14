@@ -5,8 +5,9 @@ import pytest
 from sklearn.model_selection import TimeSeriesSplit
 
 from sportsbet.cli import main
-from sportsbet.dataloaders import DummySoccerDataLoader
+from sportsbet.dataloaders import DataLoader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
+from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
 SELECTION = [
     '--stats',
@@ -28,8 +29,8 @@ def test_the_training_data_matches_the_api(cli_runner, offline_dataloader, tmp_p
     assert result.exit_code == 0, result.output
     X_cli = pd.read_csv(tmp_path / 'sports-betting-data' / 'X_train.csv', index_col=0)
 
-    loader = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain']})
-    X_api, _, _ = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
+    loader = DataLoader(param_grid={'league': ['England', 'Spain']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
+    X_api, _, _ = loader.extract_train_data(odds_type='market_average', target_event_status='postplay', download=True)
 
     assert list(X_cli.columns) == list(X_api.columns)
     assert len(X_cli) == len(X_api)
@@ -58,8 +59,8 @@ def test_a_backtest_matches_the_api(cli_runner, offline_dataloader, tmp_path):
     assert result.exit_code == 0, result.output
     cli_results = pd.read_csv(tmp_path / 'sports-betting-data' / 'backtesting_results.csv')
 
-    loader = DummySoccerDataLoader(param_grid={'league': ['England', 'Spain']})
-    X, Y, O = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
+    loader = DataLoader(param_grid={'league': ['England', 'Spain']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
+    X, Y, O = loader.extract_train_data(odds_type='market_average', target_event_status='postplay', download=True)
     api_results = backtest(OddsComparisonBettor(alpha=0.03), X, Y, O, cv=TimeSeriesSplit(2))
 
     assert len(cli_results) == len(api_results)

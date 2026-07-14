@@ -9,6 +9,7 @@ from itertools import product
 from typing import Self
 
 import pandas as pd
+from rich.console import Console
 from rich.progress import Progress
 
 from .. import ParamGrid
@@ -22,10 +23,10 @@ from ._base import PARAM_COLS, BaseDataLoader
 class DataLoader(BaseDataLoader):
     """The dataloader of data that comes from sources.
 
-    There is one of these, not one per sport. The store, the preparation, the cost estimate, the schedule and the
-    reconciliation are the same whatever is being played, and nothing in them ever asks what the sport is. The sport is
-    a property of the sources: a feed of soccer matches is a feed of soccer matches, and pairing it with the odds of a
-    basketball league is refused rather than left to fail somewhere deeper.
+    There is one of these, not one per sport. The store, the download, the schedule and the reconciliation are the same
+    whatever is being played, and nothing in them ever asks what the sport is. The sport is a property of the sources: a
+    feed of soccer matches is a feed of soccer matches, and pairing it with the odds of a basketball league is refused
+    rather than left to fail somewhere deeper.
 
     Args:
         param_grid:
@@ -62,6 +63,27 @@ class DataLoader(BaseDataLoader):
         reconciliation_ (ReconciliationReport):
             How well the matches of the two sources were found in each other.
             Only set when they are different sources.
+
+    Examples:
+        >>> import tempfile
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import FootballDataOdds, FootballDataStats, LocalStore, NotPreparedError
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['Italy'], 'division': [1], 'year': [2024]},
+        ...     stats=FootballDataStats(),
+        ...     odds=FootballDataOdds(),
+        ...     store=LocalStore(tempfile.mkdtemp()),
+        ... )
+        >>> # It never chose where its data comes from, so it can say what sport it is: the sources say.
+        >>> dataloader.sport
+        'soccer'
+        >>> # Nothing reaches the network unless `download` says so, so an extraction cannot spend by accident.
+        >>> try:
+        ...     dataloader.extract_train_data(odds_type='market_maximum')
+        ... except NotPreparedError as error:
+        ...     print(error)
+        The data has not been downloaded. Pass `download=True` to get it.
+        >>> # X, Y, O = dataloader.extract_train_data(odds_type='market_maximum', download=True)
     """
 
     def __init__(
@@ -247,7 +269,7 @@ class DataLoader(BaseDataLoader):
         report = self._report(fetch=True, refresh=refresh)
         if not report.to_fetch:
             return
-        with Progress(transient=True) as progress:
+        with Progress(transient=True, console=Console(stderr=True)) as progress:
             task = progress.add_task('Downloading the data', total=len(report.to_fetch))
             for item in report.to_fetch:
                 store.fetch([item], self._authorize)

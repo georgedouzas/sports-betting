@@ -33,18 +33,18 @@ dataloader = DataLoader(
 
 ## The contract
 
-A source answers four questions, and **never fetches**. The store does the fetching, which is what makes
-[`prepare(dry_run=True)`](dataloader.md#preparing-the-data) free and makes an extraction structurally incapable of
-downloading anything.
+A source answers four questions, and **never fetches**. The store does the fetching, which is what makes an extraction
+structurally incapable of downloading anything it was not told to.
 
 ```python
 class BaseSource:
 
-    name: ClassVar[str]      # who declared an item
-    kind: ClassVar[str]      # 'stats' or 'odds'
+    name: ClassVar[str]              # who declared an item
+    kind: ClassVar[str]              # 'stats' or 'odds'
+    sport: ClassVar[str | None]      # what the data is about, or None if the source serves any sport
 
-    def index_items(self) -> list[RawItem]:
-        """What do I need to read to know what I publish? Always free."""
+    def index_items(self, selection=None) -> list[RawItem]:
+        """What do I need to read to know what I publish?"""
 
     def catalogue(self, payloads) -> list[dict]:
         """Given those, which league/division/year combinations do I publish?"""
@@ -56,16 +56,19 @@ class BaseSource:
         """Given those, what are the long snapshots?"""
 ```
 
-Three optional hooks:
+The `sport` is on the **source**, not on the dataloader, because a dataloader has no opinion about what its data is: it
+is soccer because `FootballDataStats` is soccer. A source that serves any sport, as `OddsApi` does, leaves it `None` and
+takes the sport of the statistics it is paired with.
 
-- `estimate(items)` — what this would cost. The default sums the items' `cost`, which is `0` for a free source.
+Two optional hooks:
+
 - `request_url(item)` — add a credential *at the moment of the request*, so it never reaches a stored item.
 - `needs_schedule()` — return `True` if you address your data by *instant* rather than by season. `OddsApi` does: "the
   price at minute 45" is a timestamp, and it can only build it once it knows the kick-off.
 
 ### `RawItem` and `RawPayload`
 
-A [`RawItem`][sportsbet.sources.RawItem] is one thing to fetch. It is the unit of caching, of resuming, and of **cost**:
+A [`RawItem`][sportsbet.sources.RawItem] is one thing to fetch. It is the unit of caching, of resuming, and of counting:
 
 ```python
 RawItem(
@@ -73,9 +76,12 @@ RawItem(
     key='England_1_2025',                 # its identity, and its file name in the store
     url='https://example.com/2025.csv',
     volatile=False,                       # True if it can still change upstream
-    cost=0,                               # what the source charges to fetch it
 )
 ```
+
+An item carries no price. A vendor sets its own, changes them, and prices its endpoints differently, so a library that
+quoted you a cost would be quoting a number it had made up. What the library reports is the **number of requests**, which
+is a fact. What they are worth is between you and whoever you buy them from.
 
 Two sources declaring the **same** `source` and `key` declare the *same* item, so it is fetched **once**. That is how
 `FootballDataStats` and `FootballDataOdds` — which read the same upstream CSV — avoid downloading it twice.
@@ -177,8 +183,7 @@ Then hand them to any dataloader:
 from sportsbet.dataloaders import DataLoader
 
 dataloader = DataLoader(stats=MyStats(), odds=MyOdds())
-dataloader.prepare()
-X, Y, O = dataloader.extract_train_data(odds_type='acme')
+X, Y, O = dataloader.extract_train_data(odds_type='acme', download=True)
 ```
 
 ```text
@@ -194,12 +199,13 @@ the **features** from the statistics columns, and the **moments** from `event_st
 ### Four rules that are not style
 
 1. **Never fetch.** `index_items`, `catalogue`, `required_items` and `to_snapshots` must be pure. If a source could
-   fetch, a dry run could not be free and an extraction could download by accident.
+   fetch, an extraction could download by accident, and counting what a download would take would itself be a
+   download.
 2. **`date` is the kick-off instant, in UTC.** Resolve your feed's time zone *at your boundary*. This is what makes
    `date + event_time` the wall-clock instant of a snapshot — the address an odds vendor is asked for. Both feeds the
    library ships got this wrong in an undocumented way: football-data publishes **every** league in UK time, and the
    EuroLeague publishes **every** game in Central European time. Neither says so. Assume nothing.
-3. **A finished season is not `volatile`; a fixture is.** That is what makes `prepare()` incremental.
+3. **A finished season is not `volatile`; a fixture is.** That is what makes a download incremental.
 4. **Credentials go in `request_url`**, never in a `RawItem`. An item is written to the store; a key must not be.
 
 ## Where the data is kept
@@ -238,24 +244,24 @@ class MyStore(BaseStore):
 
 `authorize` is the source's `request_url`, so a credential reaches the request and never the store.
 
-### What a preparation tells you
+### What a download would take
 
-`prepare` returns a [`PreparationReport`][sportsbet.sources.PreparationReport]:
+An extraction that was not given `download` raises [`NotPreparedError`][sportsbet.sources.NotPreparedError] rather than
+fetching, and carries a [`PreparationReport`][sportsbet.sources.PreparationReport] saying what getting the data would
+take:
 
 ```python
-from sportsbet.sources import PreparationReport
-
-report: PreparationReport = dataloader.prepare(dry_run=True)
+report = error.report
 
 report.to_fetch          # the items that would be downloaded
 report.held              # the items already in the store
-report.estimated_cost    # {'odds_api': 8642} -- exact, and it cost nothing to learn
+report.requests          # {'odds_api': 898} -- how many requests each source would make
 report.unavailable       # requested parameters no source publishes
 ```
 
-An extraction against a store that was never prepared raises
-[`NotPreparedError`][sportsbet.sources.NotPreparedError], carrying that report — so it tells you what is missing *and*
-what obtaining it would cost. It never downloads.
+The count is exact and learning it costs nothing, because the free statistics are read, the schedule derived from them,
+and the odds addressed against it. The report says how many requests, not what they cost — see
+[`RawItem`](#rawitem-and-rawpayload).
 
 ## When two sources disagree about a name
 
@@ -363,9 +369,9 @@ class MyDataLoader(BaseDataLoader):
         return my_stats_table, my_odds_table
 ```
 
-That is the seam. `DataLoader` and `DataLoader` sit behind it and differ only in which sources they
-default to — which is why adding a sport is adding a source, and
-[`from_snapshots`](dataloader.md#from-long-snapshots) can hand it a table you built yourself.
+That is the seam. There is one `DataLoader` behind it, whatever the sport, because the sport is a property of the
+source rather than of the dataloader — which is why adding a sport, a league or a feed of your own is adding a source
+and nothing else.
 
 [`BaseBettor`][sportsbet.evaluation.BaseBettor] is the betting strategy. Implement `_fit` and `_predict_proba` and you
 get value bets, backtesting and hyperparameter search — see [the bettor guide](bettor.md#implementation).
