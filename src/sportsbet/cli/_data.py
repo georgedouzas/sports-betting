@@ -13,8 +13,8 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
-from ._options import EXTRACTION, OUTPUT, SELECTION, options
-from ._utils import counted, extraction, print_console, reported, selected
+from ._options import DOWNLOAD, EXTRACTION, OUTPUT, SELECTION, options
+from ._utils import downloaded, extraction, print_console, reported, selected
 
 
 @click.group()
@@ -40,49 +40,26 @@ def params(**selection: object) -> None:
         print_console([frame], ['Available parameters'], index=False)
 
 
-@data.command()
-@options(SELECTION)
-@click.option('--dry-run', is_flag=True, help='Report what a preparation would fetch and cost, without doing it.')
-@click.option('--refresh', is_flag=True, help='Fetch everything again, including what the store already holds.')
-def prepare(dry_run: bool, refresh: bool, **selection: object) -> None:
-    """Download the data, so an extraction never has to."""
-    with reported(), selected(selection) as dataloader:
-        if dataloader is None:
-            return
-        report = dataloader.prepare(dry_run=dry_run, refresh=refresh)
-        console = Console()
-        cost = ', '.join(f'{name} {units:,}' for name, units in report.estimated_cost.items())
-        if dry_run:
-            console.print(f'Would download [bold]{counted(len(report.to_fetch), "item")}[/bold].')
-            if cost:
-                console.print(f'Cost: [bold yellow]{cost}[/bold yellow]. Nothing has been spent.')
-        elif report.to_fetch:
-            console.print(f'Downloaded [bold green]{counted(len(report.to_fetch), "item")}[/bold green].')
-        else:
-            console.print('Already downloaded.')
-        if report.unavailable:
-            print_console([pd.DataFrame(report.unavailable)], ['Unavailable parameters'], index=False)
-
-
 @data.command(name='odds-types')
-@options(SELECTION)
+@options(SELECTION, DOWNLOAD)
 def odds_types(**selection: object) -> None:
     """Show the odds that can be extracted."""
     with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
+        dataloader._fetched(downloaded(selection)['download'])
         frame = pd.DataFrame(dataloader.get_odds_types(), columns=['Type'])
         print_console([frame], ['Available odds types'], index=False)
 
 
 @data.command()
-@options(SELECTION, EXTRACTION, OUTPUT)
+@options(SELECTION, EXTRACTION, DOWNLOAD, OUTPUT)
 def training(data_path: str | None, **selection: object) -> None:
     """Extract the training data."""
     with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection))
+        X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection), **downloaded(selection))
         Y_train = cast('pd.DataFrame', Y_train)
         has_odds = O_train is not None and not O_train.empty
         print_console(
@@ -99,13 +76,13 @@ def training(data_path: str | None, **selection: object) -> None:
 
 
 @data.command()
-@options(SELECTION, EXTRACTION, OUTPUT)
+@options(SELECTION, EXTRACTION, DOWNLOAD, OUTPUT)
 def fixtures(data_path: str | None, **selection: object) -> None:
     """Extract the games that have not been played yet."""
     with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        dataloader.extract_train_data(**extraction(selection))
+        dataloader.extract_train_data(**extraction(selection), **downloaded(selection))
         X_fix, _, O_fix = dataloader.extract_fixtures_data()
         if X_fix.empty:
             Console().print(Panel.fit('[bold red]Fixtures data were empty'))

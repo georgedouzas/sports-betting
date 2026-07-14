@@ -105,11 +105,6 @@ def test_the_catalogue_starts_where_the_history_does(source):
     assert BEFORE_HISTORY not in years
 
 
-def test_the_catalogue_is_free(source):
-    """Test the catalogue costs nothing, so a preparation can be priced without spending anything."""
-    assert source.estimate(source.index_items()) == 0
-
-
 def test_matches_that_kick_off_together_share_a_snapshot(source):
     """Test one snapshot prices every match played at that instant, so it is paid for once."""
     items = source.required_items([], SCHEDULE)
@@ -122,25 +117,6 @@ def test_the_key_never_reaches_an_item(source):
     items = source.required_items([], SCHEDULE)
     assert not [item for item in items if 'secret-key' in item.url or 'apiKey' in item.url]
     assert 'apiKey=secret-key' in source.request_url(items[0])
-
-
-def test_the_cost_follows_the_vendor(source):
-    """Test a historical snapshot costs ten times a live one, per market and per region."""
-    items = source.required_items([], SCHEDULE)
-    historical = next(item for item in items if 'live' not in item.key)
-    live = next(item for item in items if 'live' in item.key)
-    markets, regions, _ = source._settings()
-    assert historical.cost == HISTORICAL_MULTIPLIER * len(markets) * len(regions)
-    assert live.cost == len(markets) * len(regions)
-
-
-def test_more_markets_and_regions_cost_more():
-    """Test every market and every region multiplies the cost, so the estimate reflects the settings."""
-    cheap = OddsApi(key='k', markets=['h2h'], regions=['eu'])
-    dear = OddsApi(key='k', markets=['h2h', 'totals'], regions=['eu', 'uk'])
-    cheap_items = [item for item in cheap.required_items([], SCHEDULE) if 'live' not in item.key]
-    dear_items = [item for item in dear.required_items([], SCHEDULE) if 'live' not in item.key]
-    assert dear.estimate(dear_items) == MORE_MARKETS_AND_REGIONS * cheap.estimate(cheap_items)
 
 
 def test_nothing_is_asked_for_without_a_schedule(source):

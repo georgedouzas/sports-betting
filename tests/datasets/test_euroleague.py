@@ -74,11 +74,6 @@ def test_a_whole_season_is_one_request(source):
     assert 'seasons/E2024/games' in items[0].url
 
 
-def test_the_catalogue_is_free(source):
-    """Test the source charges nothing, so a preparation can be priced without spending anything."""
-    assert source.estimate(source.index_items() + source.required_items([])) == 0
-
-
 def test_the_tipoff_is_converted_from_the_time_of_the_competition(source):
     """Test the tip-off is the instant the API gives in UTC, not the one it gives in its own time.
 

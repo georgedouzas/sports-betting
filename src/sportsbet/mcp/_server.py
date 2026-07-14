@@ -101,50 +101,19 @@ def _strategy(
     }
 
 
-def _report(selection: Selection) -> tuple[Any, dict[str, Any]]:
-    """Return the dataloader, and what a preparation would fetch and cost, spending nothing."""
-    dataloader = build_dataloader(**selection)
-    report = dataloader.prepare(dry_run=True)
-    estimate = {
-        'to_fetch': len(report.to_fetch),
-        'held': len(report.held),
-        'cost': dict(report.estimated_cost),
-        'total_cost': sum(report.estimated_cost.values()),
-        'unavailable': report.unavailable,
-    }
-    return dataloader, estimate
-
-
 def _available_params(selection: Selection) -> list[dict]:
     """Return what can be selected."""
     stats_source, *_ = build_dataloader(**selection).sources
     return stats_source.available_params()
 
 
-def _estimate_preparation(selection: Selection) -> dict[str, Any]:
-    """Return what a preparation would fetch and cost."""
-    _, estimate = _report(selection)
-    return estimate
-
-
-def _prepare(selection: Selection, confirm_cost: int | None) -> dict[str, Any]:
-    """Download the data, refusing to spend what has not been agreed to."""
-    dataloader, estimate = _report(selection)
-    total = estimate['total_cost']
-    if total and confirm_cost != total:
-        msg = f'This preparation costs {total}. Report the cost, then call this again with `confirm_cost={total}`.'
-        raise ValueError(msg)
-    report = dataloader.prepare()
-    return {'fetched': len(report.to_fetch), 'held': len(report.held), 'cost': dict(report.estimated_cost)}
-
-
-def _extract_train_data(selection: Selection, odds_type: str | None) -> dict[str, Any]:
+def _extract_train_data(selection: Selection, odds_type: str | None, download: bool) -> dict[str, Any]:
     """Return the training data."""
-    X, Y, O = build_dataloader(**selection).extract_train_data(odds_type=odds_type)
+    X, Y, O = build_dataloader(**selection).extract_train_data(odds_type=odds_type, download=download)
     return {'X': _records(X), 'Y': _records(Y), 'O': _records(O)}
 
 
-def _extract_fixtures_data(selection: Selection, odds_type: str | None) -> dict[str, Any]:
+def _extract_fixtures_data(selection: Selection, odds_type: str | None, download: bool) -> dict[str, Any]:
     """Return the games that have not been played yet.
 
     The training data is extracted first, so the fixtures take its shape and the same kind of odds. A tool is answered
@@ -152,22 +121,28 @@ def _extract_fixtures_data(selection: Selection, odds_type: str | None) -> dict[
     here.
     """
     dataloader = build_dataloader(**selection)
-    dataloader.extract_train_data(odds_type=odds_type)
+    dataloader.extract_train_data(odds_type=odds_type, download=download)
     X, _, O = dataloader.extract_fixtures_data()
     return {'X': _records(X), 'O': _records(O)}
 
 
-def _backtest(selection: Selection, odds_type: str | None, strategy: Strategy, cv: int) -> list[dict[str, Any]]:
+def _backtest(
+    selection: Selection,
+    odds_type: str | None,
+    strategy: Strategy,
+    cv: int,
+    download: bool,
+) -> list[dict[str, Any]]:
     """Return the backtesting results of a model."""
     dataloader, bettor = build_dataloader(**selection), build_bettor(**strategy)
-    X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
+    X, Y, O = dataloader.extract_train_data(odds_type=odds_type, download=download)
     return _records(run_backtest(bettor, X, Y, O, cv=TimeSeriesSplit(cv)))
 
 
-def _bet(selection: Selection, odds_type: str | None, strategy: Strategy) -> list[dict[str, Any]]:
+def _bet(selection: Selection, odds_type: str | None, strategy: Strategy, download: bool) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
     dataloader, bettor = build_dataloader(**selection), build_bettor(**strategy)
-    X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
+    X, Y, O = dataloader.extract_train_data(odds_type=odds_type, download=download)
     bettor.fit(X, Y, O)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
     if X_fix.empty:
@@ -215,84 +190,6 @@ async def available_params(
 
 
 @server.tool()
-async def estimate_preparation(
-    stats: str,
-    odds: str | None = None,
-    leagues: list[str] | None = None,
-    divisions: list[int] | None = None,
-    years: list[int] | None = None,
-    odds_key_env: str = DEFAULT_KEY_ENV,
-    odds_markets: list[str] | None = None,
-    odds_regions: list[str] | None = None,
-    odds_moments: list[str] | None = None,
-    store: str | None = None,
-    aliases: list[str] | None = None,
-    max_unmatched_rate: float = 0.0,
-) -> dict[str, Any]:
-    """Return what a preparation would fetch and exactly what it would cost, spending nothing.
-
-    Call this before `prepare`. The cost is the real list of what would be bought rather than a guess, and asking is
-    free.
-    """
-    selection = _selection(
-        stats,
-        odds,
-        leagues,
-        divisions,
-        years,
-        odds_key_env,
-        odds_markets,
-        odds_regions,
-        odds_moments,
-        store,
-        aliases,
-        max_unmatched_rate,
-    )
-    result: dict[str, Any] = await _offload(_estimate_preparation, selection)
-    return result
-
-
-@server.tool()
-async def prepare(
-    stats: str,
-    odds: str | None = None,
-    leagues: list[str] | None = None,
-    divisions: list[int] | None = None,
-    years: list[int] | None = None,
-    odds_key_env: str = DEFAULT_KEY_ENV,
-    odds_markets: list[str] | None = None,
-    odds_regions: list[str] | None = None,
-    odds_moments: list[str] | None = None,
-    store: str | None = None,
-    aliases: list[str] | None = None,
-    max_unmatched_rate: float = 0.0,
-    confirm_cost: int | None = None,
-) -> dict[str, Any]:
-    """Download the data.
-
-    A source that charges is not allowed to charge by surprise. If the preparation costs anything, `confirm_cost` must
-    be the total that `estimate_preparation` reports, so whoever is paying has been told the price first. A preparation
-    that costs nothing needs no confirmation.
-    """
-    selection = _selection(
-        stats,
-        odds,
-        leagues,
-        divisions,
-        years,
-        odds_key_env,
-        odds_markets,
-        odds_regions,
-        odds_moments,
-        store,
-        aliases,
-        max_unmatched_rate,
-    )
-    result: dict[str, Any] = await _offload(_prepare, selection, confirm_cost)
-    return result
-
-
-@server.tool()
 async def extract_train_data(
     stats: str,
     odds: str | None = None,
@@ -307,8 +204,14 @@ async def extract_train_data(
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
+    download: bool = False,
 ) -> dict[str, Any]:
-    """Return the training data of the prepared data."""
+    """Return the training data.
+
+    Nothing is downloaded unless `download` is `True`. Without it, the tool says how many requests each source would
+    have to make, and makes none of them. What those requests cost is between whoever is asking and the vendor they buy
+    them from.
+    """
     selection = _selection(
         stats,
         odds,
@@ -323,7 +226,7 @@ async def extract_train_data(
         aliases,
         max_unmatched_rate,
     )
-    result: dict[str, Any] = await _offload(_extract_train_data, selection, odds_type)
+    result: dict[str, Any] = await _offload(_extract_train_data, selection, odds_type, download)
     return result
 
 
@@ -342,8 +245,12 @@ async def extract_fixtures_data(
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
+    download: bool = False,
 ) -> dict[str, Any]:
-    """Return the games that have not been played yet."""
+    """Return the games that have not been played yet.
+
+    Nothing is downloaded unless `download` is `True`.
+    """
     selection = _selection(
         stats,
         odds,
@@ -358,7 +265,7 @@ async def extract_fixtures_data(
         aliases,
         max_unmatched_rate,
     )
-    result: dict[str, Any] = await _offload(_extract_fixtures_data, selection, odds_type)
+    result: dict[str, Any] = await _offload(_extract_fixtures_data, selection, odds_type, download)
     return result
 
 
@@ -384,6 +291,7 @@ async def backtest(
     stake: float | None = None,
     model_odds_types: list[str] | None = None,
     cv: int = 3,
+    download: bool = False,
 ) -> list[dict[str, Any]]:
     """Return the backtesting results of a betting model.
 
@@ -405,7 +313,7 @@ async def backtest(
         max_unmatched_rate,
     )
     strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
-    result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, strategy, cv)
+    result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, strategy, cv, download)
     return result
 
 
@@ -430,6 +338,7 @@ async def bet(
     init_cash: float | None = None,
     stake: float | None = None,
     model_odds_types: list[str] | None = None,
+    download: bool = False,
 ) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
     selection = _selection(
@@ -447,7 +356,7 @@ async def bet(
         max_unmatched_rate,
     )
     strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
-    result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, strategy)
+    result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, strategy, download)
     return result
 
 

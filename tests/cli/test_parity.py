@@ -32,12 +32,11 @@ def _parameters(callable_):
 @pytest.mark.parametrize(
     ('command', 'api', 'renamed'),
     [
-        (['data', 'prepare'], BaseDataLoader.prepare, {}),
         (['data', 'training'], BaseDataLoader.extract_train_data, {}),
         (['model', 'backtest'], backtest, {}),
         (['model', 'backtest'], OddsComparisonBettor.__init__, {'odds_types': 'model_odds_types'}),
-        (['data', 'prepare'], OddsApi.__init__, {name: f'odds_{name}' for name in ('markets', 'regions', 'moments')}),
-        (['data', 'prepare'], DataLoader.__init__, {}),
+        (['data', 'training'], OddsApi.__init__, {name: f'odds_{name}' for name in ('markets', 'regions', 'moments')}),
+        (['data', 'training'], DataLoader.__init__, {}),
     ],
 )
 def test_a_command_reaches_what_the_api_reaches(command, api, renamed):
@@ -53,6 +52,6 @@ def test_the_sources_can_be_configured():
     A source is where the data comes from and how it is bought, so a command line that cannot configure one cannot reach
     most of the library.
     """
-    options = _options(['data', 'prepare'])
+    options = _options(['data', 'training'])
     assert {'stats', 'odds', 'odds_key_env', 'odds_markets', 'odds_regions', 'odds_moments'} <= options
     assert {'store', 'aliases', 'max_unmatched_rate'} <= options

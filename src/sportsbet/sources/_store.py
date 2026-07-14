@@ -30,9 +30,11 @@ DEFAULT_PATH = Path.home() / '.sportsbet'
 
 @dataclass
 class PreparationReport:
-    """The outcome of a preparation, or of what a preparation would do.
+    """What a download would do, or did.
 
-    Building it never spends anything, so the cost of a preparation is always known before it is paid.
+    It says how many requests each source needs. It does not say what they cost: a vendor sets its own prices, changes
+    them, and prices its endpoints differently, and a library that guessed at that would be quoting you a number it had
+    made up. The requests are a fact. What they are worth is between you and whoever you buy them from.
 
     Attributes:
         to_fetch:
@@ -41,24 +43,27 @@ class PreparationReport:
         held:
             The items the store already holds and that cannot change upstream.
 
-        estimated_cost:
-            The units each source would charge to fetch `to_fetch`. An estimate, not a measurement.
-
         unavailable:
             The requested parameters the sources do not publish, reported instead of failing at fetch time.
     """
 
     to_fetch: list[RawItem] = field(default_factory=list)
     held: list[RawItem] = field(default_factory=list)
-    estimated_cost: dict[str, int] = field(default_factory=dict)
     unavailable: list[dict] = field(default_factory=list)
+
+    @property
+    def requests(self: Self) -> dict[str, int]:
+        """The requests each source would have to make."""
+        counted: dict[str, int] = {}
+        for item in self.to_fetch:
+            counted[item.source] = counted.get(item.source, 0) + 1
+        return counted
 
     def __str__(self: Self) -> str:
         """Render the report."""
-        lines = [f'Items to fetch: {len(self.to_fetch)}.', f'Items held: {len(self.held)}.']
-        if self.estimated_cost:
-            costs = ', '.join(f'{source}: {cost}' for source, cost in self.estimated_cost.items())
-            lines.append(f'Estimated cost: {costs}.')
+        requested = ', '.join(f'{source} {count:,}' for source, count in sorted(self.requests.items()))
+        lines = [f'Requests to make: {requested}.' if requested else 'Nothing to download.']
+        lines.append(f'Items held: {len(self.held)}.')
         if self.unavailable:
             lines.append(f'Unavailable parameters: {self.unavailable}.')
         return ' '.join(lines)
@@ -67,17 +72,18 @@ class PreparationReport:
 class NotPreparedError(Exception):
     """The store does not hold the data the selected parameters require.
 
-    Extraction never fetches, so it raises this instead. The report says what is missing and what obtaining it costs.
+    Nothing is downloaded unless it was asked for, so an extraction that has not been given `download=True` raises this
+    instead, and says how many requests getting it would take.
 
     Args:
         report:
-            The preparation the store would need, when that can be known without fetching. It cannot when the store
-            does not even hold the catalogue, and finding out would mean downloading, which extraction never does.
+            What a download would have to do, when that can be known without downloading. It cannot when the store does
+            not even hold the catalogue, and finding out would mean downloading.
     """
 
     def __init__(self: Self, report: PreparationReport | None = None) -> None:
         self.report = report
-        msg = 'The data is not prepared. Call `prepare` first.'
+        msg = 'The data has not been downloaded. Pass `download=True` to get it.'
         super().__init__(f'{msg} {report}' if report is not None else msg)
 
 
