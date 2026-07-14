@@ -15,7 +15,7 @@ paths = [
 ]
 for path in paths:
     module_path = path.relative_to('src').with_suffix('')
-    doc_path = path.relative_to('src', 'sportsbet').with_suffix('.md')
+    doc_path = path.relative_to(Path('src', 'sportsbet')).with_suffix('.md')
     full_doc_path = Path('api', doc_path)
 
     parts = tuple(module_path.parts)
