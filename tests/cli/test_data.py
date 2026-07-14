@@ -54,10 +54,18 @@ def test_data_odds_types(cli_runner, offline_dataloader):
 
 @pytest.mark.xdist_group(name='serial')
 def test_data_prepare_dry_run(cli_runner, offline_dataloader):
-    """Test a preparation can be priced without being done."""
+    """Test a preparation says what it would download rather than what it did."""
     result = cli_runner.invoke(main, ['data', 'prepare', *SELECTION, '--dry-run'])
     assert result.exit_code == 0, result.output
-    assert 'Preparation (dry run)' in result.output
+    assert 'Would download' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_data_prepare_says_what_it_did(cli_runner, offline_dataloader):
+    """Test a preparation reports what happened, rather than printing what it was about to do."""
+    result = cli_runner.invoke(main, ['data', 'prepare', *SELECTION])
+    assert result.exit_code == 0, result.output
+    assert 'Would download' not in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
