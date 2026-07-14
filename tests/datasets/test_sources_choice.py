@@ -13,7 +13,7 @@ from sportsbet.sources import EuroLeagueStats, FootballDataOdds, FootballDataSta
 def test_a_dataloader_will_not_choose_where_the_data_comes_from():
     """Test a dataloader with no statistics says so, rather than reading a feed nobody asked for."""
     with pytest.raises(ValueError, match='does not choose where its data comes from'):
-        DataLoader().prepare()
+        DataLoader().extract_train_data(download=True)
 
 
 def test_the_sport_belongs_to_the_source():

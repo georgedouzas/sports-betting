@@ -57,22 +57,6 @@ def test_data_odds_types(cli_runner, offline_dataloader):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_data_prepare_dry_run(cli_runner, offline_dataloader):
-    """Test a preparation says what it would download rather than what it did."""
-    result = cli_runner.invoke(main, ['data', 'prepare', *SELECTION, '--dry-run'])
-    assert result.exit_code == 0, result.output
-    assert 'Would download' in result.output
-
-
-@pytest.mark.xdist_group(name='serial')
-def test_data_prepare_says_what_it_did(cli_runner, offline_dataloader):
-    """Test a preparation reports what happened, rather than printing what it was about to do."""
-    result = cli_runner.invoke(main, ['data', 'prepare', *SELECTION])
-    assert result.exit_code == 0, result.output
-    assert 'Would download' not in result.output
-
-
-@pytest.mark.xdist_group(name='serial')
 def test_data_training(cli_runner, offline_dataloader, tmp_path):
     """Test the training data is extracted and written."""
     result = cli_runner.invoke(main, ['data', 'training', *SELECTION, *MARKET, '-o', str(tmp_path)])
@@ -97,7 +81,7 @@ def test_a_moment_that_is_not_one_says_how_to_spell_one(cli_runner, monkeypatch)
         main,
         [
             'data',
-            'prepare',
+            'training',
             '--stats',
             'nba',
             '--odds',
@@ -114,17 +98,17 @@ def test_an_alias_that_is_not_one_says_how_to_spell_one(cli_runner, monkeypatch)
     monkeypatch.setenv('ODDS_API_KEY', 'not-used-offline')
     result = cli_runner.invoke(
         main,
-        ['data', 'prepare', '--stats', 'nba', '--odds', 'odds-api', '--alias', 'nonsense'],
+        ['data', 'training', '--stats', 'nba', '--odds', 'odds-api', '--alias', 'nonsense'],
     )
     assert 'Olimpia Milano' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_an_extraction_never_downloads(cli_runner, tmp_path):
+def test_an_extraction_downloads_nothing_it_was_not_asked_to(cli_runner, tmp_path):
     """Test an extraction says the data is missing rather than quietly going and buying it.
 
-    Downloading is a separate step because it is the only one that costs anything. A command that extracted and
-    downloaded in the same breath could spend thousands of credits on an odds vendor without anyone asking for it.
+    Downloading is the only thing that reaches the network, and for a metered source the only thing that costs money, so
+    it is the only thing that has to be asked for.
     """
     result = cli_runner.invoke(
         main,
@@ -145,8 +129,8 @@ def test_an_extraction_never_downloads(cli_runner, tmp_path):
     )
     exit_code = 1
     assert result.exit_code == exit_code
-    assert 'not prepared' in result.output
-    assert 'sportsbet data prepare' in result.output
+    assert 'has not been downloaded' in result.output
+    assert '--download' in result.output
 
 
 @pytest.mark.xdist_group(name='serial')

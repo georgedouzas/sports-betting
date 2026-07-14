@@ -58,7 +58,6 @@ def extract_frames() -> dict[str, pd.DataFrame]:
         odds=FootballDataOdds(),
         store=LocalStore(STORE_PATH),
     )
-    loader.prepare()
     X, Y, O_average = loader.extract_train_data(odds_type='market_average')
     _, _, O_maximum = loader.extract_train_data(odds_type='market_maximum')
     return {'stats': loader.stats_, 'X': X, 'Y': Y, 'O_market_average': O_average, 'O_market_maximum': O_maximum}

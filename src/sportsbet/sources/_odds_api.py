@@ -244,11 +244,10 @@ class OddsApi(BaseOddsSource):
         """
         if schedule is None or schedule.empty:
             return []
-        markets, regions, moments = self._settings()
+        _, _, moments = self._settings()
         if self.moments is None:
             moments = self._moments(schedule)
         sports = {(league, division): sport for sport, (league, division) in LEAGUES_MAPPING.items()}
-        cost = HISTORICAL_MULTIPLIER * len(markets) * len(regions)
         now = _now()
 
         items: list[RawItem] = []
@@ -264,11 +263,10 @@ class OddsApi(BaseOddsSource):
                     query = urlencode({**self._query(), 'date': _timestamp(snapshot)})
                     url = f'{HISTORICAL_URL.format(sport=sport)}?{query}'
                     key = DELIMITER.join([sport, str(year), _key_timestamp(snapshot), event_status, str(minutes)])
-                    items.append(RawItem(source=self.name, key=key, url=url, cost=cost))
+                    items.append(RawItem(source=self.name, key=key, url=url))
             live = f'{LIVE_URL.format(sport=sport)}?{urlencode(self._query())}'
             live_key = DELIMITER.join([sport, str(year), LIVE_KEY])
-            live_cost = len(markets) * len(regions)
-            items.append(RawItem(source=self.name, key=live_key, url=live, volatile=True, cost=live_cost))
+            items.append(RawItem(source=self.name, key=live_key, url=live, volatile=True))
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:

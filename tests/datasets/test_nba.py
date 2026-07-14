@@ -131,11 +131,6 @@ def test_a_season_is_named_by_the_year_it_ends_in_with_no_conversion(source):
     assert {params['year'] for params in source.catalogue(payloads)} == {2024, 2025, 2026}
 
 
-def test_the_catalogue_is_free(source):
-    """Test the source charges nothing, so a preparation can be priced without spending anything."""
-    assert source.estimate(source.index_items() + source.required_items([])) == 0
-
-
 def test_a_season_is_asked_for_one_month_at_a_time(source):
     """Test the request window stays a month, which is the only reason a season comes back whole.
 

@@ -19,13 +19,13 @@ from ..sources._schema import (
     build_stats_schema,
     derive_metadata,
 )
-from ..sources._store import PreparationReport
 
 DELIMITER = '__'
 LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
 INPUT_EVENT_STATUSES = ('preplay', 'inplay', 'postplay')
 STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
+REFRESH = 'refresh'
 DAY = pd.Timedelta('1D')
 PARAM_COLS = ['league', 'division', 'year']
 
@@ -137,24 +137,22 @@ class BaseDataLoader(ABC):
         msg = f'{type(self).__name__} does not implement parameter discovery.'
         raise NotImplementedError(msg)
 
-    def prepare(self: Self, dry_run: bool = False, refresh: bool = False) -> PreparationReport:
-        """Populate the store with the data the selected parameters require.
+    def _download(self: Self, refresh: bool) -> None:  # noqa: B027
+        """Download what the selection needs.
 
-        A dataloader that is not backed by a source has nothing to download, so it prepares nothing and returns an
-        empty report. Dataloaders backed by a source override it.
-
-        Args:
-            dry_run:
-                If `True`, nothing is fetched and nothing is spent; the report says what a preparation would do.
-
-            refresh:
-                If `True`, everything is fetched again, including what the store already holds.
-
-        Returns:
-            report:
-                What was fetched, what was already held, and what it cost.
+        A dataloader that carries its own data has nothing to download, so this does nothing. The ones backed by sources
+        override it.
         """
-        return PreparationReport()
+
+    def _fetched(self: Self, download: bool | str) -> None:
+        """Download what an extraction needs, when it was asked to.
+
+        Downloading is the only thing that reaches the network, and for a metered source it is the only thing that costs
+        money, so it is the only thing that has to be asked for. Nothing is fetched unless `download` says so, and an
+        extraction that finds the data missing says how many requests getting it would take.
+        """
+        if download:
+            self._download(refresh=download == REFRESH)
 
     def _filter_params(self: Self, params: list[dict]) -> list[dict]:
         """Filter the available combinations by `param_grid` (no invalid combinations are fabricated)."""
@@ -470,6 +468,7 @@ class BaseDataLoader(ABC):
         target_event_time: pd.Timedelta | None = None,
         input_event_status: str | None = None,
         input_event_time: pd.Timedelta | None = None,
+        download: bool | str = False,
     ) -> TrainData:
         """Extract the moment-aware training data.
 
@@ -502,6 +501,12 @@ class BaseDataLoader(ABC):
             input_event_time:
                 Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
                 together with `input_event_status`. Defaults to 0.
+            download:
+                If `True`, the data the selection needs is downloaded first, and
+                only what the store does not already hold. `'refresh'` downloads
+                everything again. The default `False` downloads nothing and says
+                how many requests it would take, so nothing reaches the network,
+                and nothing is bought, unless it was asked for.
 
         Returns:
             (X, Y, O):
@@ -509,6 +514,7 @@ class BaseDataLoader(ABC):
                 `learning_type='unsupervised'`, `Y` is `None`. The three components
                 share the same date index and rows.
         """
+        self._fetched(download)
         self._load(odds_type)
 
         self.stats_schema_.validate(self.stats_)
@@ -571,7 +577,7 @@ class BaseDataLoader(ABC):
         self.output_cols_ = Y.columns
         return X, Y, O
 
-    def extract_fixtures_data(self: Self) -> FixturesData:
+    def extract_fixtures_data(self: Self, download: bool | str = False) -> FixturesData:
         """Extract the fixtures data.
 
         Read more in the [user guide][user-guide].
@@ -589,6 +595,7 @@ class BaseDataLoader(ABC):
         if not hasattr(self, 'input_cols_'):
             msg = 'The `extract_train_data` method should be called before `extract_fixtures_data`.'
             raise ValueError(msg)
+        self._fetched(download)
         index_cols = self._identity_cols()
         fixtures_mask = ~pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._train_ids)
         fixtures_odds_mask = ~pd.MultiIndex.from_frame(self.odds_[index_cols]).isin(self._train_ids)

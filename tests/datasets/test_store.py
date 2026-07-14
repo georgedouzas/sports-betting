@@ -104,17 +104,22 @@ def test_snapshots_that_were_not_kept_are_absent(store):
     assert store.read_snapshots('test', 'odds', 'missing') is None
 
 
-def test_the_report_renders_what_it_would_do():
-    """Test the report says what would be fetched and what it would cost."""
-    report = PreparationReport(to_fetch=[ITEM], held=[], estimated_cost={'odds_api': 1240})
-    assert 'Items to fetch: 1' in str(report)
-    assert 'odds_api: 1240' in str(report)
+def test_the_report_counts_the_requests_and_does_not_price_them():
+    """Test the report says how many requests each source would make, and does not say what they cost.
+
+    A vendor sets its own prices, changes them, and prices its endpoints differently. A library that guessed at that
+    would be quoting a number it had made up.
+    """
+    report = PreparationReport(to_fetch=[ITEM])
+    assert report.requests == {ITEM.source: 1}
+    assert 'Requests to make' in str(report)
+    assert 'cost' not in str(report).lower()
 
 
 def test_the_error_carries_the_report():
-    """Test a failure to extract says exactly what is missing and what obtaining it would cost."""
-    report = PreparationReport(to_fetch=[ITEM], estimated_cost={'odds_api': 1240})
+    """Test a failure to extract says what is missing and how many requests getting it would take."""
+    report = PreparationReport(to_fetch=[ITEM])
     error = NotPreparedError(report)
     assert error.report is report
-    assert 'Call `prepare` first' in str(error)
-    assert 'odds_api: 1240' in str(error)
+    assert 'has not been downloaded' in str(error)
+    assert f'{ITEM.source} 1' in str(error)

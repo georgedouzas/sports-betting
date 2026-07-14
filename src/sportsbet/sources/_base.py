@@ -38,16 +38,12 @@ class RawItem:
 
         volatile:
             Whether the content can still change upstream.
-
-        cost:
-            The units the source charges to fetch it.
     """
 
     source: str
     key: str
     url: str
     volatile: bool = False
-    cost: int = 0
 
 
 @dataclass(frozen=True)
@@ -221,19 +217,6 @@ class BaseSource(ABC):
             return hashlib.sha256(module.read_bytes()).hexdigest()[:16]
         except (OSError, TypeError):
             return type(self).__name__
-
-    def estimate(self: Self, items: list[RawItem]) -> int:
-        """Return the units the source charges to fetch the items.
-
-        Args:
-            items:
-                The items to fetch.
-
-        Returns:
-            cost:
-                The estimated cost. Zero for free sources.
-        """
-        return sum(item.cost for item in items)
 
 
 class BaseStatsSource(BaseSource):

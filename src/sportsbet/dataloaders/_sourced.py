@@ -210,21 +210,14 @@ class DataLoader(BaseDataLoader):
         it for itself, and the index of a source is volatile and so is never held, which meant a single preparation read
         it twice and paid for it twice.
         """
-        stats_source, odds_source, store = self._resolved()
+        _, _, store = self._resolved()
         available = self._params(fetch, refresh)
         stats_items, odds_items = self._items(fetch, refresh, available)
         items = self._unique(stats_items + odds_items)
         held = [] if refresh else store.held(items)
-        to_fetch = [item for item in items if item not in held]
-        costs = {
-            source.name: source.estimate([item for item in to_fetch if item.source == source.name])
-            for source in (stats_source, odds_source)
-            if source is not None
-        }
         return PreparationReport(
-            to_fetch=to_fetch,
+            to_fetch=[item for item in items if item not in held],
             held=held,
-            estimated_cost={name: cost for name, cost in costs.items() if cost},
             unavailable=self._unavailable(available),
         )
 
@@ -242,46 +235,30 @@ class DataLoader(BaseDataLoader):
         ]
         return [params for params in requested if tuple(sorted(params.items())) not in published]
 
-    def prepare(self: Self, dry_run: bool = False, refresh: bool = False) -> PreparationReport:
-        """Populate the store with the data the selected parameters need.
+    def _download(self: Self, refresh: bool) -> None:
+        """Download the data the selected parameters need.
 
-        Only what the store does not already hold is fetched, so it is incremental and resumable. A dry run reports
-        what a preparation would fetch and what it would cost, without fetching any data and without spending
-        anything. Resolving the catalogue of the sources is free, so a dry run still reads it.
-
-        A finished season is not fetched again, since it is not expected to change. Upstream can still correct one,
-        though, so nothing it publishes is truly immutable: `refresh` reads everything again. A metered source charges
-        for that, which is why it is asked for rather than done on a schedule.
-
-        Args:
-            dry_run:
-                If `True`, no data is fetched and nothing is spent; the report says what a preparation would do.
-
-            refresh:
-                If `True`, everything is fetched again, including what the store already holds.
-
-        Returns:
-            report:
-                What was fetched, what was already held, and what it cost.
+        Only what the store does not already hold is fetched, so it is incremental and resumable. A finished season is
+        not fetched again, since it is not expected to change. Upstream can still correct one, though, so nothing it
+        publishes is truly immutable, and `refresh` reads everything again. That costs a metered source the same as the
+        first time, which is why it is asked for rather than done on a schedule.
         """
         _, _, store = self._resolved()
         report = self._report(fetch=True, refresh=refresh)
-        if dry_run or not report.to_fetch:
-            return report
+        if not report.to_fetch:
+            return
         with Progress(transient=True) as progress:
-            task = progress.add_task('Preparing the data', total=len(report.to_fetch))
+            task = progress.add_task('Downloading the data', total=len(report.to_fetch))
             for item in report.to_fetch:
                 store.fetch([item], self._authorize)
                 progress.advance(task)
         self._downloaded = None
-        return report
 
     def _unprepared(self: Self) -> PreparationReport | None:
-        """Return what a preparation would need, when that can be known without fetching.
+        """Return what a download would have to do, when that can be known without downloading.
 
         It cannot when the store does not hold the catalogue either, and finding out would mean downloading. Saying less
-        is better than downloading in order to say more, since an extraction that downloads is the one thing this must
-        never be.
+        is better than downloading in order to say more, since downloading is the thing that was not asked for.
         """
         try:
             return self._report(fetch=False)

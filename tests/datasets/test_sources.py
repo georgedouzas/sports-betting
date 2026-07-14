@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from sportsbet.dataloaders import DataLoader, from_snapshots
-from sportsbet.sources import BaseOddsSource, BaseSource, BaseStatsSource, PreparationReport, RawItem, RawPayload
+from sportsbet.sources import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
 
 PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}, {'league': 'Spain', 'division': 1, 'year': 2024}]
 ITEM_COST = 2
@@ -29,7 +29,6 @@ class _TestSource(BaseSource):
                 source=self.name,
                 key=f'{param["league"]}_{param["year"]}',
                 url=f'{param["league"]}.csv',
-                cost=ITEM_COST,
             )
             for param in params
         ]
@@ -58,17 +57,6 @@ def test_items_are_identified_by_source_and_key():
     same = RawItem(source='football_data', key='England_1_2024', url='a.csv')
     other = RawItem(source='football_data', key='Spain_1_2024', url='b.csv')
     assert len({item, same, other}) == DISTINCT_ITEMS
-
-
-def test_estimate_sums_the_item_costs():
-    """Test the cost of a preparation is arithmetic over the plan, not a measurement."""
-    source = _TestSource()
-    assert source.estimate(source.required_items(PARAMS)) == TOTAL_COST
-
-
-def test_estimate_is_zero_for_free_items():
-    """Test a free source charges nothing."""
-    assert _TestSource().estimate([RawItem(source='test', key='a', url='a.csv')]) == 0
 
 
 def test_source_cannot_be_instantiated_without_the_contract():
@@ -100,8 +88,6 @@ def test_sources_are_stored_unmodified():
     assert loader.odds is odds
 
 
-def test_prepare_is_empty_without_a_source(stats, odds):
-    """Test a dataloader that is not backed by a source has nothing to prepare."""
-    report = from_snapshots(stats, odds).prepare()
-    assert isinstance(report, PreparationReport)
-    assert not report.to_fetch
+def test_a_dataloader_with_its_own_data_downloads_nothing(stats, odds):
+    """Test a dataloader that is not backed by a source has nothing to download."""
+    assert from_snapshots(stats, odds)._download(refresh=False) is None

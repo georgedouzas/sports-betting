@@ -47,6 +47,7 @@ EXTRACTED = (
     'input_event_time',
 )
 MODELLED = ('model', 'alpha', 'init_cash', 'stake', 'betting_markets', 'model_odds_types')
+DOWNLOADED = ('download', 'refresh')
 TIMED = ('target_event_time', 'input_event_time')
 
 
@@ -80,6 +81,14 @@ def modelled(selection: dict[str, object]) -> Iterator[BaseBettor | None]:
         yield None
 
 
+def downloaded(selection: dict[str, object]) -> dict[str, Any]:
+    """Return whether a command was told to download."""
+    told = _told(selection, DOWNLOADED)
+    if told.get('refresh'):
+        return {'download': 'refresh'}
+    return {'download': bool(told.get('download'))}
+
+
 def extraction(selection: dict[str, object]) -> dict[str, Any]:
     """Return how a command was told to extract."""
     settings = {name: value for name, value in _told(selection, EXTRACTED).items() if value is not None}
@@ -97,8 +106,9 @@ def reported() -> Iterator[None]:
     """
     try:
         yield
-    except NotPreparedError:
-        Console().print(Panel.fit('[bold red]The data is not prepared. Run `sportsbet data prepare` first.'))
+    except NotPreparedError as error:
+        said = str(error).replace('Pass `download=True` to get it.', 'Pass `--download` to get it.')
+        Console().print(Panel.fit(f'[bold red]{said}'))
         raise SystemExit(1) from None
     except (SelectionError, ValueError) as error:
         Console().print(Panel.fit(f'[bold red]{error}'))

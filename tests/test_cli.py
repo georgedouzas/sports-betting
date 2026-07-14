@@ -102,7 +102,7 @@ def test_a_missing_key_says_which_one_is_missing(cli_runner, monkeypatch):
     monkeypatch.delenv('ODDS_API_KEY', raising=False)
     result = cli_runner.invoke(
         main,
-        ['data', 'prepare', '--league', 'NBA', '--stats', 'nba', '--odds', 'odds-api'],
+        ['data', 'training', '--league', 'NBA', '--stats', 'nba', '--odds', 'odds-api'],
     )
     assert 'ODDS_API_KEY' in result.output
 
