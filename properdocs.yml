@@ -36,6 +36,10 @@ nav:
     - Contributing: development/contributing.md
     - Code of Conduct: development/code_of_conduct.md
 
+not_in_nav: |
+  generated/gallery/mg_execution_times.md
+  generated/gallery/modelling/mg_execution_times.md
+
 extra_css:
   - css/style.css
   - css/material.css
