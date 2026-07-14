@@ -9,7 +9,7 @@ import pytest
 
 from sportsbet.mcp import server
 
-SELECTION = {'sport': 'soccer', 'leagues': ['England']}
+SELECTION = {'stats': 'football-data', 'odds': 'football-data', 'leagues': ['England']}
 TOOLS = [
     'available_params',
     'estimate_preparation',
@@ -43,7 +43,7 @@ def test_a_tool_is_told_what_to_do_and_reads_no_file():
     tools = asyncio.run(server.list_tools())
     for tool in tools:
         properties = tool.inputSchema['properties']
-        assert 'sport' in properties
+        assert 'stats' in properties
         assert 'config_path' not in properties
 
 

@@ -3,16 +3,8 @@
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import (
-    BaseOddsSource,
-    BaseStatsSource,
-    DummySoccerDataLoader,
-    LocalStore,
-    NotPreparedError,
-    OddsApi,
-    RawItem,
-    SoccerDataLoader,
-)
+from sportsbet.dataloaders import DataLoader, DummySoccerDataLoader
+from sportsbet.sources import BaseOddsSource, BaseStatsSource, LocalStore, NotPreparedError, OddsApi, RawItem
 
 PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}]
 SEASON = b'league,year\nEngland,2024\n'
@@ -90,14 +82,14 @@ def offline(monkeypatch):
         fetches.extend(urls)
         return [SPORTS if 'the-odds-api' in url else SEASON for url in urls]
 
-    monkeypatch.setattr('sportsbet.datasets._store.read_urls_content', read_urls_content)
+    monkeypatch.setattr('sportsbet.sources._store.read_urls_content', read_urls_content)
     return fetches
 
 
 @pytest.fixture
 def loader(tmp_path):
     """A dataloader backed by a feed and a store in a temporary directory."""
-    return SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))
+    return DataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))
 
 
 def test_extraction_without_preparation_fails(loader, offline):
@@ -135,7 +127,7 @@ def test_a_dry_run_fetches_no_data(loader, offline):
 
 def test_a_dry_run_prices_the_data_without_paying(tmp_path, offline):
     """Test the cost of a preparation is known before it is paid."""
-    loader = SoccerDataLoader(stats=_FeedStats(), odds=_PricedOdds(), store=LocalStore(tmp_path))
+    loader = DataLoader(stats=_FeedStats(), odds=_PricedOdds(), store=LocalStore(tmp_path))
     report = loader.prepare(dry_run=True)
     assert report.estimated_cost == {'priced': 620}
     assert not [url for url in offline if url.endswith('England.csv')]
@@ -172,7 +164,7 @@ def test_rebuilding_the_snapshots_fetches_nothing(loader, offline, tmp_path):
     for path in (tmp_path / 'snapshots').rglob('*.parquet'):
         path.unlink()
     offline.clear()
-    rebuilt = SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))
+    rebuilt = DataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))
     stats, _ = rebuilt._snapshots()
     assert list(stats['key']) == ['England_1_2024']
     assert not [url for url in offline if url.endswith('England.csv')]
@@ -186,7 +178,7 @@ def test_an_item_two_sources_share_is_fetched_once(loader, offline):
 
 def test_unavailable_params_are_reported(tmp_path, offline):
     """Test a combination the source does not publish is reported at plan time, not as a fetch time failure."""
-    loader = SoccerDataLoader(
+    loader = DataLoader(
         param_grid={'league': ['England'], 'division': [1], 'year': [1800]},
         stats=_FeedStats(),
         odds=_FeedOdds(),
@@ -226,11 +218,11 @@ def test_a_changed_transform_rebuilds_the_derived_data(loader, offline, tmp_path
     loader._snapshots()
     assert len(builds) == BOTH_SOURCES
 
-    SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
+    DataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
     assert len(builds) == BOTH_SOURCES
 
     monkeypatch.setattr(_Feed, 'transform_digest', lambda self: 'changed', raising=False)
-    SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
+    DataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path))._snapshots()
     assert len(builds) == BOTH_SOURCES * 2
 
 
@@ -275,7 +267,7 @@ def test_a_metered_odds_source_is_priced_exactly_without_spending(tmp_path, offl
     one priced request is made.
     """
     odds = OddsApi(key='secret-key', markets=['h2h'], regions=['eu'])
-    loader = SoccerDataLoader(stats=_ScheduleStats(), odds=odds, store=LocalStore(tmp_path))
+    loader = DataLoader(stats=_ScheduleStats(), odds=odds, store=LocalStore(tmp_path))
     report = loader.prepare(dry_run=True)
 
     snapshots = [item for item in report.to_fetch if item.source == 'odds_api']
@@ -286,7 +278,7 @@ def test_a_metered_odds_source_is_priced_exactly_without_spending(tmp_path, offl
 def test_the_key_is_never_written_to_the_store(tmp_path, offline):
     """Test the credential reaches the request and nothing else."""
     odds = OddsApi(key='secret-key')
-    loader = SoccerDataLoader(stats=_ScheduleStats(), odds=odds, store=LocalStore(tmp_path))
+    loader = DataLoader(stats=_ScheduleStats(), odds=odds, store=LocalStore(tmp_path))
     report = loader.prepare(dry_run=True)
     assert not [item for item in report.to_fetch if 'secret-key' in item.url]
     assert not [path for path in tmp_path.rglob('*') if path.is_file() and b'secret-key' in path.read_bytes()]
@@ -326,5 +318,5 @@ def test_an_index_that_has_not_changed_is_not_written_down_again(loader, offline
     manifest = tmp_path / 'manifest.jsonl'
     lines = manifest.read_text().splitlines()
 
-    SoccerDataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path)).prepare()
+    DataLoader(stats=_FeedStats(), odds=_FeedOdds(), store=LocalStore(tmp_path)).prepare()
     assert manifest.read_text().splitlines() == lines

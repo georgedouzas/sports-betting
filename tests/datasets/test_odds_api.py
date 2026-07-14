@@ -9,7 +9,7 @@ import json
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import OddsApi, RawPayload
+from sportsbet.sources import OddsApi, RawPayload
 
 SPORTS = json.dumps(
     [

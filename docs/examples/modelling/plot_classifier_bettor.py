@@ -14,8 +14,9 @@ from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
 
-from sportsbet.datasets import SoccerDataLoader
+from sportsbet.dataloaders import DataLoader
 from sportsbet.evaluation import ClassifierBettor, backtest
+from sportsbet.sources import FootballDataOdds, FootballDataStats
 
 # %%
 # Extracting the training data
@@ -25,7 +26,11 @@ from sportsbet.evaluation import ClassifierBettor, backtest
 # We also remove columns that contain missing values and select the market
 # maximum odds.
 
-dataloader = SoccerDataLoader(param_grid={'league': ['Spain'], 'year': [2020, 2021, 2022]})
+dataloader = DataLoader(
+    param_grid={'league': ['Spain'], 'year': [2020, 2021, 2022]},
+    stats=FootballDataStats(),
+    odds=FootballDataOdds(),
+)
 dataloader.prepare()
 X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='market_maximum')
 

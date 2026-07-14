@@ -7,8 +7,9 @@ confidently wrong, so these tests are mostly about it failing loudly.
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import SoccerDataLoader, UnmatchedError, resolve
-from sportsbet.datasets._resolver import similarity
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats, UnmatchedError, resolve
+from sportsbet.sources._resolver import similarity
 
 KICKOFF = pd.Timestamp('2024-08-16 19:00', tz='UTC')
 TOLERATED = 0.5
@@ -204,7 +205,7 @@ def test_the_tolerance_is_a_deliberate_choice():
 
 def test_the_free_feed_is_never_reconciled():
     """Test the free feed needs no reconciliation, since its statistics and its odds come from the same row."""
-    stats_source, odds_source = SoccerDataLoader().sources
+    stats_source, odds_source = DataLoader(stats=FootballDataStats(), odds=FootballDataOdds()).sources
     assert stats_source.name == odds_source.name
 
 

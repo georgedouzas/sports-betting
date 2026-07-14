@@ -3,16 +3,8 @@
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import (
-    BaseOddsSource,
-    BaseSource,
-    BaseStatsSource,
-    PreparationReport,
-    RawItem,
-    RawPayload,
-    SoccerDataLoader,
-    from_snapshots,
-)
+from sportsbet.dataloaders import DataLoader, from_snapshots
+from sportsbet.sources import BaseOddsSource, BaseSource, BaseStatsSource, PreparationReport, RawItem, RawPayload
 
 PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}, {'league': 'Spain', 'division': 1, 'year': 2024}]
 ITEM_COST = 2
@@ -103,7 +95,7 @@ def test_payload_keeps_the_content_verbatim():
 def test_sources_are_stored_unmodified():
     """Test the sources are constructor parameters, kept as given."""
     stats, odds = _TestSource(), _TestSource()
-    loader = SoccerDataLoader(stats=stats, odds=odds)
+    loader = DataLoader(stats=stats, odds=odds)
     assert loader.stats is stats
     assert loader.odds is odds
 

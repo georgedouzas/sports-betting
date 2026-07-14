@@ -19,7 +19,7 @@ from sklearn.utils import check_consistent_length, check_scalar
 from sklearn.utils.validation import _check_feature_names, check_is_fitted
 
 from .. import BoolData, Data
-from ..datasets._base._dataloader import parse_event_time
+from ..dataloaders._base import parse_event_time
 
 STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
 N_ODDS_TOKENS = 4

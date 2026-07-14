@@ -11,19 +11,20 @@ The sources that ship with the library:
 
 | Source | Sport | Cost | Carries |
 | --- | --- | --- | --- |
-| [`FootballDataStats`][sportsbet.datasets.FootballDataStats] | soccer | free | statistics, 1993 onward |
-| [`FootballDataOdds`][sportsbet.datasets.FootballDataOdds] | soccer | free | pre-match closing odds |
-| [`EuroLeagueStats`][sportsbet.datasets.EuroLeagueStats] | basketball | free | statistics, from the competition's own API |
-| [`NBAStats`][sportsbet.datasets.NBAStats] | basketball | free | statistics, the NBA, live through a season |
-| [`OddsApi`][sportsbet.datasets.OddsApi] | any | **your key** | time-stamped odds, live and historical |
+| [`FootballDataStats`][sportsbet.sources.FootballDataStats] | soccer | free | statistics, 1993 onward |
+| [`FootballDataOdds`][sportsbet.sources.FootballDataOdds] | soccer | free | pre-match closing odds |
+| [`EuroLeagueStats`][sportsbet.sources.EuroLeagueStats] | basketball | free | statistics, from the competition's own API |
+| [`NBAStats`][sportsbet.sources.NBAStats] | basketball | free | statistics, the NBA, live through a season |
+| [`OddsApi`][sportsbet.sources.OddsApi] | any | **your key** | time-stamped odds, live and historical |
 
 Mix them however you like. Free statistics with paid odds is the realistic configuration, and the only way to backtest an
 in-play bet:
 
 ```python
-from sportsbet.datasets import SoccerDataLoader, FootballDataStats, OddsApi
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataStats, OddsApi
 
-dataloader = SoccerDataLoader(
+dataloader = DataLoader(
     param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
     stats=FootballDataStats(),                                   # free
     odds=OddsApi(key='...', markets=['h2h', 'totals']),          # yours
@@ -64,7 +65,7 @@ Three optional hooks:
 
 ### `RawItem` and `RawPayload`
 
-A [`RawItem`][sportsbet.datasets.RawItem] is one thing to fetch. It is the unit of caching, of resuming, and of **cost**:
+A [`RawItem`][sportsbet.sources.RawItem] is one thing to fetch. It is the unit of caching, of resuming, and of **cost**:
 
 ```python
 RawItem(
@@ -79,11 +80,11 @@ RawItem(
 Two sources declaring the **same** `source` and `key` declare the *same* item, so it is fetched **once**. That is how
 `FootballDataStats` and `FootballDataOdds` — which read the same upstream CSV — avoid downloading it twice.
 
-A [`RawPayload`][sportsbet.datasets.RawPayload] is what came back, kept verbatim and kept forever. It is what your
+A [`RawPayload`][sportsbet.sources.RawPayload] is what came back, kept verbatim and kept forever. It is what your
 `catalogue` and `to_snapshots` are handed:
 
 ```python
-from sportsbet.datasets import RawPayload
+from sportsbet.sources import RawPayload
 
 payload = RawPayload(item=item, content=b'date,home_team,away_team\n...')
 payload.item.key      # 'England_1_2025'
@@ -99,7 +100,7 @@ import io
 import json
 
 import pandas as pd
-from sportsbet.datasets import BaseOddsSource, BaseStatsSource, RawItem, market_outcomes
+from sportsbet.sources import BaseOddsSource, BaseStatsSource, RawItem, market_outcomes
 
 MARKETS = ['home_win', 'draw', 'away_win']
 IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
@@ -173,9 +174,9 @@ class MyOdds(BaseOddsSource):
 Then hand them to any dataloader:
 
 ```python
-from sportsbet.datasets import SoccerDataLoader
+from sportsbet.dataloaders import DataLoader
 
-dataloader = SoccerDataLoader(stats=MyStats(), odds=MyOdds())
+dataloader = DataLoader(stats=MyStats(), odds=MyOdds())
 dataloader.prepare()
 X, Y, O = dataloader.extract_train_data(odds_type='acme')
 ```
@@ -203,12 +204,12 @@ the **features** from the statistics columns, and the **moments** from `event_st
 
 ## Where the data is kept
 
-The [store][sportsbet.datasets.LocalStore] is the only thing that fetches.
+The [store][sportsbet.sources.LocalStore] is the only thing that fetches.
 
 ```python
-from sportsbet.datasets import LocalStore
+from sportsbet.sources import LocalStore
 
-dataloader = SoccerDataLoader(store=LocalStore('/data/sportsbet'))   # default: ~/.sportsbet
+dataloader = DataLoader(stats=FootballDataStats(), odds=FootballDataOdds(), store=LocalStore('/data/sportsbet'))   # default: ~/.sportsbet
 ```
 
 Raw payloads are kept **forever** — metered data cannot be re-obtained for free — and everything derived from them is
@@ -216,10 +217,10 @@ rebuilt at no cost. The derived data is keyed by the raw content **and by the co
 the library rebuilds rather than serving you what the old transform produced.
 
 To write your own store — a shared cache, an object store, a database — implement
-[`BaseStore`][sportsbet.datasets.BaseStore]:
+[`BaseStore`][sportsbet.sources.BaseStore]:
 
 ```python
-from sportsbet.datasets import BaseStore, RawItem, RawPayload
+from sportsbet.sources import BaseStore, RawItem, RawPayload
 
 
 class MyStore(BaseStore):
@@ -239,10 +240,10 @@ class MyStore(BaseStore):
 
 ### What a preparation tells you
 
-`prepare` returns a [`PreparationReport`][sportsbet.datasets.PreparationReport]:
+`prepare` returns a [`PreparationReport`][sportsbet.sources.PreparationReport]:
 
 ```python
-from sportsbet.datasets import PreparationReport
+from sportsbet.sources import PreparationReport
 
 report: PreparationReport = dataloader.prepare(dry_run=True)
 
@@ -253,7 +254,7 @@ report.unavailable       # requested parameters no source publishes
 ```
 
 An extraction against a store that was never prepared raises
-[`NotPreparedError`][sportsbet.datasets.NotPreparedError], carrying that report — so it tells you what is missing *and*
+[`NotPreparedError`][sportsbet.sources.NotPreparedError], carrying that report — so it tells you what is missing *and*
 what obtaining it would cost. It never downloads.
 
 ## When two sources disagree about a name
@@ -269,12 +270,12 @@ X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 dataloader.reconciliation_        # a ReconciliationReport
 ```
 
-A [`ReconciliationReport`][sportsbet.datasets.ReconciliationReport] carries `matched`, `unmatched_rate`,
+A [`ReconciliationReport`][sportsbet.sources.ReconciliationReport] carries `matched`, `unmatched_rate`,
 `unmatched_stats`, `unmatched_odds`, and `suggestions`. Cross `max_unmatched_rate` (default **zero**) and you get
-[`UnmatchedError`][sportsbet.datasets.UnmatchedError] rather than a holed dataset:
+[`UnmatchedError`][sportsbet.sources.UnmatchedError] rather than a holed dataset:
 
 ```python
-from sportsbet.datasets import UnmatchedError
+from sportsbet.sources import UnmatchedError
 
 try:
     dataloader.extract_train_data(odds_type='pinnacle')
@@ -292,10 +293,10 @@ Check it — a suggestion is a resemblance, not a fact — and pass it back as `
 [the dataloader guide](dataloader.md#when-two-sources-name-a-club-differently) for why the library will never apply one
 on its own.
 
-You can reconcile two tables yourself with [`resolve`][sportsbet.datasets.resolve]:
+You can reconcile two tables yourself with [`resolve`][sportsbet.sources.resolve]:
 
 ```python
-from sportsbet.datasets import resolve
+from sportsbet.sources import resolve
 
 odds, report = resolve(stats, odds, aliases={'Olimpia Milano': 'EA7 Emporio Armani Milan'})
 ```
@@ -304,14 +305,14 @@ odds, report = resolve(stats, odds, aliases={'Olimpia Milano': 'EA7 Emporio Arma
 
 Snapshots are validated against [pandera] schemas that the library **builds from the data**. You rarely need to write
 one. When you do — to require a column, or to say at which moments it carries values — subclass
-[`BaseStatsSchema`][sportsbet.datasets.BaseStatsSchema] or [`BaseOddsSchema`][sportsbet.datasets.BaseOddsSchema] and
-describe the columns with [`required_col`][sportsbet.datasets.required_col] and
-[`optional_col`][sportsbet.datasets.optional_col]:
+[`BaseStatsSchema`][sportsbet.sources.BaseStatsSchema] or [`BaseOddsSchema`][sportsbet.sources.BaseOddsSchema] and
+describe the columns with [`required_col`][sportsbet.sources.required_col] and
+[`optional_col`][sportsbet.sources.optional_col]:
 
 ```python
 from typing import Annotated
 import pandas as pd
-from sportsbet.datasets import BaseStatsSchema, optional_col, required_col
+from sportsbet.sources import BaseStatsSchema, optional_col, required_col
 
 
 class MySchema(BaseStatsSchema):
@@ -328,7 +329,7 @@ class MySchema(BaseStatsSchema):
 An odds schema is the same, with a `provider`:
 
 ```python
-from sportsbet.datasets import BaseOddsSchema
+from sportsbet.sources import BaseOddsSchema
 
 
 class MyOddsSchema(BaseOddsSchema):
@@ -347,12 +348,12 @@ class MyOddsSchema(BaseOddsSchema):
 
 ## The abstract classes
 
-[`BaseDataLoader`][sportsbet.datasets.BaseDataLoader] is the extraction engine. Its **one** abstract method is
+[`BaseDataLoader`][sportsbet.dataloaders.BaseDataLoader] is the extraction engine. Its **one** abstract method is
 `_snapshots()`, returning the long `stats` and `odds` tables. Everything else — the column grammar, the input horizon,
 the moment-aware pivot — is implemented for you:
 
 ```python
-from sportsbet.datasets import BaseDataLoader
+from sportsbet.dataloaders import BaseDataLoader
 
 
 class MyDataLoader(BaseDataLoader):
@@ -362,7 +363,7 @@ class MyDataLoader(BaseDataLoader):
         return my_stats_table, my_odds_table
 ```
 
-That is the seam. `SoccerDataLoader` and `BasketballDataLoader` sit behind it and differ only in which sources they
+That is the seam. `DataLoader` and `DataLoader` sit behind it and differ only in which sources they
 default to — which is why adding a sport is adding a source, and
 [`from_snapshots`](dataloader.md#from-long-snapshots) can hand it a table you built yourself.
 

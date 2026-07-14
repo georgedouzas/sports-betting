@@ -66,7 +66,7 @@ bettor = ClassifierBettor(classifier=classifier, betting_markets=['home_win', 'd
 We also use the offline dummy training and fixtures data, so everything runs without any network access:
 
 ```python
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()

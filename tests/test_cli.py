@@ -5,10 +5,19 @@ import pytest
 from sklearn.model_selection import TimeSeriesSplit
 
 from sportsbet.cli import main
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
 
-SELECTION = ['--sport', 'soccer', '--league', 'England', '--league', 'Spain']
+SELECTION = [
+    '--stats',
+    'football-data',
+    '--odds',
+    'football-data',
+    '--league',
+    'England',
+    '--league',
+    'Spain',
+]
 MARKET = ['--odds-type', 'market_average', '--target-event-status', 'postplay']
 
 
@@ -74,8 +83,6 @@ def test_a_source_that_needs_a_key_reads_it_from_the_environment(cli_runner, mon
         [
             'data',
             'params',
-            '--sport',
-            'basketball',
             '--league',
             'NBA',
             '--stats',
@@ -95,7 +102,7 @@ def test_a_missing_key_says_which_one_is_missing(cli_runner, monkeypatch):
     monkeypatch.delenv('ODDS_API_KEY', raising=False)
     result = cli_runner.invoke(
         main,
-        ['data', 'prepare', '--sport', 'basketball', '--league', 'NBA', '--stats', 'nba', '--odds', 'odds-api'],
+        ['data', 'prepare', '--league', 'NBA', '--stats', 'nba', '--odds', 'odds-api'],
     )
     assert 'ODDS_API_KEY' in result.output
 

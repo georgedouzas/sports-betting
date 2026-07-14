@@ -6,25 +6,26 @@
 from __future__ import annotations
 
 from itertools import product
-from typing import ClassVar, Self
+from typing import Self
 
 import pandas as pd
 from rich.progress import Progress
 
-from ... import ParamGrid
-from .._resolver import ALIASES, resolve
-from .._sources._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
-from .._store import BaseStore, LocalStore, NotPreparedError, PreparationReport, payloads_digest
-from ._dataloader import PARAM_COLS, BaseDataLoader
-from ._schema import EVENT_COLS, IDENTITY_COLS
+from .. import ParamGrid
+from ..sources._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
+from ..sources._resolver import ALIASES, resolve
+from ..sources._schema import EVENT_COLS, IDENTITY_COLS
+from ..sources._store import BaseStore, LocalStore, NotPreparedError, PreparationReport, payloads_digest
+from ._base import PARAM_COLS, BaseDataLoader
 
 
-class SourcedDataLoader(BaseDataLoader):
-    """The dataloader of a sport whose data comes from sources.
+class DataLoader(BaseDataLoader):
+    """The dataloader of data that comes from sources.
 
-    Nothing here is about a sport. The store, the preparation, the cost estimate, the schedule and the reconciliation
-    are the same whatever is being played, so a sport is its default sources and nothing else. A sport that needs to
-    change any of this is a sign the abstraction is wrong, and the fix belongs here rather than in the sport.
+    There is one of these, not one per sport. The store, the preparation, the cost estimate, the schedule and the
+    reconciliation are the same whatever is being played, and nothing in them ever asks what the sport is. The sport is
+    a property of the sources: a feed of soccer matches is a feed of soccer matches, and pairing it with the odds of a
+    basketball league is refused rather than left to fail somewhere deeper.
 
     Args:
         param_grid:
@@ -63,9 +64,6 @@ class SourcedDataLoader(BaseDataLoader):
             Only set when they are different sources.
     """
 
-    DEFAULT_STATS: ClassVar[type[BaseStatsSource] | None] = None
-    DEFAULT_ODDS: ClassVar[type[BaseOddsSource] | None] = None
-
     def __init__(
         self: Self,
         param_grid: ParamGrid | None = None,
@@ -82,34 +80,34 @@ class SourcedDataLoader(BaseDataLoader):
         self.aliases = aliases
         self.max_unmatched_rate = max_unmatched_rate
 
-    def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource, BaseStore]:
+    def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None, BaseStore]:
         """Return the sources and the store, built once and kept.
 
-        A sport with no free odds source has no default for them, so a dataloader without one is told plainly that it
-        carries no betting markets rather than failing somewhere deeper.
+        Nothing is assumed. Which feed the data came from decides what is in it, what it costs and whether anyone may
+        redistribute it, and a dataloader that chose one for you would be answering that on your behalf.
         """
         if self._components is None:
-            stats_source = self.stats if self.stats is not None else self._default(self.DEFAULT_STATS, 'statistics')
-            odds_source = self.odds if self.odds is not None else self._default(self.DEFAULT_ODDS, 'odds')
+            if self.stats is None:
+                msg = 'No `stats` source. A dataloader does not choose where its data comes from; you do.'
+                raise ValueError(msg)
+            if self.odds is not None and self.stats.sport != (self.odds.sport or self.stats.sport):
+                msg = (
+                    f'The statistics are {self.stats.sport} and the odds are {self.odds.sport}. They are not about the '
+                    f'same matches, so nothing could pair them.'
+                )
+                raise ValueError(msg)
             store = self.store if self.store is not None else LocalStore()
-            self._components = (stats_source, odds_source, store)
+            self._components = (self.stats, self.odds, store)
         return self._components
 
-    def _default(self: Self, source: type | None, kind: str) -> BaseSource:
-        """Return the default source of a kind, or say that the sport has none."""
-        if source is None:
-            msg = (
-                f'The dataloader has no {kind} source and {type(self).__name__} has no free default for one. '
-                f'Pass one, e.g. `{kind}=OddsApi(key=...)`.'
-                if kind == 'odds'
-                else f'The dataloader has no {kind} source. Pass one.'
-            )
-            raise ValueError(msg)
-        built: BaseSource = source()
-        return built
+    @property
+    def sport(self: Self) -> str | None:
+        """The sport the sources carry, which is what they are of rather than what they were told to be."""
+        stats_source, _, _ = self._resolved()
+        return stats_source.sport
 
     @property
-    def sources(self: Self) -> tuple[BaseStatsSource, BaseOddsSource]:
+    def sources(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
         """The resolved statistics and odds sources."""
         stats_source, odds_source, _ = self._resolved()
         return stats_source, odds_source
@@ -117,7 +115,7 @@ class SourcedDataLoader(BaseDataLoader):
     def _authorize(self: Self, item: RawItem) -> str:
         """Return the URL of an item, authorized by the source that declared it."""
         stats_source, odds_source = self.sources
-        source = odds_source if item.source == odds_source.name else stats_source
+        source = odds_source if odds_source is not None and item.source == odds_source.name else stats_source
         return source.request_url(item)
 
     @staticmethod
@@ -133,22 +131,26 @@ class SourcedDataLoader(BaseDataLoader):
         """
         stats_source, odds_source, store = self._resolved()
         selection = self.param_grid
-        items = self._unique(stats_source.index_items(selection) + odds_source.index_items(selection))
+        odds_items = odds_source.index_items(selection) if odds_source is not None else []
+        items = self._unique(stats_source.index_items(selection) + odds_items)
         if fetch:
             held = [] if refresh else store.held(items)
             store.fetch([item for item in items if item not in held], self._authorize)
         return store.read(items)
 
     def _params(self: Self, fetch: bool, refresh: bool = False) -> list[dict]:
-        """Return the combinations both sources publish, reading the catalogue from the store.
+        """Return the combinations the sources publish, reading the catalogue from the store.
 
-        It is the intersection, not the union: a season whose statistics exist but whose odds do not cannot be modelled,
-        so it is never selected. Asking only the statistics source would offer it and let the missing odds surface as a
-        silently smaller dataset.
+        With odds it is the intersection, not the union: a season whose statistics exist but whose odds do not cannot be
+        bet on, so it is never selected. Asking only the statistics source would offer it and let the missing odds
+        surface as a silently smaller dataset. With no odds there is nothing to intersect with, and the statistics are
+        the whole of it.
         """
         stats_source, odds_source, _ = self._resolved()
         payloads = self._catalogue(fetch, refresh)
         stats_params = stats_source.catalogue([p for p in payloads if p.item.source == stats_source.name])
+        if odds_source is None:
+            return stats_params
         odds_params = odds_source.catalogue([p for p in payloads if p.item.source == odds_source.name])
         available = {tuple(sorted(params.items())) for params in odds_params}
         return [params for params in stats_params if tuple(sorted(params.items())) in available]
@@ -196,6 +198,8 @@ class SourcedDataLoader(BaseDataLoader):
         available = self._params(fetch, refresh) if available is None else available
         params = self._filter_params(available)
         stats_items = stats_source.required_items(params)
+        if odds_source is None:
+            return stats_items, []
         schedule = self._schedule(stats_items, fetch, refresh) if odds_source.needs_schedule() else None
         return stats_items, odds_source.required_items(params, schedule)
 
@@ -215,6 +219,7 @@ class SourcedDataLoader(BaseDataLoader):
         costs = {
             source.name: source.estimate([item for item in to_fetch if item.source == source.name])
             for source in (stats_source, odds_source)
+            if source is not None
         }
         return PreparationReport(
             to_fetch=to_fetch,
@@ -298,6 +303,9 @@ class SourcedDataLoader(BaseDataLoader):
             except KeyError as error:
                 raise NotPreparedError(self._unprepared()) from error
             stats = self._derive(stats_source, [payloads[item.source, item.key] for item in stats_items], store)
+            if odds_source is None:
+                self._downloaded = (stats, self.no_odds())
+                return self._downloaded
             odds = self._derive(odds_source, [payloads[item.source, item.key] for item in odds_items], store)
             if stats_source.name != odds_source.name and not odds.empty:
                 aliases = {**ALIASES, **(self.aliases or {})}

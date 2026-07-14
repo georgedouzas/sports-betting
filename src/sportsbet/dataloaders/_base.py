@@ -11,15 +11,15 @@ import cloudpickle
 import pandas as pd
 from sklearn.utils import check_scalar
 
-from ... import FixturesData, ParamGrid, TrainData
-from .._store import PreparationReport
-from ._schema import (
+from .. import FixturesData, ParamGrid, TrainData
+from ..sources._schema import (
     EVENT_COLS,
     IDENTITY_COLS,
     build_odds_schema,
     build_stats_schema,
     derive_metadata,
 )
+from ..sources._store import PreparationReport
 
 DELIMITER = '__'
 LEARNING_TYPES = ('supervised', 'unsupervised')
@@ -68,7 +68,7 @@ class BaseDataLoader(ABC):
     derives the available providers, markets and per-column metadata from the data
     itself, and extracts moment-aware training and fixtures data. Everything but the
     data source is implemented here; a concrete dataloader only needs to implement
-    the abstract [`_snapshots`][sportsbet.datasets.BaseDataLoader] method and, when
+    the abstract [`_snapshots`][sportsbet.dataloaders.BaseDataLoader] method and, when
     its data is downloadable, override the optional `_all_params` hook to enable
     parameter discovery.
 
@@ -203,6 +203,8 @@ class BaseDataLoader(ABC):
         """Read and validate the snapshots, derive their metadata and build the inputs."""
         stats, odds = self._snapshots()
         stats = self._finalize(stats)
+        if not [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]:
+            odds = self.no_odds()
         odds = self._finalize(odds)
         self._validate_snapshots(stats, odds)
         providers = sorted(odds['provider'].dropna().unique().tolist())
@@ -211,12 +213,6 @@ class BaseDataLoader(ABC):
             raise ValueError(msg)
         stats_value_cols = [col for col in stats.columns if col not in EVENT_COLS + IDENTITY_COLS]
         odds_value_cols = [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]
-        if not odds_value_cols:
-            msg = (
-                'The odds data carries no betting markets, so there is nothing to bet on and nothing to predict. '
-                'The markets a model learns are the ones its odds price, so a dataloader needs an odds source.'
-            )
-            raise ValueError(msg)
         stats_metadata = derive_metadata(stats, stats_value_cols)
         odds_metadata = derive_metadata(odds, odds_value_cols, allow_fixed=False)
 
@@ -228,6 +224,22 @@ class BaseDataLoader(ABC):
         self.targets_ = odds_value_cols
         self.odds_type_ = odds_type
         self.param_grid_ = stats[PARAM_COLS].drop_duplicates().to_dict('records')
+
+    @staticmethod
+    def no_odds() -> pd.DataFrame:
+        """Return the odds of a dataloader that has none: the right shape, and no rows.
+
+        With no odds there is nothing to bet on and no market to predict, and an extraction that asked for targets is
+        told so. The features are still there, and they are still worth having.
+        """
+        odds = pd.DataFrame(columns=[*EVENT_COLS, *IDENTITY_COLS, 'provider'])
+        odds['date'] = pd.to_datetime(odds['date'], utc=True).astype('datetime64[ns, UTC]')
+        odds['event_time'] = pd.to_timedelta(odds['event_time']).astype('timedelta64[ns]')
+        for col in ('event_status', 'league', 'home_team', 'away_team', 'provider'):
+            odds[col] = odds[col].astype('string[pyarrow]')
+        for col in ('division', 'year'):
+            odds[col] = odds[col].astype('int64')
+        return odds
 
     def _apply_drop_na(self: Self, X: pd.DataFrame, drop_na_thres: float) -> pd.DataFrame:
         """Drop feature columns whose missingness exceeds `drop_na_thres`.
@@ -409,6 +421,13 @@ class BaseDataLoader(ABC):
             msg = f'Invalid learning type. It should be one of {LEARNING_TYPES}. Got {learning_type} instead.'
             raise ValueError(msg)
         self.learning_type_ = learning_type if learning_type is not None else 'supervised'
+        if self.learning_type_ == 'supervised' and not self.targets_:
+            msg = (
+                'There are no odds, so there are no markets to predict: the markets a model learns are the ones its '
+                'odds price. Pass an `odds` source, or ask for `learning_type="unsupervised"` to get the features on '
+                'their own.'
+            )
+            raise ValueError(msg)
 
         check_scalar(target_event_status, 'target_event_status', (NoneType, str))
         if target_event_status is not None and target_event_status not in TARGET_EVENT_STATUSES:

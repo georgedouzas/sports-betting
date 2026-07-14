@@ -7,7 +7,7 @@ knowledge of the future, and it shows up as a backtest that makes money no bookm
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import from_snapshots
+from sportsbet.dataloaders import from_snapshots
 
 IDENTITY = {'league': 'England', 'division': 1, 'year': 2025, 'home_team': 'A', 'away_team': 'B'}
 LATER = {'league': 'England', 'division': 1, 'year': 2025, 'home_team': 'C', 'away_team': 'D'}
@@ -95,3 +95,21 @@ def test_a_match_with_no_features_is_not_dropped():
     assert len(X) == matches
     assert len(Y) == matches
     assert len(O) == matches
+
+
+def test_without_odds_there_is_nothing_to_predict_but_the_features_remain():
+    """Test a dataloader with no odds gives the features, and refuses to invent a target.
+
+    The markets a model learns are the ones its odds price, so with no odds there is no market and no target. The
+    features are still there, and exploring them, or learning from them without a target of ours, is still worth doing.
+    """
+    dataloader = from_snapshots(_stats())
+
+    with pytest.raises(ValueError, match='no markets to predict'):
+        dataloader.extract_train_data()
+
+    X, Y, O = dataloader.extract_train_data(learning_type='unsupervised')
+    matches = 2
+    assert len(X) == matches
+    assert Y is None
+    assert O.empty

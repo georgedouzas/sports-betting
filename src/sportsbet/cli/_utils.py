@@ -19,11 +19,11 @@ from rich.table import Table
 from rich.text import Text
 
 from .._selection import SelectionError, build_bettor, build_dataloader
-from ..datasets import BaseDataLoader, NotPreparedError
+from ..dataloaders import BaseDataLoader
 from ..evaluation import BaseBettor
+from ..sources import NotPreparedError
 
 SELECTED = (
-    'sport',
     'leagues',
     'divisions',
     'years',

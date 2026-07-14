@@ -10,11 +10,11 @@ from typing import ClassVar, Self
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from ... import ParamGrid
-from .._base._dataloader import BaseDataLoader
-from .._base._schema import IDENTITY_COLS
-from .._sources._base import BaseStatsSource, RawItem, RawPayload
-from .._utils import market_outcomes
+from .. import ParamGrid
+from ..sources._base import BaseStatsSource, RawItem, RawPayload
+from ..sources._schema import IDENTITY_COLS
+from ..sources._utils import market_outcomes
+from ._base import BaseDataLoader
 
 _PARAM_GRID: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2025]}
 
@@ -176,7 +176,7 @@ class DummySoccerDataLoader(BaseDataLoader):
     The data are bundled in-play sample snapshots that require no downloading, so
     they familiarize the user with the dataloader interface and drive the
     documentation examples and doctests offline. It shares the interface of
-    [`BaseDataLoader`][sportsbet.datasets.BaseDataLoader].
+    [`BaseDataLoader`][sportsbet.dataloaders.BaseDataLoader].
 
     Args:
         param_grid:
@@ -184,7 +184,7 @@ class DummySoccerDataLoader(BaseDataLoader):
             `ParameterGrid`. The default `None` selects all sample data.
 
     Examples:
-        >>> from sportsbet.datasets import DummySoccerDataLoader
+        >>> from sportsbet.dataloaders import DummySoccerDataLoader
         >>> import pandas as pd
         >>> loader = DummySoccerDataLoader(param_grid={'league': ['England']})
         >>> X_train, Y_train, O_train = loader.extract_train_data(odds_type='market_average')

@@ -52,12 +52,11 @@ def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
 
 
 def _selection(
-    sport: str,
+    stats: str,
+    odds: str | None,
     leagues: list[str] | None,
     divisions: list[int] | None,
     years: list[int] | None,
-    stats: str | None,
-    odds: str | None,
     odds_key_env: str,
     odds_markets: list[str] | None,
     odds_regions: list[str] | None,
@@ -68,7 +67,6 @@ def _selection(
 ) -> Selection:
     """Return what a tool was told about the data to use."""
     return {
-        'sport': sport,
         'leagues': leagues,
         'divisions': divisions,
         'years': years,
@@ -181,12 +179,11 @@ def _bet(selection: Selection, odds_type: str | None, strategy: Strategy) -> lis
 
 @server.tool()
 async def available_params(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -200,12 +197,11 @@ async def available_params(
     Free, and downloads no data.
     """
     selection = _selection(
-        sport,
+        stats,
+        odds,
         leagues,
         divisions,
         years,
-        stats,
-        odds,
         odds_key_env,
         odds_markets,
         odds_regions,
@@ -220,12 +216,11 @@ async def available_params(
 
 @server.tool()
 async def estimate_preparation(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -240,12 +235,11 @@ async def estimate_preparation(
     free.
     """
     selection = _selection(
-        sport,
+        stats,
+        odds,
         leagues,
         divisions,
         years,
-        stats,
-        odds,
         odds_key_env,
         odds_markets,
         odds_regions,
@@ -260,12 +254,11 @@ async def estimate_preparation(
 
 @server.tool()
 async def prepare(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -282,12 +275,11 @@ async def prepare(
     that costs nothing needs no confirmation.
     """
     selection = _selection(
-        sport,
+        stats,
+        odds,
         leagues,
         divisions,
         years,
-        stats,
-        odds,
         odds_key_env,
         odds_markets,
         odds_regions,
@@ -302,12 +294,11 @@ async def prepare(
 
 @server.tool()
 async def extract_train_data(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -319,12 +310,11 @@ async def extract_train_data(
 ) -> dict[str, Any]:
     """Return the training data of the prepared data."""
     selection = _selection(
-        sport,
+        stats,
+        odds,
         leagues,
         divisions,
         years,
-        stats,
-        odds,
         odds_key_env,
         odds_markets,
         odds_regions,
@@ -339,12 +329,11 @@ async def extract_train_data(
 
 @server.tool()
 async def extract_fixtures_data(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -356,12 +345,11 @@ async def extract_fixtures_data(
 ) -> dict[str, Any]:
     """Return the games that have not been played yet."""
     selection = _selection(
-        sport,
+        stats,
+        odds,
         leagues,
         divisions,
         years,
-        stats,
-        odds,
         odds_key_env,
         odds_markets,
         odds_regions,
@@ -376,13 +364,12 @@ async def extract_fixtures_data(
 
 @server.tool()
 async def backtest(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     model: str = 'odds-comparison',
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -404,12 +391,11 @@ async def backtest(
     `models.py:BETTOR`, since no set of arguments can describe an estimator.
     """
     selection = _selection(
-        sport,
+        stats,
+        odds,
         leagues,
         divisions,
         years,
-        stats,
-        odds,
         odds_key_env,
         odds_markets,
         odds_regions,
@@ -425,13 +411,12 @@ async def backtest(
 
 @server.tool()
 async def bet(
-    sport: str,
+    stats: str,
+    odds: str | None = None,
     model: str = 'odds-comparison',
     leagues: list[str] | None = None,
     divisions: list[int] | None = None,
     years: list[int] | None = None,
-    stats: str | None = None,
-    odds: str | None = None,
     odds_key_env: str = DEFAULT_KEY_ENV,
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
@@ -448,12 +433,11 @@ async def bet(
 ) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
     selection = _selection(
-        sport,
+        stats,
+        odds,
         leagues,
         divisions,
         years,
-        stats,
-        odds,
         odds_key_env,
         odds_markets,
         odds_regions,

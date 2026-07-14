@@ -2,13 +2,14 @@
 Soccer data
 ===========
 
-This example illustrates the usage of the [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader].
+This example illustrates the usage of the [`DataLoader`][sportsbet.dataloaders.DataLoader].
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
-from sportsbet.datasets import FootballDataStats, SoccerDataLoader
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats
 
 # %%
 # Getting the available parameters
@@ -25,7 +26,7 @@ FootballDataStats().available_params()
 # division Spanish and Italian leagues.
 
 param_grid = {'league': ['Spain', 'Italy'], 'division': [1], 'year': [2021]}
-dataloader = SoccerDataLoader(param_grid=param_grid)
+dataloader = DataLoader(param_grid=param_grid, stats=FootballDataStats(), odds=FootballDataOdds())
 
 # %%
 # Preparing the data

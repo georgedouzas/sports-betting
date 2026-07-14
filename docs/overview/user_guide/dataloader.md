@@ -8,9 +8,9 @@
 
 This section presents the dataloader object in details. The available dataloaders are the following:
 
-- [`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader]: Soccer data loader with bundled sample data, for offline testing and the examples below.
-- [`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader]: Soccer data loader that downloads historical and fixtures data from the sources you give it.
-- [`BasketballDataLoader`][sportsbet.datasets.BasketballDataLoader]: Basketball data loader, covering the EuroLeague.
+- [`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader]: Soccer data loader with bundled sample data, for offline testing and the examples below.
+- [`DataLoader`][sportsbet.dataloaders.DataLoader]: Soccer data loader that downloads historical and fixtures data from the sources you give it.
+- [`DataLoader`][sportsbet.dataloaders.DataLoader]: Basketball data loader, covering the EuroLeague.
 
 We aim to include in the future more sports and betting markets, such as the NFL and hockey. **A sport is a data source,
 not an engine** — the two dataloaders above differ only in which sources they default to, and nothing in the extraction
@@ -19,9 +19,10 @@ knows which sport it is looking at.
 ## Basketball
 
 ```python
-from sportsbet.datasets import BasketballDataLoader, EuroLeagueStats, OddsApi
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import EuroLeagueStats, OddsApi
 
-dataloader = BasketballDataLoader(
+dataloader = DataLoader(
     param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
     stats=EuroLeagueStats(),                       # free, no key
     odds=OddsApi(key='...', markets=['h2h']),      # yours
@@ -30,7 +31,7 @@ dataloader.prepare()
 X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 ```
 
-[`EuroLeagueStats`][sportsbet.datasets.EuroLeagueStats] reads the competition's own public API. It is free, needs no key,
+[`EuroLeagueStats`][sportsbet.sources.EuroLeagueStats] reads the competition's own public API. It is free, needs no key,
 and a whole season arrives in a single request.
 
 Three things differ from soccer, and **none of them is configured** — each is read from the data:
@@ -55,16 +56,17 @@ A league is a **source**, not a dataloader. The NBA is the same sport, so it is 
 statistics:
 
 ```python
-from sportsbet.datasets import BasketballDataLoader, NBAStats, OddsApi
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import NBAStats, OddsApi
 
-dataloader = BasketballDataLoader(
+dataloader = DataLoader(
     param_grid={'league': ['NBA'], 'year': [2026]},
     stats=NBAStats(),                              # free, no key
     odds=OddsApi(key='...', markets=['h2h']),      # yours
 )
 ```
 
-[`NBAStats`][sportsbet.datasets.NBAStats] is free and needs no key. A season is named by the year it **ends** in, so
+[`NBAStats`][sportsbet.sources.NBAStats] is free and needs no key. A season is named by the year it **ends** in, so
 `2026` is the 2025-26 season, and it carries the regular season, the play-in and the play-offs — but never the
 pre-season, and never the all-star weekend, whose teams are not clubs.
 
@@ -80,7 +82,7 @@ any**.
 ## Code, not data
 
 This library ships the code that fetches the data, never the data itself. The odds published by bookmakers belong to whoever
-published them, and redistributing them is not ours to do — so `SoccerDataLoader` downloads
+published them, and redistributing them is not ours to do — so `DataLoader` downloads
 [football-data.co.uk](https://www.football-data.co.uk) on **your** machine and runs the transform locally. Nothing is mirrored.
 
 Two consequences follow, and they shape the whole interface:
@@ -139,7 +141,7 @@ consequence is that you can feed the dataloader *any* set of columns that follow
 [Consuming your own data](#consuming-your-own-data).
 
 Except where a real source is being shown, the examples in this section use the offline
-[`DummySoccerDataLoader`][sportsbet.datasets.DummySoccerDataLoader], so they run without any network access and without a
+[`DummySoccerDataLoader`][sportsbet.dataloaders.DummySoccerDataLoader], so they run without any network access and without a
 preparation step.
 
 ## Initialization
@@ -154,7 +156,7 @@ matrices of training and fixtures data have the same columns.
 dataloader — it lives on the data source, which is what actually determines availability:
 
 ```python
-from sportsbet.datasets import FootballDataStats
+from sportsbet.sources import FootballDataStats
 
 params = FootballDataStats().available_params()
 # Only the league/division/year combinations the feed actually publishes are
@@ -187,7 +189,7 @@ Only combinations that actually exist in the feed are selected, and any dimensio
 Selecting a single league, letting `division` and `year` default to all their available values:
 
 ```python
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
 ```
 
@@ -207,13 +209,14 @@ Once the dataloader is initialized, the data has to be prepared before it can be
 
 ## Sources
 
-A source is where the data comes from. `SoccerDataLoader` takes two of them, and each carries its own settings — so adding a
+A source is where the data comes from. `DataLoader` takes two of them, and each carries its own settings — so adding a
 source never widens the dataloader's signature:
 
 ```python
-from sportsbet.datasets import SoccerDataLoader, FootballDataStats, FootballDataOdds
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats
 
-dataloader = SoccerDataLoader(
+dataloader = DataLoader(
     param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
     stats=FootballDataStats(),
     odds=FootballDataOdds(),
@@ -221,7 +224,7 @@ dataloader = SoccerDataLoader(
 ```
 
 Both default to the free [football-data.co.uk](https://www.football-data.co.uk) feed, so the above is the same as
-`SoccerDataLoader(param_grid=...)`.
+`DataLoader(param_grid=...)`.
 
 The statistics and the odds are **separate parameters on purpose**. They are not two ways of getting the same thing: the free
 feed carries pre-match closing odds, which is enough to backtest a pre-match bet but not an in-play one, since it never tells you
@@ -230,14 +233,15 @@ odds is therefore the realistic configuration, and a single "free or paid" switc
 
 ### Bringing your own odds
 
-[`OddsApi`][sportsbet.datasets.OddsApi] buys time-stamped prices from [The Odds API](https://the-odds-api.com) with **your** key.
+[`OddsApi`][sportsbet.sources.OddsApi] buys time-stamped prices from [The Odds API](https://the-odds-api.com) with **your** key.
 That is what makes an in-play bet backtestable: the odds it returns are the ones that were actually on offer at the minute the bet
 would have been placed.
 
 ```python
-from sportsbet.datasets import SoccerDataLoader, FootballDataStats, OddsApi
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataStats, OddsApi
 
-dataloader = SoccerDataLoader(
+dataloader = DataLoader(
     param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
     stats=FootballDataStats(),                                    # free
     odds=OddsApi(key='...', markets=['h2h', 'totals'], regions=['eu']),   # yours
@@ -280,7 +284,7 @@ dataloader.reconciliation_          # matched, unmatched_rate, unmatched_stats, 
 ```
 
 By default **not one match may go without odds** (`max_unmatched_rate=0.0`). Cross that and it raises
-[`UnmatchedError`][sportsbet.datasets.UnmatchedError] rather than handing you a holed dataset.
+[`UnmatchedError`][sportsbet.sources.UnmatchedError] rather than handing you a holed dataset.
 
 **Most of the time you will not have to do anything.** The names are paired **within a league and a season**, where the two
 sources hold the same twenty clubs. That is what makes it safe rather than a guess: every name that could be confused with another
@@ -309,7 +313,7 @@ aliases={
 **Check it** — a suggestion is a resemblance, not a fact, and the library will never apply one on its own. Then pass it back:
 
 ```python
-SoccerDataLoader(..., aliases={'Athletic Bilbao': 'Ath Bilbao'})
+DataLoader(..., aliases={'Athletic Bilbao': 'Ath Bilbao'})
 ```
 
 The reconciled odds then carry the **statistics'** identity: their kick-off and their spelling, so the two tables line up exactly
@@ -331,13 +335,14 @@ X_train, Y_train, O_train = dataloader.extract_train_data()
 ```
 
 Extracting data from a dataloader that was not prepared raises
-[`NotPreparedError`][sportsbet.datasets.NotPreparedError] rather than quietly downloading:
+[`NotPreparedError`][sportsbet.sources.NotPreparedError] rather than quietly downloading:
 
 ```python
-from sportsbet.datasets import NotPreparedError
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats, NotPreparedError
 
 try:
-    SoccerDataLoader(param_grid={'league': ['England']}).extract_train_data()
+    DataLoader(param_grid={'league': ['England']}, stats=FootballDataStats(), odds=FootballDataOdds()).extract_train_data()
 except NotPreparedError as error:
     print(error)  # says what is missing and what obtaining it would cost
 ```
@@ -361,12 +366,17 @@ A dry run downloads no data and spends nothing.
 
 ### Where the data is kept
 
-The downloaded data lives in a [`LocalStore`][sportsbet.datasets.LocalStore], by default under `~/.sportsbet`:
+The downloaded data lives in a [`LocalStore`][sportsbet.sources.LocalStore], by default under `~/.sportsbet`:
 
 ```python
-from sportsbet.datasets import SoccerDataLoader, LocalStore
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats, LocalStore
 
-dataloader = SoccerDataLoader(param_grid={'league': ['England']}, store=LocalStore('/data/sportsbet'))
+dataloader = DataLoader(
+    param_grid={'league': ['England']},
+    stats=FootballDataStats(), odds=FootballDataOdds(),
+    store=LocalStore('/data/sportsbet'),
+)
 ```
 
 The store keeps the raw downloads **forever**, and everything derived from them is rebuilt from those raw payloads at no cost.
@@ -421,7 +431,7 @@ extract the training data using the method `extract_train_data`. All of its para
 We use the following dataloader as an example:
 
 ```python
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
 ```
 
@@ -552,7 +562,7 @@ Once the training data are extracted, it is straightforward to extract the corre
 `extract_fixtures_data`:
 
 ```python
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
@@ -580,8 +590,8 @@ assert Y_fix is None
 ## Consuming your own data
 
 The extraction, grammar and moment-aware model described above are not tied to the bundled feed: two factory functions build a
-dataloader straight from data you provide — [`from_snapshots`][sportsbet.datasets.from_snapshots] and
-[`from_dataframe`][sportsbet.datasets.from_dataframe]. Because the layout is
+dataloader straight from data you provide — [`from_snapshots`][sportsbet.dataloaders.from_snapshots] and
+[`from_dataframe`][sportsbet.dataloaders.from_dataframe]. Because the layout is
 [derived from the data](#everything-is-derived-from-the-data), your columns only need to follow the long format — the providers,
 markets, features and their fixed/time-varying roles are inferred for you.
 
@@ -591,11 +601,12 @@ If your data already follows the long format, pass the `stats` and `odds` tables
 moment, tagged with `event_status` and `event_time` (whole minutes); a match with no resolvable result is treated as a fixture. The
 `odds` table adds a `provider` column, and the markets it carries become the prediction targets. Here we build two finished matches
 (with a half-time, `inplay`/`45min`, snapshot) and one upcoming fixture, deriving the market outcomes from the goals with the
-[`market_outcomes`][sportsbet.datasets.market_outcomes] helper:
+[`market_outcomes`][sportsbet.sources.market_outcomes] helper:
 
 ```python
 import pandas as pd
-from sportsbet.datasets import from_snapshots, market_outcomes
+from sportsbet.dataloaders import from_snapshots
+from sportsbet.sources import market_outcomes
 
 def snapshot(event_status, event_time, date, home, away, home_goals, away_goals, home_avg, away_avg):
     return dict(
@@ -648,7 +659,7 @@ split out into the `odds` table automatically:
 
 ```python
 import pandas as pd
-from sportsbet.datasets import from_dataframe
+from sportsbet.dataloaders import from_dataframe
 
 upcoming = pd.DataFrame([{
     'date': '2025-09-01', 'league': 'England', 'division': 1, 'year': 2025,
@@ -672,7 +683,7 @@ As we have seen above, the extracted data are the following:
 As an example we use the following data:
 
 ```python
-from sportsbet.datasets import DummySoccerDataLoader
+from sportsbet.dataloaders import DummySoccerDataLoader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
@@ -829,7 +840,7 @@ column layout:
 ```python
 import tempfile
 from pathlib import Path
-from sportsbet.datasets import DummySoccerDataLoader, load_dataloader
+from sportsbet.dataloaders import DummySoccerDataLoader, load_dataloader
 dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
 dataloader.extract_train_data(odds_type='market_average')
 path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')

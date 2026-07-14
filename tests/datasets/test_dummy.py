@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import DummySoccerDataLoader, load_dataloader
+from sportsbet.dataloaders import DummySoccerDataLoader, load_dataloader
 
 
 def test_get_all_params():

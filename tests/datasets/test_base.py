@@ -4,7 +4,8 @@ import pandas as pd
 import pandera.pandas as pa
 import pytest
 
-from sportsbet.datasets import BaseDataLoader, required_col
+from sportsbet.dataloaders import BaseDataLoader
+from sportsbet.sources import required_col
 
 
 class _TestDataLoader(BaseDataLoader):

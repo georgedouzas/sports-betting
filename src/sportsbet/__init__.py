@@ -3,7 +3,8 @@
 It provides classes to extract sports betting data and create predictive models. It contains two main
 submodules:
 
-- [`datasets`][sportsbet.datasets]: Provides the classes to extract sports betting datasets.
+- [`dataloaders`][sportsbet.dataloaders]: Turn what the sources carry into data to model.
+- [`sources`][sportsbet.sources]: Where the data comes from, and the store that keeps it.
 - [`evaluation`][sportsbet.evaluation]: Provides the classes to create and evaluate sports betting predictive models.
 """
 

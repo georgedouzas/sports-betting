@@ -3,15 +3,8 @@
 import pandas as pd
 import pytest
 
-from sportsbet.datasets import (
-    BaseDataLoader,
-    BaseOddsSource,
-    BaseStatsSource,
-    DummySoccerDataLoader,
-    SoccerDataLoader,
-    from_dataframe,
-    from_snapshots,
-)
+from sportsbet.dataloaders import BaseDataLoader, DataLoader, DummySoccerDataLoader, from_dataframe, from_snapshots
+from sportsbet.sources import BaseOddsSource, BaseStatsSource, FootballDataOdds, FootballDataStats
 
 PROVIDERS = ['market_average', 'market_maximum']
 
@@ -24,9 +17,9 @@ def long_snapshots():
 
 @pytest.fixture
 def loader(monkeypatch, long_snapshots):
-    """A SoccerDataLoader whose network download is replaced by the long sample."""
-    monkeypatch.setattr(SoccerDataLoader, '_snapshots', lambda self: long_snapshots)
-    return SoccerDataLoader(param_grid={'league': ['England']})
+    """A DataLoader whose network download is replaced by the long sample."""
+    monkeypatch.setattr(DataLoader, '_snapshots', lambda self: long_snapshots)
+    return DataLoader(param_grid={'league': ['England']}, stats=FootballDataStats(), odds=FootballDataOdds())
 
 
 class _Available:
@@ -61,7 +54,7 @@ class _AvailableOdds(_Available, BaseOddsSource):
 
 def _available_loader(param_grid=None):
     """Build a dataloader whose sources publish a fixed set of combinations."""
-    return SoccerDataLoader(param_grid=param_grid, stats=_AvailableStats(), odds=_AvailableOdds())
+    return DataLoader(param_grid=param_grid, stats=_AvailableStats(), odds=_AvailableOdds())
 
 
 def test_a_source_is_asked_without_a_dataloader():
@@ -73,7 +66,7 @@ def test_a_source_is_asked_without_a_dataloader():
 
 def test_the_dataloader_has_no_public_discovery():
     """Test discovery is not a dataloader concern, so it exposes none."""
-    assert not hasattr(SoccerDataLoader, 'get_all_params')
+    assert not hasattr(DataLoader, 'get_all_params')
 
 
 class _FewerOdds(_AvailableOdds):
@@ -85,7 +78,7 @@ class _FewerOdds(_AvailableOdds):
 
 def test_selected_params_intersect_the_sources():
     """Test a season only one source publishes is never selected, since it cannot be modelled."""
-    loader = SoccerDataLoader(stats=_AvailableStats(), odds=_FewerOdds())
+    loader = DataLoader(stats=_AvailableStats(), odds=_FewerOdds())
     assert loader._selected_params() == [{'league': 'England', 'division': 1, 'year': 2024}]
 
 
@@ -143,9 +136,9 @@ def test_validate_snapshots_rejects_missing_columns(monkeypatch, long_snapshots)
     """Test the loader rejects snapshots missing required identity columns."""
     stats, odds = long_snapshots
     bad = (stats.drop(columns=['home_team']), odds)
-    monkeypatch.setattr(SoccerDataLoader, '_snapshots', lambda self: bad)
+    monkeypatch.setattr(DataLoader, '_snapshots', lambda self: bad)
     with pytest.raises(ValueError, match='missing the required columns'):
-        SoccerDataLoader().extract_train_data(odds_type='market_average')
+        DataLoader(stats=FootballDataStats(), odds=FootballDataOdds()).extract_train_data(odds_type='market_average')
 
 
 def test_extract_fixtures_data_matches_columns(loader):
@@ -224,3 +217,13 @@ def test_base_dataloader_requires_snapshots():
     cls = BaseDataLoader
     with pytest.raises(TypeError, match='abstract'):
         cls()
+
+
+def test_a_dataloader_will_not_choose_a_source_for_you():
+    """Test a dataloader with no source says so, rather than reading a feed nobody asked for.
+
+    Which feed the data came from decides what is in it, what it costs and whether anyone may redistribute it. A
+    dataloader that picked one on your behalf would be answering that for you, quietly.
+    """
+    with pytest.raises(ValueError, match='does not choose where its data comes from'):
+        DataLoader().prepare()

@@ -11,11 +11,16 @@ It integrates with other well-known Python libraries like [pandas] and [scikit-l
 
 Sports betting datasets usually come in a format not suitable for modelling. The dataloader object provides methods to extract the
 data in a consistent format that makes it easy to create predictive models. We initialize the
-[`SoccerDataLoader`][sportsbet.datasets.SoccerDataLoader] for the Italian, Spanish leagues and years 2023, 2024:
+[`DataLoader`][sportsbet.dataloaders.DataLoader] for the Italian, Spanish leagues and years 2023, 2024:
 
 ```python
-from sportsbet.datasets import SoccerDataLoader
-dataloader = SoccerDataLoader(param_grid={'league': ['Italy', 'Spain'], 'year': [2023, 2024]})
+from sportsbet.dataloaders import DataLoader
+from sportsbet.sources import FootballDataOdds, FootballDataStats
+dataloader = DataLoader(
+    param_grid={'league': ['Italy', 'Spain'], 'year': [2023, 2024]},
+    stats=FootballDataStats(),
+    odds=FootballDataOdds(),
+)
 dataloader.prepare()
 ```
 

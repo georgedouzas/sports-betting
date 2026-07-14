@@ -4,7 +4,7 @@ import pytest
 
 from sportsbet.cli import main
 
-SELECTION = ['--sport', 'soccer', '--league', 'England']
+SELECTION = ['--stats', 'football-data', '--odds', 'football-data', '--league', 'England']
 MARKET = ['--odds-type', 'market_average', '--target-event-status', 'postplay']
 ODDS_COMPARISON = ['--model', 'odds-comparison', '--alpha', '0.03', '--cv', '2']
 
