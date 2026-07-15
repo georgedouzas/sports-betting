@@ -564,7 +564,7 @@ assert all('__inplay__60min' not in col and '__inplay__90min' not in col for col
 ```
 
 The same horizon is applied to the fixtures data, so training and prediction always use the same feature set. This is central to
-using the dataloader in practice — see [Sports betting in practice](in_practice.md).
+using the dataloader in practice — see [The moment you bet](../../practice/betting_moment.md).
 
 ### Unsupervised extraction
 

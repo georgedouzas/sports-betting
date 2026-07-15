@@ -25,12 +25,12 @@ nav:
       - Dataloader: overview/user_guide/dataloader.md
       - Data sources: overview/user_guide/sources.md
       - Bettor: overview/user_guide/bettor.md
-      - In practice: overview/user_guide/in_practice.md
     - Changelog: overview/changelog.md
     - License: overview/license.md
   - Betting in practice:
     - practice/index.md
     - The theory of value betting: practice/value_betting.md
+    - The moment you bet: practice/betting_moment.md
   - Interfaces:
     - Python API: api/
     - CLI: interfaces/cli.md
