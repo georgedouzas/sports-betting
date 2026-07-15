@@ -88,7 +88,6 @@ EXTRACTION: list[Callable[[FC], FC]] = [
 MODEL: list[Callable[[FC], FC]] = [
     click.option(
         '--model',
-        required=True,
         help=(
             f'A ready-made model ({", ".join(MODELS)}), or a scikit-learn one you built yourself, named by where it '
             f'lives, as in `models.py:BETTOR`.'
@@ -104,9 +103,12 @@ MODEL: list[Callable[[FC], FC]] = [
     click.option('--init-cash', type=float, help='The cash a backtest starts with.'),
     click.option('--stake', type=float, help='The stake of each bet.'),
     click.option('--betting-market', 'betting_markets', multiple=True, help='A market to bet on. Repeatable.'),
-    click.option('--cv', default=3, show_default=True, help='The number of time-ordered folds of a backtest.'),
-    click.option('--n-jobs', default=-1, show_default=True, help='The jobs a backtest runs in parallel.'),
-    click.option('--verbose', default=0, show_default=True, help='How much a backtest says while it runs.'),
+]
+
+BACKTEST: list[Callable[[FC], FC]] = [
+    click.option('--cv', default=3, show_default=True, help='The number of time-ordered folds.'),
+    click.option('--n-jobs', default=-1, show_default=True, help='The jobs the backtest runs in parallel.'),
+    click.option('--verbose', default=0, show_default=True, help='How much the backtest says while it runs.'),
 ]
 
 OUTPUT: list[Callable[[FC], FC]] = [
@@ -116,6 +118,17 @@ OUTPUT: list[Callable[[FC], FC]] = [
         'data_path',
         type=click.Path(),
         help='A directory to write the results to, as CSV.',
+    ),
+]
+
+DATALOADER: list[Callable[[FC], FC]] = [
+    click.option(
+        '--dataloader',
+        '-d',
+        'dataloader_path',
+        required=True,
+        type=click.Path(exists=True),
+        help='A dataloader saved by `dataloader train extract`.',
     ),
 ]
 

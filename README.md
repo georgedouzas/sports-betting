@@ -289,29 +289,31 @@ whatever is still to be played. The two share their columns, so the model traine
 
 ### CLI
 
-The same scenario, without writing any Python:
+The same scenario, without writing any Python. The commands mirror the API: `dataloader` extracts the data and
+`evaluation` works a model on it. `dataloader train extract` downloads the seasons once and saves the dataloader; the
+evaluation commands read that file, so the data is downloaded once and the model is trained once.
 
 ```bash
-# Selection of data
-sportsbet data training --stats football-data --odds football-data \
+# Download the seasons once and save the dataloader
+sportsbet dataloader train extract --stats football-data --odds football-data \
   --league Germany --league Italy --league France --division 1 --division 2 \
   --year 2021 --year 2022 --year 2023 --year 2024 \
-  --odds-type market_maximum
+  --odds-type market_maximum -o dataloader.pkl
 
-# Apply backtesting and get results
-sportsbet model backtest --stats football-data --odds football-data \
-  --league Germany --league Italy --league France --division 1 --division 2 \
-  --year 2021 --year 2022 --year 2023 --year 2024 \
-  --odds-type market_maximum --model logistic \
+# Backtest a model on the saved data
+sportsbet evaluation backtest --dataloader dataloader.pkl --model logistic \
   --betting-market home_win --betting-market draw --betting-market away_win \
   --init-cash 10000 --stake 50 --cv 5
 
-# Get value bets for upcoming betting events
-sportsbet model bet --stats football-data --odds football-data \
-  --league Germany --league Italy --league France --division 1 --division 2 \
-  --odds-type market_maximum --model logistic \
-  --betting-market home_win --betting-market draw --betting-market away_win
+# Fit the model once and save it
+sportsbet evaluation fit --dataloader dataloader.pkl --model logistic \
+  --betting-market home_win --betting-market draw --betting-market away_win \
+  -o model.pkl
+
+# Value bets for the upcoming matches, through the fitted model
+sportsbet evaluation bet --dataloader dataloader.pkl --bettor model.pkl
 ```
 
 The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from,
-and extracting it downloads it. A model of your own is Python, so build it and name it: `--model models.py:BETTOR`.
+and `dataloader train extract` downloads it. A model of your own is Python, so build it and name it:
+`--model models.py:BETTOR`.

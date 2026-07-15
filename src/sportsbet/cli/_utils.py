@@ -8,8 +8,10 @@ from __future__ import annotations
 import math
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, cast
 
+import cloudpickle
 import numpy as np
 import pandas as pd
 from rich import box
@@ -76,6 +78,19 @@ def modelled(selection: dict[str, object]) -> Iterator[BaseBettor | None]:
     except SelectionError as error:
         Console().print(Panel.fit(f'[bold red]{error}'))
         yield None
+
+
+def save_dataloader(path: str, dataloader: BaseDataLoader, train: tuple) -> None:
+    """Save an extracted dataloader and its training data, so it is downloaded once and reused."""
+    with Path(path).open('wb') as file:
+        cloudpickle.dump({'dataloader': dataloader, 'train': train}, file)
+
+
+def load_dataloader(path: str) -> tuple[BaseDataLoader, tuple]:
+    """Load a dataloader and its training data saved by `extract`."""
+    with Path(path).open('rb') as file:
+        saved = cloudpickle.load(file)
+    return saved['dataloader'], saved['train']
 
 
 def extraction(selection: dict[str, object]) -> dict[str, Any]:
