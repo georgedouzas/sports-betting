@@ -7,18 +7,20 @@ from __future__ import annotations
 
 import click
 
-from ._betting import model
-from ._data import data
+from ._betting import evaluation
+from ._data import dataloader
 
 
 @click.group()
 def main() -> None:
-    """CLI for sports-betting.
+    """Create, test and use sports betting models.
 
-    This command is executed when you type `sportsbet` or `python -m sportsbet`.
+    The commands mirror the Python API: `dataloader` selects, downloads and extracts the data, and `evaluation`
+    backtests, fits and bets with a model on it. `dataloader train extract` saves a dataloader that the evaluation
+    commands read, so the data is downloaded once and reused.
     """
     return
 
 
-main.add_command(data)
-main.add_command(model)
+for group in (dataloader, evaluation):
+    main.add_command(group)

@@ -2,12 +2,14 @@
 
 import socket
 from importlib.resources import files
+from pathlib import Path
 from typing import Annotated
 
 import pandas as pd
 import pytest
 from click.testing import CliRunner
 
+from sportsbet.cli import main
 from sportsbet.dataloaders import BaseDataLoader, DataLoader
 from sportsbet.sources import (
     BaseOddsSchema,
@@ -109,6 +111,60 @@ def offline_fixtures_dataloader(long_snapshots: tuple, monkeypatch: pytest.Monke
 
     monkeypatch.setattr('sportsbet.cli._utils.build_dataloader', build)
     monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', build)
+
+
+@pytest.fixture
+def saved_dataloader(cli_runner: CliRunner, offline_dataloader: None, tmp_path: Path) -> Path:
+    """Extract the sample training data to a saved dataloader and return its path."""
+    path = tmp_path / 'dataloader.pkl'
+    result = cli_runner.invoke(
+        main,
+        [
+            'dataloader',
+            'train',
+            'extract',
+            '--stats',
+            'football-data',
+            '--odds',
+            'football-data',
+            '--league',
+            'England',
+            '--league',
+            'Spain',
+            '--odds-type',
+            'market_average',
+            '--target-event-status',
+            'postplay',
+            '-o',
+            str(path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return path
+
+
+@pytest.fixture
+def saved_fixtures_dataloader(cli_runner: CliRunner, offline_fixtures_dataloader: None, tmp_path: Path) -> Path:
+    """Extract a dataloader that still has a match to play and return its path."""
+    path = tmp_path / 'dataloader.pkl'
+    result = cli_runner.invoke(
+        main,
+        [
+            'dataloader',
+            'train',
+            'extract',
+            '--stats',
+            'football-data',
+            '--odds',
+            'football-data',
+            '--odds-type',
+            'market_average',
+            '-o',
+            str(path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return path
 
 
 @pytest.fixture
