@@ -86,9 +86,9 @@ pdm install
 
 ### AI agent
 
-The agent is a first-class way into the library. It reaches everything Python and the command line reach, and it can do one thing
-neither of them can: write the model for you. A betting model is a scikit-learn estimator and an agent can write it, run it, and
-tell you whether it was any good.
+The agent is a first-class way into the library. It reaches everything Python and the command line reach, and it does
+the things a flag never could: it explores the data, tables the results, plots them, and writes the model. A betting
+model is a scikit-learn estimator, and an agent can write one, run it, and tell you whether it was any good.
 
 ```bash
 pip install 'sports_betting[mcp]'
@@ -211,8 +211,8 @@ X_fix, _, O_fix = dataloader.extract_fixtures_data()
 Extracting the data is what downloads it. It is held on the dataloader, and `dataloader.save('path.pkl')` keeps it,
 so you download once and reload rather than re-extracting.
 
-A betting model is a scikit-learn estimator wrapped in a bettor. The markets to bet on are a hyperparameter like any
-other, so put them in the grid and let the search choose:
+A betting model is any scikit-learn estimator wrapped in a bettor. Here a logistic regression bets the draw — the market
+the agent found paid — over five time-ordered folds:
 
 ```python
 from sklearn.compose import make_column_transformer
@@ -222,7 +222,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
-from sportsbet.evaluation import BettorGridSearchCV, ClassifierBettor, backtest
+from sportsbet.evaluation import ClassifierBettor, backtest
 
 classifier = make_pipeline(
     make_column_transformer(
@@ -231,33 +231,26 @@ classifier = make_pipeline(
     SimpleImputer(),
     MultiOutputClassifier(LogisticRegression(solver='liblinear', random_state=7, class_weight='balanced')),
 )
-bettor = BettorGridSearchCV(
-    estimator=ClassifierBettor(classifier, init_cash=10000.0, stake=50.0),
-    param_grid={
-        'classifier__multioutputclassifier__estimator__C': [0.1, 1.0, 50.0],
-        'betting_markets': [['home_win'], ['draw'], ['away_win'], ['home_win', 'draw', 'away_win']],
-    },
-    cv=TimeSeriesSplit(3),
-)
+bettor = ClassifierBettor(classifier, betting_markets=['draw'], init_cash=10000.0, stake=50.0)
 backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(5))
 ```
 
 ```text
                                                        Number of betting days  Number of bets  Yield percentage per bet  ROI percentage  Final cash
 Training start Training end Testing start Testing end
-2020-08-21     2021-02-27   2021-02-27    2021-11-06                     625            1407                       1.0             7.2     10715.5
-               2021-11-06   2021-11-06    2022-05-14                     645            1406                       8.3            58.1     15812.5
-               2022-05-14   2022-05-15    2023-02-25                     639            1406                      -0.5            -3.2      9675.5
-               2023-02-25   2023-02-26    2023-11-06                     637            1406                       4.5            31.6     13161.5
-               2023-11-06   2023-11-06    2024-06-02                     659            1407                      -0.2            -1.4      9858.0
+2020-08-21     2021-02-27   2021-02-27    2021-11-06                     625            1247                       3.6            22.3     12234.0
+               2021-11-06   2021-11-06    2022-05-14                     645            1305                       3.4            22.0     12205.0
+               2022-05-14   2022-05-15    2023-02-25                     639            1349                      -2.3           -15.8      8420.0
+               2023-02-25   2023-02-26    2023-11-06                     637            1344                       6.7            44.9     14491.5
+               2023-11-06   2023-11-06    2024-06-02                     659            1348                       8.0            54.1     15409.5
 ```
 
 Fit it with `bettor.fit(X_train, Y_train, O_train)`, then `bettor.bet(X_fix, O_fix)` returns the value bets of the
 upcoming matches, one row per fixture and one column per market.
 
-The fixtures are not restricted by `param_grid`. It selects what to train on, and a match you could have trained on has
-by definition already been played, so the two never overlap. You may train on one league and bet on another: what the
-two frames share is their columns, not their contents.
+The fixtures are downloaded separately, not sliced out of the training data. `param_grid` chose the seasons to train
+on, and those are all played; `extract_fixtures_data` downloads the current season of the selected leagues and returns
+whatever is still to be played. The two share their columns, so the model trained on the history bets on the fixtures.
 
 ### CLI
 
