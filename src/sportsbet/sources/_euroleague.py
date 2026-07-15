@@ -170,7 +170,7 @@ class EuroLeagueStats(BaseStatsSource):
 
     def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the seasons the competition publishes, which is one free request whatever is selected."""
-        return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL, volatile=True)]
+        return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
 
     def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the seasons the competition publishes.
@@ -195,7 +195,6 @@ class EuroLeagueStats(BaseStatsSource):
                 source=self.name,
                 key=f'{LEAGUE}_{param["division"]}_{param["year"]}',
                 url=GAMES_URL.format(season=param['year'] - 1),
-                volatile=True,
             )
             for param in params
             if param['league'] == LEAGUE

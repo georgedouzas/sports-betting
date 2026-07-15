@@ -195,8 +195,3 @@ def print_console(dfs: list[pd.DataFrame], titles: list[str], *, index: bool = T
             show()
         return
     show()
-
-
-def counted(count: int, noun: str) -> str:
-    """Return a count and its noun, so nothing reads `1 items`."""
-    return f'{count:,} {noun}' if count == 1 else f'{count:,} {noun}s'

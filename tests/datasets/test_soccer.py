@@ -52,11 +52,6 @@ class _AvailableOdds(_Available, BaseOddsSource):
     """The odds of a source publishing a fixed set of combinations."""
 
 
-def _available_loader(param_grid=None):
-    """Build a dataloader whose sources publish a fixed set of combinations."""
-    return DataLoader(param_grid=param_grid, stats=_AvailableStats(), odds=_AvailableOdds())
-
-
 def test_a_source_is_asked_without_a_dataloader():
     """Test what is available is asked of the source, since a param_grid cannot be written before it is known."""
     params = _AvailableStats().available_params()
@@ -67,25 +62,6 @@ def test_a_source_is_asked_without_a_dataloader():
 def test_the_dataloader_has_no_public_discovery():
     """Test discovery is not a dataloader concern, so it exposes none."""
     assert not hasattr(DataLoader, 'get_all_params')
-
-
-class _FewerOdds(_AvailableOdds):
-    """An odds source whose coverage starts later than the statistics."""
-
-    def catalogue(self, payloads):
-        return [{'league': 'England', 'division': 1, 'year': 2024}]
-
-
-def test_selected_params_intersect_the_sources():
-    """Test a season only one source publishes is never selected, since it cannot be modelled."""
-    loader = DataLoader(stats=_AvailableStats(), odds=_FewerOdds())
-    assert loader._selected_params() == [{'league': 'England', 'division': 1, 'year': 2024}]
-
-
-def test_selected_params_filters_without_fabricating():
-    """Test a partial param_grid filters the available combos instead of a cartesian product."""
-    loader = _available_loader({'league': ['Netherlands']})
-    assert loader._selected_params() == [{'league': 'Netherlands', 'division': 1, 'year': 2024}]
 
 
 def test_get_odds_types_derived_from_data(loader):

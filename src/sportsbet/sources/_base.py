@@ -34,22 +34,11 @@ class RawItem:
         url:
             Where to read it from.
 
-        volatile:
-            Whether the content can still change upstream.
-
     Examples:
         >>> from sportsbet.sources import RawItem
-        >>> item = RawItem(
-        ...     source='my_stats',
-        ...     key='England_1_2025',
-        ...     url='https://example.com/2025.csv',
-        ...     volatile=False,
-        ... )
+        >>> item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
         >>> item.key
         'England_1_2025'
-        >>> # A finished season cannot change upstream.
-        >>> item.volatile
-        False
         >>> # The same source and key is the same item, so it is read once.
         >>> item == RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
         True
@@ -58,7 +47,6 @@ class RawItem:
     source: str
     key: str
     url: str
-    volatile: bool = False
 
 
 @dataclass(frozen=True)
@@ -111,8 +99,8 @@ class BaseSource(ABC):
         True
         >>> # Asking what a source publishes declares items rather than fetching them.
         >>> items = stats.index_items()
-        >>> items[0].source, items[0].volatile
-        ('football_data', True)
+        >>> items[0].source
+        'football_data'
     """
 
     name: ClassVar[str]
@@ -261,8 +249,7 @@ class BaseStatsSource(BaseSource):
         ...     sport = 'soccer'
         ...
         ...     def index_items(self, selection=None):
-        ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json',
-        ...                         volatile=True)]
+        ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
         ...
         ...     def catalogue(self, payloads):
         ...         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
@@ -314,8 +301,7 @@ class BaseOddsSource(BaseSource):
         ...     sport = 'soccer'
         ...
         ...     def index_items(self, selection=None):
-        ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json',
-        ...                         volatile=True)]
+        ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
         ...
         ...     def catalogue(self, payloads):
         ...         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]

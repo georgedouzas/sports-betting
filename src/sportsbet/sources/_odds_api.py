@@ -67,7 +67,6 @@ MOMENTS = [('preplay', 0), ('inplay', 45)]
 CLOSING_OFFSET = pd.Timedelta(minutes=-1)
 SNAPSHOT_TOLERANCE = pd.Timedelta(minutes=5)
 TOTALS_POINT = 2.5
-HISTORICAL_MULTIPLIER = 10
 HISTORICAL_START = pd.Timestamp('2020-06-06', tz='UTC')
 FIRST_YEAR = 2021
 SPORTS_KEY = 'sports'
@@ -220,7 +219,7 @@ class OddsApi(BaseOddsSource):
 
     def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the catalogue of the vendor, which is free."""
-        return [RawItem(source=self.name, key=SPORTS_KEY, url=f'{SPORTS_URL}?all=true', volatile=True)]
+        return [RawItem(source=self.name, key=SPORTS_KEY, url=f'{SPORTS_URL}?all=true')]
 
     def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the combinations the vendor covers.
@@ -281,7 +280,7 @@ class OddsApi(BaseOddsSource):
                     items.append(RawItem(source=self.name, key=key, url=url))
             live = f'{LIVE_URL.format(sport=sport)}?{urlencode(self._query())}'
             live_key = DELIMITER.join([sport, str(year), LIVE_KEY])
-            items.append(RawItem(source=self.name, key=live_key, url=live, volatile=True))
+            items.append(RawItem(source=self.name, key=live_key, url=live))
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:

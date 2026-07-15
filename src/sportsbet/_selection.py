@@ -54,7 +54,6 @@ KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
 STATUSES = ['preplay', 'inplay', 'postplay']
 LEARNING_TYPES = ['supervised', 'unsupervised']
-MOMENT_PARTS = 2
 
 
 class SelectionError(ValueError):

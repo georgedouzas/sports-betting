@@ -55,11 +55,6 @@ def target_column(col: str, target_event_status: str, target_event_time: pd.Time
     return DELIMITER.join([col, target_event_status, format_event_time(target_event_time)])
 
 
-def odds_market(odds_col: str) -> str:
-    """Return the betting market of an odds column (drop the provider prefix)."""
-    return DELIMITER.join(odds_col.split(DELIMITER)[1:])
-
-
 class BaseDataLoader(ABC):
     """The abstract base class for dataloaders.
 
@@ -137,7 +132,6 @@ class BaseDataLoader(ABC):
 
     def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
         self.param_grid = param_grid
-        self._components: tuple | None = None
 
     @abstractmethod
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -184,10 +178,6 @@ class BaseDataLoader(ABC):
             for combination in params
             if any(all(combination[key] in values for key, values in grid.items()) for grid in grids)
         ]
-
-    def _selected_params(self: Self) -> list[dict]:
-        """Return the available combinations the `param_grid` selects."""
-        return self._filter_params(self._all_params())
 
     @staticmethod
     def _upcoming(data: pd.DataFrame) -> pd.Series:

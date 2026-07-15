@@ -188,17 +188,6 @@ class BaseOddsSchema(BaseSchema):
         return out
 
 
-def odds_columns(columns: list[str]) -> list[str]:
-    """Return the odds columns of a wide frame (the ``{provider}__{market}`` ones)."""
-    return [col for col in columns if '__' in col]
-
-
-def parse_odds_column(col: str) -> tuple[str, str]:
-    """Split a ``{provider}__{market}`` odds column into its provider and market."""
-    provider, market = col.split('__', maxsplit=1)
-    return provider, market
-
-
 def derive_metadata(
     data: pd.DataFrame,
     value_cols: list[str],
