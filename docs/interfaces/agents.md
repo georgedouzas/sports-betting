@@ -1,4 +1,4 @@
-# AI agent
+# Agents
 
 The library ships an MCP server, so an agent can drive it: find what data exists, download it, backtest a model, and hand
 back the value bets — with no Python written by you.

@@ -185,4 +185,5 @@ docs = [
     "pandas>=2.0.0",
     "kaleido>=1.3.0",
     "matplotlib>=3.11.0",
+    "mkdocs-click>=0.9.0",
 ]
