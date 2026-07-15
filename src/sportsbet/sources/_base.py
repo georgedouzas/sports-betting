@@ -19,10 +19,10 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class RawItem:
-    """A unit of fetching, caching, resuming and cost.
+    """One thing to read: a URL, or a `file://` path for a feed that ships with the library.
 
     Two sources declaring the same `source` and `key` declare the same item, so data shared by a statistics and an odds
-    source is fetched once rather than twice.
+    source is read once rather than twice.
 
     Attributes:
         source:
@@ -32,7 +32,7 @@ class RawItem:
             The identity of the item within the source.
 
         url:
-            Where to fetch it from.
+            Where to read it from.
 
         volatile:
             Whether the content can still change upstream.
@@ -47,10 +47,10 @@ class RawItem:
         ... )
         >>> item.key
         'England_1_2025'
-        >>> # A finished season cannot change, so it is fetched once and kept.
+        >>> # A finished season cannot change upstream.
         >>> item.volatile
         False
-        >>> # The same source and key is the same item, so it is never fetched twice.
+        >>> # The same source and key is the same item, so it is read once.
         >>> item == RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
         True
     """
@@ -137,7 +137,7 @@ class BaseSource(ABC):
 
         Returns:
             items:
-                The items of the catalogue. Always free, so a preparation can be priced without spending anything.
+                The items whose payloads describe the catalogue.
         """
 
     @abstractmethod
@@ -180,7 +180,7 @@ class BaseSource(ABC):
 
         Returns:
             items:
-                The items to fetch. Deterministic for the same parameters.
+                The items to read. Deterministic for the same parameters.
         """
 
     def fixtures_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
