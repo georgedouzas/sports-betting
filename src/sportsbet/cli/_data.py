@@ -13,8 +13,8 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
-from ._options import DOWNLOAD, EXTRACTION, OUTPUT, SELECTION, options
-from ._utils import downloaded, extraction, print_console, reported, selected
+from ._options import EXTRACTION, OUTPUT, SELECTION, options
+from ._utils import extraction, print_console, reported, selected
 
 
 @click.group()
@@ -41,25 +41,24 @@ def params(**selection: object) -> None:
 
 
 @data.command(name='odds-types')
-@options(SELECTION, DOWNLOAD)
+@options(SELECTION)
 def odds_types(**selection: object) -> None:
     """Show the odds that can be extracted."""
     with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        dataloader._fetched(downloaded(selection)['download'])
         frame = pd.DataFrame(dataloader.get_odds_types(), columns=['Type'])
         print_console([frame], ['Available odds types'], index=False)
 
 
 @data.command()
-@options(SELECTION, EXTRACTION, DOWNLOAD, OUTPUT)
+@options(SELECTION, EXTRACTION, OUTPUT)
 def training(data_path: str | None, **selection: object) -> None:
     """Extract the training data."""
     with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection), **downloaded(selection))
+        X_train, Y_train, O_train = dataloader.extract_train_data(**extraction(selection))
         Y_train = cast('pd.DataFrame', Y_train)
         has_odds = O_train is not None and not O_train.empty
         print_console(
@@ -76,13 +75,13 @@ def training(data_path: str | None, **selection: object) -> None:
 
 
 @data.command()
-@options(SELECTION, EXTRACTION, DOWNLOAD, OUTPUT)
+@options(SELECTION, EXTRACTION, OUTPUT)
 def fixtures(data_path: str | None, **selection: object) -> None:
     """Extract the games that have not been played yet."""
     with reported(), selected(selection) as dataloader:
         if dataloader is None:
             return
-        dataloader.extract_train_data(**extraction(selection), **downloaded(selection))
+        dataloader.extract_train_data(**extraction(selection))
         X_fix, _, O_fix = dataloader.extract_fixtures_data()
         if X_fix.empty:
             Console().print(Panel.fit('[bold red]Fixtures data were empty'))

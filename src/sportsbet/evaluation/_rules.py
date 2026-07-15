@@ -64,7 +64,7 @@ class OddsComparisonBettor(BaseBettor):
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = OddsComparisonBettor(alpha=0.03)
         >>> results = backtest(bettor, X, Y, O)
         >>> 'Number of bets' in results.columns

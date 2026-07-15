@@ -104,36 +104,6 @@ def test_an_alias_that_is_not_one_says_how_to_spell_one(cli_runner, monkeypatch)
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_an_extraction_downloads_nothing_it_was_not_asked_to(cli_runner, tmp_path):
-    """Test an extraction says the data is missing rather than quietly going and buying it.
-
-    Downloading is the only thing that reaches the network, and for a metered source the only thing that costs money, so
-    it is the only thing that has to be asked for.
-    """
-    result = cli_runner.invoke(
-        main,
-        [
-            'data',
-            'training',
-            '--stats',
-            'football-data',
-            '--odds',
-            'football-data',
-            '--league',
-            'England',
-            '--year',
-            '2025',
-            '--store',
-            str(tmp_path),
-        ],
-    )
-    exit_code = 1
-    assert result.exit_code == exit_code
-    assert 'has not been downloaded' in result.output
-    assert '--download' in result.output
-
-
-@pytest.mark.xdist_group(name='serial')
 def test_an_odds_type_that_does_not_exist_says_what_there_is(cli_runner, offline_dataloader):
     """Test what the library says is what the user reads, rather than a stack trace."""
     result = cli_runner.invoke(main, ['data', 'training', *SELECTION, '--odds-type', 'nonexistent'])

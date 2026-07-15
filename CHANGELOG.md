@@ -19,41 +19,34 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   it reached one sport of two. What it offered, using the library without writing Python, is now offered by the CLI and
   by an AI agent, both of which reach *all* of the library and are tested.
 
-- **BREAKING: the fixtures are no longer restricted by `param_grid`.** It selects what to *train* on, and a match you
-  could have trained on is by definition one that has already been played. A fixture has not been played, so the two
-  sets never overlap and filtering one by the other only ever threw fixtures away.
+- **BREAKING: `extract_fixtures_data` downloads the upcoming matches itself, and takes no arguments.** It used to slice
+  the fixtures out of the training data, which meant selecting a past season gave you no fixtures at all — the normal
+  case, since you train on history and bet on what is next, and the library quietly returned an empty frame.
 
-  You can now **train on England and bet on Italy**. What the two frames share is their columns, not their contents.
+  Now the two are separate downloads. `extract_train_data` downloads the seasons you selected; `extract_fixtures_data`
+  downloads the current season of each selected league and returns whatever in it is still to be played, shaped to the
+  training columns.
 
   ```python
   dataloader = DataLoader(
       param_grid={'league': ['England'], 'year': [2022, 2023]},
       stats=FootballDataStats(), odds=FootballDataOdds(),
   )
-  X, Y, O = dataloader.extract_train_data(odds_type='market_maximum', download=True)
-  X_fix, _, O_fix = dataloader.extract_fixtures_data()
-
-  # before:  0 fixtures, always, whenever you trained on a finished season
-  # after:   every unplayed match the feed publishes, in any league
+  X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')   # England 2022-2023
+  X_fix, _, O_fix = dataloader.extract_fixtures_data()                  # England, whatever is upcoming
   ```
 
-  Selecting a past season used to leave you with **no fixtures at all**, which is the normal case — you train on
-  history and bet on what is next. The library quietly returned an empty frame and said nothing.
+  The fixtures follow the selected **leagues**, not the years: to bet on Italy, select Italy. What the training and
+  fixtures frames share is their columns, so the model trained on the history bets on the fixtures.
 
-  Two things this costs. The season in progress of **every** league is now downloaded, because a fixture is described
-  by the form of its two teams and their form is the season they are in; without it a fixture arrives with every
-  feature missing. And the whole catalogue is read rather than the selected part of it, since a feed that only knew
-  about the leagues you selected could not offer you a fixture in any other one.
+- **A match with no result whose date has passed is no longer offered as a fixture.** A feed loses one now and then —
+  an abandoned game, a season it never finished recording. Those matches have no result and never will, so a fixture
+  must also be in the future.
 
 - **A match whose outcome the feed never recorded was handed to a supervised model as training data.** scikit-learn
   does not accept a missing value in `y`, and there is nothing to learn from a target that does not exist. Those rows
   are now dropped, rather than imputed — an invented outcome is a match that never happened. `X`, `Y` and `O` stay
   aligned.
-
-- **A match with no result whose date had passed was offered as a fixture.** A feed loses one now and then — an
-  abandoned game, a season it never finished recording. Those matches have no result and never will, and they were
-  being handed back as upcoming: the README's own worked example was betting on `Bastia vs Red Star`, a match played
-  eight months earlier. A fixture must also be in the future.
 
 - **BREAKING: `from_snapshots`, `from_dataframe` and `DummySoccerDataLoader` are gone.** There is one way to build a
   dataloader, and it is `DataLoader(param_grid, stats, odds)`. A second way to build one was a second set of
@@ -72,33 +65,39 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
   # after
   dataloader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
-  X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+  X, Y, O = dataloader.extract_train_data(odds_type='market_average')
   ```
 
   The sample also stopped being made up. It is a real season of the English and Spanish first divisions, frozen from
   football-data.co.uk. The old one invented **in-play odds**, which no free feed publishes, so every example built on it
-  was an example of something that does not exist. Its items are files rather than URLs, so `download=True` reaches no
-  network and costs nothing. The season is finished, so it has **no fixtures**: betting is shown against a live feed.
+  was an example of something that does not exist. Its items are files on disk rather than URLs, so extracting it reaches
+  no network and costs nothing. The season is finished, so it has **no fixtures**: betting is shown against a live feed.
 
-- **BREAKING: `prepare`, `dry_run` and `estimate` are gone.** Downloading is not a step of its own any more, it is a
-  parameter of the extraction, and it is `False`:
+- **BREAKING: the store is gone, and with it `prepare`, `dry_run`, `download`, `refresh`, `LocalStore`, `BaseStore`,
+  `NotPreparedError`, `PreparationReport`, the `store=` argument and `SPORTSBET_HOME`.** Persisting the data was a whole
+  subsystem — a cache under your home directory, a manifest, a refresh switch — to answer a question the dataloader
+  already answers: it holds the data after an extraction, and `save`/`load_dataloader` keep it.
+
+  So there is no download switch. Extracting downloads:
 
   ```python
   # before
   dataloader.prepare()
-  X, Y, O = dataloader.extract_train_data()
+  X, Y, O = dataloader.extract_train_data(download=True)
 
   # after
-  X, Y, O = dataloader.extract_train_data(download=True)          # or download='refresh'
+  X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')   # downloading is extracting
+  dataloader.save('england.pkl')                                        # keep it, and load it back
   ```
 
-  Nothing else reaches the network. Extract without `download` and you get a `NotPreparedError` carrying the number of
-  requests getting the data would take, and not one of them is made.
+  Each extraction downloads afresh, so the object always carries the latest data. Storing it is your responsibility, and
+  the tool for it is a file you own rather than a cache the library hides. The gate that used to stop a paid feed
+  spending is gone too — extracting a metered selection buys it — so extract deliberately and save, rather than
+  re-extracting.
 
-  The library no longer quotes a **cost**. It used to multiply an invented constant by the number of snapshots and call
-  the answer credits. A vendor sets its own prices, changes them, and prices its endpoints differently, so that number
-  was made up. What is reported now is the number of requests, which is a fact. What they are worth is between you and
-  whoever you buy them from.
+  The library also no longer quotes a **cost**. It used to multiply an invented constant by the number of snapshots and
+  call the answer credits; a vendor sets its own prices, so that number was made up. What a request is worth is between
+  you and whoever you buy it from.
 
 ### Changed
 
@@ -141,7 +140,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
   # after
   sportsbet data training --stats football-data --odds football-data --league England --year 2025 \
-    --odds-type market_maximum --download
+    --odds-type market_maximum
   ```
 
   The old contract handed the CLI a dataloader *class*, and a class carries no sources, and a source is what carries a
@@ -156,8 +155,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   ```
 
   A data source is configured from the command line as it is from Python: its markets, regions and moments
-  (`--odds-market`, `--odds-region`, `--odds-moment inplay:45`), where the data is kept (`--store`), and how the two
-  sources' team names are paired (`--alias`, `--max-unmatched-rate`). A test now compares the commands against the
+  (`--odds-market`, `--odds-region`, `--odds-moment inplay:45`) and how the two sources' team names are paired
+  (`--alias`, `--max-unmatched-rate`). A test now compares the commands against the
   Python API's signatures, so the two cannot drift apart again without the suite saying so.
 
   A betting model is the one thing that cannot be a flag, because it is a scikit-learn estimator and no arrangement of
@@ -188,17 +187,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - **A bettor betting on a single market crashed.** The probabilities were clipped in place, and the array they came
   from is read-only when a single market produces it. The default has five markets, so nobody met it.
 
-- **An extraction fetched.** When the data was not held, the error that said so built its report by *downloading* the
-  catalogue — the one thing an extraction must never do. It now says less rather than fetching in order to say more,
-  and still names what is missing whenever it can know without going to the network.
-
 - **`drop_na_thres` was not a proportion.** Above one it asked for columns that are more than complete and silently
   dropped every one of them; below nought it was accepted and meant nothing. It is now checked.
 
 - **The command line showed stack traces.** What the library says is now what the user reads.
-
-- **The download progress bar was written to standard output**, so it landed in the middle of anything being piped. It
-  goes to standard error, where progress belongs.
 
 ### Added
 
@@ -206,14 +198,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `sportsbet-mcp`. It finds what data exists, downloads it, backtests a model and returns the value bets.
 
   Its tools take the *same* arguments the commands take, so the two surfaces cannot drift and there is no file to write
-  first. A key is never one of those arguments: what is named is the environment variable holding it. **An agent cannot
-  fetch by surprise**: `download` is `False` on every tool, and asking for data that is not held reports how many
-  requests getting it would take rather than making them.
+  first. A key is never one of those arguments: what is named is the environment variable holding it, so it stays out of
+  a transcript.
 
   No model, no model key and no model call is added to the library. The agent stays outside it.
-
-- `SPORTSBET_HOME`, an environment variable naming where the store keeps its data. It defaults to `~/.sportsbet`, as
-  before.
 
 - `SampleSoccerStats` and `SampleSoccerOdds`, the sample data as sources. See the breaking change above.
 

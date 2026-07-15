@@ -6,10 +6,8 @@ The surface it replaces had no tests at all, which is most of why it was replace
 import asyncio
 
 import pandas as pd
-import pytest
 
 from sportsbet.mcp import server
-from sportsbet.sources import NotPreparedError, PreparationReport, RawItem
 
 SELECTION = {'stats': 'football-data', 'odds': 'football-data', 'leagues': ['England']}
 TOOLS = [
@@ -54,31 +52,6 @@ def test_a_key_is_never_an_argument():
         assert 'key' not in properties
 
 
-def test_nothing_is_downloaded_unless_a_tool_is_asked_to():
-    """Test every tool that reads data can be told whether to download, and does not by default.
-
-    Downloading is the only thing that reaches the network, and for a metered source the only thing that costs money. An
-    assistant that could download without being asked could spend somebody's money without asking either.
-    """
-    tools = {tool.name: tool.inputSchema for tool in asyncio.run(server.list_tools())}
-    for name in ('extract_train_data', 'extract_fixtures_data', 'backtest', 'bet'):
-        schema = tools[name]
-        assert 'download' in schema['properties']
-        assert 'download' not in schema.get('required', [])
-
-
-def test_a_tool_says_what_a_download_would_take(offline_dataloader, monkeypatch):
-    """Test a tool asked for data it has not got says how many requests getting it would take."""
-
-    class _Dataloader:
-        def extract_train_data(self, **rest):
-            raise NotPreparedError(PreparationReport(to_fetch=[RawItem(source='odds_api', key='k', url='u')]))
-
-    monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', lambda **selection: _Dataloader())
-    with pytest.raises(Exception, match='odds_api 1'):
-        _call('extract_train_data', **SELECTION)
-
-
 def test_a_tool_can_reach_a_source_that_fetches(monkeypatch):
     """Test the library can open its own event loop while a tool is being answered.
 
@@ -94,7 +67,7 @@ def test_a_tool_can_reach_a_source_that_fetches(monkeypatch):
             return pd.DataFrame([{'a': 1}]), pd.DataFrame([{'b': 1}]), pd.DataFrame([{'c': 1}])
 
     monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', lambda **selection: _Dataloader())
-    _call('extract_train_data', **SELECTION, download=True)
+    _call('extract_train_data', **SELECTION)
     assert opened
 
 
@@ -102,7 +75,7 @@ def test_an_assistant_can_go_from_nothing_to_value_bets(offline_dataloader):
     """Test the whole journey works without a line of Python written by the user."""
     assert _call('available_params', **SELECTION)
 
-    train = _call('extract_train_data', **SELECTION, odds_type='market_average', download=True)
+    train = _call('extract_train_data', **SELECTION, odds_type='market_average')
     assert train['X']
     assert train['Y']
     assert train['O']

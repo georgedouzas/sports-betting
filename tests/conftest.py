@@ -1,8 +1,6 @@
 """Configuration for the pytest test suite."""
 
-import os
 import socket
-import tempfile
 from importlib.resources import files
 from typing import Annotated
 
@@ -46,9 +44,6 @@ class SnapshotsDataLoader(BaseDataLoader):
         return self.stats, self.odds
 
 
-os.environ['SPORTSBET_HOME'] = tempfile.mkdtemp(prefix='sportsbet-tests-')
-
-
 @pytest.fixture(autouse=True, scope='session')
 def pandas_terminal_width() -> None:
     """Set options to display data."""
@@ -60,8 +55,8 @@ def pandas_terminal_width() -> None:
 def no_network(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Fail any test that reaches the network, unless it is marked `network`.
 
-    Extraction must never fetch, so the only way to know it does not is to make fetching impossible and watch the suite
-    stay green.
+    A test must not reach the network, so fetching is made impossible and the suite is watched to stay green. The tests
+    that do need real data are marked `network`.
     """
     if request.node.get_closest_marker('network'):
         return
@@ -94,7 +89,7 @@ def offline_dataloader(monkeypatch: pytest.MonkeyPatch) -> None:
             stats=SampleSoccerStats(),
             odds=SampleSoccerOdds(),
         )
-        dataloader.extract_train_data(odds_type='market_average', download=True)
+        dataloader.extract_train_data(odds_type='market_average')
         return dataloader
 
     monkeypatch.setattr('sportsbet.cli._utils.build_dataloader', build)

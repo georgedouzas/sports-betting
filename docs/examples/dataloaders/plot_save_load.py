@@ -29,7 +29,7 @@ dataloader = DataLoader(
     stats=SampleSoccerStats(),
     odds=SampleSoccerOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
 path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')
 _ = dataloader.save(path)

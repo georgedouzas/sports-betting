@@ -711,6 +711,26 @@ def _current_year() -> int:
     return datetime.now(tz=UTC).year
 
 
+def _current(
+    params: list[dict],
+    catalogue: list[tuple[str, int, int, str]],
+) -> list[tuple[dict, str]]:
+    """Return the season in progress, and its URL, for each league and division the selection names.
+
+    A selection of three leagues yields three current seasons, never a fourth, so the fixtures of a few leagues never
+    read the whole feed.
+    """
+    wanted = {(param['league'], param['division']) for param in params}
+    latest: dict[tuple[str, int], tuple[int, str]] = {}
+    for league, division, year, url in catalogue:
+        if (league, division) in wanted and ((league, division) not in latest or year > latest[league, division][0]):
+            latest[league, division] = (year, url)
+    return [
+        ({'league': league, 'division': division, 'year': year}, url)
+        for (league, division), (year, url) in sorted(latest.items())
+    ]
+
+
 def _season_years(data: pd.DataFrame) -> pd.Series:
     """Return the ending year of each season of a whole-history file."""
     return data['Season'].apply(lambda season: season if not isinstance(season, str) else int(season.split('/')[-1]))
@@ -973,42 +993,35 @@ class _FootballDataSource(BaseSource):
             return RawItem(source=self.name, key=f'{league}_{division}', url=url, volatile=True)
         return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url, volatile=year >= _current_year())
 
-    def _current_items(self: Self) -> list[RawItem]:
-        """Return the item of the season in progress of every league the feed publishes.
-
-        An upcoming match is described by the form of its two teams, and their form is the season it belongs to. That
-        season is the one in progress, whatever season the user chose to train on, so it is read whether or not it was
-        selected. Without it a fixture arrives with every feature missing, which is not a fixture anyone can bet on.
-        """
-        latest: dict[tuple[str, int], tuple[int, str]] = {}
-        for league, division, year, url in self._catalogue:
-            current = latest.get((league, division))
-            if current is None or year > current[0]:
-                latest[league, division] = (year, url)
-        return [
-            self._season_item(league, division, year, url) for (league, division), (year, url) in sorted(latest.items())
-        ]
-
     def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per selected season file, plus every season in progress and the fixtures of the feed.
+        """Return the season file of each selected combination.
 
         The URLs are looked up in the catalogue rather than constructed, so a combination the feed does not publish is
-        never fabricated. A whole-history league yields the same item for each of its seasons, so it is downloaded once
-        however many are selected.
+        left out rather than fabricated. A whole-history league yields the same item for each of its seasons, so it is
+        read once however many are selected.
         """
         seasons = {(league, division, year): url for league, division, year, url in self._catalogue}
         items: list[RawItem] = []
         for param in params:
-            league, division, year = param['league'], param['division'], param['year']
-            url = seasons.get((league, division, year))
+            url = seasons.get((param['league'], param['division'], param['year']))
             if url is None:
                 continue
-            item = self._season_item(league, division, year, url)
+            item = self._season_item(param['league'], param['division'], param['year'], url)
             if item not in items:
                 items.append(item)
-        for item in self._current_items():
-            if item not in items:
-                items.append(item)
+        return items
+
+    def fixtures_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
+        """Return the season files the upcoming matches need, plus the feed's fixtures file.
+
+        An upcoming match is described by the form of its two teams, which is the season they are in the middle of. So
+        the fixtures read the season in progress of each selected league — the same file that carries that form — and
+        the feed's fixtures file, which lists the matches still to be played.
+        """
+        items = [
+            self._season_item(param['league'], param['division'], param['year'], url)
+            for param, url in _current(params, self._catalogue)
+        ]
         items.append(RawItem(source=self.name, key=FIXTURES_KEY, url=f'{URL}/fixtures.csv', volatile=True))
         return items
 

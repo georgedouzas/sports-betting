@@ -59,6 +59,29 @@ Its two main components are dataloaders and bettors:
 - A bettor backtests a betting strategy and predicts the value bets of upcoming events. It wraps any scikit-learn
   estimator.
 
+## Installation
+
+For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
+
+```bash
+pip install sports_betting
+```
+
+To drive the library from an AI agent, install the MCP server:
+
+```bash
+pip install 'sports_betting[mcp]'
+```
+
+Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
+project as well as the main and development dependencies:
+
+```bash
+git clone https://github.com/georgedouzas/sports-betting.git
+cd sports-betting
+pdm install
+```
+
 ## Quick start
 
 ### AI agent
@@ -149,35 +172,28 @@ You: Fine. Any value bets in the upcoming fixtures?
 > relationship between what you trained on and what you can bet on is worth getting straight, because it is not the one
 > people expect.
 >
-> They are unrelated. `param_grid` selects what you train on. A fixture is a match that has not been played, so it is
-> never a match you could have trained on. The two frames share their columns, not their contents:
+> `param_grid` chose the seasons to train on, and those are all finished. A fixture has not been played, so the two
+> never overlap. The fixtures are downloaded separately, from the current season of the leagues you selected:
 >
 > ```python
 > dataloader = DataLoader(
->     param_grid={'league': ['England'], 'year': [2022, 2023]},   # train on this
+>     param_grid={'league': ['Germany', 'Italy', 'France'], 'division': [1, 2], 'year': [2021, 2022, 2023, 2024]},
 >     stats=FootballDataStats(), odds=FootballDataOdds(),
 > )
-> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum', download=True)
-> X_fix, _, O_fix = dataloader.extract_fixtures_data()            # bet on whatever is unplayed, anywhere
+> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')   # the seasons above, to train on
+> X_fix, _, O_fix = dataloader.extract_fixtures_data()                  # whatever those leagues have upcoming
 > ```
 >
-> ```text
-> X      760 matches   England, 2022-2023
-> X_fix    2 matches   Brazil, France        <- leagues you never trained on
-> same columns, so the same model consumes both
-> ```
->
-> So train on the Premier League and bet on Serie A if you like. Whether that is a good idea is your call, since the
-> model has never seen those teams, but the library will not stop you and it will not silently hide the fixtures either.
->
-> Given what we found, I would not: the edge we located is in Italy, and it is four seasons of one league found after a
-> dozen tries. Hold a season back and check it there before staking anything.
+> Same columns, so the model trained on the history bets on the fixtures. To bet on another league, select it. And
+> given what we found, I would not stake this yet: the edge is in Italy, four seasons of one league found after a dozen
+> tries. Hold a season back and check it there first.
 
-The agent names the environment variable holding your API key, never the key itself, and downloads nothing unless you ask.
+The agent names the environment variable holding your API key, never the key itself. Extracting the data downloads it,
+so a paid odds feed spends only when you extract — do it once and `save` the dataloader rather than re-extracting.
 
 ### Python API
 
-The same thing, in code. A dataloader is a statistics source and an odds source, and you name both:
+The same thing, in code. A dataloader is a statistics source and an odds source:
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -188,11 +204,12 @@ dataloader = DataLoader(
     stats=FootballDataStats(),
     odds=FootballDataOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 ```
 
-`download=True` fetches the data. Leave it out and you just see how many requests it would take.
+Extracting the data is what downloads it. It is held on the dataloader, and `dataloader.save('path.pkl')` keeps it,
+so you download once and reload rather than re-extracting.
 
 A betting model is a scikit-learn estimator wrapped in a bettor. The markets to bet on are a hyperparameter like any
 other, so put them in the grid and let the search choose:
@@ -251,7 +268,7 @@ The same scenario, without writing any Python:
 sportsbet data training --stats football-data --odds football-data \
   --league Germany --league Italy --league France --division 1 --division 2 \
   --year 2021 --year 2022 --year 2023 --year 2024 \
-  --odds-type market_maximum --download
+  --odds-type market_maximum
 
 # Apply backtesting and get results
 sportsbet model backtest --stats football-data --odds football-data \
@@ -269,33 +286,4 @@ sportsbet model bet --stats football-data --odds football-data \
 ```
 
 The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from,
-and `--download` fetches it. A model of your own is Python, so build it and name it: `--model models.py:BETTOR`.
-
-## Sports betting in practice
-
-Betting is not about predicting matches, it is about finding the odds a bookmaker priced wrong. That idea, and the
-maths behind it, is the [theory of value betting](https://georgedouzas.github.io/sports-betting/practice/value_betting/).
-
-## Installation
-
-For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
-
-```bash
-pip install sports_betting
-```
-
-To drive the library from an AI agent, install the MCP server:
-
-```bash
-pip install 'sports_betting[mcp]'
-```
-
-Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
-project as well as the main and development dependencies:
-
-```bash
-git clone https://github.com/georgedouzas/sports-betting.git
-cd sports-betting
-pdm install
-```
-
+and extracting it downloads it. A model of your own is Python, so build it and name it: `--model models.py:BETTOR`.

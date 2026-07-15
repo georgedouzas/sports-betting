@@ -5,18 +5,16 @@
 
 from __future__ import annotations
 
-import hashlib
-import inspect
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Self
 
 import pandas as pd
 
+from ._fetch import fetch_payloads
+
 if TYPE_CHECKING:
     from .. import ParamGrid
-    from ._store import BaseStore
 
 
 @dataclass(frozen=True)
@@ -97,8 +95,8 @@ class BaseSource(ABC):
     sport of the one it is paired with.
 
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
-    Its planning and transform methods never fetch, so what a download would take can always be counted without making
-    it, and an extraction can never download by accident.
+    Its planning and transform methods never fetch: they declare what to read and turn the payloads into snapshots, and
+    the dataloader does the reading. A source is therefore a pure description of a feed, easy to write and to test.
 
     It also answers what it publishes, through `available_params`. That question has to be answerable before a
     `param_grid` is written, so it belongs here and not on a dataloader that is configured with one.
@@ -155,33 +153,17 @@ class BaseSource(ABC):
                 The available `league`, `division` and `year` combinations.
         """
 
-    def available_params(self: Self, store: BaseStore | None = None, refresh: bool = False) -> list[dict]:
-        """Return the parameter combinations the source publishes.
+    def available_params(self: Self) -> list[dict]:
+        """Return the league, division and season combinations the source publishes.
 
-        This is where you start: a `param_grid` cannot be written before it is known what exists, so it needs no
-        dataloader. The catalogue is free and it is re-read, so a new season shows up as soon as it is published.
-
-        What is published depends on how the source is configured, since a credential may only cover part of what the
-        source offers.
-
-        Args:
-            store:
-                Where the catalogue is kept. The default `None` keeps it in `~/.sportsbet`.
-
-            refresh:
-                If `True`, everything is read again, including what the store already holds.
+        Start here: a `param_grid` names what to select, and you write it once you know what there is to select. What a
+        source publishes depends on how it is configured, since a credential may cover only part of what it offers.
 
         Returns:
             params:
                 The available `league`, `division` and `year` combinations.
         """
-        from ._store import LocalStore  # noqa: PLC0415
-
-        store = store if store is not None else LocalStore()
-        items = self.index_items()
-        held = [] if refresh else store.held(items)
-        store.fetch([item for item in items if item not in held], self.request_url)
-        return self.catalogue(store.read(items))
+        return self.catalogue(fetch_payloads(self.index_items(), self.request_url))
 
     @abstractmethod
     def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
@@ -201,6 +183,27 @@ class BaseSource(ABC):
                 The items to fetch. Deterministic for the same parameters.
         """
 
+    def fixtures_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
+        """Return the raw items the upcoming matches need.
+
+        The default is the same items training needs, which suits a source whose season file already carries the matches
+        still to be played, or an odds source that prices whatever the schedule lists. A source whose upcoming matches
+        live somewhere else — a separate fixtures file, the season in progress rather than the one selected — overrides
+        it.
+
+        Args:
+            params:
+                The selected parameter combinations.
+
+            schedule:
+                The upcoming matches, for an odds source that prices by instant.
+
+        Returns:
+            items:
+                The items whose payloads yield the upcoming matches.
+        """
+        return self.required_items(params, schedule)
+
     def needs_schedule(self: Self) -> bool:
         """Return whether the source has to be told when the matches are.
 
@@ -216,7 +219,7 @@ class BaseSource(ABC):
         """Return the URL to fetch an item from.
 
         The credential is added here, at the moment of the request, so it never reaches a `RawItem` and is never
-        written to the store.
+        part of the data you save.
 
         Args:
             item:
@@ -240,23 +243,6 @@ class BaseSource(ABC):
             snapshots:
                 The long snapshots.
         """
-
-    def transform_digest(self: Self) -> str:
-        """Return the identity of the code that turns the payloads into snapshots.
-
-        The snapshots are derived by code as well as from data, so what is cached against them has to know when the
-        code changes. A release version cannot: an editable install keeps the version it was installed with, so an
-        edited transform would keep serving what the previous one produced.
-
-        Returns:
-            digest:
-                The identity of the transform.
-        """
-        try:
-            module = Path(inspect.getfile(type(self)))
-            return hashlib.sha256(module.read_bytes()).hexdigest()[:16]
-        except (OSError, TypeError):
-            return type(self).__name__
 
 
 class BaseStatsSource(BaseSource):
@@ -298,7 +284,7 @@ class BaseStatsSource(BaseSource):
         ...         return pd.concat([preplay, postplay], ignore_index=True)
         >>>
         >>> source = MyStats()
-        >>> # It never fetches. It says what it needs, and the store gets it.
+        >>> # It never fetches. It says what it needs, and the dataloader reads it.
         >>> source.required_items([{'year': 2025}])[0].url
         'https://example.com/2025.csv'
         >>> csv = b'date,league,division,year,home_team,away_team,home_form,home_goals,away_goals\n'

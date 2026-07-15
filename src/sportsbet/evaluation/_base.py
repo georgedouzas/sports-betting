@@ -140,7 +140,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = BaseRateBettor(betting_markets=['home_win', 'draw', 'away_win'])
         >>> results = backtest(bettor, X, Y, O)
         >>> 'Yield percentage per bet' in results.columns
@@ -493,7 +493,7 @@ def save_bettor(bettor: BaseBettor, path: str) -> None:
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = OddsComparisonBettor(betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
         >>> save_bettor(bettor, path)
         >>> # A fitted bettor comes back fitted, so the model that was backtested is the model that bets.
@@ -525,7 +525,7 @@ def load_bettor(path: str) -> BaseBettor:
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> save_bettor(OddsComparisonBettor(betting_markets=['home_win']).fit(X, Y, O), path)
         >>> bettor = load_bettor(path)
         >>> # It is ready to bet without being fitted again: one row per match, one column per market.

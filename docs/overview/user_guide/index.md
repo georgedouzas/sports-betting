@@ -23,11 +23,10 @@ dataloader = DataLoader(
 )
 ```
 
-The next step is to extract the training data, including the market maximum odds. Nothing is downloaded unless
-`download` says so:
+The next step is to extract the training data, including the market maximum odds. Extracting it is what downloads it:
 
 ```python
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 ```
 
 Finally, the corresponding fixtures data are easily extracted:

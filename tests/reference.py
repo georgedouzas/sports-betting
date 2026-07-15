@@ -19,7 +19,7 @@ import aiohttp
 import pandas as pd
 
 from sportsbet.dataloaders import DataLoader
-from sportsbet.sources import FootballDataOdds, FootballDataStats, LocalStore
+from sportsbet.sources import FootballDataOdds, FootballDataStats
 
 PARAM_GRID = {'league': ['England'], 'division': [1], 'year': [2025]}
 RAW_URLS = {
@@ -30,7 +30,6 @@ SAMPLES_PATH = Path(__file__).parent / 'samples'
 FINGERPRINT_PATH = SAMPLES_PATH / 'reference_fingerprint.json'
 RAW_PATH = SAMPLES_PATH / 'football_data'
 FRAMES_PATH = SAMPLES_PATH / 'reference_frames'
-STORE_PATH = SAMPLES_PATH / 'store'
 
 
 def hash_column(column: pd.Series) -> str:
@@ -56,7 +55,6 @@ def extract_frames() -> dict[str, pd.DataFrame]:
         param_grid=PARAM_GRID,
         stats=FootballDataStats(),
         odds=FootballDataOdds(),
-        store=LocalStore(STORE_PATH),
     )
     X, Y, O_average = loader.extract_train_data(odds_type='market_average')
     _, _, O_maximum = loader.extract_train_data(odds_type='market_maximum')

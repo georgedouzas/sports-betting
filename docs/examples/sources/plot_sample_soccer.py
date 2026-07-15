@@ -34,10 +34,10 @@ stats.available_params()
 # -------------------
 #
 # It is an ordinary source, so it is used like any other: give it to a dataloader beside an odds source. The
-# `download=True` copies the bundled files into the store, which costs nothing and touches no network.
+# Extracting reads the bundled files off your disk, which costs nothing and touches no network.
 
 dataloader = DataLoader(param_grid={'league': ['England']}, stats=stats, odds=SampleSoccerOdds())
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
 # %%
 # The input data:

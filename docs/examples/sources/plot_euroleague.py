@@ -39,7 +39,7 @@ sorted({param['year'] for param in params})[-5:]
 # exactly that rather than inventing a target. The features are still worth having, so ask for them.
 
 dataloader = DataLoader(param_grid={'league': ['Euroleague'], 'year': [2024]}, stats=stats)
-X_train, Y_train, O_train = dataloader.extract_train_data(learning_type='unsupervised', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(learning_type='unsupervised')
 
 # %%
 # The input data:

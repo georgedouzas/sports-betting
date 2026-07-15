@@ -1,4 +1,4 @@
-"""It provides the sources the data comes from, and the store that keeps it."""
+"""It provides the sources the data comes from."""
 
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ from ._schema import (
     optional_col,
     required_col,
 )
-from ._store import BaseStore, LocalStore, NotPreparedError, PreparationReport
 from ._utils import market_outcomes
 
 __all__: list[str] = [
@@ -30,15 +29,11 @@ __all__: list[str] = [
     'BaseSource',
     'BaseStatsSchema',
     'BaseStatsSource',
-    'BaseStore',
     'EuroLeagueStats',
     'FootballDataOdds',
     'FootballDataStats',
-    'LocalStore',
     'NBAStats',
-    'NotPreparedError',
     'OddsApi',
-    'PreparationReport',
     'RawItem',
     'RawPayload',
     'ReconciliationReport',

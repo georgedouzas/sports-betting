@@ -59,7 +59,7 @@ def test_statistics_and_odds_of_different_sports_are_refused():
     Nothing could pair them, and the failure would otherwise arrive much later, as a roster in which no team could be
     found in the other.
     """
-    with pytest.raises(ValueError, match='not about the same matches'):
+    with pytest.raises(ValueError, match='about different sports'):
         _ = DataLoader(stats=NBAStats(), odds=FootballDataOdds()).sources
 
 
@@ -70,7 +70,7 @@ def test_a_dataloader_will_not_choose_a_source_for_you():
     dataloader that picked one on your behalf would be answering that for you, quietly.
     """
     with pytest.raises(ValueError, match='does not choose where its data comes from'):
-        DataLoader().extract_train_data(download=True)
+        DataLoader().extract_train_data()
 
 
 def test_odds_that_carry_no_markets_say_so():

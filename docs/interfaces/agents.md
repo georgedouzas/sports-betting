@@ -32,41 +32,29 @@ A tool is told what to do in its arguments, exactly as a command is — what to 
 - **Nothing is left behind to fall out of date.** A file the agent wrote three sessions ago, still pointing at last
   season, is a bug waiting to happen. A tool call describes itself.
 
-## Nothing downloads unless it was asked to
+## What it costs
 
-Odds are often bought per request, so an agent trying to be helpful could spend on your behalf and you would find out
-afterwards. It cannot: **`download` defaults to `False`**, and no other argument fetches anything.
+Extracting the data downloads it, and for a paid odds feed that spends. There is no gate in front of that — a metered
+key is a metered key — so the thing worth telling an agent is which sources are free and which are not:
 
-Ask for data that is not held and the tool refuses, and says what getting it would take:
+- The statistics feeds — football-data, the EuroLeague, the NBA — are **free**.
+- The odds are free only from football-data. `odds-api` buys prices per request, so what an NBA or in-play selection
+  costs is between whoever holds the key and the vendor.
 
-```text
-extract_train_data(leagues=['Germany', 'Italy', 'France'], divisions=[1, 2], years=[2021, 2022, 2023, 2024],
-                   stats='football-data', odds='football-data')
-
-    -> The data has not been downloaded. Pass `download=True` to get it.
-       Requests to make: football_data 25. Items held: 0.
-
-extract_train_data(..., download=True)
-
-    -> runs, and makes those 25 requests
-```
-
-The count is the real list of what would be fetched, and learning it costs nothing. What those requests are *worth* is
-between you and the vendor you buy them from — a vendor sets its own prices and changes them, so the library reports the
-fact and leaves the price to you.
+An agent that knows this asks before pointing a paid key at a large selection, rather than after.
 
 ## The tools
 
-| Tool | Fetches? | Does |
-| --- | --- | --- |
-| `available_params` | never | What leagues, divisions and seasons exist. |
-| `extract_train_data` | only if told | The training data. |
-| `extract_fixtures_data` | only if told | The games not yet played. |
-| `backtest` | only if told | Backtests a betting model. |
-| `bet` | only if told | The value bets for the fixtures. |
+| Tool | Does |
+| --- | --- |
+| `available_params` | What leagues, divisions and seasons exist. Downloads nothing. |
+| `extract_train_data` | Downloads and returns the training data. |
+| `extract_fixtures_data` | Downloads and returns the games not yet played. |
+| `backtest` | Backtests a betting model. |
+| `bet` | The value bets for the fixtures. |
 
 Every one of them takes `stats` and, optionally, `odds` — a dataloader does not choose where its data comes from, you
-do — and every one takes `download`, which is the only thing that reaches the network.
+do.
 
 A model is named: `odds-comparison` or `logistic`, or one of your own as `models.py:BETTOR`, since no set of arguments
 can describe a scikit-learn estimator. That is the thing an agent can do which no flag can: **write the estimator**, run

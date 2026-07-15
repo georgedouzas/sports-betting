@@ -48,7 +48,7 @@ dataloader = DataLoader(
     stats=SampleSoccerStats(),
     odds=SampleSoccerOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
 # The sample carries the half-time score, and none of it reached the features: the odds are pre-match.
 assert not [col for col in X_train.columns if '__inplay__' in col]
@@ -157,8 +157,8 @@ dataloader = DataLoader(
     stats=FootballDataStats(),
     odds=FootballDataOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
-X_fix, _, O_fix = dataloader.extract_fixtures_data(download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
+X_fix, _, O_fix = dataloader.extract_fixtures_data()
 ```
 
 `download` is the only thing that reaches the network, and it is `False` unless you pass it. It is incremental, so running it
@@ -167,7 +167,7 @@ already finished. Everything else on this page — the input horizon, the traini
 unchanged. See [Downloading the data](../overview/user_guide/dataloader.md#downloading-the-data).
 
 If the upstream feed corrects a season that has already finished, that will not be picked up on its own — the store has no
-reason to look at data it considers done. Ask it to, with `download='refresh'`. See
+reason to look at stale data. Extract again to download it afresh. See
 [What happens when the upstream data changes](../overview/user_guide/dataloader.md#what-happens-when-the-upstream-data-changes).
 
 One honest limitation. The free feed carries **pre-match closing odds**, so the in-play flow above trains and predicts correctly

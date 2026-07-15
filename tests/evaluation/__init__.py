@@ -13,7 +13,7 @@ from sportsbet.evaluation._base import BaseBettor
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
 _loader = DataLoader(stats=SampleSoccerStats(), odds=SampleSoccerOdds())
-X_train, Y_train, O_train = _loader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = _loader.extract_train_data(odds_type='market_average')
 X_fix, _, O_fix = _loader.extract_fixtures_data()
 
 

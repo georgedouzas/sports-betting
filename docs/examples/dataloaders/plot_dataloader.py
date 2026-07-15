@@ -49,7 +49,7 @@ dataloader.get_odds_types()
 # `download` is the only thing that reaches the network. Leave it out and nothing is fetched: you are told how many
 # requests it would take, and you decide.
 
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
 # %%
 # The input data:

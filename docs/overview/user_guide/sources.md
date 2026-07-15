@@ -33,8 +33,9 @@ dataloader = DataLoader(
 
 ## The contract
 
-A source answers four questions, and **never fetches**. The store does the fetching, which is what makes an extraction
-structurally incapable of downloading anything it was not told to.
+A source answers four questions, and does not fetch — it only *declares* what to read. The dataloader reads the items
+it declares into memory and hands the payloads back, so a source stays a pure description of a feed, easy to write and
+easy to test.
 
 ```python
 class BaseSource:
@@ -50,7 +51,10 @@ class BaseSource:
         """Given those, which league/division/year combinations do I publish?"""
 
     def required_items(self, params, schedule=None) -> list[RawItem]:
-        """Given a selection, what do I need fetched?"""
+        """Given a selection, what do I need read?"""
+
+    def fixtures_items(self, params, schedule=None) -> list[RawItem]:
+        """And what do I need read for the upcoming matches? (defaults to required_items)"""
 
     def to_snapshots(self, payloads) -> pd.DataFrame:
         """Given those, what are the long snapshots?"""
@@ -62,18 +66,18 @@ takes the sport of the statistics it is paired with.
 
 Two optional hooks:
 
-- `request_url(item)` — add a credential *at the moment of the request*, so it never reaches a stored item.
+- `request_url(item)` — add a credential *at the moment of the request*, so it never reaches a `RawItem` and is never part of the data you save.
 - `needs_schedule()` — return `True` if you address your data by *instant* rather than by season. `OddsApi` does: "the
   price at minute 45" is a timestamp, and it can only build it once it knows the kick-off.
 
 ### `RawItem` and `RawPayload`
 
-A [`RawItem`][sportsbet.sources.RawItem] is one thing to fetch. It is the unit of caching, of resuming, and of counting:
+A [`RawItem`][sportsbet.sources.RawItem] is one thing to read — a URL, or a `file://` path for a feed that ships with the library:
 
 ```python
 RawItem(
     source='my_stats',                    # who declared it
-    key='England_1_2025',                 # its identity, and its file name in the store
+    key='England_1_2025',                 # its identity within the source
     url='https://example.com/2025.csv',
     volatile=False,                       # True if it can still change upstream
 )
@@ -183,7 +187,7 @@ Then hand them to any dataloader:
 from sportsbet.dataloaders import DataLoader
 
 dataloader = DataLoader(stats=MyStats(), odds=MyOdds())
-X, Y, O = dataloader.extract_train_data(odds_type='acme', download=True)
+X, Y, O = dataloader.extract_train_data(odds_type='acme')
 ```
 
 ```text
@@ -198,70 +202,32 @@ the **features** from the statistics columns, and the **moments** from `event_st
 
 ### Four rules that are not style
 
-1. **Never fetch.** `index_items`, `catalogue`, `required_items` and `to_snapshots` must be pure. If a source could
-   fetch, an extraction could download by accident, and counting what a download would take would itself be a
-   download.
+1. **Never fetch.** `index_items`, `catalogue`, `required_items` and `to_snapshots` must be pure — they *declare* and
+   *transform*, and the dataloader does the reading. A source that fetched would be a source you could not test without
+   a network.
 2. **`date` is the kick-off instant, in UTC.** Resolve your feed's time zone *at your boundary*. This is what makes
    `date + event_time` the wall-clock instant of a snapshot — the address an odds vendor is asked for. Both feeds the
    library ships got this wrong in an undocumented way: football-data publishes **every** league in UK time, and the
    EuroLeague publishes **every** game in Central European time. Neither says so. Assume nothing.
-3. **A finished season is not `volatile`; a fixture is.** That is what makes a download incremental.
-4. **Credentials go in `request_url`**, never in a `RawItem`. An item is written to the store; a key must not be.
+3. **The upcoming matches come from `fixtures_items`.** The default reads the same items as training, which suits a feed
+   whose season file already lists the matches still to be played. Override it when they live elsewhere.
+4. **Credentials go in `request_url`**, never in a `RawItem`. The item is what the transform sees and what you might
+   save; a key belongs in neither.
 
-## Where the data is kept
+## Keeping the data
 
-The [store][sportsbet.sources.LocalStore] is the only thing that fetches.
-
-```python
-from sportsbet.sources import LocalStore
-
-dataloader = DataLoader(stats=FootballDataStats(), odds=FootballDataOdds(), store=LocalStore('/data/sportsbet'))   # default: ~/.sportsbet
-```
-
-Raw payloads are kept **forever** — metered data cannot be re-obtained for free — and everything derived from them is
-rebuilt at no cost. The derived data is keyed by the raw content **and by the code that transformed it**, so upgrading
-the library rebuilds rather than serving you what the old transform produced.
-
-To write your own store — a shared cache, an object store, a database — implement
-[`BaseStore`][sportsbet.sources.BaseStore]:
+There is no store to configure and no cache under your home directory. Extracting downloads the data into the
+dataloader, which holds it, and `save` writes the object out:
 
 ```python
-from sportsbet.sources import BaseStore, RawItem, RawPayload
+dataloader.save('italy.pkl')
 
-
-class MyStore(BaseStore):
-    """A store of your own."""
-
-    def held(self, items: list[RawItem]) -> list[RawItem]:
-        """Which of these do I already have, and cannot have changed upstream?"""
-
-    def fetch(self, items: list[RawItem], authorize=None) -> list[RawPayload]:
-        """Download these and keep them. The only place anything is fetched."""
-
-    def read(self, items: list[RawItem]) -> list[RawPayload]:
-        """Give me back what I have. Raise if I do not have it."""
+from sportsbet.dataloaders import load_dataloader
+dataloader = load_dataloader('italy.pkl')      # the data comes back with it
 ```
 
-`authorize` is the source's `request_url`, so a credential reaches the request and never the store.
-
-### What a download would take
-
-An extraction that was not given `download` raises [`NotPreparedError`][sportsbet.sources.NotPreparedError] rather than
-fetching, and carries a [`PreparationReport`][sportsbet.sources.PreparationReport] saying what getting the data would
-take:
-
-```python
-report = error.report
-
-report.to_fetch          # the items that would be downloaded
-report.held              # the items already in the store
-report.requests          # {'odds_api': 898} -- how many requests each source would make
-report.unavailable       # requested parameters no source publishes
-```
-
-The count is exact and learning it costs nothing, because the free statistics are read, the schedule derived from them,
-and the odds addressed against it. The report says how many requests, not what they cost — see
-[`RawItem`](#rawitem-and-rawpayload).
+That is the whole persistence story. Extract once, save, and load to reuse it without downloading — and, for a paid odds
+feed, without paying — again. Where your data lives and how long it is kept is then your decision, not the library's.
 
 ## When two sources disagree about a name
 

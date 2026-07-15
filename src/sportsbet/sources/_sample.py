@@ -23,8 +23,8 @@ class _SampleSource:
     """The half of a sample source that does not depend on what it carries.
 
     The data ships with the library, so the catalogue is known without reading anything and every item is a file on your
-    own disk. Nothing else about it is special: the store fetches it, keeps it and skips it next time, and the sport,
-    the markets and the moments are read from the data exactly as they are for a feed on the internet.
+    own disk. Nothing else about it is special: the dataloader reads it exactly as it reads a feed on the internet, and
+    the sport, the markets and the moments come out of the data the same way.
     """
 
     name: ClassVar[str] = 'sample_soccer'
@@ -86,7 +86,7 @@ class SampleSoccerStats(_SampleSource, BaseStatsSource):
         ...     stats=source,
         ...     odds=SampleSoccerOdds(),
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> # A whole season of the Premier League.
         >>> len(X)
         380
@@ -108,7 +108,7 @@ class SampleSoccerOdds(_SampleSource, BaseOddsSource):
         >>> source.name, source.kind, source.sport
         ('sample_soccer', 'odds', 'soccer')
         >>> dataloader = DataLoader(stats=SampleSoccerStats(), odds=source)
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')
         >>> # The providers and the markets are read from the data, not registered anywhere.
         >>> dataloader.get_odds_types()
         ['market_average', 'market_maximum']

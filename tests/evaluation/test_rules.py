@@ -88,6 +88,6 @@ def test_a_bettor_with_any_number_of_markets_can_be_backtested(betting_markets):
     came from holds a single block, which is what one market produces. Nobody met it because the default is five.
     """
     dataloader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
-    X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+    X, Y, O = dataloader.extract_train_data(odds_type='market_average')
     bettor = OddsComparisonBettor(alpha=0.03, betting_markets=betting_markets)
     assert not backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2)).empty

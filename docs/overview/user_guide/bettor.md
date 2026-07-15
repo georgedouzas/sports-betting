@@ -73,11 +73,11 @@ dataloader = DataLoader(
     stats=SampleSoccerStats(),
     odds=SampleSoccerOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 ```
 
-It is a real Premier League season, frozen. `download=True` copies it out of the package and into the store; it reaches
-no network and costs nothing.
+It is a real Premier League season, frozen. Extracting it reads the bundled files off your disk, so it reaches no
+network and costs nothing.
 
 The season is finished, so it has **no fixtures** — a fixture is a match that has not been played. Everything below is
 shown on the training data. To bet on matches that have not happened, point the same bettor at
