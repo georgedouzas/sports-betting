@@ -20,16 +20,21 @@ theme:
 nav:
   - Overview:
     - index.md
-    - User guide: 
+    - User guide:
       - overview/user_guide/index.md
       - Dataloader: overview/user_guide/dataloader.md
       - Data sources: overview/user_guide/sources.md
       - Bettor: overview/user_guide/bettor.md
-      - AI agent: overview/user_guide/agent.md
       - In practice: overview/user_guide/in_practice.md
     - Changelog: overview/changelog.md
     - License: overview/license.md
-  - API: api/
+  - Betting in practice:
+    - practice/index.md
+    - The theory of value betting: practice/value_betting.md
+  - Interfaces:
+    - Python API: api/
+    - CLI: interfaces/cli.md
+    - Agents: interfaces/agents.md
   - Examples: generated/gallery
   - Development:
     - development/index.md
@@ -37,8 +42,8 @@ nav:
     - Code of Conduct: development/code_of_conduct.md
 
 not_in_nav: |
+  generated/gallery/**/mg_execution_times.md
   generated/gallery/mg_execution_times.md
-  generated/gallery/modelling/mg_execution_times.md
 
 extra_css:
   - css/style.css
@@ -47,6 +52,7 @@ extra_css:
 
 markdown_extensions:
   - admonition
+  - mkdocs-click
   - pymdownx.arithmatex:
       generic: true
   - callouts

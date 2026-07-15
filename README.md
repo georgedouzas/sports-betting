@@ -74,7 +74,7 @@ claude mcp add sportsbet -- sportsbet-mcp
 
 What follows is a chat with Claude, driving the library through the MCP server. Every figure in it is real output.
 
-> You: What soccer data can I work with?
+You: What soccer data can I work with?
 
 > Claude: 918 league–division–season combinations across 27 leagues, from 1994 to 2026.
 >
@@ -85,7 +85,7 @@ What follows is a chat with Claude, driving the library through the MCP server. 
 > Every one comes with historical odds from several bookmakers, so a backtest runs against real prices. I have not
 > downloaded anything, since reading the catalogue is free.
 
-> You: Find me a strategy that works on the top two divisions of Germany, Italy and France, 2021 to 2024.
+You: Find me a strategy that works on the top two divisions of Germany, Italy and France, 2021 to 2024.
 
 > Claude: Downloaded 25 files. Then I searched, rather than guessing.
 >
@@ -130,7 +130,7 @@ What follows is a chat with Claude, driving the library through the MCP server. 
 > Worth being honest about: I have now tried a dozen configurations on this data. Some of that +2.6% is me searching,
 > not the model knowing. Before you stake anything, hold a season back and check it there.
 
-> You: Which league is that draw edge actually in?
+You: Which league is that draw edge actually in?
 
 > Claude: Almost entirely Italy.
 >
@@ -143,7 +143,7 @@ What follows is a chat with Claude, driving the library through the MCP server. 
 > That is a big number and I would treat it with suspicion rather than excitement. It is one league over four seasons,
 > found after I had already looked at several splits.
 
-> You: Fine. Any value bets in the upcoming fixtures?
+You: Fine. Any value bets in the upcoming fixtures?
 
 > Claude: Not today, since the European season is over and there is nothing anywhere that has not been played. But the
 > relationship between what you trained on and what you can bet on is worth getting straight, because it is not the one
@@ -173,8 +173,7 @@ What follows is a chat with Claude, driving the library through the MCP server. 
 > Given what we found, I would not: the edge we located is in Italy, and it is four seasons of one league found after a
 > dozen tries. Hold a season back and check it there before staking anything.
 
-The agent passes the name of the environment variable holding your API key, never the key itself, and it downloads
-nothing unless you ask it to.
+The agent names the environment variable holding your API key, never the key itself, and downloads nothing unless you ask.
 
 ### Python API
 
@@ -193,8 +192,7 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maxi
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 ```
 
-`download=True` is the only thing that reaches the network. Leave it out and nothing is fetched: you are told how many
-requests it would take, and you decide.
+`download=True` fetches the data. Leave it out and you just see how many requests it would take.
 
 A betting model is a scikit-learn estimator wrapped in a bettor. The markets to bet on are a hyperparameter like any
 other, so put them in the grid and let the search choose:
@@ -237,12 +235,8 @@ Training start Training end Testing start Testing end
                2023-11-06   2023-11-06    2024-06-02                     659            1407                      -0.2            -1.4      9858.0
 ```
 
-Then fit and predict the value bets:
-
-```python
-bettor.fit(X_train, Y_train, O_train)
-bettor.bet(X_fix, O_fix)
-```
+Fit it with `bettor.fit(X_train, Y_train, O_train)`, then `bettor.bet(X_fix, O_fix)` returns the value bets of the
+upcoming matches, one row per fixture and one column per market.
 
 The fixtures are not restricted by `param_grid`. It selects what to train on, and a match you could have trained on has
 by definition already been played, so the two never overlap. You may train on one league and bet on another: what the
@@ -274,69 +268,13 @@ sportsbet model bet --stats football-data --odds football-data \
   --betting-market home_win --betting-market draw --betting-market away_win
 ```
 
-`--stats` and `--odds` say where the data comes from, and they also say what the sport is, so there is no `--sport`.
-Without `--download` nothing is fetched, and the command tells you how many requests it would take. A model of your own
-is Python, so build it and name it: `--model models.py:BETTOR`.
+The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from,
+and `--download` fetches it. A model of your own is Python, so build it and name it: `--model models.py:BETTOR`.
 
 ## Sports betting in practice
 
-A betting event is a random experiment. Every outcome has some probability of occurring, even an unlikely one, such as more than
-ten goals in a soccer match and nobody knows what those probabilities actually are.
-
-### Fair odds
-
-The bookmaker estimates the probability $p$ of an outcome and offers odds $o$ on it. A bet of one unit returns $o$ if the outcome
-occurs and nothing otherwise, so its expected profit is
-
-$$
-\mathbb{E}[\Pi] = p \, o - 1.
-$$
-
-The odds are fair when this is zero, that is when
-
-$$
-o = \frac{1}{p}.
-$$
-
-At fair odds, neither side makes profit in the long run.
-
-### The bookmaker's margin
-
-Bookmakers do not offer fair odds. They shorten them, so that the implied probability $1/o$ of every outcome is a little higher
-than the probability they estimated. Across the $n$ mutually exclusive outcomes of an event, the implied probabilities therefore
-sum to more than one:
-
-$$
-\sum_{i=1}^{n} \frac{1}{o_i} = 1 + m, \qquad m > 0.
-$$
-
-The excess $m$ is the over-round, and it is the bookmaker's margin. Note what has *not* changed: the bookmaker still has to
-estimate $p$. The margin protects a good estimate, it does not replace one.
-
-### Value bets
-
-The bettor can estimate the probabilities too. Write the bettor's estimate as $\hat{p}$. A bet is a value bet when the bettor's
-estimate exceeds the probability implied by the offered odds:
-
-$$
-\hat{p} > \frac{1}{o} \quad \Longleftrightarrow \quad \hat{p} \, o - 1 > 0,
-$$
-
-that is, when the bet has positive expected profit under the bettor's own estimate. Selecting value bets is the only betting
-strategy that makes sense over the long run.
-
-The caveat matters: neither side observes the true $p$. A value bet is a claim that $\hat{p}$ is closer to the truth than $1/o$ is
-and the bettor can be wrong, the bookmaker can be wrong, or both.
-
-### Is it hopeless?
-
-Bookmakers have more data, more computing power and teams of analysts. It is tempting to conclude that competing with them is
-pointless, but that does not follow. Bookmakers balance many concerns beyond accuracy: their exposure, their competitors, the
-weight of public money, which is why the odds offered on the same event vary noticeably from one bookmaker to another. That
-variation is the opening.
-
-The goal is therefore not to build an arbitrarily accurate model of football. It is to identify value bets systematically and
-backtest them honestly. A realistic aim, and the one `sports-betting` is built to serve.
+Betting is not about predicting matches, it is about finding the odds a bookmaker priced wrong. That idea, and the
+maths behind it, is the [theory of value betting](https://georgedouzas.github.io/sports-betting/practice/value_betting/).
 
 ## Installation
 
