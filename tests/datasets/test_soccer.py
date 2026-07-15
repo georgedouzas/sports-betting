@@ -12,8 +12,13 @@ PROVIDERS = ['market_average', 'market_maximum']
 
 @pytest.fixture
 def loader(monkeypatch, long_snapshots):
-    """A DataLoader whose network download is replaced by the long sample."""
+    """A DataLoader whose network download is replaced by the long sample.
+
+    The sample carries both the played matches and the upcoming one, so it stands in for both the training download and
+    the fixtures download.
+    """
     monkeypatch.setattr(DataLoader, '_snapshots', lambda self: long_snapshots)
+    monkeypatch.setattr(DataLoader, '_fixtures_snapshots', lambda self: long_snapshots)
     return DataLoader(param_grid={'league': ['England']}, stats=FootballDataStats(), odds=FootballDataOdds())
 
 
@@ -192,4 +197,4 @@ def test_a_dataloader_will_not_choose_a_source_for_you():
     dataloader that picked one on your behalf would be answering that for you, quietly.
     """
     with pytest.raises(ValueError, match='does not choose where its data comes from'):
-        DataLoader().extract_train_data(download=True)
+        DataLoader().extract_train_data()

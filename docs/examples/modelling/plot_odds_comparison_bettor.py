@@ -25,7 +25,7 @@ dataloader = DataLoader(
     stats=SampleSoccerStats(),
     odds=SampleSoccerOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 
 # %%
 # A model that needs no features

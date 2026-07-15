@@ -48,7 +48,7 @@ dataloader = DataLoader(
     stats=stats,
     odds=odds,
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 
 # %%
 # The input data:

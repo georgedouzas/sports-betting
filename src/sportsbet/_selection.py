@@ -36,7 +36,6 @@ from .sources import (
     EuroLeagueStats,
     FootballDataOdds,
     FootballDataStats,
-    LocalStore,
     NBAStats,
     OddsApi,
 )
@@ -141,7 +140,6 @@ def build_dataloader(
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
-    store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
 ) -> DataLoader:
@@ -164,7 +162,6 @@ def build_dataloader(
         param_grid=selected or None,
         stats=STATS_SOURCES[stats](),
         odds=_odds_source(odds, odds_key_env, odds_markets, odds_regions, odds_moments) if odds else None,
-        store=LocalStore(store) if store else None,
         aliases=_aliases(aliases),
         max_unmatched_rate=max_unmatched_rate,
     )

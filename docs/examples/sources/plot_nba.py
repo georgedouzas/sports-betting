@@ -44,7 +44,7 @@ sorted({param['year'] for param in params})[-5:]
 # It is free and needs no key. The odds are another source, and there is no free one for basketball.
 
 dataloader = DataLoader(param_grid={'league': ['NBA'], 'year': [2024]}, stats=stats)
-X_train, _, _ = dataloader.extract_train_data(learning_type='unsupervised', download=True)
+X_train, _, _ = dataloader.extract_train_data(learning_type='unsupervised')
 X_train
 
 # %%

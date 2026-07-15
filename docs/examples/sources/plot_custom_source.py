@@ -24,8 +24,8 @@ MARKETS = ['home_win', 'draw', 'away_win']
 # Four questions, and never a fetch
 # ---------------------------------
 #
-# A source says what it needs read and how to turn it into snapshots. It **never fetches** — the store does that — which
-# is what makes an extraction structurally incapable of downloading anything it was not told to.
+# A source says what it needs read and how to turn it into snapshots. It **never fetches** — the dataloader reads the
+# items it declares — so a source stays a pure description of a feed, easy to write and to test.
 
 
 class MyStats(BaseStatsSource):
@@ -60,14 +60,14 @@ class MyStats(BaseStatsSource):
 
 
 # %%
-# It declares what it needs. The store is what goes and gets it.
+# It declares what it needs. The dataloader reads it.
 
 source = MyStats()
 source.required_items([{'year': 2025}])[0]
 
 # %%
 # Given the bytes that came back, it says what the snapshots are. Here we hand it a payload directly, which is exactly
-# what the store would have handed it.
+# what the dataloader would have handed it.
 
 csv = b'date,league,division,year,home_team,away_team,home_form,home_goals,away_goals\n'
 csv += b'2025-08-16,Ruritania,1,2025,A,B,0.5,2,1\n'
@@ -119,7 +119,7 @@ odds_source.to_snapshots([RawPayload(item=odds_source.required_items([{'year': 2
 # from sportsbet.dataloaders import DataLoader
 #
 # dataloader = DataLoader(stats=MyStats(), odds=MyOdds())
-# X, Y, O = dataloader.extract_train_data(odds_type='acme', download=True)
+# X, Y, O = dataloader.extract_train_data(odds_type='acme')
 # ```
 #
 # Four rules that are not style:
@@ -127,7 +127,7 @@ odds_source.to_snapshots([RawPayload(item=odds_source.required_items([{'year': 2
 # 1. **Never fetch.** If a source could fetch, an extraction could download by accident.
 # 2. **`date` is the kick-off instant, in UTC.** Resolve your feed's time zone at your own boundary.
 # 3. **A finished season is not `volatile`; a fixture is.** That is what makes a download incremental.
-# 4. **Credentials go in `request_url`**, never in a `RawItem`. An item is written to the store; a key must not be.
+# 4. **Credentials go in `request_url`**, never in a `RawItem`. The item is what the transform sees and what you save.
 
 # %%
 # A picture of it

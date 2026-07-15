@@ -60,7 +60,6 @@ def _selection(
     odds_markets: list[str] | None,
     odds_regions: list[str] | None,
     odds_moments: list[str] | None,
-    store: str | None,
     aliases: list[str] | None,
     max_unmatched_rate: float,
 ) -> Selection:
@@ -75,7 +74,6 @@ def _selection(
         'odds_markets': odds_markets,
         'odds_regions': odds_regions,
         'odds_moments': odds_moments,
-        'store': store,
         'aliases': aliases,
         'max_unmatched_rate': max_unmatched_rate,
     }
@@ -106,13 +104,13 @@ def _available_params(selection: Selection) -> list[dict]:
     return stats_source.available_params()
 
 
-def _extract_train_data(selection: Selection, odds_type: str | None, download: bool) -> dict[str, Any]:
+def _extract_train_data(selection: Selection, odds_type: str | None) -> dict[str, Any]:
     """Return the training data."""
-    X, Y, O = build_dataloader(**selection).extract_train_data(odds_type=odds_type, download=download)
+    X, Y, O = build_dataloader(**selection).extract_train_data(odds_type=odds_type)
     return {'X': _records(X), 'Y': _records(Y), 'O': _records(O)}
 
 
-def _extract_fixtures_data(selection: Selection, odds_type: str | None, download: bool) -> dict[str, Any]:
+def _extract_fixtures_data(selection: Selection, odds_type: str | None) -> dict[str, Any]:
     """Return the games that have not been played yet.
 
     The training data is extracted first, so the fixtures take its shape and the same kind of odds. A tool is answered
@@ -120,7 +118,7 @@ def _extract_fixtures_data(selection: Selection, odds_type: str | None, download
     here.
     """
     dataloader = build_dataloader(**selection)
-    dataloader.extract_train_data(odds_type=odds_type, download=download)
+    dataloader.extract_train_data(odds_type=odds_type)
     X, _, O = dataloader.extract_fixtures_data()
     return {'X': _records(X), 'O': _records(O)}
 
@@ -130,18 +128,17 @@ def _backtest(
     odds_type: str | None,
     strategy: Strategy,
     cv: int,
-    download: bool,
 ) -> list[dict[str, Any]]:
     """Return the backtesting results of a model."""
     dataloader, bettor = build_dataloader(**selection), build_bettor(**strategy)
-    X, Y, O = dataloader.extract_train_data(odds_type=odds_type, download=download)
+    X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
     return _records(run_backtest(bettor, X, Y, O, cv=TimeSeriesSplit(cv)))
 
 
-def _bet(selection: Selection, odds_type: str | None, strategy: Strategy, download: bool) -> list[dict[str, Any]]:
+def _bet(selection: Selection, odds_type: str | None, strategy: Strategy) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
     dataloader, bettor = build_dataloader(**selection), build_bettor(**strategy)
-    X, Y, O = dataloader.extract_train_data(odds_type=odds_type, download=download)
+    X, Y, O = dataloader.extract_train_data(odds_type=odds_type)
     bettor.fit(X, Y, O)
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
     if X_fix.empty:
@@ -162,14 +159,10 @@ async def available_params(
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
-    store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
 ) -> list[dict]:
-    """Return the leagues, divisions and seasons that can be selected.
-
-    Free, and downloads no data.
-    """
+    """Return the leagues, divisions and seasons that can be selected."""
     selection = _selection(
         stats,
         odds,
@@ -180,7 +173,6 @@ async def available_params(
         odds_markets,
         odds_regions,
         odds_moments,
-        store,
         aliases,
         max_unmatched_rate,
     )
@@ -199,17 +191,14 @@ async def extract_train_data(
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
-    store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
-    download: bool = False,
 ) -> dict[str, Any]:
     """Return the training data.
 
-    Nothing is downloaded unless `download` is `True`. Without it, the tool says how many requests each source would
-    have to make, and makes none of them. What those requests cost is between whoever is asking and the vendor they buy
-    them from.
+    It downloads the selected seasons. What a metered odds feed charges for them is between whoever is asking and the
+    vendor they buy from.
     """
     selection = _selection(
         stats,
@@ -221,11 +210,10 @@ async def extract_train_data(
         odds_markets,
         odds_regions,
         odds_moments,
-        store,
         aliases,
         max_unmatched_rate,
     )
-    result: dict[str, Any] = await _offload(_extract_train_data, selection, odds_type, download)
+    result: dict[str, Any] = await _offload(_extract_train_data, selection, odds_type)
     return result
 
 
@@ -240,16 +228,11 @@ async def extract_fixtures_data(
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
-    store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
-    download: bool = False,
 ) -> dict[str, Any]:
-    """Return the games that have not been played yet.
-
-    Nothing is downloaded unless `download` is `True`.
-    """
+    """Return the games that have not been played yet."""
     selection = _selection(
         stats,
         odds,
@@ -260,11 +243,10 @@ async def extract_fixtures_data(
         odds_markets,
         odds_regions,
         odds_moments,
-        store,
         aliases,
         max_unmatched_rate,
     )
-    result: dict[str, Any] = await _offload(_extract_fixtures_data, selection, odds_type, download)
+    result: dict[str, Any] = await _offload(_extract_fixtures_data, selection, odds_type)
     return result
 
 
@@ -280,7 +262,6 @@ async def backtest(
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
-    store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
@@ -290,7 +271,6 @@ async def backtest(
     stake: float | None = None,
     model_odds_types: list[str] | None = None,
     cv: int = 3,
-    download: bool = False,
 ) -> list[dict[str, Any]]:
     """Return the backtesting results of a betting model.
 
@@ -307,12 +287,11 @@ async def backtest(
         odds_markets,
         odds_regions,
         odds_moments,
-        store,
         aliases,
         max_unmatched_rate,
     )
     strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
-    result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, strategy, cv, download)
+    result: list[dict[str, Any]] = await _offload(_backtest, selection, odds_type, strategy, cv)
     return result
 
 
@@ -328,7 +307,6 @@ async def bet(
     odds_markets: list[str] | None = None,
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
-    store: str | None = None,
     aliases: list[str] | None = None,
     max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
@@ -337,7 +315,6 @@ async def bet(
     init_cash: float | None = None,
     stake: float | None = None,
     model_odds_types: list[str] | None = None,
-    download: bool = False,
 ) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
     selection = _selection(
@@ -350,12 +327,11 @@ async def bet(
         odds_markets,
         odds_regions,
         odds_moments,
-        store,
         aliases,
         max_unmatched_rate,
     )
     strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
-    result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, strategy, download)
+    result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, strategy)
     return result
 
 

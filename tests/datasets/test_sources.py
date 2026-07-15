@@ -89,6 +89,6 @@ def test_sources_are_stored_unmodified():
     assert loader.odds is odds
 
 
-def test_a_dataloader_with_its_own_data_downloads_nothing(stats, odds):
-    """Test a dataloader that is not backed by a source has nothing to download."""
-    assert SnapshotsDataLoader(stats, odds)._download(refresh=False) is None
+def test_a_dataloader_with_its_own_data_has_no_sources(stats, odds):
+    """Test a dataloader carrying its own data reports no sources, since it downloads nothing."""
+    assert SnapshotsDataLoader(stats, odds).sources == ()

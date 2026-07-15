@@ -31,7 +31,7 @@ dataloader = DataLoader(
     stats=SampleSoccerStats(),
     odds=SampleSoccerOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
 bettor = OddsComparisonBettor(alpha=0.03, betting_markets=['home_win', 'draw', 'away_win'])
 _ = bettor.fit(X_train, Y_train, O_train)

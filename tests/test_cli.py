@@ -30,7 +30,7 @@ def test_the_training_data_matches_the_api(cli_runner, offline_dataloader, tmp_p
     X_cli = pd.read_csv(tmp_path / 'sports-betting-data' / 'X_train.csv', index_col=0)
 
     loader = DataLoader(param_grid={'league': ['England', 'Spain']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
-    X_api, _, _ = loader.extract_train_data(odds_type='market_average', target_event_status='postplay', download=True)
+    X_api, _, _ = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
 
     assert list(X_cli.columns) == list(X_api.columns)
     assert len(X_cli) == len(X_api)
@@ -60,7 +60,7 @@ def test_a_backtest_matches_the_api(cli_runner, offline_dataloader, tmp_path):
     cli_results = pd.read_csv(tmp_path / 'sports-betting-data' / 'backtesting_results.csv')
 
     loader = DataLoader(param_grid={'league': ['England', 'Spain']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
-    X, Y, O = loader.extract_train_data(odds_type='market_average', target_event_status='postplay', download=True)
+    X, Y, O = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
     api_results = backtest(OddsComparisonBettor(alpha=0.03), X, Y, O, cv=TimeSeriesSplit(2))
 
     assert len(cli_results) == len(api_results)

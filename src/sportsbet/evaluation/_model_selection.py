@@ -133,7 +133,7 @@ def backtest(
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = OddsComparisonBettor(betting_markets=['home_win', 'draw', 'away_win'])
         >>> results = backtest(bettor, X, Y, O, cv=TimeSeriesSplit(2))
         >>> # The folds run forward in time, so a model is never tested on a match it was trained on.
@@ -362,7 +362,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = BettorGridSearchCV(
         ...     estimator=OddsComparisonBettor(),
         ...     param_grid={'alpha': [0.02, 0.05, 0.1]},

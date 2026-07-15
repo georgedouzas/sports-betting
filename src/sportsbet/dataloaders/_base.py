@@ -25,7 +25,6 @@ LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
 INPUT_EVENT_STATUSES = ('preplay', 'inplay', 'postplay')
 STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
-REFRESH = 'refresh'
 DAY = pd.Timedelta('1D')
 PARAM_COLS = ['league', 'division', 'year']
 
@@ -138,52 +137,42 @@ class BaseDataLoader(ABC):
 
     def __init__(self: Self, param_grid: ParamGrid | None = None) -> None:
         self.param_grid = param_grid
-        self._provided_snapshots: tuple[pd.DataFrame, pd.DataFrame] | None = None
-        self._downloaded: tuple[pd.DataFrame, pd.DataFrame] | None = None
         self._components: tuple | None = None
 
     @abstractmethod
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return the long `stats`/`odds` snapshots.
+        """Return the long training `stats`/`odds` snapshots.
 
-        Every dataloader must implement this.
+        Every dataloader implements this. A dataloader backed by sources downloads them; one carrying its own data
+        returns it.
         """
+
+    def _fixtures_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Return the long `stats`/`odds` snapshots of the upcoming matches.
+
+        The default is the training snapshots, which is right for a dataloader carrying its own data: the fixtures are
+        the unplayed matches already in it. A dataloader backed by sources overrides it to download the current data the
+        upcoming matches need.
+        """
+        return self._snapshots()
 
     @property
     def sources(self: Self) -> tuple:
         """The data sources of the dataloader.
 
-        Ask a source what it publishes, since a `param_grid` cannot be written before it is known what exists. It is
-        empty for a dataloader whose data is provided directly rather than downloaded.
+        A source says what it publishes, which is where a `param_grid` starts. It is empty for a dataloader carrying its
+        own data.
         """
         return ()
 
     def _all_params(self: Self) -> list[dict]:
-        """Return the available parameter combinations, used only to filter `param_grid`.
+        """Return the combinations the sources publish, used to filter `param_grid`.
 
-        Discovery is not a dataloader concern: a `param_grid` cannot be written before it is known what exists, so the
-        question is answered by the source's `available_params`. A dataloader needs the answer only to refuse a
-        combination the sources do not publish.
+        A `param_grid` names what to select, and the source's `available_params` says what there is to select. A
+        dataloader carrying its own data has no catalogue to answer from.
         """
-        msg = f'{type(self).__name__} does not implement parameter discovery.'
+        msg = f'{type(self).__name__} carries its own data, so it publishes no catalogue of parameters.'
         raise NotImplementedError(msg)
-
-    def _download(self: Self, refresh: bool) -> None:  # noqa: B027
-        """Download what the selection needs.
-
-        A dataloader that carries its own data has nothing to download, so this does nothing. The ones backed by sources
-        override it.
-        """
-
-    def _fetched(self: Self, download: bool | str) -> None:
-        """Download what an extraction needs, when it was asked to.
-
-        Downloading is the only thing that reaches the network, and for a metered source it is the only thing that costs
-        money, so it is the only thing that has to be asked for. Nothing is fetched unless `download` says so, and an
-        extraction that finds the data missing says how many requests getting it would take.
-        """
-        if download:
-            self._download(refresh=download == REFRESH)
 
     def _filter_params(self: Self, params: list[dict]) -> list[dict]:
         """Filter the available combinations by `param_grid` (no invalid combinations are fabricated)."""
@@ -209,22 +198,6 @@ class BaseDataLoader(ABC):
         they are not bettable, and offering them as fixtures would be offering a bet on a match that is already over.
         """
         return data['date'] >= pd.Timestamp.now(tz='UTC')
-
-    def _selected_mask(self: Self, stats: pd.DataFrame) -> pd.Series:
-        """Return which snapshots belong to a league, division and season the `param_grid` selects.
-
-        `param_grid` selects what to *train* on. It does not select what to bet on: a match that has not been played is
-        never one you could have trained on, whatever season you chose, so the fixtures are not filtered by it. The two
-        frames share their columns, not their contents.
-        """
-        if self.param_grid is None:
-            return pd.Series(data=True, index=stats.index)
-        available = stats[PARAM_COLS].drop_duplicates().to_dict('records')
-        selected = self._filter_params(available)
-        if not selected:
-            return pd.Series(data=False, index=stats.index)
-        allowed = pd.MultiIndex.from_frame(pd.DataFrame(selected)[PARAM_COLS])
-        return pd.Series(data=pd.MultiIndex.from_frame(stats[PARAM_COLS]).isin(allowed), index=stats.index)
 
     @staticmethod
     def _finalize(data: pd.DataFrame) -> pd.DataFrame:
@@ -525,18 +498,15 @@ class BaseDataLoader(ABC):
         target_event_time: pd.Timedelta | None = None,
         input_event_status: str | None = None,
         input_event_time: pd.Timedelta | None = None,
-        download: bool | str = False,
     ) -> TrainData:
         """Extract the moment-aware training data.
 
         Read more in the [user guide][user-guide].
 
-        It returns historical data that can be used to create a betting strategy
-        based on heuristics or machine learning models. The method prepares data
-        for the prediction target defined by `target_event_status` and
-        `target_event_time`. Every snapshot before the target becomes features
-        (X) — optionally capped at an input horizon — the target-moment outcomes
-        become labels (Y), and the corresponding betting odds become O.
+        It downloads the selected seasons and returns the historical data a betting strategy is built and backtested on.
+        Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in `X` —
+        optionally capped at an input horizon — the target-moment outcomes become the labels `Y`, and the odds become
+        `O`. Call it again to download the data again; keep it with `save`.
 
         Args:
             drop_na_thres:
@@ -558,12 +528,6 @@ class BaseDataLoader(ABC):
             input_event_time:
                 Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
                 together with `input_event_status`. Defaults to 0.
-            download:
-                If `True`, the data the selection needs is downloaded first, and
-                only what the store does not already hold. `'refresh'` downloads
-                everything again. The default `False` downloads nothing and says
-                how many requests it would take, so nothing reaches the network,
-                and nothing is bought, unless it was asked for.
 
         Returns:
             (X, Y, O):
@@ -571,8 +535,8 @@ class BaseDataLoader(ABC):
                 `learning_type='unsupervised'`, `Y` is `None`. The three components
                 share the same date index and rows.
         """
-        self._fetched(download)
         self._load(odds_type)
+        self.odds_type_ = odds_type
 
         self.stats_schema_.validate(self.stats_)
         self.odds_schema_.validate(self.odds_)
@@ -595,16 +559,13 @@ class BaseDataLoader(ABC):
             input_event_time,
         )
 
-        # A match is trained on when it is resolvable at the target moment and its season was selected. It is a fixture
-        # when it is not resolvable at all: a match that was played but not selected is neither.
+        # A match is trained on when it is resolvable at the target moment. The training data is the selected
+        # seasons, so a match still to be played has no target yet, and the fixtures download it separately.
         index_cols = self._identity_cols()
         target_mask = (self.stats_['event_status'] == target_event_status) & (
             self.stats_['event_time'] == target_event_time
         )
-        self._played_ids = pd.MultiIndex.from_frame(self.stats_.loc[target_mask, index_cols])
-        train_ids = pd.MultiIndex.from_frame(
-            self.stats_.loc[target_mask & self._selected_mask(self.stats_), index_cols],
-        )
+        train_ids = pd.MultiIndex.from_frame(self.stats_.loc[target_mask, index_cols])
         if train_ids.empty:
             msg = 'No resolvable events were found for the requested target moment.'
             raise ValueError(msg)
@@ -643,18 +604,18 @@ class BaseDataLoader(ABC):
         labelled = Y.notna().all(axis=1)
         return X[labelled], Y[labelled], O[labelled]
 
-    def extract_fixtures_data(self: Self, download: bool | str = False) -> FixturesData:
+    def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.
 
         Read more in the [user guide][user-guide].
 
-        A fixture is a match that has not been played yet, in any league the sources publish. It is **not** restricted
-        by `param_grid`: that selects what to train on, and a match you could have trained on is by definition one that
-        has already been played. So you may train on England and bet on Italy. What the two frames share is their
-        columns, not their contents.
+        A fixture is a match that has not been played yet. This downloads the upcoming matches of the selected leagues
+        and returns them shaped exactly like the training data, so the model trained on the history bets on the
+        fixtures. The two share their columns, not their contents: `param_grid` chose the seasons to train on, and a
+        match still to be played is in none of them.
 
-        `extract_train_data` must have been called first, since it is what fixes those columns. The multi-output targets
-        `Y` are always `None`, and are returned only for consistency.
+        `extract_train_data` fixes those columns, so it is called first. The multi-output targets `Y` are always `None`,
+        and are returned only for consistency.
 
         Returns:
             (X, None, O):
@@ -662,22 +623,29 @@ class BaseDataLoader(ABC):
                 corresponding odds `O`, matching the training columns.
         """
         if not hasattr(self, 'input_cols_'):
-            msg = 'The `extract_train_data` method should be called before `extract_fixtures_data`.'
+            msg = 'Call `extract_train_data` before `extract_fixtures_data`, since it fixes the columns to match.'
             raise ValueError(msg)
-        self._fetched(download)
+        stats, odds = self._fixtures_snapshots()
+        stats = self._finalize(stats)
+        odds = self._finalize(odds)
+        odds = odds[odds['provider'] == self.odds_type_] if self.odds_type_ is not None else odds.iloc[0:0]
+
         index_cols = self._identity_cols()
-        upcoming = self._upcoming(self.stats_)
-        fixtures_mask = ~pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._played_ids) & upcoming
-        fixtures_odds_mask = ~pd.MultiIndex.from_frame(self.odds_[index_cols]).isin(self._played_ids) & self._upcoming(
-            self.odds_,
+        played = pd.MultiIndex.from_frame(
+            stats.loc[
+                (stats['event_status'] == self.target_event_status_) & (stats['event_time'] == self.target_event_time_),
+                index_cols,
+            ],
         )
+        fixtures_mask = ~pd.MultiIndex.from_frame(stats[index_cols]).isin(played) & self._upcoming(stats)
+        fixtures_odds_mask = ~pd.MultiIndex.from_frame(odds[index_cols]).isin(played) & self._upcoming(odds)
         if not fixtures_mask.any():
             X = pd.DataFrame(columns=self.input_cols_, index=pd.DatetimeIndex([], name='date'))
             O = pd.DataFrame(columns=self.odds_cols_, index=pd.DatetimeIndex([], name='date'))
             return X, None, O
         X, O = self._extract(
-            self.stats_[fixtures_mask],
-            self.odds_[fixtures_odds_mask],
+            stats[fixtures_mask],
+            odds[fixtures_odds_mask],
             self.target_event_status_,
             self.target_event_time_,
             self.input_event_status_,
@@ -723,7 +691,7 @@ def load_dataloader(path: str) -> BaseDataLoader:
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> _ = dataloader.save(path)
         >>> # It comes back knowing what it was told, so the fixtures take the shape the training data took.
         >>> loaded = load_dataloader(path)

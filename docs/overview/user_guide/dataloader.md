@@ -29,7 +29,7 @@ dataloader = DataLoader(
     stats=EuroLeagueStats(),                       # free, no key
     odds=OddsApi(key='...', markets=['h2h']),      # yours
 )
-X, Y, O = dataloader.extract_train_data(odds_type='pinnacle', download=True)
+X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 ```
 
 [`EuroLeagueStats`][sportsbet.sources.EuroLeagueStats] reads the competition's own public API. It is free, needs no key,
@@ -76,8 +76,8 @@ bettable rather than merely reviewable. That sounds obvious and it is not — th
 season's results only months *after* the season ends, so a source built on it could backtest the league and never bet
 on it.
 
-A full NBA season is a lot of time-stamped odds. Ask for it without `download` and you are told exactly how many
-requests each source would have to make, **and none of them is made** — see [downloading the data](#downloading-the-data).
+A full NBA season is a lot of time-stamped odds, so extract it once and [keep the result](#keeping-the-data) rather
+than paying to download it again.
 
 ## Code, not data
 
@@ -87,8 +87,8 @@ published them, and redistributing them is not ours to do — so `DataLoader` do
 
 Two consequences follow, and they shape the whole interface:
 
-- Data has to be **downloaded before it can be used**, and that only happens when you pass
-  [`download`](#downloading-the-data) — never as a side effect of asking for training data.
+- Data has to be **downloaded before it can be used**, which is what extracting it does — see
+  [downloading the data](#downloading-the-data).
 - Where the data comes from is a **choice you make**, by injecting [sources](#sources). Free statistics and paid odds are
   complementary rather than alternatives, so they are separate parameters.
 
@@ -215,7 +215,7 @@ dataloader = DataLoader(
 )
 ```
 
-Once the dataloader is initialized, the data can be extracted — and downloaded, if you ask for it.
+Once the dataloader is initialized, the data can be extracted, which is what downloads it.
 
 ## Sources
 
@@ -260,15 +260,13 @@ dataloader = DataLoader(
 )
 ```
 
-**It is metered, so nothing is bought unless you ask.** Extract without `download` and you are told how many requests
-each source would have to make, and none of them is made — see [downloading the data](#downloading-the-data).
+**It is metered, so extract deliberately.** Extracting the training data downloads the selected seasons and, for a paid
+feed, buys their odds. So extract once, and [keep the result](#keeping-the-data) with `save` rather than re-extracting.
+The statistics are free and they say when every match kicks off, so a snapshot is bought per kick-off, per moment, and
+matches that kick off together are bought once. What a request is *worth* is between you and the vendor.
 
-That count is *exact*, and it costs *nothing* to obtain. The statistics are free and they say when every match kicks
-off, so the snapshots to buy — one per kick-off, per moment — can be counted without asking the vendor for a single one
-of them. Matches that kick off together share a snapshot and are fetched once. What a request is *worth* is between you
-and the vendor: prices change, endpoints differ, and a library that quoted you a number would be making it up.
-
-Your key is added to a request at the moment it is made. It is never part of a stored item and never written to the store.
+Your key is added to a request at the moment it is made, so it never leaves your machine and is never part of the data
+you save.
 
 Two limits are worth knowing. The vendor's history begins in **June 2020**, and historical prices are a **paid tier**. Since only
 the seasons both sources publish can be modelled, older seasons simply are not offered when `OddsApi` is the odds source — you
@@ -286,7 +284,7 @@ clean, plausible, and wrong.
 So when your statistics and your odds come from different sources, they are reconciled, and the result is a hard gate:
 
 ```python
-X, Y, O = dataloader.extract_train_data(odds_type='pinnacle', download=True)
+X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 dataloader.reconciliation_          # matched, unmatched_rate, unmatched_stats, unmatched_odds
 ```
 
@@ -329,89 +327,40 @@ rather than nearly.
 None of this runs on the free path, where the statistics and the odds come from the same upstream row and their identities are
 equal by construction.
 
-A source declares *what* it needs and *how* to transform it. It never fetches — that is the store's job. This is what makes the
-guarantees below possible rather than merely intended.
+A source declares *what* it needs and *how* to transform it. The dataloader fetches those items into memory and hands
+the payloads back to the source, so the source stays a pure description of a feed.
 
 ## Downloading the data
 
-Downloading is not a step of its own. It is a parameter of the extraction, and it is `False`:
+There is no separate download step and no download switch. Extracting the data downloads it:
 
 ```python
-X_train, Y_train, O_train = dataloader.extract_train_data(download=True)
-X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data(download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
+X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
-Ask for data that is not held, without asking for it to be downloaded, and the extraction raises
-[`NotPreparedError`][sportsbet.sources.NotPreparedError] rather than quietly fetching:
+`extract_train_data` downloads the selected seasons; `extract_fixtures_data` downloads the current data the upcoming
+matches need. Each call downloads afresh, so the object always carries the latest data, and the downloaded snapshots are
+held on it as `stats_` and `odds_`.
+
+The catalogue is read scoped to the selection, so a selection of three leagues never reads the index of a fourth, and a
+paid odds feed is only ever asked to price the matches you selected and the ones still to be played.
+
+## Keeping the data
+
+The dataloader *is* the store. After an extraction it holds the downloaded snapshots, so keeping them is keeping the
+object:
 
 ```python
-from sportsbet.sources import NotPreparedError
+dataloader.save('england.pkl')
 
-try:
-    dataloader.extract_train_data(odds_type='market_maximum')
-except NotPreparedError as error:
-    print(error)
-    error.report.to_fetch     # the items that would be downloaded
-    error.report.held         # the items already in the store
-    error.report.requests     # how many requests each source would make
-    error.report.unavailable  # requested parameters the source does not publish
+from sportsbet.dataloaders import load_dataloader
+dataloader = load_dataloader('england.pkl')      # the data comes back with it
 ```
 
-```text
-The data has not been downloaded. Pass `download=True` to get it. Requests to make: football_data 25. Items held: 0.
-```
-
-That is deliberate. A metered odds source turns an accidental call into money, and a large `param_grid` turns it into a long
-wait. Neither should be able to happen because you asked for a dataframe. Knowing what a download *would* take costs nothing,
-and there is no way to spend without saying `download`.
-
-One honest limit. The count is derived from the **catalogue** — what each source publishes — so it can only be given once
-the catalogue is held. Against a completely empty store there is no count yet, because working one out would itself mean
-downloading, and that is the one thing this is here to prevent. The error still refuses; it just cannot say how much.
-
-The download is **incremental**: it fetches only what the store does not already hold, so re-running a complete extraction
-fetches nothing. It is **resumable**: an interrupted run continues rather than starting over.
-
-### Where the data is kept
-
-The downloaded data lives in a [`LocalStore`][sportsbet.sources.LocalStore], by default under `~/.sportsbet`:
-
-```python
-from sportsbet.dataloaders import DataLoader
-from sportsbet.sources import FootballDataOdds, FootballDataStats, LocalStore
-
-dataloader = DataLoader(
-    param_grid={'league': ['England']},
-    stats=FootballDataStats(), odds=FootballDataOdds(),
-    store=LocalStore('/data/sportsbet'),
-)
-```
-
-The store keeps the raw downloads **forever**, and everything derived from them is rebuilt from those raw payloads at no cost.
-This matters if you ever pay for odds: changing the feature engineering, or upgrading the library, never re-downloads and never
-re-charges you. The derived data is keyed by the library version as well as by the raw content, so an upgrade that changes the
-transform rebuilds rather than serving you what the old one produced.
-
-### What happens when the upstream data changes
-
-The store treats two kinds of data differently:
-
-- **Data that is expected to change** — the fixtures, the season in progress, and the catalogue of what is available — is
-  re-read on every download. You never have to invalidate anything by hand, and there is no expiry to tune.
-- **Data that is finished** — a completed season — is kept and not downloaded again. This is what makes a download
-  incremental, and what stops a metered source from re-charging you for history you already bought.
-
-The second rule has a limit worth knowing: **nothing upstream is truly immutable.** football-data.co.uk does occasionally
-correct a finished season, and a correction like that will not be picked up on its own, because the store has no reason to
-look. When you want it to look, ask:
-
-```python
-X, Y, O = dataloader.extract_train_data(download='refresh')   # re-read everything, including what is already held
-```
-
-That is a deliberate choice rather than a schedule, because on a metered source a refresh is charged for again. If the
-re-fetched content turns out to be identical, nothing downstream is rebuilt — the derived data is keyed by content, so an
-unchanged file costs nothing beyond the download.
+This is how you avoid downloading — and, for a paid feed, paying — twice: extract once, save, and load. There is no
+hidden cache under your home directory and nothing to invalidate; if you want fresh data, you extract again. And because
+you own the file, where your data lives and how long it is kept is your decision, not the library's.
 
 ## Column-naming grammar
 
@@ -505,7 +454,7 @@ a feature:
 
 ```python
 import pandas as pd
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 assert Y_train.columns.tolist() == [
     'home_win__postplay__0min',
     'draw__postplay__0min',
@@ -588,43 +537,39 @@ dataloader = DataLoader(
     stats=FootballDataStats(),
     odds=FootballDataOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
-### The fixtures are not what you selected
+### The fixtures share the training columns, not the training data
 
 This is the part that surprises people, so it is worth being blunt about.
 
-**`param_grid` does not restrict the fixtures.** It selects what to *train* on, and a match you could have trained on is, by
-definition, one that has already been played. A fixture has not been played. The two sets never overlap, so filtering one by the
-other would be meaningless — it would only ever remove fixtures, never select them.
-
-So you may **train on England and bet on Italy**:
+**The fixtures are downloaded separately, not sliced out of the training data.** `param_grid` chose the seasons to
+train on — England 2022 and 2023, say — and those matches have all been played. A fixture has not. So the two never
+overlap: `extract_fixtures_data` goes and downloads the current season of each selected league and returns whatever in
+it is still to be played.
 
 ```text
-X       760 matches   England, 2022-2023   <- param_grid
-X_fix     2 matches   Brazil, France       <- every league, whatever has not been played
+X       760 matches   England, 2022-2023   <- the seasons you selected, to train on
+X_fix     3 matches   England, upcoming    <- the current season, still to be played
 ```
 
-What the two frames share is their **columns**, not their contents. That is the whole contract: the same model consumes both.
+What the two frames share is their **columns**, not their contents. That is the whole contract: the same model, trained
+on the history, bets on the fixtures.
 
 ```python
 assert X_train.columns.tolist() == X_fix.columns.tolist()
 assert O_train.columns.tolist() == O_fix.columns.tolist()
 ```
 
-Whether betting on a league your model has never seen is a *good* idea is your business — it has never met those teams. The
-library will not stop you, and it will not silently drop the fixtures either.
+The fixtures follow the **leagues** you selected, not the years — to bet on Italy, select Italy. A fixture is described
+by the form of its two teams, which is the season they are in the middle of, so `extract_fixtures_data` downloads that
+current season (of the selected leagues only, never a fourth) to compute it.
 
-Two consequences follow, and they are not free:
-
-- **The season in progress of every league is downloaded**, whatever you selected. A fixture is described by the form of its two
-  teams, and their form is the season it belongs to. Without it, a fixture arrives with every feature missing, which is not
-  something anyone can bet on.
-- **A finished season has no fixtures.** There is nothing left in it that has not been played. Out of season, every league is in
-  that state, and `extract_fixtures_data` correctly returns nothing. The bundled
-  [`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] is a frozen finished season, so it never has any.
+**A finished season has no fixtures.** There is nothing left in it that has not been played. Out of season every league
+is in that state, and `extract_fixtures_data` correctly returns nothing. The bundled
+[`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] is a frozen finished season, so it never has any.
 
 A match with **no result whose date has passed** is not a fixture either. It is a hole in the feed — an abandoned game, a season
 it never finished recording — and it is excluded rather than offered to you as a bet on a match that is already over.
@@ -654,7 +599,7 @@ Once written, it is an ordinary source: give it to `DataLoader` beside any odds 
 from sportsbet.dataloaders import DataLoader
 
 dataloader = DataLoader(stats=MyStats(), odds=MyOdds())
-X, Y, O = dataloader.extract_train_data(odds_type='acme', download=True)
+X, Y, O = dataloader.extract_train_data(odds_type='acme')
 ```
 
 A source whose data is already on your disk is still a source — that is exactly what
@@ -697,7 +642,7 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 dataloader = DataLoader(
     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 

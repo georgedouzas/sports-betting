@@ -34,14 +34,14 @@ odds.name, odds.kind
 {'carries no sport of its own': odds.sport is None}
 
 # %%
-# Your key never reaches the store
-# --------------------------------
+# Your key never reaches the data
+# -------------------------------
 #
-# The key is added to a request at the moment the request is made. It is never part of a stored item, so it is never
+# The key is added to a request at the moment the request is made. It is never part of a `RawItem`, so it is never
 # written to disk.
 
 item = RawItem(source='odds_api', key='snapshot', url='https://api.the-odds-api.com/v4/sports?all=true')
-{'key in the stored item': 'your-key' in item.url}
+{'key in the item': 'your-key' in item.url}
 
 # %%
 odds.request_url(item)
@@ -64,7 +64,7 @@ odds.request_url(item)
 #     stats=NBAStats(),
 #     odds=OddsApi(key=os.environ['ODDS_API_KEY'], markets=['h2h']),
 # )
-# X, Y, O = dataloader.extract_train_data(odds_type='pinnacle', download=True)
+# X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 # ```
 #
 # Leave `download` out and nothing is fetched: you are told how many requests it would take, and you decide. What those

@@ -7,12 +7,17 @@ from __future__ import annotations
 
 import asyncio
 import io
+from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 import aiohttp
 import pandas as pd
+
+if TYPE_CHECKING:
+    from ._base import RawItem, RawPayload
 
 CONNECTIONS_LIMIT = 20
 ENCODING = 'ISO-8859-1'
@@ -44,15 +49,35 @@ def _read_local_content(url: str) -> bytes:
 
 
 def read_urls_content(urls: list[str]) -> list[bytes]:
-    """Read the URLs content.
+    """Read the content behind each URL.
 
-    A `file://` URL is read from disk rather than over the network, so a source whose feed is a file that ships with the
-    library is an ordinary source: the store fetches it, keeps it and skips it next time, exactly as it does a feed that
-    lives on the internet.
+    A `file://` URL is read from disk and the rest are read over the network, so a source whose feed ships with the
+    library reads its files exactly as another source reads a remote feed.
     """
     remote = [url for url in urls if not url.startswith(LOCAL)]
     fetched = iter(asyncio.run(_read_urls_content_async(remote)) if remote else [])
     return [_read_local_content(url) if url.startswith(LOCAL) else next(fetched).encode(ENCODING) for url in urls]
+
+
+def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
+    """Read each item and pair the bytes back with the item that asked for it.
+
+    Args:
+        items:
+            The items to read.
+
+        authorize:
+            Turns an item into the URL to read it from, adding a credential at the moment of the request so it stays out
+            of the item.
+
+    Returns:
+        payloads:
+            One payload per item, in the same order.
+    """
+    from ._base import RawPayload  # noqa: PLC0415
+
+    contents = read_urls_content([authorize(item) for item in items])
+    return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
 
 
 def read_csv_content(content: bytes) -> pd.DataFrame:

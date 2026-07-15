@@ -58,7 +58,7 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
         ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average', download=True)
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> # Create a pipeline to handle categorical features and missing values
         >>> clf_pipeline = make_pipeline(
         ...     make_column_transformer(

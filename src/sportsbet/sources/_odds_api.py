@@ -106,7 +106,7 @@ class OddsApi(BaseOddsSource):
     the minute it would have been placed. The free feed cannot do that: it only publishes the closing price.
 
     It needs your own key, and the data it buys never leaves your machine. The key is added to a request when the
-    request is made, so it is never written to the store.
+    request is made, so it never reaches a `RawItem` and is never part of the data you save.
 
     Historical prices are a paid tier and begin on 6 June 2020. Every market, region and moment is a separate request,
     so extract without `download` first and see how many it would take.
@@ -139,7 +139,7 @@ class OddsApi(BaseOddsSource):
         >>> # It sells every sport, so it carries none of its own and takes the sport it is paired with.
         >>> source.sport is None
         True
-        >>> # The key is added when the request is made, so it never reaches a stored item.
+        >>> # The key is added when the request is made, so it never reaches the item.
         >>> item = RawItem(source='odds_api', key='snapshot', url='https://api.the-odds-api.com/v4/sports?all=true')
         >>> 'secret' in item.url
         False
@@ -193,7 +193,7 @@ class OddsApi(BaseOddsSource):
     def request_url(self: Self, item: RawItem) -> str:
         """Return the URL to fetch an item from, with the key added.
 
-        The key is added here and nowhere else, so it never reaches a `RawItem` and is never written to the store.
+        The key is added here and nowhere else, so it never reaches a `RawItem` and is never part of the data you save.
 
         Args:
             item:

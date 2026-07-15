@@ -32,7 +32,7 @@ dataloader = DataLoader(
     stats=FootballDataStats(),
     odds=FootballDataOdds(),
 )
-X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='market_maximum', download=True)
+X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='market_maximum')
 
 # %%
 # The input data:

@@ -49,11 +49,6 @@ SELECTION: list[Callable[[FC], FC]] = [
         help='A moment to price, as `status:minutes`, e.g. `inplay:45`. Repeatable.',
     ),
     click.option(
-        '--store',
-        type=click.Path(),
-        help='Where the downloaded data is kept. The default is `~/.sportsbet`.',
-    ),
-    click.option(
         '--alias',
         'aliases',
         multiple=True,
@@ -112,15 +107,6 @@ MODEL: list[Callable[[FC], FC]] = [
     click.option('--cv', default=3, show_default=True, help='The number of time-ordered folds of a backtest.'),
     click.option('--n-jobs', default=-1, show_default=True, help='The jobs a backtest runs in parallel.'),
     click.option('--verbose', default=0, show_default=True, help='How much a backtest says while it runs.'),
-]
-
-DOWNLOAD: list[Callable[[FC], FC]] = [
-    click.option(
-        '--download',
-        is_flag=True,
-        help='Download what is missing. Without it nothing is fetched, and the requests it would take are reported.',
-    ),
-    click.option('--refresh', is_flag=True, help='Download everything again, including what the store already holds.'),
 ]
 
 OUTPUT: list[Callable[[FC], FC]] = [
