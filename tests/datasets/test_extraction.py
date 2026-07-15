@@ -30,7 +30,7 @@ class _Feed:
         self.fetched = fetched
 
     def index_items(self, selection=None):
-        return [RawItem(source=self.name, key='catalogue', url='file:///dev/null', volatile=True)]
+        return [RawItem(source=self.name, key='catalogue', url='file:///dev/null')]
 
     def catalogue(self, payloads):
         return [*PARAMS, CURRENT]

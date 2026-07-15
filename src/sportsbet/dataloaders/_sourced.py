@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from itertools import product
 from typing import Self
 
 import pandas as pd
@@ -15,7 +14,7 @@ from ..sources._base import BaseOddsSource, BaseStatsSource, RawItem
 from ..sources._fetch import fetch_payloads
 from ..sources._resolver import ALIASES, resolve
 from ..sources._schema import EVENT_COLS, IDENTITY_COLS
-from ._base import PARAM_COLS, BaseDataLoader
+from ._base import BaseDataLoader
 
 
 class DataLoader(BaseDataLoader):
@@ -96,23 +95,21 @@ class DataLoader(BaseDataLoader):
         self.max_unmatched_rate = max_unmatched_rate
 
     def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
-        """Return the two sources, checked and kept.
+        """Return the statistics and odds sources, checked to be about the same sport.
 
-        You choose where the data comes from, which is why a missing statistics source is an error rather than a
-        default, and why pairing soccer statistics with basketball odds is refused here rather than left to fail deeper.
+        You choose where the data comes from. So a missing statistics source is an error, and pairing soccer statistics
+        with basketball odds is caught here rather than deeper.
         """
-        if self._components is None:
-            if self.stats is None:
-                msg = 'No `stats` source. A dataloader does not choose where its data comes from; you do.'
-                raise ValueError(msg)
-            if self.odds is not None and self.stats.sport != (self.odds.sport or self.stats.sport):
-                msg = (
-                    f'The statistics are {self.stats.sport} and the odds are {self.odds.sport}. They are about '
-                    f'different sports, so nothing could pair them.'
-                )
-                raise ValueError(msg)
-            self._components = (self.stats, self.odds)
-        return self._components
+        if self.stats is None:
+            msg = 'No `stats` source. A dataloader does not choose where its data comes from; you do.'
+            raise ValueError(msg)
+        if self.odds is not None and self.stats.sport != (self.odds.sport or self.stats.sport):
+            msg = (
+                f'The statistics are {self.stats.sport} and the odds are {self.odds.sport}. They are about different '
+                f'sports, so nothing could pair them.'
+            )
+            raise ValueError(msg)
+        return self.stats, self.odds
 
     @property
     def sport(self: Self) -> str | None:
@@ -147,12 +144,6 @@ class DataLoader(BaseDataLoader):
             return stats_params
         priced = {tuple(sorted(params.items())) for params in self._catalogue(odds_source)}
         return [params for params in stats_params if tuple(sorted(params.items())) in priced]
-
-    def _authorize(self: Self, item: RawItem) -> str:
-        """Return the URL of an item, authorized by the source that declared it."""
-        stats_source, odds_source = self._resolved()
-        source = odds_source if odds_source is not None and item.source == odds_source.name else stats_source
-        return source.request_url(item)
 
     def _paired(
         self: Self,
@@ -208,17 +199,3 @@ class DataLoader(BaseDataLoader):
         schedule = self._moments(upcoming) if odds_source is not None and odds_source.needs_schedule() else None
         odds_items = odds_source.fixtures_items(params, schedule) if odds_source is not None else []
         return self._paired(stats, odds_items)
-
-    def _unavailable(self: Self, available: list[dict]) -> list[dict]:
-        """Return the fully specified parameters the sources do not publish."""
-        if self.param_grid is None:
-            return []
-        published = {tuple(sorted(params.items())) for params in available}
-        grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
-        requested = [
-            dict(zip(grid, values, strict=True))
-            for grid in grids
-            if sorted(grid) == sorted(PARAM_COLS)
-            for values in product(*[grid[key] for key in grid])
-        ]
-        return [params for params in requested if tuple(sorted(params.items())) not in published]

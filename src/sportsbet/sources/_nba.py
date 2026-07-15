@@ -196,7 +196,7 @@ class NBAStats(BaseStatsSource):
 
     def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the seasons the competition publishes, which is one free request whatever is selected."""
-        return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL, volatile=True)]
+        return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
 
     def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the seasons the competition publishes.
@@ -234,7 +234,6 @@ class NBAStats(BaseStatsSource):
                         source=self.name,
                         key=f'{LEAGUE}_{param["division"]}_{year}_{start.year}{month:02d}',
                         url=GAMES_URL.format(start=f'{start.year}{month:02d}01', end=f'{start.year}{month:02d}{last}'),
-                        volatile=True,
                     ),
                 )
         return items

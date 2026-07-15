@@ -37,7 +37,7 @@ def sources(monkeypatch):
     """Statistics and odds sources whose feed index is supplied directly."""
     stats, odds = FootballDataStats(), FootballDataOdds()
     for source in (stats, odds):
-        monkeypatch.setattr(source, '_catalogue', INDEX)
+        monkeypatch.setattr(source, '_catalogue', INDEX, raising=False)
     return stats, odds
 
 

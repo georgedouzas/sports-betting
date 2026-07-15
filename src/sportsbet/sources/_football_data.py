@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import ClassVar, Self
 
 import numpy as np
@@ -706,11 +705,6 @@ def _division(league: str, code: str) -> int:
     return int(code)
 
 
-def _current_year() -> int:
-    """Return the current year, above which a season can still change upstream."""
-    return datetime.now(tz=UTC).year
-
-
 def _current(
     params: list[dict],
     catalogue: list[tuple[str, int, int, str]],
@@ -938,9 +932,6 @@ class _FootballDataSource(BaseSource):
     sport: ClassVar[str | None] = 'soccer'
     name: ClassVar[str] = 'football_data'
 
-    def __init__(self: Self) -> None:
-        self._catalogue: list[tuple[str, int, int, str]] = []
-
     def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the index pages and the whole-history files, from which the catalogue is read.
 
@@ -954,12 +945,12 @@ class _FootballDataSource(BaseSource):
         """
         leagues = _selected_leagues(selection)
         items = [
-            RawItem(source=self.name, key=f'{INDEX_PREFIX}_{league}', url=_index_url(league), volatile=True)
+            RawItem(source=self.name, key=f'{INDEX_PREFIX}_{league}', url=_index_url(league))
             for league in MAIN_LEAGUES
             if leagues is None or league in leagues
         ]
         items.extend(
-            RawItem(source=self.name, key=f'{league}_1', url=_history_url(league), volatile=True)
+            RawItem(source=self.name, key=f'{league}_1', url=_history_url(league))
             for league in HISTORY_LEAGUES
             if leagues is None or league in leagues
         )
@@ -990,8 +981,8 @@ class _FootballDataSource(BaseSource):
     def _season_item(self: Self, league: str, division: int, year: int, url: str) -> RawItem:
         """Return the item of a season file."""
         if league in HISTORY_LEAGUES:
-            return RawItem(source=self.name, key=f'{league}_{division}', url=url, volatile=True)
-        return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url, volatile=year >= _current_year())
+            return RawItem(source=self.name, key=f'{league}_{division}', url=url)
+        return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url)
 
     def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the season file of each selected combination.
@@ -1000,7 +991,7 @@ class _FootballDataSource(BaseSource):
         left out rather than fabricated. A whole-history league yields the same item for each of its seasons, so it is
         read once however many are selected.
         """
-        seasons = {(league, division, year): url for league, division, year, url in self._catalogue}
+        seasons = {(league, division, year): url for league, division, year, url in getattr(self, '_catalogue', [])}
         items: list[RawItem] = []
         for param in params:
             url = seasons.get((param['league'], param['division'], param['year']))
@@ -1020,14 +1011,14 @@ class _FootballDataSource(BaseSource):
         """
         items = [
             self._season_item(param['league'], param['division'], param['year'], url)
-            for param, url in _current(params, self._catalogue)
+            for param, url in _current(params, getattr(self, '_catalogue', []))
         ]
-        items.append(RawItem(source=self.name, key=FIXTURES_KEY, url=f'{URL}/fixtures.csv', volatile=True))
+        items.append(RawItem(source=self.name, key=FIXTURES_KEY, url=f'{URL}/fixtures.csv'))
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
         """Transform the raw feed payloads into the long snapshots of this source."""
-        stats, odds = _modelling_snapshots(payloads, self._catalogue)
+        stats, odds = _modelling_snapshots(payloads, getattr(self, '_catalogue', []))
         return stats if self.kind == 'stats' else odds
 
 
