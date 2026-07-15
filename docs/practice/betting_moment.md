@@ -1,10 +1,14 @@
 [pandas Timedelta]: <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>
 
-# Sports betting in practice
+# The moment you bet
 
-The [dataloader](dataloader.md) turns raw matches into moment-aware `X`, `Y` and `O`, and the [bettor](bettor.md) turns those into
-a betting strategy. This page puts the two together into an end-to-end flow and answers the question that matters most once you
-start betting for real: **which data can I actually use, and when?**
+The [theory of value betting](value_betting.md) says what to look for. This page is about the discipline that makes the search
+honest: a model may only ever use what it would actually have known at the instant the bet is placed. Get that wrong and a
+backtest turns into a fantasy.
+
+The [dataloader](../overview/user_guide/dataloader.md) turns raw matches into moment-aware `X`, `Y` and `O`, and the
+[bettor](../overview/user_guide/bettor.md) turns those into a betting strategy. Here they come together end to end, and the
+question that matters most once you start betting for real: which data can I actually use, and when?
 
 ## The golden rule: train it the way you will use it
 
@@ -22,7 +26,7 @@ simply missing (`NaN`). The practical question is therefore always: *how far has
 
 This is why including half-time data in `X` at training time requires half-time data at prediction time: you can only bet on a
 match once it has actually reached half-time. You express the betting moment with the
-[input horizon](dataloader.md#the-input-horizon) — the `input_event_status` and `input_event_time` arguments of
+[input horizon](../overview/user_guide/dataloader.md#the-input-horizon) — the `input_event_status` and `input_event_time` arguments of
 `extract_train_data` — and it is applied to both the training and the fixtures data, so the two never fall out of step.
 
 ## Betting before kick-off
@@ -160,12 +164,12 @@ X_fix, _, O_fix = dataloader.extract_fixtures_data(download=True)
 `download` is the only thing that reaches the network, and it is `False` unless you pass it. It is incremental, so running it
 again before each betting session refreshes the fixtures and the current season without re-downloading the seasons that are
 already finished. Everything else on this page — the input horizon, the training and serving symmetry, the backtest — is
-unchanged. See [Downloading the data](dataloader.md#downloading-the-data).
+unchanged. See [Downloading the data](../overview/user_guide/dataloader.md#downloading-the-data).
 
 If the upstream feed corrects a season that has already finished, that will not be picked up on its own — the store has no
 reason to look at data it considers done. Ask it to, with `download='refresh'`. See
-[What happens when the upstream data changes](dataloader.md#what-happens-when-the-upstream-data-changes).
+[What happens when the upstream data changes](../overview/user_guide/dataloader.md#what-happens-when-the-upstream-data-changes).
 
 One honest limitation. The free feed carries **pre-match closing odds**, so the in-play flow above trains and predicts correctly
 but cannot be *backtested* against a real in-play price: nobody recorded what the odds were at minute 45. To backtest an in-play
-bet you need a source with time-stamped prices, injected as the dataloader's [odds source](dataloader.md#sources).
+bet you need a source with time-stamped prices, injected as the dataloader's [odds source](../overview/user_guide/dataloader.md#sources).
