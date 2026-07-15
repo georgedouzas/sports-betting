@@ -24,14 +24,14 @@ MIN_MARGIN = 0.15
 ALIASES: dict[str, str] = {
     'Olimpia Milano': 'EA7 Emporio Armani Milan',
 }
-"""The clubs the pairing cannot place, and only those.
+"""The clubs the pairing needs help to place, and only those.
 
 A club is normally paired without help, because the two sources hold the same roster and a name is only ever compared
 with the twenty or so clubs of its own league and season. What lands here is a club the two sources call by genuinely
 different names, sharing no word between them.
 
-`Olimpia Milano` is the historic name of the club; `EA7 Emporio Armani Milan` is its sponsor's. They have nothing in
-common but the city, so nothing can pair them and nothing should try.
+`Olimpia Milano` is the historic name of the club; `EA7 Emporio Armani Milan` is its sponsor's. They share only the
+city, so an alias is what pairs them.
 """
 
 
@@ -59,8 +59,8 @@ def normalize(name: str) -> str:
 class UnmatchedError(Exception):
     """Too many matches of one source could not be found in the other.
 
-    A match whose odds are missing is not an error that shows itself: it is a slightly smaller dataset and a backtest
-    that is confidently wrong. So it is raised rather than tolerated.
+    A match whose odds are missing hides as a slightly smaller dataset and a backtest that is confidently wrong, so the
+    pairing raises to surface it.
 
     Args:
         report:
@@ -106,8 +106,8 @@ class ReconciliationReport:
             The matches found in both sources.
 
         unmatched_stats:
-            The matches whose odds were not found. These are the dangerous ones: they would silently become a dataset
-            with holes in it.
+            The matches whose odds were not found. These are the ones that matter: unnoticed, they leave holes in the
+            dataset.
 
         unmatched_odds:
             The odds whose match was not found.
@@ -116,8 +116,8 @@ class ReconciliationReport:
             The proportion of matches whose odds were not found.
 
         suggestions:
-            For every team name that was not found, the names it most resembles. A suggestion is never applied on its
-            own, since a wrong alias attaches the odds of one club to another and says nothing about it.
+            For every team name that was not found, the names it most resembles. You confirm a suggestion by adding it
+            as an alias, since applying it blindly could attach the odds of one club to another.
 
     Examples:
         >>> import pandas as pd
@@ -224,7 +224,7 @@ def _pair_rosters(stats_names: set[str], odds_names: set[str]) -> tuple[dict[str
     so they match themselves before anything is inferred, and what is left over has nothing to be confused with.
 
     A name is paired only when it is clearly the best of the roster and clearly better than the next best. Anything
-    ambiguous is left unpaired and reported, since a wrong pairing says nothing about itself.
+    ambiguous is left unpaired and reported for review.
     """
     matched = {name: name for name in odds_names & stats_names}
     unpaired_odds = odds_names - set(matched)
@@ -262,7 +262,7 @@ def _mapping(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -
 
     A name is only reported when there is a club left for it to be. An odds source lists more than one competition under
     a league, so a cup tie against a club from another division arrives alongside the league games. It belongs to nobody
-    here, and telling the user to write an alias for it would be telling them to fix something that is not broken.
+    here, so it is left out of the report.
     """
     given = {normalize(name): normalize(alias) for name, alias in aliases.items()}
     mapping: dict = {}
@@ -310,9 +310,8 @@ def resolve(
     makes pairing them safe rather than a guess: every name that could be confused with another is present on both
     sides, so it matches itself before anything is inferred.
 
-    A match whose odds are not found is the failure that matters. It does not look like an error, it looks like a
-    smaller dataset, and it produces a backtest that is confidently wrong. So it is counted and, past the tolerance,
-    raised.
+    A match whose odds are not found is the failure that matters: it hides as a smaller dataset and produces a backtest
+    that is confidently wrong, so it is counted and, past the tolerance, raised.
 
     Args:
         stats:

@@ -452,7 +452,7 @@ def _preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     """Preprocess the data.
 
     Each non-closing odds column is back-filled from its closing twin when it is absent or empty, before the closing
-    columns are dropped, so the historical odds are not lost.
+    columns are dropped, so the historical odds are kept.
     """
     data = data.drop(
         columns=[col for col in data.columns if 'Unnamed' in col or col in REMOVED_COLS],
@@ -534,7 +534,7 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
     """Extract high level features for modelling data.
 
     The expanding and rolling means run over the season frame with the fixtures rows already concatenated onto it, then
-    shift by one, so an upcoming match carries the form of the matches before it and never its own outcome.
+    shift by one, so an upcoming match carries the form of the matches before it.
     """
     team_cols = ['home_team', 'away_team']
     target_cols = [
@@ -711,8 +711,7 @@ def _current(
 ) -> list[tuple[dict, str]]:
     """Return the season in progress, and its URL, for each league and division the selection names.
 
-    A selection of three leagues yields three current seasons, never a fourth, so the fixtures of a few leagues never
-    read the whole feed.
+    A selection of three leagues yields three current seasons, so the fixtures of a few leagues read only those leagues.
     """
     wanted = {(param['league'], param['division']) for param in params}
     latest: dict[tuple[str, int], tuple[int, str]] = {}
@@ -741,11 +740,11 @@ def _kickoff(data: pd.DataFrame, date_format: str) -> pd.Series:
     """Return the kick-off instant in UTC.
 
     The feed publishes every league's kick-off in UK time, whatever the country the match is played in, so it is
-    converted here. A source resolves its own time zone at its own boundary and never emits a local or naive instant,
-    which is what lets `date + event_time` address a moment of a match in wall-clock time.
+    converted here. A source resolves its own time zone at its own boundary and emits a UTC instant, which is what lets
+    `date + event_time` address a moment of a match in wall-clock time.
 
     Older seasons carry no kick-off time. Their matches fall back to midnight, and they predate every time-stamped odds
-    source, so they can never be joined to one.
+    source.
     """
     date = pd.to_datetime(data['Date'], format=date_format, dayfirst=True)
     if 'Time' in data.columns:
@@ -779,7 +778,7 @@ def _latest_years(catalogue: list[tuple[str, int, int, str]], processed: list) -
     """Return the latest published year of each league and division.
 
     It comes from the whole feed catalogue rather than the selection, so an upcoming match belongs to the season it is
-    actually part of and never to an older one the user happened to select.
+    actually part of.
     """
     years = [{'league': league, 'division': division, 'year': year} for league, division, year, _ in catalogue]
     years.extend({'league': league, 'division': division, 'year': year} for league, division, year, _ in processed)
@@ -876,8 +875,7 @@ def _selected_leagues(selection: ParamGrid | None) -> set[str] | None:
     """Return the leagues a selection names, or `None` when it names none and so every one of them is wanted.
 
     A selection is one grid or a list of them, and a grid that names no league names all of them, so one such grid is
-    enough for every league to be wanted. Answering with too few would leave a league that was asked for undownloaded,
-    which is the one mistake here that is worse than downloading too much.
+    enough for every league to be wanted. It errs toward more leagues, so every league the selection asks for is read.
     """
     if not selection:
         return None
@@ -907,7 +905,7 @@ def _history_url(league: str) -> str:
 def _parse_index(league: str, content: bytes) -> list[tuple[str, int, int, str]]:
     """Parse an index page for the division, year and URL of every season it publishes.
 
-    The upstream is the only authority on what it publishes, so no combination is fabricated from a cartesian product.
+    The upstream is the only authority on what it publishes, so every combination is read straight from the page.
     """
     page = BeautifulSoup(content.decode(ENCODING), features='html.parser')
     hrefs = {
@@ -926,7 +924,7 @@ class _FootballDataSource(BaseSource):
     """A source backed by the football-data.co.uk feed.
 
     The statistics and the odds come from the same upstream file, so both declare the same items and the file is
-    downloaded once rather than twice.
+    downloaded once.
     """
 
     sport: ClassVar[str | None] = 'soccer'
@@ -940,8 +938,8 @@ class _FootballDataSource(BaseSource):
         sixteen of them together are twenty times the size of a season of the league that was actually asked for, and
         the index is re-read on every preparation, so they were paid for again every time.
 
-        A league that was not selected is therefore not asked about. Discovery still asks about all of them, because
-        nothing can be selected before it is known what exists.
+        So only the leagues the selection names are asked about. Discovery still asks about all of them, because nothing
+        can be selected before it is known what exists.
         """
         leagues = _selected_leagues(selection)
         items = [
@@ -987,9 +985,8 @@ class _FootballDataSource(BaseSource):
     def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the season file of each selected combination.
 
-        The URLs are looked up in the catalogue rather than constructed, so a combination the feed does not publish is
-        left out rather than fabricated. A whole-history league yields the same item for each of its seasons, so it is
-        read once however many are selected.
+        The URLs are looked up in the catalogue, so every item points at a combination the feed publishes. A whole-
+        history league yields the same item for each of its seasons, so it is read once however many are selected.
         """
         seasons = {(league, division, year): url for league, division, year, url in getattr(self, '_catalogue', [])}
         items: list[RawItem] = []
@@ -1025,7 +1022,7 @@ class _FootballDataSource(BaseSource):
 class FootballDataStats(_FootballDataSource, BaseStatsSource):
     """The statistics of the football-data.co.uk feed.
 
-    It downloads the feed on your own machine and transforms it locally, so no data is redistributed. It needs no key.
+    It downloads the feed on your own machine and transforms it locally, so the data stays with you. It needs no key.
 
     Read more in the [user guide][user-guide].
 
@@ -1052,8 +1049,8 @@ class FootballDataStats(_FootballDataSource, BaseStatsSource):
 class FootballDataOdds(_FootballDataSource, BaseOddsSource):
     """The odds of the football-data.co.uk feed.
 
-    It carries the closing odds of the market average and the market maximum. They are pre-match prices, so an in-play
-    bet cannot be backtested against them; a source with time-stamped prices is needed for that.
+    It carries the closing odds of the market average and the market maximum. They are pre-match prices, so they
+    backtest a pre-match bet; a source with time-stamped prices backtests an in-play one.
 
     Read more in the [user guide][user-guide].
 

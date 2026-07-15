@@ -22,7 +22,7 @@ class DataLoader(BaseDataLoader):
 
     There is one dataloader for every sport, because the sport is a property of the sources rather than of the loader. A
     feed of soccer matches stays a feed of soccer matches whatever it is paired with, so the loader reads the sport off
-    the statistics source and refuses a pairing whose odds are about a different one.
+    the statistics source and pairs it only with odds about the same sport.
 
     It downloads the data into memory when you extract, and holds it on the object. Extract again and it downloads
     again, so the object always carries the latest data; keep what you have with `save`, and read it back with
@@ -51,8 +51,8 @@ class DataLoader(BaseDataLoader):
 
         max_unmatched_rate:
             The proportion of matches that may go without odds when the two
-            sources differ. The default `0.0` allows none, since a match whose
-            odds silently go missing shrinks the dataset and skews the backtest.
+            sources differ. The default `0.0` allows none, so every match keeps
+            its odds and the backtest stays on the full dataset.
 
     Attributes:
         stats_ (pd.DataFrame):
@@ -97,8 +97,8 @@ class DataLoader(BaseDataLoader):
     def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
         """Return the statistics and odds sources, checked to be about the same sport.
 
-        You choose where the data comes from. So a missing statistics source is an error, and pairing soccer statistics
-        with basketball odds is caught here rather than deeper.
+        You choose where the data comes from. A missing statistics source raises here, and a pairing of soccer
+        statistics with basketball odds is caught here.
         """
         if self.stats is None:
             msg = 'No `stats` source. A dataloader does not choose where its data comes from; you do.'
@@ -126,7 +126,7 @@ class DataLoader(BaseDataLoader):
         """Return the combinations a source publishes for the selection.
 
         The source is told what was selected, so a feed whose catalogue is as large as its data reads only the part of
-        it that could hold the selection. A selection of three leagues never reads the index of a fourth.
+        it that could hold the selection. A selection of three leagues reads the index of those three.
         """
         payloads = fetch_payloads(source.index_items(self.param_grid), source.request_url)
         return source.catalogue(payloads)
@@ -134,9 +134,8 @@ class DataLoader(BaseDataLoader):
     def _all_params(self: Self) -> list[dict]:
         """Return the combinations both sources publish for the selection.
 
-        With odds it is the intersection: a season the statistics carry but the odds do not cannot be bet on, so it is
-        left out rather than offered and left to lose its odds silently later. With no odds the statistics are the whole
-        of it.
+        With odds it is the intersection: a season is kept when both the statistics and the odds carry it, so every
+        kept season can be bet on. With no odds the statistics are the whole of it.
         """
         stats_source, odds_source = self._resolved()
         stats_params = self._catalogue(stats_source)
@@ -188,7 +187,7 @@ class DataLoader(BaseDataLoader):
         """Download the upcoming matches of the selection and return their long snapshots.
 
         The upcoming matches come from the season each selected league is in the middle of, whatever season was chosen
-        to train on. The odds price the matches still to be played, and nothing already finished.
+        to train on. The odds price the matches still to be played.
         """
         stats_source, odds_source = self._resolved()
         params = self._filter_params(self._all_params())

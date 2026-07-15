@@ -110,7 +110,7 @@ You: What soccer data can I work with?
 
 You: Find me a strategy that works on the top two divisions of Germany, Italy and France, 2021 to 2024.
 
-> Claude: Downloaded 25 files. Then I searched, rather than guessing.
+> Claude: Downloaded 24 season files. Then I searched, rather than guessing.
 >
 > First, which market is even worth betting. A logistic model on each, at the best odds in the market:
 >
@@ -165,6 +165,41 @@ You: Which league is that draw edge actually in?
 >
 > That is a big number and I would treat it with suspicion rather than excitement. It is one league over four seasons,
 > found after I had already looked at several splits.
+
+You: Write me the Italy draw model, then, and show me the folds.
+
+> Claude: Here it is — a logistic regression on the two Italian divisions, betting only the draw:
+>
+> ```python
+> from sklearn.compose import make_column_transformer
+> from sklearn.impute import SimpleImputer
+> from sklearn.linear_model import LogisticRegression
+> from sklearn.multioutput import MultiOutputClassifier
+> from sklearn.pipeline import make_pipeline
+> from sklearn.preprocessing import OneHotEncoder
+> from sportsbet.evaluation import ClassifierBettor
+>
+> classifier = make_pipeline(
+>     make_column_transformer(
+>         (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']), remainder='passthrough'
+>     ),
+>     SimpleImputer(),
+>     MultiOutputClassifier(LogisticRegression(solver='liblinear', class_weight='balanced')),
+> )
+> bettor = ClassifierBettor(classifier, betting_markets=['draw'], init_cash=10000.0, stake=50.0)
+> ```
+>
+> | Testing period | Bets | Yield per bet | Final cash |
+> | --- | ---: | ---: | ---: |
+> | Mar 2021 – Nov 2021 | 440 | +1.7% | £10,365 |
+> | Nov 2021 – Aug 2022 | 461 | +12.7% | £12,934 |
+> | Aug 2022 – Mar 2023 | 487 | +4.5% | £11,097 |
+> | Mar 2023 – Nov 2023 | 470 | +8.9% | £12,085 |
+> | Nov 2023 – Jun 2024 | 485 | +17.2% | £14,171 |
+>
+> Positive in all five folds, mean +9.0%. That is the kind of result I would want to distrust hardest — I found it by
+> narrowing to the league that already looked good. Give me a season I have never touched and I will tell you if it
+> holds.
 
 You: Fine. Any value bets in the upcoming fixtures?
 

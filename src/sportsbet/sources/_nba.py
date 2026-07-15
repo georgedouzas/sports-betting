@@ -39,9 +39,8 @@ def _wanted(event: dict[str, Any]) -> bool:
     their teams are inventions, so keeping the regular season keeps them. The play-off rounds are not filed as standard
     games, so keeping the standard games drops every one of them.
 
-    It is written as an exclusion so an unfamiliar label is dropped rather than admitted. A missing game is a visible
-    gap; an invented team in the roster is a silent corruption that breaks the pairing with the odds for the whole
-    competition.
+    So it keeps an event only when both labels are recognized, which keeps the pairing with the odds sound: a dropped
+    game shows as a visible gap, while an invented team in the roster would corrupt the whole competition's pairing.
     """
     competitions = event.get('competitions') or [{}]
     season_type = event.get('season', {}).get('type')
@@ -53,8 +52,8 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
     """Return the games of a month, as the API publishes them.
 
     The tip-off is the instant the API gives, which it gives in UTC. Whether a game was played is the flag it carries on
-    that game, never the season being over: a finished season still holds games that were postponed and never made up,
-    and those have no result to learn from.
+    that game: a finished season still holds games that were postponed and never made up, and those have no result to
+    learn from.
     """
     events = json.loads(content).get('events', [])
     records = []
@@ -90,10 +89,10 @@ def _form(games: pd.DataFrame) -> pd.DataFrame:
     """Return what each team had done before each of its games.
 
     The upcoming games are already part of the frame, so one of them carries the form of the games before it. Every
-    average is shifted by one, so a game never sees its own result.
+    average is shifted by one, so a game sees only the games before it.
 
-    Points scored, points conceded, and the wins that follow from them. The feed carries a score line and nothing else,
-    so there is nothing else to build.
+    Points scored, points conceded, and the wins that follow from them. The feed carries a score line, so that is what
+    the form is built from.
     """
     played = games['home_points'].ge(0) & games['away_points'].ge(0)
     sides = [
@@ -122,8 +121,7 @@ def _form(games: pd.DataFrame) -> pd.DataFrame:
 def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
     """Return the long snapshots of a season.
 
-    A game that has not been played gets a pre-play snapshot and nothing else, so it becomes a fixture and never a
-    training row.
+    A game that has not been played gets only its pre-play snapshot, so it becomes a fixture.
     """
     if games.empty:
         return games
@@ -218,8 +216,7 @@ class NBAStats(BaseStatsSource):
 
         The feed returns at most a thousand games and says nothing when it has more, so asking for a whole season, which
         is about fourteen hundred, quietly loses a quarter of it. A month holds two hundred and forty at its busiest, so
-        a month is an answer the feed can give in full. Widening the window to save requests would lose games and raise
-        nothing.
+        a month is an answer the feed can give in full.
         """
         items = []
         for param in params:

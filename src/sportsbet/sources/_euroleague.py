@@ -32,8 +32,8 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
     """Return the games of a season, as the API publishes them.
 
     The tip-off is taken from the field the API gives in UTC. The one it calls `date` is in its own head-office time,
-    whatever country the game is played in — a game in Istanbul reads 18:30 there and tips off at 20:30 locally — so
-    reading that one would be a guess, and a wrong guess would move every game by an hour or two without saying so.
+    whatever country the game is played in — a game in Istanbul reads 18:30 there and tips off at 20:30 locally — so the
+    UTC field is the one that places the game at the right instant.
     """
     games: list[dict[str, Any]] = json.loads(content).get('data', [])
     records = []
@@ -67,10 +67,10 @@ def _form(games: pd.DataFrame) -> pd.DataFrame:
     """Return what each team had done before each of its games.
 
     The upcoming games are already part of the frame, so one of them carries the form of the games before it. Every
-    average is shifted by one, so a game never sees its own result.
+    average is shifted by one, so a game sees only the games before it.
 
-    Points scored, points conceded, and the wins that follow from them. The feed carries a score line and nothing else,
-    so there is nothing else to build.
+    Points scored, points conceded, and the wins that follow from them. The feed carries a score line, so that is what
+    the form is built from.
     """
     played = games['home_points'].ge(0) & games['away_points'].ge(0)
     sides = [
@@ -99,8 +99,7 @@ def _form(games: pd.DataFrame) -> pd.DataFrame:
 def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
     """Return the long snapshots of a season.
 
-    A game that has not been played gets a pre-play snapshot and nothing else, so it becomes a fixture and never a
-    training row with a result nobody knows.
+    A game that has not been played gets only its pre-play snapshot, so it becomes a fixture.
     """
     if games.empty:
         return games
