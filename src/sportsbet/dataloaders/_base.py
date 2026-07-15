@@ -169,7 +169,7 @@ class BaseDataLoader(ABC):
         raise NotImplementedError(msg)
 
     def _filter_params(self: Self, params: list[dict]) -> list[dict]:
-        """Filter the available combinations by `param_grid` (no invalid combinations are fabricated)."""
+        """Filter the available combinations by `param_grid`, keeping only combinations that exist."""
         if self.param_grid is None:
             return params
         grids = self.param_grid if isinstance(self.param_grid, list) else [self.param_grid]
@@ -183,9 +183,9 @@ class BaseDataLoader(ABC):
     def _upcoming(data: pd.DataFrame) -> pd.Series:
         """Return which snapshots belong to a match that has not been played yet.
 
-        A missing result is not the same thing as an unplayed match. A feed loses one now and then — an abandoned game,
-        a season it never finished recording — and those matches have no result and never will. They are in the past, so
-        they are not bettable, and offering them as fixtures would be offering a bet on a match that is already over.
+        A match counts as upcoming by its date, which lies in the future. A missing result is a separate matter: a feed
+        sometimes drops one — an abandoned game, a season it never finished recording — and those matches stay in the
+        past. Dating from the future keeps the fixtures to the matches genuinely still to come.
         """
         return data['date'] >= pd.Timestamp.now(tz='UTC')
 
@@ -247,8 +247,8 @@ class BaseDataLoader(ABC):
     def no_odds() -> pd.DataFrame:
         """Return the odds of a dataloader that has none: the right shape, and no rows.
 
-        With no odds there is nothing to bet on and no market to predict, and an extraction that asked for targets is
-        told so. The features are still there, and they are still worth having.
+        An extraction that asks for targets is told there are no markets to predict, and the features remain available
+        on their own.
         """
         odds = pd.DataFrame(columns=[*EVENT_COLS, *IDENTITY_COLS, 'provider'])
         odds['date'] = pd.to_datetime(odds['date'], utc=True).astype('datetime64[ns, UTC]')
@@ -262,8 +262,7 @@ class BaseDataLoader(ABC):
     def _apply_drop_na(self: Self, X: pd.DataFrame, drop_na_thres: float) -> pd.DataFrame:
         """Drop feature columns whose missingness exceeds `drop_na_thres`.
 
-        It is a proportion, so it lies between none and all of them. Anything above one asks for columns that are more
-        than complete, and dropped every column instead of saying so.
+        It is a proportion in `[0.0, 1.0]`, checked to lie in that range.
         """
         check_scalar(drop_na_thres, 'drop_na_thres', (int, float), min_val=0.0, max_val=1.0)
         if not X.empty:
@@ -287,8 +286,8 @@ class BaseDataLoader(ABC):
     ) -> pd.Series:
         """Mask of snapshots strictly before the target, optionally capped at an input horizon.
 
-        A snapshot is kept when it is strictly before the target moment (no post-target leakage) and, when an input
-        horizon is given, at or before it.
+        A snapshot is kept when it is strictly before the target moment and, when an input horizon is given, at or
+        before it.
         """
         rank = data['event_status'].map(STATUS_RANK)
         time = data['event_time']
@@ -303,9 +302,9 @@ class BaseDataLoader(ABC):
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
         """Pivot long snapshots into wide, moment-aware feature columns.
 
-        A match whose features are all missing is still a match. The first round of a season has no form behind it, so
-        every one of its features is empty, and a pivot drops a row it has nothing to put in. The match would then
-        vanish from the data with nothing said, though it has two teams, a date and a price, and is perfectly bettable.
+        Every match is kept, even one whose features are all missing. The first round of a season has no form behind it,
+        so its features are empty, and the pivot reindexes onto the full set of matches to keep it: it has two teams, a
+        date and a price, and is bettable.
         """
         index_cols = self._identity_cols()
         feature_cols = [col for col in stats.columns if col not in self.stats_schema_.snapshot_cols()]
@@ -381,10 +380,8 @@ class BaseDataLoader(ABC):
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Build aligned, date-indexed ``X`` and ``O`` for the given snapshots.
 
-        A bet is placed at the moment its odds are quoted, so a feature from any later moment is one the bettor could
-        not have had. Left alone, the features would stretch all the way to the whistle: a model would be handed the
-        half-time score and asked to bet at the price offered before kick-off, which is not an edge but a way of
-        travelling in time. So the features stop where the odds do, unless a horizon says otherwise.
+        A bet is placed at the moment its odds are quoted, so the features come from that moment or earlier, the ones
+        the bettor actually had. The features stop where the odds do, unless a horizon says otherwise.
         """
         bet = self._bet_moment(odds, target_event_status, target_event_time)
         if input_event_status is None:

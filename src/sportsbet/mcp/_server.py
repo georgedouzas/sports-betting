@@ -1,11 +1,10 @@
 """Implements the server that lets an agent drive the library.
 
-The agent lives outside the library. Nothing here calls a model, holds a model's key, or chooses one: the library stays
-a set of estimators that behave the same way every time they are run, and the agent is one more consumer of it.
+The agent lives outside the library. The library stays a set of estimators that behave the same way every time they are
+run; the agent calls them, holds the keys and makes the choices, and the server connects the two.
 
-A tool is told what to do in its arguments, exactly as a command is, so there is no file to write first and nothing left
-behind to fall out of date. A key is never one of those arguments: what is named is the environment variable holding it,
-so the key itself stays out of a transcript.
+A tool is told what to do in its arguments, exactly as a command is, so everything it needs is in the call. The argument
+names the environment variable holding a key, so the key itself stays out of a transcript.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -41,7 +40,7 @@ async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
 
 
 def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
-    """Return a frame as records, since an agent cannot read a dataframe."""
+    """Return a frame as records, which an agent can read."""
     if frame is None or frame.empty:
         return []
     return [

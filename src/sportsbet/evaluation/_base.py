@@ -71,10 +71,10 @@ def complementary_events(markets: list[str]) -> list[list[str]]:
 
     They are derived from the markets the data actually carries, rather than named in advance. `over` and `under` are
     complementary at whatever the line is, whether it is 2.5 goals or 220.5 points. The outcome of a match is whichever
-    of a home win, a draw and an away win the data has, so a sport that cannot be drawn simply has two of them.
+    of a home win, a draw and an away win the data has, so a sport without a draw has two of them.
 
-    It has to come from the data rather than from a list. A home win and an away win are complementary in a sport that
-    cannot be drawn, and are not in a sport that can, and only the data knows which sport this is.
+    It comes from the data rather than a list. A home win and an away win are complementary in a sport without a draw
+    but not in one with it, and only the data knows which sport this is.
 
     Args:
         markets:

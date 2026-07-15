@@ -11,11 +11,11 @@ import pandas as pd
 def market_outcomes(home_goals: pd.Series, away_goals: pd.Series, markets: list[str]) -> pd.DataFrame:
     """Derive boolean outcomes for the given markets from home/away goals.
 
-    A convenience for producing market-outcome columns (e.g. when preparing a
-    frame for `from_dataframe`); the loader itself never derives markets.
+    A convenience for a source that builds its own outcome columns; the dataloader reads the markets straight from the
+    data.
 
-    It is not a soccer thing. A sport that cannot be drawn simply does not ask
-    for a draw, and the outcome comes out two-way.
+    It works for any sport. A sport with no draw asks only for the two win
+    markets, and the outcome comes out two-way.
 
     Args:
         home_goals:

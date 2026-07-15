@@ -20,11 +20,11 @@ PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2
 
 
 class _SampleSource:
-    """The half of a sample source that does not depend on what it carries.
+    """The half of a sample source that is the same whether it carries statistics or odds.
 
-    The data ships with the library, so the catalogue is known without reading anything and every item is a file on your
-    own disk. Nothing else about it is special: the dataloader reads it exactly as it reads a feed on the internet, and
-    the sport, the markets and the moments come out of the data the same way.
+    The data ships with the library, so the catalogue is known up front and every item is a file on your own disk. The
+    dataloader reads it exactly as it reads a feed on the internet, and the sport, the markets and the moments come out
+    of the data the same way.
     """
 
     name: ClassVar[str] = 'sample_soccer'
@@ -32,7 +32,7 @@ class _SampleSource:
     sport: ClassVar[str | None] = 'soccer'
 
     def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return no items, since what the library ships is known without reading it."""
+        """Return no items, since the library already knows what it ships."""
         return []
 
     def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
@@ -65,11 +65,11 @@ class SampleSoccerStats(_SampleSource, BaseStatsSource):
 
     It is a real season of the English and Spanish first divisions, taken from
     [football-data.co.uk](https://www.football-data.co.uk) and frozen, carrying the identity of every match, the form of
-    the two teams before it, the score at half time and the result. It needs no key and it reaches no network, so it
-    runs offline, which is what makes it the data of the examples and the tests.
+    the two teams before it, the score at half time and the result. It needs no key and runs offline, which is what
+    makes it the data of the examples and the tests.
 
-    The season is finished, so it has **no fixtures**. A fixture is a match that has not been played, and there are none
-    left in a season that is over. To bet on something, use a live source such as
+    The season is finished, so every match in it is played: it gives training data. A fixture is a match that has not
+    been played, and a finished season has none. To bet on something, use a live source such as
     [`FootballDataStats`][sportsbet.sources.FootballDataStats].
 
     Examples:

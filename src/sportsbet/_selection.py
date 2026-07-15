@@ -3,9 +3,9 @@
 A dataloader is a sport, the data to select from it, and the sources it reads. All of that is a short, closed list of
 names, so it fits in the arguments of a command or of a tool, and nothing needs to be written down first.
 
-A betting model does not fit, and pretending otherwise would be the mistake. A model is a scikit-learn estimator, and an
-estimator can be any pipeline anybody can build. The ready-made ones are named here, and anything beyond them is named
-by where it lives, as an object rather than as a settings file that tries to describe one.
+A betting model is the exception. A model is a scikit-learn estimator, and an estimator can be any pipeline anybody can
+build. The ready-made ones are named here, and anything beyond them is named by where it lives, as an object rather than
+as a settings file that tries to describe one.
 
 The command line and the server are told the same things in the same way, so neither owns a format the other has to
 learn.
@@ -145,11 +145,11 @@ def build_dataloader(
     """Return the dataloader a selection describes.
 
     The statistics have to be named. Which feed the data came from decides what is in it, what it costs and whether
-    anyone may redistribute it, so it is not something to be chosen on your behalf. It also decides the sport, which is
-    therefore never asked for.
+    anyone may redistribute it, so you name it yourself. It also decides the sport, so the sport comes from the source
+    rather than a separate argument.
 
-    The odds are optional. Without them there is nothing to bet on and no market to predict, so only the features can be
-    had, which is enough to explore the data or to learn from it without a target of ours.
+    The odds are optional. With no odds you get the features on their own, which is enough to explore the data or to
+    learn from it without a target of ours.
     """
     if stats not in STATS_SOURCES:
         msg = f'`{stats}` is not a statistics source. Available: {", ".join(sorted(STATS_SOURCES))}.'
@@ -176,8 +176,8 @@ def build_bettor(
 ) -> BaseBettor:
     """Return the betting model a selection describes.
 
-    A ready-made model is named. Anything else is a scikit-learn estimator, which no set of arguments can describe, so
-    it is named by where it lives — `models.py:BETTOR` — and it is built in Python, where it belongs.
+    A ready-made model is named. Anything else is a scikit-learn estimator, so it is named by where it lives —
+    `models.py:BETTOR` — and it is built in Python, where it belongs.
     """
     markets = betting_markets or None
     if ':' in model:

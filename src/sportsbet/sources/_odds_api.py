@@ -102,10 +102,10 @@ class OddsApi(BaseOddsSource):
     """The odds of The Odds API.
 
     It carries time-stamped prices, so an in-play bet can be backtested against the odds that were actually available at
-    the minute it would have been placed. The free feed cannot do that: it only publishes the closing price.
+    the minute it would have been placed. The free feed publishes the closing price alone.
 
-    It needs your own key, and the data it buys never leaves your machine. The key is added to a request when the
-    request is made, so it never reaches a `RawItem` and is never part of the data you save.
+    It needs your own key, and the data it buys stays on your machine. The key is added to a request when the
+    request is made, so it belongs to the request alone.
 
     Historical prices are a paid tier and begin on 6 June 2020. Every market, region and moment is a separate request,
     so extract without `download` first and see how many it would take.
@@ -125,9 +125,8 @@ class OddsApi(BaseOddsSource):
 
         moments:
             The moments of a match to price, as `(event_status, minutes)` pairs.
-            The default `None` prices the moments the statistics carry, and no
-            others: a price for a moment there is nothing to pair with can never
-            be used, and it costs the same as one that can. Every moment is a
+            The default `None` prices the moments the statistics carry, so every
+            price pairs with something known at that moment. Every moment is a
             separate snapshot, so it multiplies the requests.
 
     Examples:
@@ -169,11 +168,10 @@ class OddsApi(BaseOddsSource):
 
     @staticmethod
     def _moments(schedule: pd.DataFrame) -> list[tuple[str, int]]:
-        """Return the moments the statistics carry, which are the only ones worth a price.
+        """Return the moments the statistics carry, which are the ones worth a price.
 
-        A price is bought to be paired with what was known at that moment, so a moment the statistics do not have is a
-        price that can never be used — and it costs the same as one that can. A sport whose statistics stop at the
-        whistle has no use for the odds at half time.
+        A price is bought to be paired with what was known at that moment, so the moments the statistics carry are the
+        ones worth buying. A sport whose statistics stop at the whistle prices up to the whistle.
         """
         moments = schedule[list(EVENT_COLS)].drop_duplicates()
         return sorted(
@@ -185,14 +183,14 @@ class OddsApi(BaseOddsSource):
         )
 
     def _query(self: Self) -> dict[str, str]:
-        """Return the query the vendor expects, without the credential."""
+        """Return the query parameters the vendor expects; the credential is added later."""
         markets, regions, _ = self._settings()
         return {'regions': ','.join(regions), 'markets': ','.join(markets), 'oddsFormat': 'decimal'}
 
     def request_url(self: Self, item: RawItem) -> str:
         """Return the URL to fetch an item from, with the key added.
 
-        The key is added here and nowhere else, so it never reaches a `RawItem` and is never part of the data you save.
+        The key is added here and nowhere else, so it belongs to the request alone.
 
         Args:
             item:
@@ -224,8 +222,8 @@ class OddsApi(BaseOddsSource):
     def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the combinations the vendor covers.
 
-        The vendor has no notion of a season, so the years are its historical coverage. A competition it does not list,
-        or one that is not mapped to a league, is left out rather than guessed at.
+        The vendor has no notion of a season, so the years are its historical coverage. A competition is included when
+        the vendor lists it and it maps to a league.
         """
         if not payloads:
             return []

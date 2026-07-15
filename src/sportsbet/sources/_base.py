@@ -83,8 +83,8 @@ class BaseSource(ABC):
     sport of the one it is paired with.
 
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
-    Its planning and transform methods never fetch: they declare what to read and turn the payloads into snapshots, and
-    the dataloader does the reading. A source is therefore a pure description of a feed, easy to write and to test.
+    Its planning and transform methods declare what to read and turn the payloads into snapshots; the dataloader does
+    the reading. A source is therefore a pure description of a feed, easy to write and to test.
 
     It also answers what it publishes, through `available_params`. That question has to be answerable before a
     `param_grid` is written, so it belongs here and not on a dataloader that is configured with one.
@@ -115,8 +115,8 @@ class BaseSource(ABC):
         every season it ever played has no index, so the file is the catalogue, and reading it means downloading it.
         Asking such a feed what it publishes therefore costs as much as the data.
 
-        So a source is told what is being looked for, and answers with what it needs in order to place it. A selection
-        of one league has no business downloading another.
+        So a source is told what is being looked for, and answers with what it needs in order to place it. It reads
+        only the leagues the selection names.
 
         Args:
             selection:
@@ -195,7 +195,7 @@ class BaseSource(ABC):
     def needs_schedule(self: Self) -> bool:
         """Return whether the source has to be told when the matches are.
 
-        A source that carries its own schedule, because its events and its odds arrive in the same file, does not.
+        A source whose events and odds arrive in the same file carries its own schedule and returns `False`.
 
         Returns:
             needed:
@@ -206,8 +206,7 @@ class BaseSource(ABC):
     def request_url(self: Self, item: RawItem) -> str:
         """Return the URL to fetch an item from.
 
-        The credential is added here, at the moment of the request, so it never reaches a `RawItem` and is never
-        part of the data you save.
+        The credential is added here, at the moment of the request, so it belongs to the request alone.
 
         Args:
             item:

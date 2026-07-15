@@ -149,7 +149,7 @@ class BaseOddsSchema(BaseSchema):
     """Base schema for odds snapshots.
 
     An odds snapshot is a price a named provider offered on a named market at a stated moment. The markets are the
-    columns, so a sport that cannot be drawn simply has no `draw` column and nothing has to be told about it.
+    columns, so each sport carries exactly the market columns it has.
 
     Examples:
         >>> from sportsbet.sources import BaseOddsSchema, optional_col, required_col
@@ -195,13 +195,13 @@ def derive_metadata(
 ) -> dict[str, dict[str, Any]]:
     """Derive per-column `include`/`fixed`/`type` metadata from a long snapshot frame.
 
-    Nothing is assumed about a column's role: `include` is the set of statuses at
+    Every column's role is read from the data: `include` is the set of statuses at
     which the column actually carries values, and `fixed` is whether the column is
     constant within every match.
 
-    A price is never fixed. It belongs to a provider and to a moment, so it keeps
-    them in its name even when only one provider offers it — otherwise a single
-    bookmaker would silently lose its prefix, which the whole odds grammar rests on.
+    A price is always time-varying. It belongs to a provider and to a moment, so
+    it keeps them in its name even when only one provider offers it, which the
+    whole odds grammar rests on.
 
     Args:
         data:

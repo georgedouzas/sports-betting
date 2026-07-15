@@ -170,7 +170,7 @@ def _expanded(headings: list[str], rows: list[list[Text]]) -> Table:
 def print_console(dfs: list[pd.DataFrame], titles: list[str], *, index: bool = True) -> None:
     """Print the results, a record at a time when they are too wide, and paged when they are too tall.
 
-    The title is printed beside the table rather than inside it, so a narrow table does not wrap its own heading.
+    The title is printed beside the table rather than inside it, so a narrow table keeps its heading on one line.
     """
     console = Console()
     rendered = []
