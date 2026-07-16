@@ -6,209 +6,56 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## Unreleased
+## [0.14.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.14.0) - 2026-07-16
 
-<small>A new sport's league, and surfaces that reach all of it</small>
+<small>[Compare with 0.13.1](https://github.com/georgedouzas/sports-betting/compare/0.13.1...0.14.0)</small>
 
-### Removed
+### Features
 
-- **BREAKING: the GUI is gone**, along with the `sportsbet-gui` command, the `gui` extra, `reflex`, `reflex-ag-grid`,
-  `nest-asyncio` and the Node toolchain they needed.
+- Show the results of a command as a table ([389641b](https://github.com/georgedouzas/sports-betting/commit/389641bddbfe3fd49c4074b008e0ffe70b896b21) by georgedouzas).
+- Add an MCP server, so an assistant can drive the library ([f8c6c1e](https://github.com/georgedouzas/sports-betting/commit/f8c6c1eef4b7598b11b46fd18d86374dc36e3424) by georgedouzas).
+- Add the NBA as a second basketball league ([923f516](https://github.com/georgedouzas/sports-betting/commit/923f516b5ae8f69d048e024cf8610d0ee6926ded) by georgedouzas).
+- Add basketball, starting with the EuroLeague ([ee34e9e](https://github.com/georgedouzas/sports-betting/commit/ee34e9e5bddbbbeefb6582930fcb690b3d8c26dc) by georgedouzas).
+- Reconcile two sources, and refuse a dataset with holes in it ([290bb38](https://github.com/georgedouzas/sports-betting/commit/290bb38dea97cb4f5366c798ba0e223ccb5a18e9) by georgedouzas).
+- Add the odds source backed by The Odds API ([7017429](https://github.com/georgedouzas/sports-betting/commit/7017429c8656fcba7c5a92fbde838054ead038e2) by georgedouzas).
+- Make `date` the kick-off instant in UTC ([bf1cd8a](https://github.com/georgedouzas/sports-betting/commit/bf1cd8aa742cd444d3032296d40e904f1221de03) by georgedouzas).
+- Replace the mirrored dataset with pluggable data sources ([76b858a](https://github.com/georgedouzas/sports-betting/commit/76b858a7e66e08a51c06831b8acdcb95b1250625) by georgedouzas).
 
-  It was a quarter of the codebase and nothing tested it — `pyproject.toml` excluded it from the test run by name — and
-  it reached one sport of two. What it offered, using the library without writing Python, is now offered by the CLI and
-  by an AI agent, both of which reach *all* of the library and are tested.
+### Bug Fixes
 
-- **BREAKING: `extract_fixtures_data` downloads the upcoming matches itself, and takes no arguments.** It used to slice
-  the fixtures out of the training data, which meant selecting a past season gave you no fixtures at all — the normal
-  case, since you train on history and bet on what is next, and the library quietly returned an empty frame.
+- pass the test suite on Windows ([103d48c](https://github.com/georgedouzas/sports-betting/commit/103d48ce76e26a68f423eddc03a80a35c9bfc708) by georgedouzas).
+- Do not let the features run past the odds they are bet against ([5b753b6](https://github.com/georgedouzas/sports-betting/commit/5b753b67c07ec50c1293daed80db55e8f10a19be) by georgedouzas).
+- Read the catalogue once, and stop the manifest growing forever ([5a82598](https://github.com/georgedouzas/sports-betting/commit/5a82598e46f87d052aa0276beb381c6872746a2a) by georgedouzas).
+- Drop the fake sport from the CLI, and stop the messages lecturing ([91abece](https://github.com/georgedouzas/sports-betting/commit/91abece9f511a970a7492862947151be243144a3) by georgedouzas).
+- Make the CLI reach the whole API, and fix four bugs it exposed ([9de6390](https://github.com/georgedouzas/sports-betting/commit/9de639040519854d5343a79cb536e788bfd12680) by georgedouzas).
+- Do not report a club that belongs to another competition ([dbacd29](https://github.com/georgedouzas/sports-betting/commit/dbacd2933a87134689d6cbb46f9b704ec97b5469) by georgedouzas).
+- Derive the complementary markets from the data ([81666f9](https://github.com/georgedouzas/sports-betting/commit/81666f944e85605ff8abbcdcb1aa0a955c550351) by georgedouzas).
+- Rebuild the derived data when the transform or the upstream changes ([259eb56](https://github.com/georgedouzas/sports-betting/commit/259eb5612f6b9c7bd70ce0f975b35830e5b8952f) by georgedouzas).
 
-  Now the two are separate downloads. `extract_train_data` downloads the seasons you selected; `extract_fixtures_data`
-  downloads the current season of each selected league and returns whatever in it is still to be played, shaped to the
-  training columns.
+### Docs
 
-  ```python
-  dataloader = DataLoader(
-      param_grid={'league': ['England'], 'year': [2022, 2023]},
-      stats=FootballDataStats(), odds=FootballDataOdds(),
-  )
-  X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')   # England 2022-2023
-  X_fix, _, O_fix = dataloader.extract_fixtures_data()                  # England, whatever is upcoming
-  ```
+- rewrite the user guide and README, concise and positive ([bdd19da](https://github.com/georgedouzas/sports-betting/commit/bdd19da5ce4f2e36c87ae9649a4e7916efefaa46) by georgedouzas).
+- rework the example gallery ([b3a9007](https://github.com/georgedouzas/sports-betting/commit/b3a9007f8fd05b4a72d15019eece1843ff379ca6) by georgedouzas).
+- give Interfaces its own landing page ([b56cd86](https://github.com/georgedouzas/sports-betting/commit/b56cd869b5ea0236f052017cc59b0be099715cd2) by georgedouzas).
+- rerun and expand the README chat; docstrings say what things do ([aa1a5f8](https://github.com/georgedouzas/sports-betting/commit/aa1a5f8f4705d65cc614b676ffb1f29f6e84e22d) by georgedouzas).
+- simpler README example, and docstrings that say what things do ([a8af420](https://github.com/georgedouzas/sports-betting/commit/a8af420e2f4e9314b765b1219380a146fd0a72ba) by georgedouzas).
+- consolidate the practice guides into one section ([1338b85](https://github.com/georgedouzas/sports-betting/commit/1338b85982d58c6a0051094f7adc35bc2c3aa905) by georgedouzas).
+- an interfaces menu, a betting guide, and a lighter README ([5a86487](https://github.com/georgedouzas/sports-betting/commit/5a86487f856e5ffcfd2d6767823e3f60dfdd562e) by georgedouzas).
+- write the README the way it reads best ([7cdca92](https://github.com/georgedouzas/sports-betting/commit/7cdca921326172c4320b5bb2281e9cf3fa7c12fe) by georgedouzas).
+- fix the warnings the documentation build emits ([a75ed44](https://github.com/georgedouzas/sports-betting/commit/a75ed4473947dcd7c98a56d7759e5382fb5186d8) by georgedouzas).
+- Make the assistant a first-class way into the library ([2d9a823](https://github.com/georgedouzas/sports-betting/commit/2d9a823cb91d13aa11cc5314e2c87fa9b45778f0) by georgedouzas).
+- Show what the examples print ([2704818](https://github.com/georgedouzas/sports-betting/commit/27048186232d3b27516b7270b36cf468b2523897) by georgedouzas).
+- Give the CLI the same example as the Python API ([e53ed13](https://github.com/georgedouzas/sports-betting/commit/e53ed1323fd37a2f36820ec4e7ce559589b71019) by georgedouzas).
+- Say what the CLI does, not what it is not ([8359290](https://github.com/georgedouzas/sports-betting/commit/835929052c4277060b53fdf62ede4b2b4754e2fe) by georgedouzas).
+- Rewrite the betting theory, with the mathematics written out ([8145738](https://github.com/georgedouzas/sports-betting/commit/814573801c54c5b5c705d2b5bcba0028911b4070) by georgedouzas).
+- Document the surfaces, and the two breaking changes ([bede713](https://github.com/georgedouzas/sports-betting/commit/bede7131b609b2d5087d3c45461eb6f315f077da) by georgedouzas).
+- Document the extension surface with runnable examples ([8cf5202](https://github.com/georgedouzas/sports-betting/commit/8cf52025fe1e91d4a9f4f8a69ae8b616c68446be) by georgedouzas).
 
-  The fixtures follow the selected **leagues**, not the years: to bet on Italy, select Italy. What the training and
-  fixtures frames share is their columns, so the model trained on the history bets on the fixtures.
+### Code Refactoring
 
-- **A match with no result whose date has passed is no longer offered as a fixture.** A feed loses one now and then —
-  an abandoned game, a season it never finished recording. Those matches have no result and never will, so a fixture
-  must also be in the future.
-
-- **A match whose outcome the feed never recorded was handed to a supervised model as training data.** scikit-learn
-  does not accept a missing value in `y`, and there is nothing to learn from a target that does not exist. Those rows
-  are now dropped, rather than imputed — an invented outcome is a match that never happened. `X`, `Y` and `O` stay
-  aligned.
-
-- **BREAKING: `from_snapshots`, `from_dataframe` and `DummySoccerDataLoader` are gone.** There is one way to build a
-  dataloader, and it is `DataLoader(param_grid, stats, odds)`. A second way to build one was a second set of
-  capabilities to keep in step, and it let a dataloader exist whose data came from nowhere in particular — the one
-  question every dataset should have to answer.
-
-  Data of your own is a **source**, which is four methods and no fetching. If it never came from anywhere, implement
-  `BaseDataLoader._snapshots`, which is the seam every dataloader already sits on.
-
-  The offline sample is now a pair of ordinary **sources**, not a dataloader of its own:
-
-  ```python
-  # before
-  dataloader = DummySoccerDataLoader(param_grid={'league': ['England']})
-  X, Y, O = dataloader.extract_train_data(odds_type='market_average')
-
-  # after
-  dataloader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
-  X, Y, O = dataloader.extract_train_data(odds_type='market_average')
-  ```
-
-  The sample also stopped being made up. It is a real season of the English and Spanish first divisions, frozen from
-  football-data.co.uk. The old one invented **in-play odds**, which no free feed publishes, so every example built on it
-  was an example of something that does not exist. Its items are files on disk rather than URLs, so extracting it reaches
-  no network and costs nothing. The season is finished, so it has **no fixtures**: betting is shown against a live feed.
-
-- **BREAKING: the store is gone, and with it `prepare`, `dry_run`, `download`, `refresh`, `LocalStore`, `BaseStore`,
-  `NotPreparedError`, `PreparationReport`, the `store=` argument and `SPORTSBET_HOME`.** Persisting the data was a whole
-  subsystem — a cache under your home directory, a manifest, a refresh switch — to answer a question the dataloader
-  already answers: it holds the data after an extraction, and `save`/`load_dataloader` keep it.
-
-  So there is no download switch. Extracting downloads:
-
-  ```python
-  # before
-  dataloader.prepare()
-  X, Y, O = dataloader.extract_train_data(download=True)
-
-  # after
-  X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')   # downloading is extracting
-  dataloader.save('england.pkl')                                        # keep it, and load it back
-  ```
-
-  Each extraction downloads afresh, so the object always carries the latest data. Storing it is your responsibility, and
-  the tool for it is a file you own rather than a cache the library hides. The gate that used to stop a paid feed
-  spending is gone too — extracting a metered selection buys it — so extract deliberately and save, rather than
-  re-extracting.
-
-  The library also no longer quotes a **cost**. It used to multiply an invented constant by the number of snapshots and
-  call the answer credits; a vendor sets its own prices, so that number was made up. What a request is worth is between
-  you and whoever you buy it from.
-
-### Changed
-
-- **BREAKING: one `DataLoader` for every sport.** `SoccerDataLoader` and `BasketballDataLoader` are replaced by a single
-  `DataLoader`. A dataloader never knew what sport it was looking at — the sport is a property of the **source**, and it
-  is read from there:
-
-  ```python
-  # before
-  dataloader = SoccerDataLoader(param_grid={'league': ['England']})
-
-  # after
-  dataloader = DataLoader(param_grid={'league': ['England']}, stats=FootballDataStats(), odds=FootballDataOdds())
-  ```
-
-  **The sources have no defaults.** A dataloader does not choose where its data comes from; you do, so that you always
-  know what you are modelling. `stats` is required. `odds` is optional, but with no odds there are no markets and so
-  nothing to predict — the extraction says exactly that, and offers `learning_type='unsupervised'` if the features are
-  what you are after.
-
-- **BREAKING: `sportsbet.datasets` is split into `sportsbet.dataloaders` and `sportsbet.sources`.** A dataloader shapes
-  data for modelling; a source says where it comes from. They were two things in one package.
-
-  ```python
-  # before
-  from sportsbet.datasets import SoccerDataLoader, FootballDataStats
-
-  # after
-  from sportsbet.dataloaders import DataLoader
-  from sportsbet.sources import FootballDataStats
-  ```
-
-- **BREAKING: the CLI takes no configuration file.** The `--config-path` option, the `DATALOADER_CLASS`/`PARAM_GRID`
-  variables and the `configs/` examples are all gone. A command is told what to do in its own arguments, and the
-  command groups are now `data` and `model`.
-
-  ```bash
-  # before
-  sportsbet dataloader training -c config.py
-
-  # after
-  sportsbet data training --stats football-data --odds football-data --league England --year 2025 \
-    --odds-type market_maximum
-  ```
-
-  The old contract handed the CLI a dataloader *class*, and a class carries no sources, and a source is what carries a
-  key — so the command line could express exactly one configuration in the whole library, soccer with the free feed.
-  Now every sport, every source and every credential reaches it. `--stats` and `--odds` say where the data comes from,
-  and so they also say what the sport is: there is no `--sport`. A key is read from the environment, so it never
-  appears in a command or in a shell's history:
-
-  ```bash
-  export ODDS_API_KEY=...
-  sportsbet data training --stats nba --odds odds-api --league NBA --year 2026
-  ```
-
-  A data source is configured from the command line as it is from Python: its markets, regions and moments
-  (`--odds-market`, `--odds-region`, `--odds-moment inplay:45`) and how the two sources' team names are paired
-  (`--alias`, `--max-unmatched-rate`). A test now compares the commands against the
-  Python API's signatures, so the two cannot drift apart again without the suite saying so.
-
-  A betting model is the one thing that cannot be a flag, because it is a scikit-learn estimator and no arrangement of
-  arguments can describe one. `odds-comparison` and `logistic` are ready-made; a model of your own is built in Python
-  and named as an object, with `--model models.py:BETTOR`.
-
-### Fixed
-
-- **The features could be taken from after the odds were quoted, so every backtest was a fantasy.** A bet is placed at
-  the moment its odds are quoted, and the features ran on to the whistle. With a free soccer feed, whose odds are the
-  ones offered before kick-off, a model was handed the **score at half time** and asked to bet at the price offered
-  **before the match** — which is not an edge, it is knowledge of the future. The worked example in the README
-  backtested at a 38% yield per bet and a 269% return. It now reports 1.9%, which is what the same model is really
-  worth.
-
-  The features now stop where the odds do. Asking for a later moment on purpose is refused and told why. In-play
-  betting is unaffected: buy a price at half time and the half-time score is yours to use.
-
-- **A match with no features was silently dropped.** The first round of a season has no form behind it, so every one of
-  its features is missing, and a pivot drops a row it has nothing to put in. Ten Premier League matches a season
-  disappeared with nothing said, though each of them has two teams, a date and a price. Only the in-play columns above
-  had been keeping them alive, which is how the two bugs hid each other.
-
-- **A whole feed was downloaded to satisfy a selection of three leagues.** The catalogue was read for every league the
-  source publishes, whatever had been asked for. Selecting Germany, Italy and France fetched 1.7 MB of index pages
-  instead of 104 KB.
-
-- **A bettor betting on a single market crashed.** The probabilities were clipped in place, and the array they came
-  from is read-only when a single market produces it. The default has five markets, so nobody met it.
-
-- **`drop_na_thres` was not a proportion.** Above one it asked for columns that are more than complete and silently
-  dropped every one of them; below nought it was accepted and meant nothing. It is now checked.
-
-- **The command line showed stack traces.** What the library says is now what the user reads.
-
-### Added
-
-- An **MCP server**, so an AI agent can drive the library: `pip install 'sports-betting[mcp]'`, then point the agent at
-  `sportsbet-mcp`. It finds what data exists, downloads it, backtests a model and returns the value bets.
-
-  Its tools take the *same* arguments the commands take, so the two surfaces cannot drift and there is no file to write
-  first. A key is never one of those arguments: what is named is the environment variable holding it, so it stays out of
-  a transcript.
-
-  No model, no model key and no model call is added to the library. The agent stays outside it.
-
-- `SampleSoccerStats` and `SampleSoccerOdds`, the sample data as sources. See the breaking change above.
-
-- `NBAStats`, a free, key-less statistics source for the **NBA**, backed by ESPN. It carries the regular season, the
-  play-in and the play-offs, with the tip-off as a UTC instant, and it is live: the games played this week carry their
-  scores this week. Pair it with your own odds — `DataLoader(stats=NBAStats(), odds=OddsApi(key=...))` — because, as
-  with the EuroLeague, no free basketball odds feed exists.
+- scikit-learn __init__ style, and remove dead code ([b7d4856](https://github.com/georgedouzas/sports-betting/commit/b7d485620221ed6e7fd1558680b09c648d66354b) by georgedouzas).
+- Pair the rosters of a league, rather than a name against every club ([41fb6f0](https://github.com/georgedouzas/sports-betting/commit/41fb6f0d61b2d33391bc9a5720e494ec0be43d53) by georgedouzas).
+- Move parameter discovery from the dataloader to the source ([05e00f8](https://github.com/georgedouzas/sports-betting/commit/05e00f856a1cf2653e8c2ffd97a41be79e1f8b58) by georgedouzas).
 
 ## [0.13.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.13.1) - 2026-07-10
 
@@ -216,7 +63,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Bug Fixes
 
-- Drop nptyping so numpy can move to 2.x ([a8944b3](https://github.com/georgedouzas/sports-betting/commit/a8944b33b4d417c9cede840fb668ffae6eb0fce3) by georgedouzas).
+- Drop nptyping so numpy can move to 2.x ([20cc10a](https://github.com/georgedouzas/sports-betting/commit/20cc10a56ae09e676037914582fead7c7f4d2c40) by georgedouzas).
+
+### Chore
+
+- Release 0.13.1 ([bb63246](https://github.com/georgedouzas/sports-betting/commit/bb632466bd5666f77ee5907c6ca4d8514aedebab) by georgedouzas).
 
 ## [0.13.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.13.0) - 2026-07-10
 
@@ -515,7 +366,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Predictions 03/10/2023 ([6af121b](https://github.com/georgedouzas/sports-betting/commit/6af121be9aef9b4c51bfd7866ddfb9b38e6b5576) by georgedouzas).
 - Skip session if fixtures data are empty ([00d3eeb](https://github.com/georgedouzas/sports-betting/commit/00d3eeb0eb491f94f1036096d97f7fab6e303b98) by georgedouzas).
 
-## [0.8.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.0) - 2023-09-30
+## [0.8.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.8.0) - 2023-09-29
 
 <small>[Compare with 0.7.0](https://github.com/georgedouzas/sports-betting/compare/0.7.0...0.8.0)</small>
 
@@ -707,7 +558,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 <small>[Compare with 0.2.1](https://github.com/georgedouzas/sports-betting/compare/0.2.1...0.2.2)</small>
 
-## [0.2.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.2.1) - 2022-02-02
+## [0.2.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.2.1) - 2022-02-01
 
 <small>[Compare with 0.2.0](https://github.com/georgedouzas/sports-betting/compare/0.2.0...0.2.1)</small>
 
@@ -719,7 +570,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 <small>[Compare with 0.1.5](https://github.com/georgedouzas/sports-betting/compare/0.1.5...0.1.6)</small>
 
-## [0.1.5](https://github.com/georgedouzas/sports-betting/releases/tag/0.1.5) - 2022-01-19
+## [0.1.5](https://github.com/georgedouzas/sports-betting/releases/tag/0.1.5) - 2022-01-18
 
 <small>[Compare with 0.1.4](https://github.com/georgedouzas/sports-betting/compare/0.1.4...0.1.5)</small>
 
