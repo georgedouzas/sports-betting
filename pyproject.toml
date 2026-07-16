@@ -56,6 +56,9 @@ sportsbet-mcp = "sportsbet.mcp:run"
 mcp = [
     "mcp>=1.2",
 ]
+execution = [
+    "playwright>=1.57",
+]
 [tool.pdm.version]
 source = "scm"
 

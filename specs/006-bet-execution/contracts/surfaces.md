@@ -25,17 +25,26 @@ Python API, as `dataloader` and `evaluation` already do.
 `tests/cli/test_parity.py` already exists and enforces this shape for the current groups. It gains
 the execution group.
 
-## The venue is configured, not selected by name
+## A venue is named the way a model is named
 
-The venue arrives as a `VENUE` object in the same Python config module the CLI and the MCP server
-already read for `DATALOADER`. A venue is not a string the library looks up in a table, because
-that table is the per-site knowledge FR-007 keeps out.
+A venue follows `build_bettor`, not `build_dataloader`, and the reason is the one
+[_selection.py](../../../src/sportsbet/_selection.py) already gives for models: a dataloader is a
+sport and a short closed list of names, so it fits in arguments, while an estimator can be any
+pipeline anybody can build, so it is named by where it lives and built in Python.
+
+A venue is the second kind. Its URL, its notes, and its certificate paths are not a closed list,
+and a site-driven one carries prose. So `build_venue` sits beside `build_bettor` in
+`_selection.py` and takes the same two forms:
+
+```text
+--venue betfair              # ready-made, as `odds-comparison` is
+--venue venue.py:VENUE       # one of your own, as `models.py:BETTOR` is
+```
 
 ```python
-# config.py
+# venue.py
 from sportsbet.execution import BrowserSession
 
-DATALOADER = SoccerDataLoader(param_grid={'league': ['Greece']})
 VENUE = BrowserSession(
     key='novibet',
     url='https://www.novibet.gr/stoixima',
@@ -48,26 +57,28 @@ VENUE = BrowserSession(
 )
 ```
 
-Swapping Novibet for Stoiximan, or for Betfair, is an edit to this file and nothing else. The
-user owns which venue, which URLs, and what the agent is told about the site. Both surfaces read
-the same module, so they cannot drift and no credential enters an argument (the pattern feature
-005 established).
+Swapping Novibet for Stoiximan, or for Betfair, is an edit to that file and nothing else. Both
+surfaces resolve the reference the same way, through the existing `_load_object`, so neither owns
+a format the other has to learn and no credential enters an argument.
+
+`build_venue` imports `sportsbet.execution` lazily, since the extra is optional and `_selection.py`
+is imported on every run. Without the extra it names the extra to install, which is SC-010.
 
 ## CLI
 
 Every parameter is passed with `--`, matching the existing groups. No positional arguments.
 
 ```text
-sportsbet execution venue    --config config.py
-sportsbet execution markets  --config config.py --dataloader loader.pkl
-sportsbet execution balance  --config config.py
-sportsbet execution quote    --config config.py --bettor model.pkl --dataloader loader.pkl \
+sportsbet execution venue    --venue venue.py:VENUE
+sportsbet execution markets  --venue betfair --dataloader loader.pkl
+sportsbet execution balance  --venue betfair
+sportsbet execution quote    --venue betfair --bettor model.pkl --dataloader loader.pkl \
                              --output quote.json
-sportsbet execution place    --config config.py --quote quote.json \
+sportsbet execution place    --venue betfair --quote quote.json \
                              --confirm-stake 50.0 --confirm-exposure 50.0 \
                              --max-stake 10.0 --max-exposure 100.0
-sportsbet execution status   --config config.py --quote quote.json
-sportsbet execution cancel   --config config.py --identity <ref>
+sportsbet execution status   --venue betfair --quote quote.json
+sportsbet execution cancel   --venue betfair --identity <ref>
 ```
 
 `quote` writes the itemised batch and its totals. `place` reads it back and refuses unless both
@@ -77,8 +88,9 @@ non-zero, so a forgotten flag costs a run rather than a balance.
 There is no `--dry-run` flag, deliberately. Dry run is the absence of confirmation, not the
 presence of a flag, so no default can be misconfigured into spending.
 
-The credential is named in the config, never passed on the command line, because a CLI option is a
-shell history entry (FR-017).
+The credential is named by the venue, never passed on the command line, because a CLI option is a
+shell history entry (FR-017). A ready-made venue defaults to a variable NAME, so nothing sensitive
+has a default.
 
 ## MCP
 
@@ -86,13 +98,13 @@ Tools mirror the CLI, and the confirmation rule is enforced in code rather than 
 tool description (the pattern feature 005 established for `prepare` and `confirm_cost`).
 
 ```text
-execution_venue_info(config_path) -> {key, url, notes, can_cancel}
-execution_quote(config_path, bettor_path, dataloader_path, limits) -> quote
-execution_place(config_path, quote, confirm_stake, confirm_exposure, limits) -> receipts
+execution_venue_info(venue) -> {key, url, notes, can_cancel}
+execution_quote(venue, bettor_path, dataloader_path, limits) -> quote
+execution_place(venue, quote, confirm_stake, confirm_exposure, limits) -> receipts
 ```
 
 `execution_venue_info` is how the user's site knowledge reaches the agent: it returns the `notes`
-and URLs from the config verbatim. The package stores and returns that text and never reads it,
+and the URL from the venue verbatim. The package stores and returns that text and never reads it,
 so the site knowledge lives in the user's config and the agent's head, and nowhere in the library.
 
 `execution_place` without both confirmations returns refusals stating the real figures. With
