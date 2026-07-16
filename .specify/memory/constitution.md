@@ -1,6 +1,27 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.0.0 → 1.1.0
+Rationale: Sync the constitution to the surfaces that exist. Feature 005 removed
+the GUI and added the MCP server, so Principle I named a surface that is gone and
+omitted the one that replaced it. Adds the rule that an agent is a client of the
+surfaces rather than a component of the library, and that credentialled or
+side-effecting capabilities live behind an optional extra. MINOR: materially
+expanded guidance, no principle removed or redefined.
+
+Modified principles:
+  - I. scikit-learn-Compatible API — surfaces are now Python API, CLI and MCP
+    server (was Python API, CLI, GUI); adds the agent-is-a-client rule.
+Modified sections:
+  - Technology & Tooling Standards — `gui`/`reflex` extra replaced by the `mcp`
+    extra; adds the optional-extra rule for credentialled side effects.
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
 Version change: (unversioned template) → 1.0.0
 Rationale: Initial ratification. First concrete constitution replacing the
 placeholder template; establishes five core principles derived from the
@@ -45,9 +66,13 @@ Public estimators (dataloaders, bettors) MUST conform to the scikit-learn
 estimator contract: constructor parameters are stored unmodified, state learned
 during fitting uses trailing-underscore attributes, and behavior is configured
 through explicit parameters (including `param_grid`) rather than hidden global
-state. The three delivery surfaces — Python API, CLI (`sportsbet`), and GUI
-(`sportsbet-gui`) — MUST expose the same underlying capabilities without one
-surface holding logic the others cannot reach.
+state. The three delivery surfaces — Python API, CLI (`sportsbet`), and MCP
+server (`sportsbet-mcp`) — MUST expose the same underlying capabilities without
+one surface holding logic the others cannot reach.
+
+An agent is a client of those surfaces, never a component of the library: no
+model, model key, model choice, or agent loop enters the package, so estimators
+stay deterministic and testable.
 
 Rationale: Interoperability with the scikit-learn ecosystem (pipelines, model
 selection, cross-validation) is the library's core value proposition; drift from
@@ -111,9 +136,11 @@ quickly without executable coverage.
 - **Language**: Python `>=3.11, <3.14`; code targets `py311` and MUST remain
   compatible across all supported minor versions.
 - **Core dependencies**: `scikit-learn`, `pandas`, `pandera`, `click` (CLI),
-  `rich`, `aiohttp` (async data fetching); the optional `gui` extra uses
-  `reflex`. New runtime dependencies MUST be justified and added to
-  `pyproject.toml`, not vendored ad hoc.
+  `rich`, `aiohttp` (async data fetching); the optional `mcp` extra uses `mcp`
+  and ships the `sportsbet-mcp` server. New runtime dependencies MUST be
+  justified and added to `pyproject.toml`, not vendored ad hoc. A capability
+  that needs a credential or performs a real-world side effect MUST live behind
+  an optional extra, never in the default install.
 - **Build & packaging**: PDM with SCM-derived versioning; the package layout is
   `src/`-based. Do not hand-edit generated version metadata.
 - **Task automation**: `nox` sessions (`tests`, `checks`, `formatting`, `docs`,
@@ -156,4 +183,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-08
+**Version**: 1.1.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-16
