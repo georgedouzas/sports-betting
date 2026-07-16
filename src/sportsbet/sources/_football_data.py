@@ -909,9 +909,9 @@ def _parse_index(league: str, content: bytes) -> list[tuple[str, int, int, str]]
     """
     page = BeautifulSoup(content.decode(ENCODING), features='html.parser')
     hrefs = {
-        element.get('href')
-        for element in page.find_all('a')
-        if element.get('href') and element.get('href').endswith('csv')
+        href
+        for href in (element.get('href') for element in page.find_all('a'))
+        if isinstance(href, str) and href.endswith('csv')
     }
     seasons = []
     for href in hrefs:
