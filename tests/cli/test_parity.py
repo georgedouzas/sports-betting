@@ -53,8 +53,21 @@ def test_a_command_reaches_what_the_api_reaches(command, api, renamed):
 
 def test_execution_reaches_what_the_api_reaches():
     """Test every execution capability is reachable from the command line."""
-    for command in (['venue'], ['markets'], ['balance'], ['quote'], ['place']):
+    for command in (['venue'], ['markets'], ['balance'], ['quote'], ['place'], ['status'], ['cancel']):
         assert 'venue_ref' in _options(['execution', *command])
+
+
+def test_the_site_path_reaches_what_the_api_reaches():
+    """Test the browser primitives are on the command line as well as in the tools."""
+    for command in (['read'], ['act'], ['fix']):
+        assert 'venue_ref' in _options(['execution', 'page', *command])
+    assert {'click_ref', 'type_ref', 'select_ref'} <= _options(['execution', 'page', 'act'])
+    assert {'match', 'locators'} <= _options(['execution', 'page', 'fix'])
+
+
+def test_cancelling_names_the_bet_by_what_makes_it_that_bet():
+    """Test a bet is cancelled by its identity, which is the venue, the match, the market and the selection."""
+    assert {'match', 'market', 'selection'} <= _options(['execution', 'cancel'])
 
 
 def test_placing_takes_both_confirmations_and_both_ceilings():
@@ -79,7 +92,7 @@ def test_placing_has_no_dry_run_flag():
 def test_no_command_takes_a_secret():
     """Test a secret is never a command line option, since an option is a shell history entry."""
     forbidden = {'key', 'password', 'secret', 'token', 'app_key', 'username', 'credential'}
-    for group in ('venue', 'markets', 'balance', 'quote', 'place'):
+    for group in ('venue', 'markets', 'balance', 'quote', 'place', 'status', 'cancel'):
         options = _options(['execution', group])
         assert not options & forbidden, f'`execution {group}` can be handed {sorted(options & forbidden)}'
 

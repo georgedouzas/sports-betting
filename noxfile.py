@@ -150,7 +150,8 @@ def tests(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
-    session.run('pdm', 'install', '-dG', 'tests', '-G', 'mcp', external=True)
+    session.run('pdm', 'install', '-dG', 'tests', '-G', 'mcp', '-G', 'execution', external=True)
+    session.run('python', '-m', 'playwright', 'install', '--only-shell', 'chromium')
     env = {'COVERAGE_FILE': f'.coverage.{session.python}'}
     if session.posargs:
         session.run('pytest', '-k', *session.posargs, env=env)

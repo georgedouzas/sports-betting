@@ -89,7 +89,10 @@ jobs:
         cache-dependency-path: pyproject.toml
 
     - name: Install dependencies
-      run: pdm install -dG maintenance -dG tests -G mcp
+      run: pdm install -dG maintenance -dG tests -G mcp -G execution
+
+    - name: Install the browser the site-driven tests use
+      run: pdm run python -m playwright install --with-deps --only-shell chromium
 
     - name: Run the test suite
       env:

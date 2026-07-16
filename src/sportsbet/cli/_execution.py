@@ -20,7 +20,15 @@ from rich.panel import Panel
 
 from .._selection import build_venue
 from ..evaluation import load_bettor
-from ..execution import BaseVenue, BetIdentity, ExposureLimits, PlacementIntent, PlacementQuote
+from ..execution import (
+    BaseVenue,
+    BetIdentity,
+    BrowserSession,
+    ExposureLimits,
+    FixedSession,
+    PlacementIntent,
+    PlacementQuote,
+)
 from ..execution import place as run_place
 from ..execution import quote as run_quote
 from ._utils import load_dataloader, print_console, reported
@@ -29,7 +37,19 @@ from ._utils import load_dataloader, print_console, reported
 def _venue(venue_ref: str) -> BaseVenue:
     """Return the venue a reference names, authenticated."""
     built = build_venue(venue_ref)
+    if not isinstance(built, BaseVenue):
+        msg = f'`{venue_ref}` is a browser session, which has no bets of its own to place. Use `execution page`.'
+        raise click.UsageError(msg)
     asyncio.run(built.authenticate())
+    return built
+
+
+def _session(venue_ref: str) -> BrowserSession:
+    """Return the browser session a reference names."""
+    built = build_venue(venue_ref)
+    if isinstance(built, BaseVenue):
+        msg = f'`{venue_ref}` is a venue with an API, so it is placed at with `execution place` rather than driven.'
+        raise click.UsageError(msg)
     return built
 
 
@@ -259,3 +279,158 @@ def place(
             receipts.to_csv(written / 'receipts.csv', index=False)
         if not (receipts['stake'] > 0).any():
             raise SystemExit(1)
+
+
+@execution.command()
+@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option(
+    '--quote',
+    '-q',
+    'quote_path',
+    required=True,
+    type=click.Path(exists=True),
+    help='A quote written by `quote`.',
+)
+def status(venue_ref: str, quote_path: str) -> None:
+    """Show what the venue holds for the bets of a quote."""
+    with reported():
+        built = _venue(venue_ref)
+        quoted = _read_quote(quote_path)
+        identities = [intent.identity for intent in quoted.intents]
+        print_console([asyncio.run(built.read_status(identities))], ['What the venue holds'])
+
+
+@execution.command()
+@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--match', required=True, help='The match the bet is on.')
+@click.option('--market', required=True, help='The market the bet is on.')
+@click.option('--selection', required=True, help='The selection the bet backs.')
+def cancel(venue_ref: str, match: str, market: str, selection: str) -> None:
+    """Cancel a bet, where the venue cancels."""
+    with reported():
+        built = _venue(venue_ref)
+        receipt = asyncio.run(built.cancel(BetIdentity(built.key, match, market, selection)))
+        Console().print(Panel.fit(receipt.detail))
+
+
+@execution.group()
+def page() -> None:
+    """Read and act on a bookmaker's website.
+
+    Each command is a whole session: it opens the browser, goes to the page, does the one thing and closes. A ref comes
+    from the snapshot of the page it was read on, so pass the same `--url` that produced it.
+
+    Driving a bookmaker's website breaches essentially every bookmaker's terms of service and risks the account being
+    closed and the balance lost. The library supplies the browser and the page, and the knowledge of the site is yours.
+    """
+    return
+
+
+@page.command('read')
+@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--url', help='The page to read. Without it the venue\'s own url is read.')
+@click.option('--selector', help='The part of the page to read. Reading a part keeps a turn cheap.')
+@click.option('--depth', type=int, help='How far down to read.')
+def page_read(venue_ref: str, url: str | None, selector: str | None, depth: int | None) -> None:
+    """Show a page in a form an agent can reason about and act on."""
+    with reported():
+        session = _session(venue_ref)
+        Console().print(asyncio.run(_read(session, url, selector, depth)))
+
+
+@page.command('act')
+@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--url', required=True, help='The page the ref was read on.')
+@click.option('--click', 'click_ref', help='The ref of an element to click.')
+@click.option('--type', 'type_ref', help='The ref of an element to fill.')
+@click.option('--text', help='What to fill it with.')
+@click.option('--select', 'select_ref', help='The ref of an element to choose an option in.')
+@click.option('--value', help='The option to choose.')
+def page_act(
+    venue_ref: str,
+    url: str,
+    click_ref: str | None,
+    type_ref: str | None,
+    text: str | None,
+    select_ref: str | None,
+    value: str | None,
+) -> None:
+    """Act on a page and show what the action produced."""
+    with reported():
+        session = _session(venue_ref)
+        Console().print(asyncio.run(_act(session, url, click_ref, type_ref, text, select_ref, value)))
+
+
+@page.command('fix')
+@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--url', required=True, help='The page that was explored.')
+@click.option('--match', required=True, help='The match to pin the session to.')
+@click.option(
+    '--locator',
+    'locators',
+    multiple=True,
+    help='Something found, as `name=locator`, e.g. `stake=textbox[name="Stake"]`. Repeatable.',
+)
+def page_fix(venue_ref: str, url: str, match: str, locators: tuple[str, ...]) -> None:
+    """Pin what exploring found, so that placing does not have to find it again."""
+    with reported():
+        session = _session(venue_ref)
+        pinned = asyncio.run(_fix(session, url, match, _locators(locators)))
+        Console().print(Panel.fit(f'[bold]{pinned.match}[/bold]\n{pinned.url}\n\n{pinned.locators}'))
+
+
+def _locators(given: tuple[str, ...]) -> dict[str, str]:
+    """Return what was found, each of them a name and a locator."""
+    found = {}
+    for pair in given:
+        name, sep, locator = pair.partition('=')
+        if not sep or not name or not locator:
+            msg = f'`{pair}` should be a name and a locator, as in `stake=textbox[name="Stake"]`.'
+            raise click.UsageError(msg)
+        found[name] = locator
+    return found
+
+
+async def _read(session: BrowserSession, url: str | None, selector: str | None, depth: int | None) -> str:
+    """Open the browser, read the page and close it."""
+    try:
+        await session.navigate(url or session.url)
+        shot = await session.snapshot(selector, depth)
+        return shot.yaml
+    finally:
+        await session.stop()
+
+
+async def _act(
+    session: BrowserSession,
+    url: str,
+    click_ref: str | None,
+    type_ref: str | None,
+    text: str | None,
+    select_ref: str | None,
+    value: str | None,
+) -> str:
+    """Open the browser, act on the page and close it."""
+    try:
+        await session.navigate(url)
+        if click_ref:
+            shot = await session.click(click_ref)
+        elif type_ref:
+            shot = await session.type(type_ref, text or '')
+        elif select_ref:
+            shot = await session.select(select_ref, value or '')
+        else:
+            msg = 'Name what to do: `--click`, `--type` with `--text`, or `--select` with `--value`.'
+            raise click.UsageError(msg)
+        return shot.yaml
+    finally:
+        await session.stop()
+
+
+async def _fix(session: BrowserSession, url: str, match: str, locators: dict[str, str]) -> FixedSession:
+    """Open the browser, pin what was found and close it."""
+    try:
+        await session.navigate(url)
+        return session.fix(match, locators)
+    finally:
+        await session.stop()
