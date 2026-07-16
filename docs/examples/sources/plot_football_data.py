@@ -1,7 +1,8 @@
-"""Football-Data soccer feed =========================
+"""
+Football Data soccer feed
+=========================
 
-This example illustrates [`FootballDataStats`][sportsbet.sources.FootballDataStats] and
-[`FootballDataOdds`][sportsbet.sources.FootballDataOdds], the free soccer feed of football-data.co.uk.
+This example illustrates FootballDataStats and FootballDataOdds, the free soccer feed of football-data.co.uk.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>

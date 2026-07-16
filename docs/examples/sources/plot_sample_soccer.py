@@ -2,8 +2,8 @@
 Sample soccer data
 ==================
 
-This example illustrates [`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] and
-[`SampleSoccerOdds`][sportsbet.sources.SampleSoccerOdds], the sample data that ships with the library.
+This example illustrates SampleSoccerStats and
+SampleSoccerOdds, the sample data that ships with the library.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -55,10 +55,10 @@ O_train
 # It has no fixtures
 # ------------------
 #
-# The season is finished, so every match in it has been played. A fixture is a match that has **not** been played, so
+# The season is finished, so every match in it has been played. A fixture is a match that has not been played, so
 # the sample has none, and `extract_fixtures_data` returns an empty frame with the training columns.
 #
-# To bet on something you need a source that is still publishing matches — see
+# To bet on something you need a source that is still publishing matches. See
 # [Football-Data](plot_football_data.md). The sample is for learning the interface, not for betting.
 
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
@@ -67,12 +67,13 @@ len(X_fix)
 # %%
 # A picture of it
 # ---------------
+#
+# How the season actually fell out: home wins lead, which is the home advantage the odds are always pricing in.
 
 outcomes = Y_train.sum()
 outcomes.index = outcomes.index.str.split('__').str[0]
 
 fig, ax = plt.subplots()
-ax.bar(outcomes.index, outcomes.to_numpy())
-ax.set_title('Outcomes of the Premier League sample season')
+ax.bar(outcomes.index, outcomes.to_numpy(), color=['tab:green', 'tab:grey', 'tab:red'])
+ax.set_title('How the sample season ended, by outcome')
 ax.set_ylabel('matches')
-fig.autofmt_xdate(rotation=30)

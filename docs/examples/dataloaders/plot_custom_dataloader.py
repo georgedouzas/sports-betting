@@ -2,7 +2,7 @@
 A dataloader of your own
 ========================
 
-This example illustrates [`BaseDataLoader`][sportsbet.dataloaders.BaseDataLoader], for data that is already on your
+This example illustrates BaseDataLoader, for data that is already on your
 machine and never came from a source.
 """
 
@@ -80,11 +80,16 @@ O
 # %%
 # A picture of it
 # ---------------
+#
+# The odds my feed carries imply a probability for each outcome. They sum to more than one, and that surplus is the
+# bookmaker's margin, the edge built into every price, and the reason a naive bet loses slowly.
 
-outcomes = Y.sum()
-outcomes.index = outcomes.index.str.split('__').str[0]
+prices = {market: O.filter(like=f'__{market}__').iloc[0, 0] for market in MARKETS}
+implied = {market: 1 / price for market, price in prices.items()}
+overround = sum(implied.values())
 
 fig, ax = plt.subplots()
-ax.bar(outcomes.index, outcomes.to_numpy())
-ax.set_title('Outcomes of my own two matches')
-ax.set_ylabel('matches')
+ax.bar(list(implied), list(implied.values()))
+ax.axhline(1 / len(MARKETS), color='black', linewidth=0.8, linestyle='--')
+ax.set_title(f'What the prices imply, summing to {overround:.2f}')
+ax.set_ylabel('implied probability')

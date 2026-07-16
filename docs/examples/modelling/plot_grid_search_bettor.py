@@ -2,14 +2,15 @@
 Searching over betting markets
 ==============================
 
-This example illustrates [`BettorGridSearchCV`][sportsbet.evaluation.BettorGridSearchCV], and the point that is easy to
-miss: **the markets to bet on are a hyperparameter**, so they can be searched over like any other.
+This example illustrates BettorGridSearchCV, and the point that is easy to
+miss: the markets to bet on are a hyperparameter, so they can be searched over like any other.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
 import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.compose import make_column_transformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -79,14 +80,21 @@ results = backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(3))
 results
 
 # %%
-# A picture of it
-# ---------------
+# What the search saw
+# -------------------
+#
+# The search scored every market on the same footing as the regularisation. Here is the score it gave each set of
+# markets, the best value of `C` for each, which is how it came to prefer one over the others. The bar it picked is
+# the choice you would otherwise have made by hand, or worse, by peeking at the answers.
 
-yields = results['Yield percentage per bet'].to_numpy()
+scores = pd.DataFrame(bettor.cv_results_)
+scores['markets'] = scores['param_betting_markets'].apply(' + '.join)
+best_per_markets = scores.groupby('markets')['mean_test_score'].max().sort_values()
+chosen = ' + '.join(bettor.best_params_['betting_markets'])
+colours = ['tab:orange' if markets == chosen else 'tab:blue' for markets in best_per_markets.index]
 
 fig, ax = plt.subplots()
-ax.bar(range(1, len(yields) + 1), yields)
-ax.axhline(0, color='black', linewidth=0.8)
-ax.set_title('Searched bettor: yield per bet, by fold')
-ax.set_xlabel('fold')
-ax.set_ylabel('yield %')
+ax.barh(best_per_markets.index, best_per_markets.to_numpy(), color=colours)
+ax.axvline(0, color='black', linewidth=0.8)
+ax.set_title('The markets are scored, not assumed (orange is the choice)')
+ax.set_xlabel('best cross-validated return')
