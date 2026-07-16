@@ -24,9 +24,9 @@
 
 A user has fitted a bettor and extracted the upcoming fixtures. `bettor.bet(X_fix, O_fix)` tells them which markets are worth backing. Today they open a browser and type each one in by hand. Instead, they hand those value bets to execution, point it at a venue where they hold an account, and see exactly what would be staked and what the total exposure would be. Nothing moves. When they are satisfied, they opt in explicitly and the bets are placed.
 
-**Why this priority**: This is the point of the feature and the smallest slice that closes the loop from model to money. It uses the venue's own sanctioned betting API, so it is stable, testable against a sandbox, and leaves the user's account in good standing. Everything else builds on the contract this story defines.
+**Why this priority**: This is the point of the feature and the smallest slice that closes the loop from model to money. It uses the venue's own sanctioned betting API, so it is stable, testable, and leaves the user's account in good standing. Everything else builds on the contract this story defines.
 
-**Independent Test**: Fully testable against the reference venue's sandbox and a fake venue: take a set of value bets, run execution in its default mode and assert nothing was staked, then run with the explicit opt-in and assert exactly the intended bets were placed once each.
+**Independent Test**: Fully testable against a fake venue and recorded payloads: take a set of value bets, run execution in its default mode and assert nothing was staked, then run with the explicit opt-in and assert exactly the intended bets were placed once each. Planning established that no exchange offers a placement sandbox, so a fake is the only safe test facility rather than the fallback.
 
 **Acceptance Scenarios**:
 
@@ -45,7 +45,7 @@ Having placed bets, the user needs to know what became of them: what the balance
 
 **Why this priority**: Placement without reconciliation is unusable in practice, but it is only meaningful once P1 exists. It is also what lets a backtested edge be compared with what was actually obtained.
 
-**Independent Test**: Against a fake or sandbox venue holding known bets, read balance, open bets and statuses, and assert each placement traces back to the value bet, the match, the market and the selection that caused it.
+**Independent Test**: Against a fake venue holding known bets, read balance, open bets and statuses, and assert each placement traces back to the value bet, the match, the market and the selection that caused it.
 
 **Acceptance Scenarios**:
 
@@ -61,14 +61,17 @@ Most bookmakers publish no betting API. For those, the user points an agent at t
 
 **Why this priority**: It is the least safe and least stable path. It breaches essentially every bookmaker's terms of service, risks account closure and loss of the balance, and breaks whenever the site's markup changes. It is worth doing last, behind the sanctioned path, and only with that risk stated plainly.
 
-**Independent Test**: Against a fake bookmaker page served from disk, an agent can navigate, read the markets, fill a bet slip and confirm a placement, with the dry run and the limits applying exactly as they do for an API venue.
+**Independent Test**: Against a fake bookmaker page served over loopback, an agent can navigate, read the markets, pin a session, fill a bet slip and confirm a placement.
+
+**What this path does not promise**: Planning found FR-005 and FR-007 in contradiction, because a `place` on a website has to find the market, click the price, fill the stake and work the confirm flow, and every one of those is site knowledge. That makes it either a per-site adapter, which FR-007 forbids, or a model call inside the package, which FR-022 forbids. The site-driven path therefore exposes primitives and the agent places. Two guarantees consequently hold on the API path and are the agent's here: placing once and only once, which needs the venue's record read back, and the stake and exposure ceilings, which bind whoever calls the venue. The documentation states this rather than letting a user infer that the rails are the same.
 
 **Acceptance Scenarios**:
 
-1. **Given** a bookmaker site and an authenticated session, **When** the agent reads a market page, **Then** it receives the page content in a form it can reason about.
-2. **Given** a chosen selection and stake, **When** the agent places the bet without a real-money opt-in, **Then** the system reports the intended stake and submits nothing.
-3. **Given** the real-money opt-in, **When** the agent submits the bet slip, **Then** the placement is confirmed and recorded with a receipt like any other venue.
+1. **Given** a bookmaker site and an authenticated session, **When** the agent reads a market page, **Then** it receives the page content in a form it can reason about and act on.
+2. **Given** a market page the agent has explored, **When** it pins the session, **Then** later actions resolve against the pinned locators after the page re-renders.
+3. **Given** a confirm control the site has disabled, **When** the agent acts on it, **Then** the action fails rather than reporting a placement that did not happen.
 4. **Given** a venue that blocks automated access, **When** that block is met, **Then** the system reports it and stops, and offers no means of getting around it.
+5. **Given** the site-driven path, **When** a caller looks for placing, status or cancelling on it, **Then** those are absent, so no caller can reach a guarantee that is not there.
 
 ---
 
