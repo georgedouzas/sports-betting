@@ -2,10 +2,10 @@
 The Odds API
 ============
 
-This example illustrates [`OddsApi`][sportsbet.sources.OddsApi], the paid odds source that carries time-stamped prices.
+This example illustrates OddsApi, the paid odds source that carries time-stamped prices.
 
 Nothing here is bought and nothing is downloaded: the example shows how the source is configured and how your key is
-handled, which is what you want to understand *before* spending anything.
+handled, which is what you want to understand before spending anything.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -50,7 +50,7 @@ odds.request_url(item)
 # Using it
 # --------
 #
-# Pair it with free statistics — here the NBA — and read your key from the environment rather than writing it into a
+# Pair it with free statistics, here the NBA, and read your key from the environment rather than writing it into a
 # file that could be committed:
 #
 # ```python
@@ -67,8 +67,8 @@ odds.request_url(item)
 # X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 # ```
 #
-# Leave `download` out and nothing is fetched: you are told how many requests it would take, and you decide. What those
-# requests cost is between you and the vendor.
+# Extracting is what spends: every market, region and moment is its own request, and what those requests cost is
+# between you and the vendor. Ask the source what it would fetch first, and price it before you commit.
 
 NBAStats().sport, OddsApi(key='your-key').sport
 

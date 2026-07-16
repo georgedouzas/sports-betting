@@ -2,8 +2,8 @@
 A bettor of your own
 ====================
 
-This example illustrates [`BaseBettor`][sportsbet.evaluation.BaseBettor] and
-[`complementary_events`][sportsbet.evaluation.complementary_events].
+This example illustrates BaseBettor and
+complementary_events.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -65,7 +65,7 @@ backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(3))
 # Which markets are mutually exclusive
 # ------------------------------------
 #
-# The probabilities of a group of complementary markets must sum to one, and the groups come from the **data** rather
+# The probabilities of a group of complementary markets must sum to one, and the groups come from the data rather
 # than from a list somebody wrote down. A sport that cannot be drawn simply has two outcomes instead of three, and
 # nothing had to be told which sport this is.
 

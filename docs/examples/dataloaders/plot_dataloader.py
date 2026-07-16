@@ -2,7 +2,7 @@
 Dataloader
 ==========
 
-This example illustrates [`DataLoader`][sportsbet.dataloaders.DataLoader], the object that turns the data of your
+This example illustrates DataLoader, the object that turns the data of your
 sources into training and fixtures data.
 """
 
@@ -32,7 +32,7 @@ dataloader.sport
 # Selecting the data
 # ------------------
 #
-# `param_grid` selects what to **train** on. Any dimension left out takes all of its available values, and a combination
+# `param_grid` selects what to train on. Any dimension left out takes all of its available values, and a combination
 # the sources do not publish is never requested.
 
 dataloader.sources
@@ -46,8 +46,8 @@ dataloader.get_odds_types()
 # Extracting the training data
 # ----------------------------
 #
-# `download` is the only thing that reaches the network. Leave it out and nothing is fetched: you are told how many
-# requests it would take, and you decide.
+# This is where the download happens. It pulls the selected seasons and hands back three frames, and the dataloader
+# keeps them, so once you have extracted, `save` carries the data with it and nothing has to be fetched twice.
 
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
@@ -67,9 +67,9 @@ O_train
 # Extracting the fixtures data
 # ----------------------------
 #
-# A fixture is a match that has **not been played**. It is *not* restricted by `param_grid`: that selects what to train
+# A fixture is a match that has not been played. It is not restricted by `param_grid`, which selects what to train
 # on, and a match you could have trained on has by definition already been played. So you may train on England and bet
-# on Italy. What the two frames share is their **columns**, not their contents.
+# on Italy. What the two frames share is their columns, not their contents.
 #
 # The sample is a finished season, so it has no fixtures at all. Use a live source to get some.
 

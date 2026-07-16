@@ -2,7 +2,7 @@
 Saving and loading a dataloader
 ===============================
 
-This example illustrates `save` and [`load_dataloader`][sportsbet.dataloaders.load_dataloader].
+This example illustrates save and load_dataloader.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -47,8 +47,14 @@ X_fix, _, O_fix = loaded.extract_fixtures_data()
 # %%
 # A picture of it
 # ---------------
+#
+# The saved file is the whole season: every match the loader extracted, ready to travel to another machine. Here it is
+# by month.
 
-fig, ax = plt.subplots()
-ax.bar(['X train', 'X fixtures'], [len(X_train.columns), len(X_fix.columns)])
-ax.set_title('The fixtures carry the columns of the training data')
-ax.set_ylabel('columns')
+per_month = X_train.index.to_period('M').value_counts().sort_index()
+
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.bar([str(period) for period in per_month.index], per_month.to_numpy())
+ax.set_title('The season the saved dataloader carries, by month')
+ax.set_ylabel('matches')
+fig.autofmt_xdate(rotation=45)

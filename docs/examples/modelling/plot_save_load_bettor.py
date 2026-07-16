@@ -2,8 +2,8 @@
 Saving and loading a bettor
 ===========================
 
-This example illustrates [`save_bettor`][sportsbet.evaluation.save_bettor] and
-[`load_bettor`][sportsbet.evaluation.load_bettor].
+This example illustrates save_bettor and
+load_bettor.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>

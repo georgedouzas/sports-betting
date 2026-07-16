@@ -2,9 +2,9 @@
 A source of your own
 ====================
 
-This example illustrates [`BaseStatsSource`][sportsbet.sources.BaseStatsSource],
-[`BaseOddsSource`][sportsbet.sources.BaseOddsSource], [`RawItem`][sportsbet.sources.RawItem] and
-[`RawPayload`][sportsbet.sources.RawPayload], by writing a feed for a league the library has never heard of.
+This example illustrates BaseStatsSource,
+BaseOddsSource, RawItem and
+RawPayload, by writing a feed for a league the library has never heard of.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -24,8 +24,8 @@ MARKETS = ['home_win', 'draw', 'away_win']
 # Four questions, and never a fetch
 # ---------------------------------
 #
-# A source says what it needs read and how to turn it into snapshots. It **never fetches** — the dataloader reads the
-# items it declares — so a source stays a pure description of a feed, easy to write and to test.
+# A source says what it needs read and how to turn it into snapshots. It never fetches. The dataloader reads the
+# items it declares, so a source stays a plain description of a feed, easy to write and to test.
 
 
 class MyStats(BaseStatsSource):
@@ -35,7 +35,7 @@ class MyStats(BaseStatsSource):
     sport = 'soccer'
 
     def index_items(self, selection=None):
-        return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json', volatile=True)]
+        return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
     def catalogue(self, payloads):
         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
@@ -78,7 +78,7 @@ snapshots
 # The odds are a source too
 # -------------------------
 #
-# The markets are its **columns** and the bookmaker is its `provider` column, so nothing has to be registered anywhere.
+# The markets are its columns and the bookmaker is its `provider` column, so nothing has to be registered anywhere.
 # Drop `draw` and you have a sport that cannot be drawn, and the bettor works the two-way market out on its own.
 
 
@@ -89,7 +89,7 @@ class MyOdds(BaseOddsSource):
     sport = 'soccer'
 
     def index_items(self, selection=None):
-        return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json', volatile=True)]
+        return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
     def catalogue(self, payloads):
         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
@@ -124,10 +124,11 @@ odds_source.to_snapshots([RawPayload(item=odds_source.required_items([{'year': 2
 #
 # Four rules that are not style:
 #
-# 1. **Never fetch.** If a source could fetch, an extraction could download by accident.
-# 2. **`date` is the kick-off instant, in UTC.** Resolve your feed's time zone at your own boundary.
-# 3. **A finished season is not `volatile`; a fixture is.** That is what makes a download incremental.
-# 4. **Credentials go in `request_url`**, never in a `RawItem`. The item is what the transform sees and what you save.
+# 1. Never fetch. If a source could fetch, an extraction could download by accident.
+# 2. `date` is the kick-off instant, in UTC. Resolve your feed's time zone at your own boundary.
+# 3. Fixtures come from `fixtures_items`. It defaults to the training items, so override it only when the upcoming
+#    matches live in a different file than the finished seasons.
+# 4. Credentials go in `request_url`, never in a `RawItem`. The item is what the transform sees and what you save.
 
 # %%
 # A picture of it

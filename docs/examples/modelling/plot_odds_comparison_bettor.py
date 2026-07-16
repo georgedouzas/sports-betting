@@ -2,7 +2,7 @@
 Odds comparison bettor
 ======================
 
-This example illustrates [`OddsComparisonBettor`][sportsbet.evaluation.OddsComparisonBettor], which bets by comparing
+This example illustrates OddsComparisonBettor, which bets by comparing
 the odds of different providers rather than by learning from the features.
 """
 
@@ -10,6 +10,7 @@ the odds of different providers rather than by learning from the features.
 # Licence: MIT
 
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.model_selection import TimeSeriesSplit
 
 from sportsbet.dataloaders import DataLoader
@@ -41,7 +42,7 @@ _ = bettor.fit(X_train, Y_train, O_train)
 
 # %%
 # The value bets, one boolean column per market. This bettor models the odds themselves, so it needs them at prediction
-# time as well as at training time — unlike a classifier bettor, which learns from the features alone.
+# time as well as at training time, unlike a classifier bettor, which learns from the features alone.
 
 bettor.bet(X_train, O_train)
 
@@ -53,14 +54,21 @@ results = backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(3))
 results
 
 # %%
-# A picture of it
-# ---------------
+# Turning the one knob
+# --------------------
+#
+# `alpha` is the whole model. Small, and it bets on almost every match, taking any price a shade above the average.
+# Large, and it waits for the rare, glaring mispricing. Sweep it and you can watch the bettor go from greedy to picky.
 
-yields = results['Yield percentage per bet'].to_numpy()
+alphas = np.linspace(0.0, 0.12, 13)
+placed = []
+for alpha in alphas:
+    picky = OddsComparisonBettor(alpha=alpha, betting_markets=['home_win', 'draw', 'away_win'])
+    picky.fit(X_train, Y_train, O_train)
+    placed.append(int(picky.bet(X_train, O_train).sum()))
 
 fig, ax = plt.subplots()
-ax.bar(range(1, len(yields) + 1), yields)
-ax.axhline(0, color='black', linewidth=0.8)
-ax.set_title('Odds comparison bettor: yield per bet, by fold')
-ax.set_xlabel('fold')
-ax.set_ylabel('yield %')
+ax.plot(alphas, placed, marker='o')
+ax.set_title('The bettor gets pickier as alpha rises')
+ax.set_xlabel('alpha (how far above average a price must be)')
+ax.set_ylabel('value bets found')
