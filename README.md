@@ -39,23 +39,23 @@
 
 | Category          | Tools    |
 | ------------------| -------- |
-| **Development**   | [![black][black badge]][black] [![ruff][ruff badge]][ruff] [![mypy][mypy badge]][mypy] [![docformatter][docformatter badge]][docformatter] |
-| **Testing**       | [![pytest][pytest badge]][pytest] [![coverage][coverage badge]][coverage] [![interrogate][interrogate badge]][interrogate] |
-| **Security**      | [![safety][safety badge]][safety] [![bandit][bandit badge]][bandit] |
-| **Automation**    | [![nox][nox badge]][nox] [![pre-commit][pre-commit badge]][pre-commit] |
-| **Package**       | ![version][version badge] ![pythonversion][pythonversion badge] ![downloads][downloads badge] |
-| **Documentation** | [![mkdocs][mkdocs badge]][mkdocs]|
-| **Communication** | [![discussions][discussions badge]][discussions] |
+| Development   | [![black][black badge]][black] [![ruff][ruff badge]][ruff] [![mypy][mypy badge]][mypy] [![docformatter][docformatter badge]][docformatter] |
+| Testing       | [![pytest][pytest badge]][pytest] [![coverage][coverage badge]][coverage] [![interrogate][interrogate badge]][interrogate] |
+| Security      | [![safety][safety badge]][safety] [![bandit][bandit badge]][bandit] |
+| Automation    | [![nox][nox badge]][nox] [![pre-commit][pre-commit badge]][pre-commit] |
+| Package       | ![version][version badge] ![pythonversion][pythonversion badge] ![downloads][downloads badge] |
+| Documentation | [![mkdocs][mkdocs badge]][mkdocs]|
+| Communication | [![discussions][discussions badge]][discussions] |
 
 ## Introduction
 
-`sports-betting` is a set of tools for creating, testing and using sports betting models. You can drive it from an AI
-agent, from Python, or from the command line.
+`sports-betting` is a set of tools for creating, testing and using sports betting models. You can use it from an AI agent, from
+Python, or from the command line.
 
 Its two main components are dataloaders and bettors:
 
-- A dataloader downloads the data and shapes it for modelling. It is built from a statistics source and an odds source, and you
-  choose both, so you always know where your data came from.
+- A dataloader downloads the data and shapes it for modelling. It is built from a statistics source and an odds source. You choose
+  both, so you always know where your data came from.
 - A bettor backtests a betting strategy and predicts the value bets of upcoming events. It wraps any scikit-learn
   estimator.
 
@@ -87,19 +87,19 @@ pdm install
 ### AI agent
 
 The agent is a first-class way into the library. It reaches everything Python and the command line reach, and it does
-the things a flag never could: it explores the data, tables the results, plots them, and writes the model. A betting
-model is a scikit-learn estimator, and an agent can write one, run it, and tell you whether it was any good.
+more besides. It explores the data, tables the results, plots them, writes the model, and does anything else you ask. A
+betting model is a scikit-learn estimator, and an agent can write one, run it, and tell you whether it was any good.
 
 ```bash
 pip install 'sports_betting[mcp]'
 claude mcp add sportsbet -- sportsbet-mcp
 ```
 
-What follows is a chat with Claude, driving the library through the MCP server. Every figure in it is real output.
+What follows is a chat with Claude, using the library through the MCP server, with the real output.
 
 You: What soccer data can I work with?
 
-> Claude: 918 league–division–season combinations across 27 leagues, from 1994 to 2026.
+> Claude: 918 league, division and season combinations across 27 leagues, from 1994 to 2026.
 >
 > England goes deepest, with five divisions. Germany, Italy, France, Spain, Scotland, the Netherlands, Belgium,
 > Portugal, Turkey and Greece have one or two each, and there are single-division feeds for another sixteen countries,
@@ -142,11 +142,11 @@ You: Find me a strategy that works on the top two divisions of Germany, Italy an
 >
 > | Testing period | Bets | Yield per bet | Final cash |
 > | --- | ---: | ---: | ---: |
-> | Feb 2021 – Nov 2021 | 1,407 | +1.0% | £10,715 |
-> | Nov 2021 – May 2022 | 1,406 | +8.3% | £15,812 |
-> | May 2022 – Feb 2023 | 1,406 | −0.5% | £9,675 |
-> | Feb 2023 – Nov 2023 | 1,406 | +4.5% | £13,161 |
-> | Nov 2023 – Jun 2024 | 1,407 | −0.2% | £9,858 |
+> | Feb 2021 to Nov 2021 | 1,407 | +1.0% | £10,715 |
+> | Nov 2021 to May 2022 | 1,406 | +8.3% | £15,812 |
+> | May 2022 to Feb 2023 | 1,406 | −0.5% | £9,675 |
+> | Feb 2023 to Nov 2023 | 1,406 | +4.5% | £13,161 |
+> | Nov 2023 to Jun 2024 | 1,407 | −0.2% | £9,858 |
 >
 > Mean yield +2.6%, positive in three folds of five. Better than the fixed model, which managed +1.2%.
 >
@@ -168,7 +168,7 @@ You: Which league is that draw edge actually in?
 
 You: Write me the Italy draw model, then, and show me the folds.
 
-> Claude: Here it is — a logistic regression on the two Italian divisions, betting only the draw:
+> Claude: Here it is, a logistic regression on the two Italian divisions, betting only the draw:
 >
 > ```python
 > from sklearn.compose import make_column_transformer
@@ -191,24 +191,23 @@ You: Write me the Italy draw model, then, and show me the folds.
 >
 > | Testing period | Bets | Yield per bet | Final cash |
 > | --- | ---: | ---: | ---: |
-> | Mar 2021 – Nov 2021 | 440 | +1.7% | £10,365 |
-> | Nov 2021 – Aug 2022 | 461 | +12.7% | £12,934 |
-> | Aug 2022 – Mar 2023 | 487 | +4.5% | £11,097 |
-> | Mar 2023 – Nov 2023 | 470 | +8.9% | £12,085 |
-> | Nov 2023 – Jun 2024 | 485 | +17.2% | £14,171 |
+> | Mar 2021 to Nov 2021 | 440 | +1.7% | £10,365 |
+> | Nov 2021 to Aug 2022 | 461 | +12.7% | £12,934 |
+> | Aug 2022 to Mar 2023 | 487 | +4.5% | £11,097 |
+> | Mar 2023 to Nov 2023 | 470 | +8.9% | £12,085 |
+> | Nov 2023 to Jun 2024 | 485 | +17.2% | £14,171 |
 >
-> Positive in all five folds, mean +9.0%. That is the kind of result I would want to distrust hardest — I found it by
+> Positive in all five folds, mean +9.0%. That is the kind of result I would want to distrust hardest. I found it by
 > narrowing to the league that already looked good. Give me a season I have never touched and I will tell you if it
 > holds.
 
 You: Fine. Any value bets in the upcoming fixtures?
 
-> Claude: Not today, since the European season is over and there is nothing anywhere that has not been played. But the
-> relationship between what you trained on and what you can bet on is worth getting straight, because it is not the one
-> people expect.
+> Claude: None right now. `extract_fixtures_data` comes back empty for Germany, Italy and France: their seasons are in
+> the summer break, so there is no upcoming match to price.
 >
-> `param_grid` chose the seasons to train on, and those are all finished. A fixture has not been played, so the two
-> never overlap. The fixtures are downloaded separately, from the current season of the leagues you selected:
+> The mechanism is worth seeing. `param_grid` chose the seasons to train on, and those are all played. The fixtures come
+> from a separate download, the current season of the leagues you selected, so training and fixtures never overlap.
 >
 > ```python
 > dataloader = DataLoader(
@@ -216,19 +215,19 @@ You: Fine. Any value bets in the upcoming fixtures?
 >     stats=FootballDataStats(), odds=FootballDataOdds(),
 > )
 > X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')   # the seasons above, to train on
-> X_fix, _, O_fix = dataloader.extract_fixtures_data()                  # whatever those leagues have upcoming
+> X_fix, _, O_fix = dataloader.extract_fixtures_data()                  # the current season's upcoming matches
 > ```
 >
-> Same columns, so the model trained on the history bets on the fixtures. To bet on another league, select it. And
-> given what we found, I would not stake this yet: the edge is in Italy, four seasons of one league found after a dozen
-> tries. Hold a season back and check it there first.
+> They share their columns, so when the season restarts the model trained on the history bets on the fixtures. To bet on
+> another league, select it. Given what we found I would hold off staking: the edge is Italy alone, four seasons found
+> after a dozen tries. Hold a season back and check it there first.
 
 The agent names the environment variable holding your API key, never the key itself. Extracting the data downloads it,
-so a paid odds feed spends only when you extract — do it once and `save` the dataloader rather than re-extracting.
+so a paid odds feed spends only when you extract. Do it once and `save` the dataloader rather than re-extracting.
 
 ### Python API
 
-The same thing, in code. A dataloader is a statistics source and an odds source:
+The same functionality, in code. A dataloader is created by a statistics source and an odds source:
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -243,11 +242,8 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maxi
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 ```
 
-Extracting the data is what downloads it. It is held on the dataloader, and `dataloader.save('path.pkl')` keeps it,
-so you download once and reload rather than re-extracting.
-
-A betting model is any scikit-learn estimator wrapped in a bettor. Here a logistic regression bets the draw — the market
-the agent found paid — over five time-ordered folds:
+A betting model is any scikit-learn estimator wrapped in a bettor. Here we backtest a bettor that wraps a logistic regression
+classifier:
 
 ```python
 from sklearn.compose import make_column_transformer
@@ -281,17 +277,16 @@ Training start Training end Testing start Testing end
 ```
 
 Fit it with `bettor.fit(X_train, Y_train, O_train)`, then `bettor.bet(X_fix, O_fix)` returns the value bets of the
-upcoming matches, one row per fixture and one column per market.
+upcoming matches.
 
-The fixtures are downloaded separately, not sliced out of the training data. `param_grid` chose the seasons to train
-on, and those are all played; `extract_fixtures_data` downloads the current season of the selected leagues and returns
-whatever is still to be played. The two share their columns, so the model trained on the history bets on the fixtures.
+The fixtures are downloaded separately by `extract_fixtures_data`, which returns the upcoming betting events. The
+training and fixtures data share their columns, so the model trained on the history can bet on the fixtures.
 
 ### CLI
 
-The same scenario, without writing any Python. The commands mirror the API: `dataloader` extracts the data and
-`evaluation` works a model on it. `dataloader train extract` downloads the seasons once and saves the dataloader; the
-evaluation commands read that file, so the data is downloaded once and the model is trained once.
+The same scenario from the command line, which mirrors the API. `dataloader` extracts the data and `evaluation` works a
+model on it. `dataloader train extract` downloads the seasons once and saves the dataloader. The evaluation commands
+read that file, so the data is downloaded once and the model is trained once.
 
 ```bash
 # Download the seasons once and save the dataloader
@@ -315,5 +310,25 @@ sportsbet evaluation bet --dataloader dataloader.pkl --bettor model.pkl
 ```
 
 The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from,
-and `dataloader train extract` downloads it. A model of your own is Python, so build it and name it:
-`--model models.py:BETTOR`.
+and `dataloader train extract` downloads it. The ready-made models cover the common cases. A model of your own is
+Python, so you write it in a file and name it, as in `--model models.py:bettor`, where `bettor` is the object below.
+
+```python
+# models.py
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sportsbet.evaluation import ClassifierBettor
+
+classifier = make_pipeline(
+    make_column_transformer(
+        (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']), remainder='passthrough'
+    ),
+    SimpleImputer(),
+    MultiOutputClassifier(LogisticRegression(solver='liblinear', random_state=7, class_weight='balanced')),
+)
+bettor = ClassifierBettor(classifier, betting_markets=['draw'], init_cash=10000.0, stake=50.0)
+```

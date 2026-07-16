@@ -30,7 +30,7 @@ $$
 \sum_{i=1}^{n} \frac{1}{o_i} = 1 + m, \qquad m > 0.
 $$
 
-The excess $m$ is the over-round, and it is the bookmaker's margin. Note what has *not* changed: the bookmaker still has to
+The excess $m$ is the overround, and it is the bookmaker's margin. Notice what has not changed. The bookmaker still has to
 estimate $p$. The margin protects a good estimate, it does not replace one.
 
 ## Value bets
