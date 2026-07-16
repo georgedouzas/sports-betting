@@ -20,8 +20,11 @@ import pandas as pd
 from mcp.server.fastmcp import FastMCP
 from sklearn.model_selection import TimeSeriesSplit
 
-from .._selection import DEFAULT_KEY_ENV, build_bettor, build_dataloader
+from .._selection import DEFAULT_KEY_ENV, build_bettor, build_dataloader, build_venue
 from ..evaluation import backtest as run_backtest
+from ..execution import BaseVenue, BetIdentity, ExposureLimits, PlacementIntent, PlacementQuote
+from ..execution import place as run_place
+from ..execution import quote as run_quote
 
 server: FastMCP = FastMCP('sportsbet')
 
@@ -374,6 +377,147 @@ async def bet(
     strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
     result: list[dict[str, Any]] = await _offload(_bet, selection, odds_type, strategy)
     return result
+
+
+def _venue(reference: str) -> BaseVenue:
+    """Return the venue a reference names."""
+    return build_venue(reference)
+
+
+def _intents(key: str, records: list[dict[str, Any]]) -> list[PlacementIntent]:
+    """Return the bets a caller means to place."""
+    return [
+        PlacementIntent(
+            identity=BetIdentity(key, record['match'], record['market'], record['selection']),
+            stake=float(record['stake']),
+            min_price=float(record['min_price']),
+            value_bet=str(record.get('value_bet', '')),
+        )
+        for record in records
+    ]
+
+
+def _quote_records(quoted: PlacementQuote) -> dict[str, Any]:
+    """Return a quote an agent can read and pass back."""
+    return {
+        'total_stake': quoted.total_stake,
+        'total_exposure': quoted.total_exposure,
+        'quoted_at': quoted.quoted_at.isoformat(),
+        'intents': [
+            {
+                'match': intent.identity.match,
+                'market': intent.identity.market,
+                'selection': intent.identity.selection,
+                'stake': intent.stake,
+                'min_price': intent.min_price,
+                'value_bet': intent.value_bet,
+                'ref': intent.identity.ref,
+            }
+            for intent in quoted.intents
+        ],
+    }
+
+
+def _quote_of(key: str, held: dict[str, Any]) -> PlacementQuote:
+    """Return the quote a caller passed back."""
+    return PlacementQuote(
+        intents=_intents(key, held['intents']),
+        total_stake=float(held['total_stake']),
+        total_exposure=float(held['total_exposure']),
+        quoted_at=pd.Timestamp(held['quoted_at']).to_pydatetime(),
+    )
+
+
+@server.tool()
+async def execution_venue_info(venue: str) -> dict[str, Any]:
+    """Return what a venue is and what its owner wrote down about the site.
+
+    The notes come back exactly as they were written. The library does not read them: they are for you.
+    """
+    built = _venue(venue)
+    return {
+        'key': built.key,
+        'can_cancel': built.can_cancel,
+        'url': getattr(built, 'url', None),
+        'notes': getattr(built, 'notes', None),
+    }
+
+
+@server.tool()
+async def execution_authenticate(venue: str) -> dict[str, Any]:
+    """Authenticate at a venue, reading each secret from the variable the venue names."""
+    built = _venue(venue)
+    await built.authenticate()
+    return {'venue': built.key, 'authenticated': True}
+
+
+@server.tool()
+async def execution_read_balance(venue: str) -> dict[str, Any]:
+    """Return the balance and what is currently at stake."""
+    built = _venue(venue)
+    await built.authenticate()
+    balance, exposure = await built.read_balance()
+    return {'balance': balance, 'exposure': exposure}
+
+
+@server.tool()
+async def execution_list_markets(venue: str, matches: list[str]) -> list[dict[str, Any]]:
+    """Return the markets a venue offers on the given matches, with their prices."""
+    built = _venue(venue)
+    await built.authenticate()
+    return _records(await built.list_markets(matches))
+
+
+@server.tool()
+async def execution_quote(venue: str, intents: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return what would be staked, before anything is.
+
+    Pass `total_stake` and `total_exposure` back to `execution_place` to place the bets. Nothing is staked until you do.
+    """
+    built = _venue(venue)
+    await built.authenticate()
+    quoted = await run_quote(built, _intents(built.key, intents), ExposureLimits())
+    return _quote_records(quoted)
+
+
+@server.tool()
+async def execution_place(
+    venue: str,
+    quote: dict[str, Any],
+    confirm_stake: float | None = None,
+    confirm_exposure: float | None = None,
+    max_stake: float = 0.0,
+    max_exposure: float = 0.0,
+    kill: bool = False,
+) -> list[dict[str, Any]]:
+    """Place a quoted batch, staking nothing unless the quoted figures are passed back exactly.
+
+    `confirm_stake` and `confirm_exposure` are the figures `execution_quote` returned. Anything else stakes nothing and
+    says what the figures really are.
+    """
+    built = _venue(venue)
+    await built.authenticate()
+    limits = ExposureLimits(max_stake_per_bet=max_stake, max_total_exposure=max_exposure, killed=kill)
+    receipts = await run_place(built, _quote_of(built.key, quote), limits, confirm_stake, confirm_exposure)
+    return _records(receipts)
+
+
+@server.tool()
+async def execution_read_status(venue: str, intents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return what the venue holds for these bets."""
+    built = _venue(venue)
+    await built.authenticate()
+    identities = [intent.identity for intent in _intents(built.key, intents)]
+    return _records(await built.read_status(identities))
+
+
+@server.tool()
+async def execution_cancel(venue: str, match: str, market: str, selection: str) -> dict[str, Any]:
+    """Cancel a bet, where the venue cancels."""
+    built = _venue(venue)
+    await built.authenticate()
+    receipt = await built.cancel(BetIdentity(built.key, match, market, selection))
+    return {'status': receipt.status.value, 'detail': receipt.detail}
 
 
 def run() -> None:

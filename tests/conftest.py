@@ -12,6 +12,15 @@ from click.testing import CliRunner
 
 from sportsbet.cli import main
 from sportsbet.dataloaders import BaseDataLoader, DataLoader
+from sportsbet.execution import (
+    BaseVenue,
+    BetIdentity,
+    CancellationUnsupportedError,
+    PlacementIntent,
+    PlacementReceipt,
+    PlacementStatus,
+    VenueBlockedError,
+)
 from sportsbet.sources import (
     BaseOddsSchema,
     BaseStatsSchema,
@@ -45,6 +54,120 @@ class SnapshotsDataLoader(BaseDataLoader):
     def _snapshots(self: 'SnapshotsDataLoader') -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the snapshots the test provided."""
         return self.stats, self.odds
+
+
+class FakeVenue(BaseVenue):
+    """A venue a test can hold in its hand, and the only kind a test may reach.
+
+    No exchange offers a placement sandbox. Betfair's delayed application key is widely believed to be one and is not:
+    it places real bets on the live exchange. So a fake is not the second-best way of proving this code, it is the only
+    way of proving it that does not spend money.
+
+    It keeps what it was asked to do and answers whether it already holds a bet, which is the one behaviour the once-
+    only promise rests on. The faults are injectable because a retry, a crash and a lost connection are exactly when
+    double staking happens.
+    """
+
+    key = 'fake'
+    can_cancel = True
+
+    def __init__(
+        self: 'FakeVenue',
+        prices: dict[tuple[str, str, str], float] | None = None,
+        balance: float = 1000.0,
+        exposure: float = 0.0,
+        fail_after_accept: int | None = None,
+        blocked: bool = False,
+        cancels: bool = True,
+        matched: float | None = None,
+        min_interval: float = 0.0,
+    ) -> None:
+        """Keep what the test arranged."""
+        self.prices = prices or {}
+        self.balance = balance
+        self.exposure = exposure
+        self.fail_after_accept = fail_after_accept
+        self.blocked = blocked
+        self.can_cancel = cancels
+        self.matched = matched
+        self.min_interval = min_interval
+        self.orders: dict[str, dict] = {}
+        self.attempts: list[str] = []
+        self.placed_order: list[str] = []
+
+    async def authenticate(self: 'FakeVenue') -> None:
+        """Accept any caller, since a fake holds nothing worth guarding."""
+        if self.blocked:
+            msg = '`fake` refused the login.'
+            raise VenueBlockedError(msg)
+
+    async def list_markets(self: 'FakeVenue', matches: list[str]) -> pd.DataFrame:
+        """Return the prices the test arranged."""
+        records = [
+            {'match': match, 'market': market, 'selection': selection, 'price': price}
+            for (match, market, selection), price in self.prices.items()
+            if not matches or match in matches
+        ]
+        return pd.DataFrame.from_records(records, columns=['match', 'market', 'selection', 'price'])
+
+    async def read_balance(self: 'FakeVenue') -> tuple[float, float]:
+        """Return the balance and the exposure the test arranged."""
+        return self.balance, self.exposure
+
+    async def place(self: 'FakeVenue', intent: PlacementIntent) -> PlacementReceipt:
+        """Record a bet, unless one is already recorded for its identity."""
+        ref = intent.identity.ref
+        self.attempts.append(ref)
+        if self.blocked:
+            msg = '`fake` blocked automated access.'
+            raise VenueBlockedError(msg)
+        if ref in self.orders:
+            order = self.orders[ref]
+            return PlacementReceipt(
+                identity=intent.identity,
+                status=PlacementStatus.ALREADY_PLACED,
+                stake=order['stake'],
+                price=order['price'],
+                venue_bet_id=order['bet_id'],
+                value_bet=intent.value_bet,
+                detail='`fake` already holds a bet for this selection.',
+            )
+        price = self.prices.get((intent.identity.match, intent.identity.market, intent.identity.selection))
+        self.orders[ref] = {
+            'stake': intent.stake,
+            'price': price or intent.min_price,
+            'bet_id': f'bet-{len(self.orders) + 1}',
+        }
+        self.placed_order.append(ref)
+        if self.fail_after_accept is not None and len(self.orders) == self.fail_after_accept:
+            msg = 'The connection dropped after the venue accepted the bet.'
+            raise TimeoutError(msg)
+        staked = intent.stake if self.matched is None else self.matched
+        status = PlacementStatus.MATCHED_PARTIAL if staked < intent.stake else PlacementStatus.MATCHED_FULL
+        return PlacementReceipt(
+            identity=intent.identity,
+            status=status,
+            stake=staked,
+            price=price or intent.min_price,
+            venue_bet_id=self.orders[ref]['bet_id'],
+            value_bet=intent.value_bet,
+            placed_at=pd.Timestamp.now(tz='UTC').to_pydatetime(),
+        )
+
+    async def read_status(self: 'FakeVenue', identities: list[BetIdentity]) -> pd.DataFrame:
+        """Return what the fake holds for these identities."""
+        records = [
+            {'ref': identity.ref, **self.orders[identity.ref]} for identity in identities if identity.ref in self.orders
+        ]
+        return pd.DataFrame.from_records(records)
+
+    async def cancel(self: 'FakeVenue', identity: BetIdentity) -> PlacementReceipt:
+        """Cancel a bet, saying so when the fake was arranged not to cancel."""
+        if not self.can_cancel:
+            msg = '`fake` cannot cancel a bet.'
+            raise CancellationUnsupportedError(msg)
+        self.orders.pop(identity.ref, None)
+        return PlacementReceipt(identity=identity, status=PlacementStatus.REJECTED, detail='`fake` cancelled the bet.')
 
 
 @pytest.fixture(autouse=True, scope='session')

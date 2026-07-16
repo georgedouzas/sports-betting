@@ -24,7 +24,7 @@ Each maps to a success criterion. All are runnable without a bookmaker account.
 ### 1. The default refuses (SC-002, FR-009)
 
 ```bash
-sportsbet execution place --config tests/fake_venue_config.py --quote quote.json
+sportsbet execution place --venue tests/fake_venue.py:VENUE --quote quote.json
 ```
 
 Expect the full itemised quote printed, `DRY_RUN` on every receipt, zero stakes, non-zero exit.

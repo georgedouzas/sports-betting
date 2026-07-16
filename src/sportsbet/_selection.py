@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sklearn.compose import make_column_transformer
 from sklearn.impute import SimpleImputer
@@ -30,6 +31,10 @@ from sklearn.preprocessing import OneHotEncoder
 from . import ParamGrid
 from .dataloaders import DataLoader
 from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
+
+if TYPE_CHECKING:
+    from .execution import BaseVenue
+
 from .sources import (
     BaseOddsSource,
     BaseStatsSource,
@@ -50,9 +55,11 @@ ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
     'odds-api': OddsApi,
 }
 MODELS = ['odds-comparison', 'logistic']
+VENUES = ['betfair']
 KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
 STATUSES = ['preplay', 'inplay', 'postplay']
+EXECUTION_EXTRA = "Placing bets needs the execution extra. Install it with `pip install 'sports-betting[execution]'`."
 
 
 class SelectionError(ValueError):
@@ -163,6 +170,40 @@ def build_dataloader(
         aliases=_aliases(aliases),
         max_unmatched_rate=max_unmatched_rate,
     )
+
+
+def build_venue(venue: str) -> BaseVenue:
+    """Return the venue a selection describes.
+
+    A venue is named the way a model is named rather than the way a dataloader is. A dataloader is a sport and a short
+    list of names, so it fits in arguments. A venue carries URLs, notes and certificates, and a site-driven one carries
+    prose, so it is named by where it lives and built in Python.
+
+    The import is made here rather than at the top of the file because placing lives behind an optional extra, and this
+    module is imported on every run.
+
+    Args:
+        venue:
+            A ready-made venue, or where one of your own lives, as in `venue.py:VENUE`.
+
+    Returns:
+        built:
+            The venue.
+    """
+    try:
+        from .execution import BaseVenue, BetfairVenue  # noqa: PLC0415
+    except ImportError as missing:
+        raise SelectionError(EXECUTION_EXTRA) from missing
+    if ':' in venue:
+        built = _load_object(venue)
+        if not isinstance(built, BaseVenue):
+            msg = f'`{venue}` is not a venue.'
+            raise SelectionError(msg)
+        return built
+    if venue == 'betfair':
+        return BetfairVenue()
+    msg = f'`{venue}` is not a venue. Ready-made: {", ".join(VENUES)}. For one of your own, use `venue.py:VENUE`.'
+    raise SelectionError(msg)
 
 
 def build_bettor(
