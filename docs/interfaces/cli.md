@@ -6,7 +6,7 @@ own arguments, so there is no configuration file to write first. `--stats` and `
 and a source that needs a key reads it from the environment, so the key never enters a command. A model of your own is
 Python, so you build it and name it: `--model models.py:BETTOR`.
 
-`dataloader train extract` downloads the seasons once and saves the dataloader to a file; the evaluation commands read
+`dataloader train extract` downloads the seasons once and saves the dataloader to a file. The evaluation commands read
 that file with `--dataloader`, so the data is downloaded once and the model is trained once.
 
 ```bash
