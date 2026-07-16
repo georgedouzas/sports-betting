@@ -1,6 +1,7 @@
 """Configuration for the pytest test suite."""
 
 import socket
+from collections.abc import Callable
 from importlib.resources import files
 from pathlib import Path
 from typing import Annotated
@@ -63,12 +64,20 @@ def no_network(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) 
     if request.node.get_closest_marker('network'):
         return
 
-    def guard(*args: object, **kwargs: object) -> None:
-        msg = 'The test suite must not reach the network. Use a recorded payload or mark the test `network`.'
-        raise RuntimeError(msg)
+    loopback = {'127.0.0.1', '::1', 'localhost'}
 
-    monkeypatch.setattr(socket.socket, 'connect', guard)
-    monkeypatch.setattr(socket.socket, 'connect_ex', guard)
+    def blocked(real: Callable[..., object]) -> Callable[..., object]:
+        def guard(self: socket.socket, address: object, *args: object, **kwargs: object) -> object:
+            host = address[0] if isinstance(address, tuple) else address
+            if host in loopback:
+                return real(self, address, *args, **kwargs)
+            msg = 'The test suite must not reach the network. Use a recorded payload or mark the test `network`.'
+            raise RuntimeError(msg)
+
+        return guard
+
+    monkeypatch.setattr(socket.socket, 'connect', blocked(socket.socket.connect))
+    monkeypatch.setattr(socket.socket, 'connect_ex', blocked(socket.socket.connect_ex))
 
 
 @pytest.fixture

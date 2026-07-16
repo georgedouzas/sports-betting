@@ -61,7 +61,7 @@ class SelectionError(ValueError):
 
 def _load_object(reference: str) -> object:
     """Return the object a reference names, which is a Python file and a name inside it."""
-    path, _, name = reference.partition(':')
+    path, _, name = reference.rpartition(':')
     if not name:
         msg = f'`{reference}` should name an object inside a Python file, as in `models.py:BETTOR`.'
         raise SelectionError(msg)
