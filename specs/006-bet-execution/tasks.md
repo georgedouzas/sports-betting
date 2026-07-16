@@ -201,14 +201,14 @@ agent's on this path, and the docs say so.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T054 Add `docs/overview/user_guide/execution.md` leading with the money and terms-of-service risks, ahead of any instruction to use it (FR-024). State plainly that driving a bookmaker's website breaches essentially every bookmaker's terms and risks account closure and loss of the balance. State that once-only and the ceilings hold on the API path and are the agent's on the site path. No bold, no dashes, no semicolons; say what things do rather than what they do not.
-- [ ] T055 [P] Document in `docs/overview/user_guide/execution.md` that no exchange offers a placement sandbox, and that Betfair's delayed application key places REAL bets on the live exchange. Users will otherwise believe the folklore and test with real money.
-- [ ] T056 [P] Register the execution page in the `properdocs.yml` nav.
-- [ ] T057 [P] Add the CHANGELOG entry for `sportsbet.execution` and the `execution` extra, with a runnable snippet.
-- [ ] T058 [P] Re-run the public-API docs audit: every public name has a runnable example. Network-touching classes keep non-executable examples.
-- [ ] T059 Run every scenario in [quickstart.md](./quickstart.md) and confirm each success criterion.
-- [ ] T060 Verify `git diff --stat -- src/sportsbet/dataloaders src/sportsbet/evaluation` is EMPTY (FR-025, SC-007). This is an additive feature.
-- [ ] T061 Verify SC-010 in a clean environment: `pip install sports-betting` pulls no `playwright`, and `sportsbet execution` reports the extra to install rather than raising `ImportError`. Install `[mcp]` alone and confirm the execution tools name `[execution]`.
+- [X] T054 Add `docs/overview/user_guide/execution.md` leading with the money and terms-of-service risks, ahead of any instruction to use it (FR-024). State plainly that driving a bookmaker's website breaches essentially every bookmaker's terms and risks account closure and loss of the balance. State that once-only and the ceilings hold on the API path and are the agent's on the site path. No bold, no dashes, no semicolons; say what things do rather than what they do not.
+- [X] T055 [P] Document in `docs/overview/user_guide/execution.md` that no exchange offers a placement sandbox, and that Betfair's delayed application key places REAL bets on the live exchange. Users will otherwise believe the folklore and test with real money.
+- [X] T056 [P] Register the execution page in the `properdocs.yml` nav.
+- [X] T057 [P] The CHANGELOG is generated from the commits by `git-changelog` under the angular convention, so the `feat:` commits of this feature are its entries. Nothing is hand written into `CHANGELOG.md`, and the `changelog` session renders it at release.
+- [X] T058 [P] Re-run the public-API docs audit: every public name has a runnable example. Network-touching classes keep non-executable examples.
+- [X] T059 Run every scenario in [quickstart.md](./quickstart.md) and confirm each success criterion.
+- [X] T060 Verify `git diff --stat -- src/sportsbet/dataloaders src/sportsbet/evaluation` is EMPTY (FR-025, SC-007). This is an additive feature.
+- [X] T061 Verify SC-010 in a clean environment: `pip install sports-betting` pulls no `playwright`, and `sportsbet execution` reports the extra to install rather than raising `ImportError`. Install `[mcp]` alone and confirm the execution tools name `[execution]`.
 
 ---
 
