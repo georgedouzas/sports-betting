@@ -109,6 +109,12 @@ def _extract_train_data(selection: Selection, odds_type: str | None) -> dict[str
     return {'X': _records(X), 'Y': _records(Y), 'O': _records(O)}
 
 
+def _extract_exploration_data(selection: Selection) -> dict[str, Any]:
+    """Return the features on their own, with no targets and no odds."""
+    X = build_dataloader(**selection).extract_exploration_data()
+    return {'X': _records(X)}
+
+
 def _extract_fixtures_data(selection: Selection, odds_type: str | None) -> dict[str, Any]:
     """Return the games that have not been played yet.
 
@@ -176,6 +182,42 @@ async def available_params(
         max_unmatched_rate,
     )
     result: list[dict] = await _offload(_available_params, selection)
+    return result
+
+
+@server.tool()
+async def extract_exploration_data(
+    stats: str,
+    odds: str | None = None,
+    leagues: list[str] | None = None,
+    divisions: list[int] | None = None,
+    years: list[int] | None = None,
+    odds_key_env: str = DEFAULT_KEY_ENV,
+    odds_markets: list[str] | None = None,
+    odds_regions: list[str] | None = None,
+    odds_moments: list[str] | None = None,
+    aliases: list[str] | None = None,
+    max_unmatched_rate: float = 0.0,
+) -> dict[str, Any]:
+    """Return the features on their own, with no targets and no odds.
+
+    Use it to look at a sport before choosing what to select or model, or when the source carries no odds and so has
+    nothing to predict.
+    """
+    selection = _selection(
+        stats,
+        odds,
+        leagues,
+        divisions,
+        years,
+        odds_key_env,
+        odds_markets,
+        odds_regions,
+        odds_moments,
+        aliases,
+        max_unmatched_rate,
+    )
+    result: dict[str, Any] = await _offload(_extract_exploration_data, selection)
     return result
 
 

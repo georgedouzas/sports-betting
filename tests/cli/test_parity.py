@@ -33,6 +33,7 @@ def _parameters(callable_):
     ('command', 'api', 'renamed'),
     [
         (['dataloader', 'train', 'extract'], BaseDataLoader.extract_train_data, {}),
+        (['dataloader', 'exploration', 'extract'], BaseDataLoader.extract_exploration_data, {}),
         (['evaluation', 'backtest'], backtest, {}),
         (['evaluation', 'backtest'], OddsComparisonBettor.__init__, {'odds_types': 'model_odds_types'}),
         (

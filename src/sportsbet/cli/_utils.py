@@ -40,7 +40,6 @@ SELECTED = (
 EXTRACTED = (
     'drop_na_thres',
     'odds_type',
-    'learning_type',
     'target_event_status',
     'target_event_time',
     'input_event_status',

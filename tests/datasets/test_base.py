@@ -85,22 +85,6 @@ def test_extract_train_data_fails_on_no_inplay_postplay_events(stats, odds, stat
         dataloader.extract_train_data()
 
 
-def test_extract_train_data_fails_on_invalid_learning_type(stats, odds, stats_schema, odds_schema):
-    """Test extract_train_data fails on invalid learning type."""
-    targets = ['home_goals', 'away_goals']
-    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
-    with pytest.raises(ValueError, match="Invalid learning type"):
-        dataloader.extract_train_data(learning_type='invalid')
-
-
-def test_extract_train_data_fails_on_non_string_learning_type(stats, odds, stats_schema, odds_schema):
-    """Test extract_train_data fails on non-string learning type."""
-    targets = ['home_goals', 'away_goals']
-    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
-    with pytest.raises(TypeError):
-        dataloader.extract_train_data(learning_type=123)
-
-
 def test_extract_train_data_fails_on_invalid_event_status(stats, odds, stats_schema, odds_schema):
     """Test extract_train_data fails on invalid event status."""
     targets = ['home_goals', 'away_goals']
@@ -176,24 +160,20 @@ def test_extract_train_data_inplay_target_excludes_later_snapshots(stats, odds, 
     assert list(Y.columns) == ['home_goals__inplay__60min', 'away_goals__inplay__60min']
 
 
-def test_extract_train_data_unsupervised_returns_x_none_o(stats, odds, stats_schema, odds_schema):
-    """Test unsupervised extraction returns a uniform (X, None, O) three-tuple (T009)."""
+def test_extract_exploration_data_returns_features(stats, odds, stats_schema, odds_schema):
+    """Test exploration extraction returns the features on their own, as a single frame."""
     targets = ['home_goals', 'away_goals']
     dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
-    X, Y, O = dataloader.extract_train_data(learning_type='unsupervised')
+    X = dataloader.extract_exploration_data()
     assert isinstance(X, pd.DataFrame)
-    assert Y is None
-    assert isinstance(O, pd.DataFrame)
-    assert X.index.equals(O.index)
+    assert not X.empty
 
 
-@pytest.mark.parametrize('learning_type', ['reinforcement', 'semi-supervised', 'other'])
-def test_extract_train_data_rejects_unknown_learning_type(learning_type, stats, odds, stats_schema, odds_schema):
-    """Test unknown learning types (including reinforcement) are rejected (T009)."""
-    targets = ['home_goals', 'away_goals']
-    dataloader = _from_components(stats, odds, stats_schema, odds_schema, targets)
-    with pytest.raises(ValueError, match='Invalid learning type'):
-        dataloader.extract_train_data(learning_type=learning_type)
+def test_extract_train_data_without_markets_points_to_exploration(stats, odds, stats_schema, odds_schema):
+    """Test a dataloader with no markets refuses to train and points at exploration instead."""
+    dataloader = _from_components(stats, odds, stats_schema, odds_schema, [])
+    with pytest.raises(ValueError, match='extract_exploration_data'):
+        dataloader.extract_train_data()
 
 
 def test_extract_fixtures_data_before_train_data_fails(stats, odds, stats_schema, odds_schema):

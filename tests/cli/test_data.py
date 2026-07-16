@@ -52,6 +52,15 @@ def test_train_extract(cli_runner, offline_dataloader, tmp_path):
 
 
 @pytest.mark.xdist_group(name='serial')
+def test_exploration_extract(cli_runner, offline_dataloader, tmp_path):
+    """Test the features are extracted on their own and written."""
+    result = cli_runner.invoke(main, ['dataloader', 'exploration', 'extract', *SELECTION, '-o', str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert 'Exploration features' in result.output
+    assert (tmp_path / 'sports-betting-data' / 'X.csv').exists()
+
+
+@pytest.mark.xdist_group(name='serial')
 def test_fixtures_extract(cli_runner, saved_fixtures_dataloader, tmp_path):
     """Test the fixtures are extracted from a saved dataloader and written."""
     result = cli_runner.invoke(

@@ -17,7 +17,7 @@ from collections.abc import Callable
 import click
 from click.decorators import FC
 
-from .._selection import DEFAULT_KEY_ENV, LEARNING_TYPES, MODELS, ODDS_SOURCES, STATS_SOURCES, STATUSES
+from .._selection import DEFAULT_KEY_ENV, MODELS, ODDS_SOURCES, STATS_SOURCES, STATUSES
 
 SELECTION: list[Callable[[FC], FC]] = [
     click.option('--league', 'leagues', multiple=True, help='A league to select. Repeat it to select more.'),
@@ -63,14 +63,8 @@ SELECTION: list[Callable[[FC], FC]] = [
     ),
 ]
 
-EXTRACTION: list[Callable[[FC], FC]] = [
-    click.option('--odds-type', help='The odds to extract, e.g. `market_average`.'),
+HORIZON: list[Callable[[FC], FC]] = [
     click.option('--drop-na-thres', default=0.0, show_default=True, help='The threshold to drop missing columns.'),
-    click.option(
-        '--learning-type',
-        type=click.Choice(LEARNING_TYPES),
-        help='`supervised` (the default) has targets; `unsupervised` has features and odds only.',
-    ),
     click.option(
         '--target-event-status',
         type=click.Choice(STATUSES),
@@ -83,6 +77,11 @@ EXTRACTION: list[Callable[[FC], FC]] = [
         help='The latest snapshot kept as a feature. The default keeps every one before the target.',
     ),
     click.option('--input-event-time', help='The moment of the input horizon, e.g. `45min`.'),
+]
+
+EXTRACTION: list[Callable[[FC], FC]] = [
+    click.option('--odds-type', help='The odds to extract, e.g. `market_average`.'),
+    *HORIZON,
 ]
 
 MODEL: list[Callable[[FC], FC]] = [

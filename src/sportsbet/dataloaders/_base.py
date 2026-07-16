@@ -21,7 +21,6 @@ from ..sources._schema import (
 )
 
 DELIMITER = '__'
-LEARNING_TYPES = ('supervised', 'unsupervised')
 TARGET_EVENT_STATUSES = ('inplay', 'postplay')
 INPUT_EVENT_STATUSES = ('preplay', 'inplay', 'postplay')
 STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
@@ -424,26 +423,12 @@ class BaseDataLoader(ABC):
 
     def _resolve_params(
         self: Self,
-        learning_type: str | None,
         target_event_status: str | None,
         target_event_time: pd.Timedelta | None,
         input_event_status: str | None,
         input_event_time: pd.Timedelta | None,
-    ) -> tuple[str, str, pd.Timedelta]:
-        """Validate and default the learning type, target moment and input horizon."""
-        check_scalar(learning_type, 'learning_type', (NoneType, str))
-        if learning_type is not None and learning_type not in LEARNING_TYPES:
-            msg = f'Invalid learning type. It should be one of {LEARNING_TYPES}. Got {learning_type} instead.'
-            raise ValueError(msg)
-        self.learning_type_ = learning_type if learning_type is not None else 'supervised'
-        if self.learning_type_ == 'supervised' and not self.targets_:
-            msg = (
-                'There are no odds, so there are no markets to predict: the markets a model learns are the ones its '
-                'odds price. Pass an `odds` source, or ask for `learning_type="unsupervised"` to get the features on '
-                'their own.'
-            )
-            raise ValueError(msg)
-
+    ) -> tuple[str, pd.Timedelta]:
+        """Validate and default the target moment and input horizon."""
         check_scalar(target_event_status, 'target_event_status', (NoneType, str))
         if target_event_status is not None and target_event_status not in TARGET_EVENT_STATUSES:
             msg = (
@@ -473,55 +458,18 @@ class BaseDataLoader(ABC):
             raise ValueError(msg)
         self.input_event_time_ = input_event_time if input_event_time is not None else pd.Timedelta('0min')
 
-        return self.learning_type_, self.target_event_status_, self.target_event_time_
+        return self.target_event_status_, self.target_event_time_
 
-    def extract_train_data(
+    def _extract_inputs(
         self: Self,
-        *,
-        drop_na_thres: float = 0.0,
-        odds_type: str | None = None,
-        learning_type: str | None = None,
-        target_event_status: str | None = None,
-        target_event_time: pd.Timedelta | None = None,
-        input_event_status: str | None = None,
-        input_event_time: pd.Timedelta | None = None,
-    ) -> TrainData:
-        """Extract the moment-aware training data.
-
-        Read more in the [user guide][user-guide].
-
-        It downloads the selected seasons and returns the historical data a betting strategy is built and backtested on.
-        Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in `X` —
-        optionally capped at an input horizon — the target-moment outcomes become the labels `Y`, and the odds become
-        `O`. Call it again to download the data again; keep it with `save`.
-
-        Args:
-            drop_na_thres:
-                Threshold in `[0.0, 1.0]` controlling how aggressively feature
-                columns with missing values are dropped. `0.0` keeps all columns.
-            odds_type:
-                One of `get_odds_types()`. `None` returns no odds.
-            learning_type:
-                `'supervised'` (default): `Y` holds the target outcomes.
-                `'unsupervised'`: `Y` is `None` (features and odds only).
-            target_event_status:
-                `'inplay'` or `'postplay'` (default `'postplay'`).
-            target_event_time:
-                In-play target time (e.g. `pd.Timedelta('60min')`). Defaults to 0.
-            input_event_status:
-                Latest snapshot status to keep as a feature, one of `'preplay'`,
-                `'inplay'`, `'postplay'`. `None` (default) keeps every snapshot
-                before the target; e.g. `'preplay'` keeps only pre-match features.
-            input_event_time:
-                Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
-                together with `input_event_status`. Defaults to 0.
-
-        Returns:
-            (X, Y, O):
-                Moment-aware features `X`, target outcomes `Y` and odds `O`. For
-                `learning_type='unsupervised'`, `Y` is `None`. The three components
-                share the same date index and rows.
-        """
+        odds_type: str | None,
+        drop_na_thres: float,
+        target_event_status: str | None,
+        target_event_time: pd.Timedelta | None,
+        input_event_status: str | None,
+        input_event_time: pd.Timedelta | None,
+    ) -> tuple[pd.DataFrame, pd.DataFrame, str, pd.Timedelta]:
+        """Load the snapshots and build the moment-aware features and odds of the training selection."""
         self._load(odds_type)
         self.odds_type_ = odds_type
 
@@ -537,9 +485,8 @@ class BaseDataLoader(ABC):
             msg = 'No `inplay` or `postplay` events were found.'
             raise ValueError(msg)
 
-        # Validate and resolve the learning type, target moment and input horizon
-        learning_type, target_event_status, target_event_time = self._resolve_params(
-            learning_type,
+        # Validate and resolve the target moment and input horizon
+        target_event_status, target_event_time = self._resolve_params(
             target_event_status,
             target_event_time,
             input_event_status,
@@ -560,7 +507,6 @@ class BaseDataLoader(ABC):
         train_mask = pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(train_ids)
         train_odds_mask = pd.MultiIndex.from_frame(self.odds_[index_cols]).isin(train_ids)
 
-        # Extract input and odds data
         X, O = self._extract(
             self.stats_[train_mask],
             self.odds_[train_odds_mask],
@@ -571,11 +517,70 @@ class BaseDataLoader(ABC):
         )
         X = self._apply_drop_na(X, drop_na_thres)
         self.odds_cols_ = O.columns
-        if learning_type == 'unsupervised':
-            self.output_cols_ = None
-            return X, None, O
+        return X, O, target_event_status, target_event_time
+
+    def extract_train_data(
+        self: Self,
+        *,
+        drop_na_thres: float = 0.0,
+        odds_type: str | None = None,
+        target_event_status: str | None = None,
+        target_event_time: pd.Timedelta | None = None,
+        input_event_status: str | None = None,
+        input_event_time: pd.Timedelta | None = None,
+    ) -> TrainData:
+        """Extract the moment-aware training data.
+
+        Read more in the [user guide][user-guide].
+
+        It downloads the selected seasons and returns the historical data a betting strategy is built and backtested on.
+        Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in `X`,
+        optionally capped at an input horizon, the target-moment outcomes become the labels `Y`, and the odds become
+        `O`. Call it again to download the data again, and keep it with `save`. When the odds source carries no markets
+        there is nothing to predict, so call `extract_exploration_data` for the features on their own.
+
+        Args:
+            drop_na_thres:
+                Threshold in `[0.0, 1.0]` controlling how aggressively feature
+                columns with missing values are dropped. `0.0` keeps all columns.
+            odds_type:
+                One of `get_odds_types()`. `None` returns no odds.
+            target_event_status:
+                `'inplay'` or `'postplay'` (default `'postplay'`).
+            target_event_time:
+                In-play target time (e.g. `pd.Timedelta('60min')`). Defaults to 0.
+            input_event_status:
+                Latest snapshot status to keep as a feature, one of `'preplay'`,
+                `'inplay'`, `'postplay'`. `None` (default) keeps every snapshot
+                before the target; e.g. `'preplay'` keeps only pre-match features.
+            input_event_time:
+                Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
+                together with `input_event_status`. Defaults to 0.
+
+        Returns:
+            (X, Y, O):
+                Moment-aware features `X`, target outcomes `Y` and odds `O`. The
+                three components share the same date index and rows.
+        """
+        X, O, target_event_status, target_event_time = self._extract_inputs(
+            odds_type,
+            drop_na_thres,
+            target_event_status,
+            target_event_time,
+            input_event_status,
+            input_event_time,
+        )
+        if not self.targets_:
+            msg = (
+                'There are no odds, so there are no markets to predict: the markets a model learns are the ones its '
+                'odds price. Pass an `odds` source, or call `extract_exploration_data` to get the features on their '
+                'own.'
+            )
+            raise ValueError(msg)
 
         # Extract output data
+        index_cols = self._identity_cols()
+        train_mask = pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._train_ids)
         Y = self._extract_targets(
             self.stats_[train_mask],
             pd.MultiIndex.from_frame(X.reset_index()[index_cols]),
@@ -590,6 +595,54 @@ class BaseDataLoader(ABC):
         # rather than imputed: an invented outcome is a match that never happened.
         labelled = Y.notna().all(axis=1)
         return X[labelled], Y[labelled], O[labelled]
+
+    def extract_exploration_data(
+        self: Self,
+        *,
+        drop_na_thres: float = 0.0,
+        target_event_status: str | None = None,
+        target_event_time: pd.Timedelta | None = None,
+        input_event_status: str | None = None,
+        input_event_time: pd.Timedelta | None = None,
+    ) -> pd.DataFrame:
+        """Extract the moment-aware features on their own, for exploration.
+
+        Read more in the [user guide][user-guide].
+
+        It downloads the selected seasons and returns the features `X`, with no targets and no odds. Use it to look at a
+        sport before choosing a `param_grid` or a model, or when the source carries no odds and so has nothing to
+        predict. The features follow the target moment and input horizon you pass.
+
+        Args:
+            drop_na_thres:
+                Threshold in `[0.0, 1.0]` controlling how aggressively feature
+                columns with missing values are dropped. `0.0` keeps all columns.
+            target_event_status:
+                `'inplay'` or `'postplay'` (default `'postplay'`).
+            target_event_time:
+                In-play target time (e.g. `pd.Timedelta('60min')`). Defaults to 0.
+            input_event_status:
+                Latest snapshot status to keep as a feature, one of `'preplay'`,
+                `'inplay'`, `'postplay'`. `None` (default) keeps every snapshot
+                before the target; e.g. `'preplay'` keeps only pre-match features.
+            input_event_time:
+                Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
+                together with `input_event_status`. Defaults to 0.
+
+        Returns:
+            X:
+                The moment-aware features of the selected matches.
+        """
+        X, _, _, _ = self._extract_inputs(
+            None,
+            drop_na_thres,
+            target_event_status,
+            target_event_time,
+            input_event_status,
+            input_event_time,
+        )
+        self.output_cols_ = None
+        return X
 
     def extract_fixtures_data(self: Self) -> FixturesData:
         """Extract the fixtures data.
