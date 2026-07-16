@@ -5,6 +5,7 @@ on:
     branches:
       - '**'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
