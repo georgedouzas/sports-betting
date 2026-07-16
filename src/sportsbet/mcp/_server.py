@@ -22,7 +22,7 @@ from sklearn.model_selection import TimeSeriesSplit
 
 from .._selection import DEFAULT_KEY_ENV, build_bettor, build_dataloader, build_venue
 from ..evaluation import backtest as run_backtest
-from ..execution import BaseVenue, BetIdentity, ExposureLimits, PlacementIntent, PlacementQuote
+from ..execution import BaseVenue, BetIdentity, BrowserSession, ExposureLimits, PlacementIntent, PlacementQuote
 from ..execution import place as run_place
 from ..execution import quote as run_quote
 
@@ -381,7 +381,11 @@ async def bet(
 
 def _venue(reference: str) -> BaseVenue:
     """Return the venue a reference names."""
-    return build_venue(reference)
+    built = build_venue(reference)
+    if not isinstance(built, BaseVenue):
+        msg = f'`{reference}` is a browser session, which has no bets of its own to place. Use the browser tools.'
+        raise TypeError(msg)
+    return built
 
 
 def _intents(key: str, records: list[dict[str, Any]]) -> list[PlacementIntent]:
@@ -518,6 +522,89 @@ async def execution_cancel(venue: str, match: str, market: str, selection: str) 
     await built.authenticate()
     receipt = await built.cancel(BetIdentity(built.key, match, market, selection))
     return {'status': receipt.status.value, 'detail': receipt.detail}
+
+
+_SESSIONS: dict[str, BrowserSession] = {}
+
+
+async def _session(venue: str) -> BrowserSession:
+    """Return the browser session a reference names, opening it once and keeping it open.
+
+    A login has to last across calls, and the browser is what holds it, so the session is kept here for as long as the
+    server runs rather than opened and closed around each call.
+    """
+    if venue not in _SESSIONS:
+        built = build_venue(venue)
+        if isinstance(built, BaseVenue):
+            msg = f'`{venue}` is a venue with an API, so it is placed at with `execution_place` rather than driven.'
+            raise TypeError(msg)
+        await built.start()
+        _SESSIONS[venue] = built
+    return _SESSIONS[venue]
+
+
+@server.tool()
+async def browser_navigate(venue: str, url: str) -> dict[str, Any]:
+    """Go to a page of a bookmaker's website and return it.
+
+    The page comes back as an accessibility snapshot: a ref for everything that can be acted on, which `browser_click`,
+    `browser_type` and `browser_select` take. Driving a bookmaker's website breaches essentially every bookmaker's
+    terms of service and risks the account being closed and the balance lost.
+    """
+    session = await _session(venue)
+    shot = await session.navigate(url)
+    return {'yaml': shot.yaml, 'url': shot.url}
+
+
+@server.tool()
+async def browser_snapshot(venue: str, selector: str | None = None, depth: int | None = None) -> dict[str, Any]:
+    """Return the page, or a part of it.
+
+    Read a part rather than the whole page where you can, since the whole page is the cost of every turn.
+    """
+    session = await _session(venue)
+    shot = await session.snapshot(selector, depth)
+    return {'yaml': shot.yaml, 'url': shot.url}
+
+
+@server.tool()
+async def browser_click(venue: str, ref: str) -> dict[str, Any]:
+    """Click an element and return the page it produced.
+
+    An element the site has disabled or hidden is not clicked and this says so, rather than reporting a click that did
+    not happen.
+    """
+    session = await _session(venue)
+    shot = await session.click(ref)
+    return {'yaml': shot.yaml, 'url': shot.url}
+
+
+@server.tool()
+async def browser_type(venue: str, ref: str, text: str) -> dict[str, Any]:
+    """Fill an element and return the page it produced."""
+    session = await _session(venue)
+    shot = await session.type(ref, text)
+    return {'yaml': shot.yaml, 'url': shot.url}
+
+
+@server.tool()
+async def browser_select(venue: str, ref: str, value: str) -> dict[str, Any]:
+    """Choose an option and return the page it produced."""
+    session = await _session(venue)
+    shot = await session.select(ref, value)
+    return {'yaml': shot.yaml, 'url': shot.url}
+
+
+@server.tool()
+async def browser_fix(venue: str, match: str, locators: dict[str, str]) -> dict[str, Any]:
+    """Pin what exploring found, so that placing does not have to find it again.
+
+    Pin a role and an accessible name rather than a ref, since a ref belongs to one state of the page and is refused
+    here. A price is not pinned at all: read it when the bet is placed.
+    """
+    session = await _session(venue)
+    pinned = session.fix(match, locators)
+    return {'match': pinned.match, 'url': pinned.url, 'locators': pinned.locators}
 
 
 def run() -> None:

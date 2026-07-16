@@ -6,6 +6,7 @@ import pytest
 
 from sportsbet.execution import (
     BetIdentity,
+    CancellationUnsupportedError,
     CredentialError,
     CredentialRef,
     ExposureLimits,
@@ -34,6 +35,7 @@ OVER_STAKE = 50.0
 FILLED = 4.0
 OPEN_EXPOSURE = 40.0
 QUOTED_EXPOSURE = 50.0
+BALANCE = 250.0
 BOTH = 2
 
 
@@ -357,3 +359,54 @@ def test_the_quote_counts_the_exposure_already_open():
     batch = quoted(venue, [intent(stake=10.0)])
     assert batch.total_stake == STAKE
     assert batch.total_exposure == QUOTED_EXPOSURE
+
+
+def test_the_venue_reports_what_it_holds():
+    """A bet that went on can be read back from the venue."""
+    venue = FakeVenue(prices=PRICES)
+    batch = quoted(venue, [intent(stake=STAKE)])
+    run(place(venue, batch, limits(), batch.total_stake, batch.total_exposure))
+    held = run(venue.read_status([identity()]))
+    assert list(held['ref']) == [identity().ref]
+    assert list(held['stake']) == [STAKE]
+
+
+def test_the_venue_reports_nothing_for_a_bet_that_never_went_on():
+    """A bet that was never placed is not at the venue, and the venue says so."""
+    venue = FakeVenue(prices=PRICES)
+    assert run(venue.read_status([identity()])).empty
+
+
+def test_the_balance_and_the_exposure_are_both_reported():
+    """The balance is what can be staked and the exposure is what already is."""
+    venue = FakeVenue(prices=PRICES, balance=BALANCE, exposure=OPEN_EXPOSURE)
+    balance, exposure = run(venue.read_balance())
+    assert balance == BALANCE
+    assert exposure == OPEN_EXPOSURE
+
+
+def test_a_venue_that_cannot_cancel_says_so_rather_than_seeming_to():
+    """A venue that cannot cancel raises rather than returning a receipt that implies it did."""
+    venue = FakeVenue(prices=PRICES, cancels=False)
+    with pytest.raises(CancellationUnsupportedError, match='cannot cancel'):
+        run(venue.cancel(identity()))
+
+
+def test_a_venue_that_can_cancel_cancels():
+    """A cancelled bet is no longer at the venue."""
+    venue = FakeVenue(prices=PRICES)
+    batch = quoted(venue, [intent(stake=STAKE)])
+    run(place(venue, batch, limits(), batch.total_stake, batch.total_exposure))
+    assert len(venue.orders) == 1
+    run(venue.cancel(identity()))
+    assert venue.orders == {}
+
+
+def test_a_cancelled_bet_can_be_placed_again():
+    """A bet that was cancelled is no longer at the venue, so it is no longer already placed."""
+    venue = FakeVenue(prices=PRICES)
+    batch = quoted(venue, [intent(stake=STAKE)])
+    run(place(venue, batch, limits(), batch.total_stake, batch.total_exposure))
+    run(venue.cancel(identity()))
+    receipts = run(place(venue, batch, limits(), batch.total_stake, batch.total_exposure))
+    assert receipts['status'].iloc[0] == PlacementStatus.MATCHED_FULL.value

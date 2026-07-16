@@ -6,6 +6,8 @@ until the caller passes back the exact figures that were quoted.
 
 from __future__ import annotations
 
+from typing import Any
+
 from ._base import (
     BaseVenue,
     BetIdentity,
@@ -28,11 +30,14 @@ __all__: list[str] = [
     'BaseVenue',
     'BetIdentity',
     'BetfairVenue',
+    'BrowserSession',
     'CancellationUnsupportedError',
     'CredentialError',
     'CredentialRef',
     'ExecutionError',
     'ExposureLimits',
+    'FixedSession',
+    'PageSnapshot',
     'PlacementIntent',
     'PlacementQuote',
     'PlacementReceipt',
@@ -44,3 +49,23 @@ __all__: list[str] = [
     'receipts_frame',
     'resolve',
 ]
+
+
+_BROWSER = {'BrowserSession', 'FixedSession', 'PageSnapshot'}
+_MISSING = "Driving a site needs the execution extra. Install it with `pip install 'sports-betting[execution]'`."
+
+
+def __getattr__(name: str) -> Any:  # noqa: ANN401
+    """Return a name that needs the browser, importing it only when it is asked for.
+
+    The browser lives behind the optional extra, so importing it here would make the whole module need it. Everything
+    that reaches a venue through its own API needs nothing beyond what the library already installs.
+    """
+    if name in _BROWSER:
+        try:
+            from . import _browser  # noqa: PLC0415
+        except ImportError as missing:
+            raise ImportError(_MISSING) from missing
+        return getattr(_browser, name)
+    msg = f'module {__name__!r} has no attribute {name!r}'
+    raise AttributeError(msg)

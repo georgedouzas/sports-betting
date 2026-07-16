@@ -25,6 +25,12 @@ TOOLS = [
     'execution_place',
     'execution_read_status',
     'execution_cancel',
+    'browser_navigate',
+    'browser_snapshot',
+    'browser_click',
+    'browser_type',
+    'browser_select',
+    'browser_fix',
 ]
 
 
@@ -46,7 +52,7 @@ def test_a_tool_is_told_what_to_do_and_reads_no_file():
     for tool in tools:
         properties = tool.inputSchema['properties']
         assert 'config_path' not in properties
-        wanted = 'venue' if tool.name.startswith('execution_') else 'stats'
+        wanted = 'venue' if tool.name.startswith(('execution_', 'browser_')) else 'stats'
         assert wanted in properties
 
 
@@ -61,7 +67,7 @@ def test_a_key_is_never_an_argument():
     for tool in tools:
         properties = set(tool.inputSchema['properties'])
         assert not properties & forbidden, f'`{tool.name}` can be handed {sorted(properties & forbidden)}'
-        if not tool.name.startswith('execution_'):
+        if not tool.name.startswith(('execution_', 'browser_')):
             assert 'odds_key_env' in properties
 
 

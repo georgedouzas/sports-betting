@@ -182,22 +182,26 @@ def build_venue(venue: str) -> BaseVenue:
     The import is made here rather than at the top of the file because placing lives behind an optional extra, and this
     module is imported on every run.
 
+    A venue with an API and a site driven in a browser are different things, and both are named the same way. The first
+    places once and only once and holds to the ceilings, because the library is what calls it. The second is a browser
+    the agent places with, so those are the agent's.
+
     Args:
         venue:
             A ready-made venue, or where one of your own lives, as in `venue.py:VENUE`.
 
     Returns:
         built:
-            The venue.
+            The venue, or the browser session.
     """
     try:
-        from .execution import BaseVenue, BetfairVenue  # noqa: PLC0415
+        from .execution import BaseVenue, BetfairVenue, BrowserSession  # noqa: PLC0415
     except ImportError as missing:
         raise SelectionError(EXECUTION_EXTRA) from missing
     if ':' in venue:
         built = _load_object(venue)
-        if not isinstance(built, BaseVenue):
-            msg = f'`{venue}` is not a venue.'
+        if not isinstance(built, BaseVenue | BrowserSession):
+            msg = f'`{venue}` is not a venue and is not a browser session.'
             raise SelectionError(msg)
         return built
     if venue == 'betfair':

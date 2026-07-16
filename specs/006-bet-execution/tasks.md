@@ -144,20 +144,20 @@ alone.
 
 ### Tests for User Story 2
 
-- [ ] T032 [P] [US2] Test status reporting in `tests/test_execution.py`: bets are reported open, matched, rejected or settled, including a partial match.
-- [ ] T033 [P] [US2] Test traceability in `tests/test_execution.py`: every receipt identifies the venue, the market, the selection, the stake, the price obtained and the value bet (FR-016). Assert the trace works FROM THE VENUE ALONE, with no local state, which is SC-005 and the reason identity excludes the run.
-- [ ] T034 [P] [US2] Test cancellation honesty in `tests/test_execution.py`: a venue with `can_cancel=False` raises `CancellationUnsupported` rather than returning a receipt implying it cancelled (FR-008).
+- [X] T032 [P] [US2] Test status reporting in `tests/test_execution.py`: bets are reported open, matched, rejected or settled, including a partial match.
+- [X] T033 [P] [US2] Test traceability in `tests/test_execution.py`: every receipt identifies the venue, the market, the selection, the stake, the price obtained and the value bet (FR-016). Assert the trace works FROM THE VENUE ALONE, with no local state, which is SC-005 and the reason identity excludes the run.
+- [X] T034 [P] [US2] Test cancellation honesty in `tests/test_execution.py`: a venue with `can_cancel=False` raises `CancellationUnsupported` rather than returning a receipt implying it cancelled (FR-008).
 
 ### Implementation for User Story 2
 
-- [ ] T035 [P] [US2] Implement `BetfairVenue.read_status` in `src/sportsbet/execution/_betfair.py` via `listCurrentOrders(customerOrderRefs=[...])`. Chunk conservatively: the documented 250 cap applies to `betIds` and `marketIds`, and the limit for `customerOrderRefs` is undocumented, so do not assume it generalises (research D3).
-- [ ] T036 [P] [US2] Implement `BetfairVenue.read_balance` in `src/sportsbet/execution/_betfair.py` via `getAccountFunds`, returning balance and open exposure.
-- [ ] T037 [P] [US2] Implement `BetfairVenue.cancel` in `src/sportsbet/execution/_betfair.py` via `cancelOrders`, with `can_cancel = True`.
-- [ ] T038 [US2] Add `execution status`, `execution balance` and `execution cancel` to `src/sportsbet/cli/_execution.py`.
-- [ ] T039 [US2] Add `execution_read_status`, `execution_read_balance` and `execution_cancel` tools to `src/sportsbet/mcp/_server.py`.
-- [ ] T040 [US2] Extend `tests/cli/test_parity.py` for the US2 capabilities.
+- [X] T035 [P] [US2] Implement `BetfairVenue.read_status` in `src/sportsbet/execution/_betfair.py` via `listCurrentOrders(customerOrderRefs=[...])`. Chunk conservatively: the documented 250 cap applies to `betIds` and `marketIds`, and the limit for `customerOrderRefs` is undocumented, so do not assume it generalises (research D3).
+- [X] T036 [P] [US2] Implement `BetfairVenue.read_balance` in `src/sportsbet/execution/_betfair.py` via `getAccountFunds`, returning balance and open exposure.
+- [X] T037 [P] [US2] Implement `BetfairVenue.cancel` in `src/sportsbet/execution/_betfair.py` via `cancelOrders`, with `can_cancel = True`.
+- [X] T038 [US2] Add `execution status`, `execution balance` and `execution cancel` to `src/sportsbet/cli/_execution.py`.
+- [X] T039 [US2] Add `execution_read_status`, `execution_read_balance` and `execution_cancel` tools to `src/sportsbet/mcp/_server.py`.
+- [X] T040 [US2] Extend `tests/cli/test_parity.py` for the US2 capabilities.
 
-**Checkpoint**: Placement stops being write-only.
+**Checkpoint**: DONE. Placement stops being write-only.
 
 ---
 
@@ -178,24 +178,24 @@ agent's on this path, and the docs say so.
 
 ### Tests for User Story 3
 
-- [ ] T041 [P] [US3] Test that the guarantee is unreachable in `tests/test_browser.py`: `BrowserSession` is not a `BaseVenue` and exposes no `place`, `read_status` or `cancel`. A caller must not be able to reach a guarantee that does not exist. This test IS the FR-005/FR-007 resolution, so it stays permanently.
-- [ ] T042 [P] [US3] Test actionability in `tests/test_browser.py` against a mock bet slip served over loopback: `click` on a DISABLED confirm control fails rather than reporting success, and the same for a hidden one. This is a permanent regression test and the property that decided Playwright over injected JavaScript, which silently "clicked" a disabled Place-bet button under test (research D4). A false success on a confirm button is a receipt that lies about money.
-- [ ] T043 [P] [US3] Test the pinned session in `tests/test_browser.py`: serve a page whose odds widget re-renders on a timer, changing every snapshot ref. Explore, `fix` the stake and confirm locators, act after a re-render, and assert the pinned locators still resolve. Assert `fix` rejects a raw ref and stores no price.
-- [ ] T044 [P] [US3] Test the block path in `tests/test_browser.py`: a page returning a block response yields `BLOCKED` and stops. Assert no retry with different timing, headers, or presentation (FR-023).
-- [ ] T045 [P] [US3] Test `notes` in `tests/test_browser.py`: stored and returned verbatim through `execution_venue_info`, never parsed. Assert the package holds no site table, no selector pack, and no default naming a bookmaker.
+- [X] T041 [P] [US3] Test that the guarantee is unreachable in `tests/test_browser.py`: `BrowserSession` is not a `BaseVenue` and exposes no `place`, `read_status` or `cancel`. A caller must not be able to reach a guarantee that does not exist. This test IS the FR-005/FR-007 resolution, so it stays permanently.
+- [X] T042 [P] [US3] Test actionability in `tests/test_browser.py` against a mock bet slip served over loopback: `click` on a DISABLED confirm control fails rather than reporting success, and the same for a hidden one. This is a permanent regression test and the property that decided Playwright over injected JavaScript, which silently "clicked" a disabled Place-bet button under test (research D4). A false success on a confirm button is a receipt that lies about money.
+- [X] T043 [P] [US3] Test the pinned session in `tests/test_browser.py`: serve a page whose odds widget re-renders on a timer, changing every snapshot ref. Explore, `fix` the stake and confirm locators, act after a re-render, and assert the pinned locators still resolve. Assert `fix` rejects a raw ref and stores no price.
+- [X] T044 [P] [US3] Test the block path in `tests/test_browser.py`: a page returning a block response yields `BLOCKED` and stops. Assert no retry with different timing, headers, or presentation (FR-023).
+- [X] T045 [P] [US3] Test `notes` in `tests/test_browser.py`: stored and returned verbatim through `execution_venue_info`, never parsed. Assert the package holds no site table, no selector pack, and no default naming a bookmaker.
 
 ### Implementation for User Story 3
 
-- [ ] T046 [US3] Implement `BrowserSession.__init__` in `src/sportsbet/execution/_browser.py` taking `key`, `url`, `notes`, `credential_env`, `user_data_dir` and `min_interval`. Parameters stored unmodified and unvalidated per Constitution Principle I. `notes` is ONE free-text blob rather than structured URL fields, because nothing in the library parses it and the only reader is the agent.
-- [ ] T047 [US3] Implement session lifecycle in `src/sportsbet/execution/_browser.py`: one `BrowserContext` per process via `launch_persistent_context(user_data_dir=...)`, held across tool calls so a login survives them. One instance per `user_data_dir`. Playwright's API is not thread-safe, so manage `start()`/`stop()` explicitly rather than using the documented `with sync_playwright()` idiom (research D6).
-- [ ] T048 [US3] Implement `navigate` and `snapshot` in `src/sportsbet/execution/_browser.py` returning `PageSnapshot` from `locator.aria_snapshot(mode='ai')`. Scope by locator or depth rather than snapshotting `body`, since it is the token cost of every agent turn. Note `page.accessibility.snapshot()` was removed in Playwright 1.57 and plain `aria_snapshot()` without `mode='ai'` omits the refs.
-- [ ] T049 [US3] Implement `click`, `type` and `select` in `src/sportsbet/execution/_browser.py`, each taking a ref and returning the resulting snapshot so the agent sees what its action did without a second call. Pace with `min_interval`.
-- [ ] T050 [US3] Implement `fix(match, locators)` and `FixedSession` in `src/sportsbet/execution/_browser.py`. Store roles and accessible names, NEVER refs, which go stale on the re-render an odds widget does constantly. Store NO price: the price is read at placement and checked against `min_price`, and pinning it would defeat the only protection between quoting and landing. A `FixedSession` is navigation state, not placement state, so it does not conflict with FR-015.
-- [ ] T051 [US3] Add `execution page read`, `execution page act` and `execution page fix` to `src/sportsbet/cli/_execution.py`.
-- [ ] T052 [US3] Add `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_select` and `browser_fix` tools to `src/sportsbet/mcp/_server.py`. They carry no site knowledge: the agent supplies which site, which control, which market.
-- [ ] T053 [US3] Extend `tests/cli/test_parity.py` for the US3 capabilities.
+- [X] T046 [US3] Implement `BrowserSession.__init__` in `src/sportsbet/execution/_browser.py` taking `key`, `url`, `notes`, `credential_env`, `user_data_dir` and `min_interval`. Parameters stored unmodified and unvalidated per Constitution Principle I. `notes` is ONE free-text blob rather than structured URL fields, because nothing in the library parses it and the only reader is the agent.
+- [X] T047 [US3] Implement session lifecycle in `src/sportsbet/execution/_browser.py`: one `BrowserContext` per process via `launch_persistent_context(user_data_dir=...)`, held across tool calls so a login survives them. One instance per `user_data_dir`. Playwright's API is not thread-safe, so manage `start()`/`stop()` explicitly rather than using the documented `with sync_playwright()` idiom (research D6).
+- [X] T048 [US3] Implement `navigate` and `snapshot` in `src/sportsbet/execution/_browser.py` returning `PageSnapshot` from `locator.aria_snapshot(mode='ai')`. Scope by locator or depth rather than snapshotting `body`, since it is the token cost of every agent turn. Note `page.accessibility.snapshot()` was removed in Playwright 1.57 and plain `aria_snapshot()` without `mode='ai'` omits the refs.
+- [X] T049 [US3] Implement `click`, `type` and `select` in `src/sportsbet/execution/_browser.py`, each taking a ref and returning the resulting snapshot so the agent sees what its action did without a second call. Pace with `min_interval`.
+- [X] T050 [US3] Implement `fix(match, locators)` and `FixedSession` in `src/sportsbet/execution/_browser.py`. Store roles and accessible names, NEVER refs, which go stale on the re-render an odds widget does constantly. Store NO price: the price is read at placement and checked against `min_price`, and pinning it would defeat the only protection between quoting and landing. A `FixedSession` is navigation state, not placement state, so it does not conflict with FR-015.
+- [X] T051 [US3] Add `execution page read`, `execution page act` and `execution page fix` to `src/sportsbet/cli/_execution.py`.
+- [X] T052 [US3] Add `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_select` and `browser_fix` tools to `src/sportsbet/mcp/_server.py`. They carry no site knowledge: the agent supplies which site, which control, which market.
+- [X] T053 [US3] Extend `tests/cli/test_parity.py` for the US3 capabilities.
 
-**Checkpoint**: An agent can drive a site, and the library promises only what it can keep.
+**Checkpoint**: DONE. An agent can drive a site, and the library promises only what it can keep.
 
 ---
 
