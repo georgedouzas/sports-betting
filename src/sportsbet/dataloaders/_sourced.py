@@ -42,7 +42,7 @@ class DataLoader(BaseDataLoader):
         odds:
             The source of the odds. It may differ from the statistics source,
             since free statistics and paid odds are complementary. The default
-            `None` gives a dataloader with no markets, for unsupervised use.
+            `None` gives a dataloader with no markets, for `extract_exploration_data`.
 
         aliases:
             The team names of the odds source, mapped to the names of the

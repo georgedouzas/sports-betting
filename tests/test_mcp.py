@@ -12,6 +12,7 @@ from sportsbet.mcp import server
 SELECTION = {'stats': 'football-data', 'odds': 'football-data', 'leagues': ['England']}
 TOOLS = [
     'available_params',
+    'extract_exploration_data',
     'extract_train_data',
     'extract_fixtures_data',
     'backtest',

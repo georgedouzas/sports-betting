@@ -74,13 +74,13 @@ def dataloader(fetched: list[str], monkeypatch: pytest.MonkeyPatch) -> DataLoade
 
 def test_training_fetches_only_the_selected_seasons(dataloader: DataLoader, fetched: list[str]) -> None:
     """Test extracting the training data downloads the selected seasons and nothing of the fixtures."""
-    dataloader.extract_train_data(learning_type='unsupervised')
+    dataloader.extract_exploration_data()
     assert fetched == ['train_2024']
 
 
 def test_fixtures_fetch_the_current_season_not_the_selected_one(dataloader: DataLoader, fetched: list[str]) -> None:
     """Test extracting the fixtures downloads the current data, separately from the training seasons."""
-    dataloader.extract_train_data(learning_type='unsupervised')
+    dataloader.extract_exploration_data()
     fetched.clear()
     dataloader.extract_fixtures_data()
     assert 'current' in fetched
@@ -89,9 +89,9 @@ def test_fixtures_fetch_the_current_season_not_the_selected_one(dataloader: Data
 
 def test_extracting_again_downloads_again(dataloader: DataLoader, fetched: list[str]) -> None:
     """Test each extraction downloads afresh, so the object always carries the latest data."""
-    dataloader.extract_train_data(learning_type='unsupervised')
+    dataloader.extract_exploration_data()
     fetched.clear()
-    dataloader.extract_train_data(learning_type='unsupervised')
+    dataloader.extract_exploration_data()
     assert 'train_2024' in fetched
 
 
@@ -102,4 +102,4 @@ def test_a_threshold_that_is_not_a_proportion_is_refused(
 ) -> None:
     """Test `drop_na_thres` is a proportion, so a value outside `[0, 1]` is refused rather than misread."""
     with pytest.raises(ValueError, match='drop_na_thres'):
-        dataloader.extract_train_data(learning_type='unsupervised', drop_na_thres=drop_na_thres)
+        dataloader.extract_exploration_data(drop_na_thres=drop_na_thres)

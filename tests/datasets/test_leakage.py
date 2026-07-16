@@ -108,8 +108,7 @@ def test_without_odds_there_is_nothing_to_predict_but_the_features_remain():
     with pytest.raises(ValueError, match='no markets to predict'):
         dataloader.extract_train_data()
 
-    X, Y, O = dataloader.extract_train_data(learning_type='unsupervised')
+    X = dataloader.extract_exploration_data()
     matches = 2
     assert len(X) == matches
-    assert Y is None
-    assert O.empty
+    assert not X.empty

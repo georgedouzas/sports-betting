@@ -12,7 +12,7 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
-from ._options import DATALOADER, EXTRACTION, OUTPUT, SELECTION, options
+from ._options import DATALOADER, EXTRACTION, HORIZON, OUTPUT, SELECTION, options
 from ._utils import extraction, load_dataloader, print_console, reported, save_dataloader, selected
 
 
@@ -86,6 +86,31 @@ def extract_train(output: str, **selection: object) -> None:
         ]
         print_console(frames, titles)
         Console().print(f'Saved the dataloader to [bold]{output}[/bold].')
+
+
+@dataloader.group()
+def exploration() -> None:
+    """Work with the features on their own, for exploring a sport."""
+    return
+
+
+@exploration.command(name='extract')
+@options(SELECTION, HORIZON, OUTPUT)
+def extract_exploration(data_path: str | None, **selection: object) -> None:
+    """Download the features of the selection, with no targets and no odds.
+
+    Use it to look at a sport before choosing what to select or model, or when the source carries no odds and so has
+    nothing to predict.
+    """
+    with reported(), selected(selection) as loader:
+        if loader is None:
+            return
+        X = loader.extract_exploration_data(**extraction(selection))
+        print_console([X], ['Exploration features'])
+        if data_path is not None:
+            written = Path(data_path) / 'sports-betting-data'
+            written.mkdir(parents=True, exist_ok=True)
+            X.to_csv(written / 'X.csv')
 
 
 @dataloader.group()
