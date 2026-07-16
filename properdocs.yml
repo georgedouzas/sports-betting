@@ -32,6 +32,7 @@ nav:
     - The theory of value betting: practice/value_betting.md
     - The moment you bet: practice/betting_moment.md
   - Interfaces:
+    - interfaces/index.md
     - Python API: api/
     - CLI: interfaces/cli.md
     - Agents: interfaces/agents.md
