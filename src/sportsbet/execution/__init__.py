@@ -25,6 +25,7 @@ from ._base import (
 from ._betfair import BetfairVenue
 from ._credentials import CredentialError, CredentialRef, resolve
 from ._place import place, quote, value_bet_intents
+from ._schedule import betting_moment, execute, feasible
 
 __all__: list[str] = [
     'BaseVenue',
@@ -44,6 +45,9 @@ __all__: list[str] = [
     'PlacementReceiptSchema',
     'PlacementStatus',
     'VenueBlockedError',
+    'betting_moment',
+    'execute',
+    'feasible',
     'place',
     'quote',
     'receipts_frame',

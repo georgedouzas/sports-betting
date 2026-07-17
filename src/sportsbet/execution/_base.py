@@ -1,12 +1,7 @@
-"""Implements what a bet is before it is placed, and what a venue is asked to do with it.
+"""Types shared by the venues and the placing.
 
-A bettor says which markets are worth backing. It stops there, and it holds no credential and reaches nothing, so a
-saved model cannot spend money. Placing is what this module does with what a bettor produced.
-
-A bet is the same bet whenever it names the same venue, match, market and selection. That is what its identity is made
-of, and its reference is derived from those four rather than remembered, so a run that crashed and started again
-recomputes the reference it used before and finds its own bet at the venue. Nothing here writes down what was placed:
-the venue is the record, and a second copy is a thing that drifts.
+A bet is the same bet when it names the same venue, match, market and selection. Its reference is derived from those
+four rather than stored, so a restarted run recomputes it and finds its own bet at the venue.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -155,9 +150,10 @@ class PlacementReceiptSchema(pa.DataFrameModel):
     detail: str = pa.Field(nullable=True)
 
     class Config:
-        """Allow no column beyond the ones named."""
+        """Allow no column beyond the ones named, and coerce the dtypes."""
 
         strict = True
+        coerce = True
 
 
 def receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
@@ -180,14 +176,7 @@ def receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
         for receipt in receipts
     ]
     frame = pd.DataFrame.from_records(records, columns=list(PlacementReceiptSchema.to_schema().columns))
-    frame = frame.astype(
-        {'ref': str, 'venue': str, 'match': str, 'market': str, 'selection': str, 'status': str, 'stake': float},
-    )
-    frame['price'] = pd.to_numeric(frame['price'], errors='coerce').astype(float)
-    frame['placed_at'] = pd.to_datetime(frame['placed_at'], utc=True).astype('datetime64[ns, UTC]')
-    frame['venue_bet_id'] = frame['venue_bet_id'].astype(object)
-    frame['value_bet'] = frame['value_bet'].astype(object)
-    frame['detail'] = frame['detail'].astype(object)
+    frame['placed_at'] = pd.to_datetime(frame['placed_at'], utc=True)
     result: pd.DataFrame = PlacementReceiptSchema.validate(frame)
     return result
 

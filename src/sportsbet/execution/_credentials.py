@@ -1,8 +1,7 @@
-"""Implements how a secret is reached, which is by name.
+"""Read a secret from the variable named for it, never from an argument.
 
-A caller names the variable holding a secret and never carries the secret itself, exactly as an odds key is named today.
-An argument is written into a shell history, a transcript and a traceback, so a secret passed as one has been published.
-Named, it stays where the user put it.
+An argument reaches a shell history, a transcript and a traceback, so a named variable is read where it is used and
+travels nowhere.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
