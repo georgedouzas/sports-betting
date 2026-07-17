@@ -262,15 +262,22 @@ def test_quoting_downloads_nothing_and_fits_nothing(ready, monkeypatch):
     assert built == []
 
 
-def test_the_notes_come_back_exactly_as_they_were_written(tmp_path):
-    """Test the site knowledge reaches the agent and the library never reads it."""
+def test_the_notes_of_a_website_reach_the_agent(tmp_path):
+    """Test the site knowledge of a browser session reaches the agent and the library never reads it.
+
+    The tool has to answer for a browser session, since that is the venue kind whose notes exist. A plain venue would
+    have hidden that the tool refused one.
+    """
     path = tmp_path / 'venue.py'
     path.write_text(
-        "from tests.conftest import FakeVenue\n"
-        "VENUE = FakeVenue()\n"
-        "VENUE.notes = 'The slip opens on the right. Confirm is two steps.'\n"
-        "VENUE.url = 'https://example.invalid/stoixima'\n",
+        "from sportsbet.execution import BrowserSession\n"
+        "VENUE = BrowserSession(\n"
+        "    key='novibet',\n"
+        "    url='https://example.invalid/stoixima',\n"
+        "    notes='The slip opens on the right. Confirm is two steps.',\n"
+        ")\n",
     )
     info = _call('execution_venue_info', venue=f'{path}:VENUE')
+    assert info['key'] == 'novibet'
     assert info['notes'] == 'The slip opens on the right. Confirm is two steps.'
     assert info['url'] == 'https://example.invalid/stoixima'

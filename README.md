@@ -59,6 +59,10 @@ Its two main components are dataloaders and bettors:
 - A bettor backtests a betting strategy and predicts the value bets of upcoming events. It wraps any scikit-learn
   estimator.
 
+Once a bettor has found the value bets, execution places them. A venue with an official betting API is placed at by the
+library. A bookmaker with no API is driven in a browser by your agent, on your own account, with the risk of that
+stated plainly.
+
 ## Installation
 
 For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
@@ -71,6 +75,13 @@ To drive the library from an AI agent, install the MCP server:
 
 ```bash
 pip install 'sports_betting[mcp]'
+```
+
+To place bets as well as find them, add the execution extra. Driving a bookmaker's website also needs a browser:
+
+```bash
+pip install 'sports_betting[mcp,execution]'
+python -m playwright install chromium
 ```
 
 Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
@@ -222,8 +233,56 @@ You: Fine. Any value bets in the upcoming fixtures?
 > another league, select it. Given what we found I would hold off staking: the edge is Italy alone, four seasons found
 > after a dozen tries. Hold a season back and check it there first.
 
+You: Say the season is on and there are value bets. How would you actually place them?
+
+> Claude: By quoting first and staking only once you have seen the quote. The leagues are in their summer break, so I
+> will show it on two example draws rather than invent live prices. Here is the quote for a £50 stake on each:
+>
+> ```text
+> total_stake 100.0 | total_exposure 100.0
+> ```
+>
+> Running it now, the way you would by default, places nothing:
+>
+> ```text
+>              match market selection  status  stake  detail
+> Juventus vs Napoli   draw  Juventus dry_run    0.0  Nothing was staked. To place these bets, pass back the quoted stake of 100.0 and the quoted exposure of 100.0.
+>      Roma vs Lazio   draw      Roma dry_run    0.0  Nothing was staked. To place these bets, pass back the quoted stake of 100.0 and the quoted exposure of 100.0.
+> ```
+>
+> A dry run is not a flag I remembered to set. It is what happens until I pass the quoted figures back exactly. If I
+> pass the wrong ones, it still stakes nothing and tells me the real ones:
+>
+> ```text
+>              status  detail
+> refused_unconfirmed  Nothing was staked. The quoted stake is 100.0 and the quoted exposure is 100.0, but 10.0 and 10.0 were passed back.
+> refused_unconfirmed  Nothing was staked. The quoted stake is 100.0 and the quoted exposure is 100.0, but 10.0 and 10.0 were passed back.
+> ```
+>
+> Only the quoted figures place the bets, one at a time, each with a receipt:
+>
+> ```text
+>              match market selection       status  stake  price
+> Juventus vs Napoli   draw  Juventus matched_full   50.0   3.10
+>      Roma vs Lazio   draw      Roma matched_full   50.0   3.25
+> ```
+>
+> That was a venue with an official API, which I place at for you. A bookmaker with no API is different: I drive its
+> website on your account, which breaches essentially every bookmaker's terms of service and risks the account and the
+> balance in it. I read the page as something I can act on, and I refuse to click a confirm button the site has
+> disabled rather than pretend the bet went on:
+>
+> ```yaml
+> - form "Bet slip" [ref=e2]:
+>   - textbox "Stake" [ref=e3]: "10.00"
+>   - button "Place bet" [ref=e4]
+>   - button "Confirm bet" [disabled] [ref=e5]
+> ```
+
 The agent names the environment variable holding your API key, never the key itself. Extracting the data downloads it,
 so a paid odds feed spends only when you extract. Do it once and `save` the dataloader rather than re-extracting.
+Placing spends real money, so it refuses until you confirm the quote, and it never evades a venue that blocks
+automation.
 
 ### Python API
 

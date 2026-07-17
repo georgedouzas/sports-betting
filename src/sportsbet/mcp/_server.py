@@ -487,12 +487,14 @@ def _quote_of(key: str, held: dict[str, Any]) -> PlacementQuote:
 async def execution_venue_info(venue: str) -> dict[str, Any]:
     """Return what a venue is and what its owner wrote down about the site.
 
-    The notes come back exactly as they were written. The library does not read them: they are for you.
+    It answers for a venue with an API and for a bookmaker's website alike, since it is the tool that hands a website's
+    notes to the agent. The notes come back exactly as they were written. The library does not read them: they are for
+    you.
     """
-    built = _venue(venue)
+    built = build_venue(venue)
     return {
         'key': built.key,
-        'can_cancel': built.can_cancel,
+        'can_cancel': getattr(built, 'can_cancel', False),
         'url': getattr(built, 'url', None),
         'notes': getattr(built, 'notes', None),
     }
