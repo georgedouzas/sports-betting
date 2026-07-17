@@ -298,7 +298,7 @@ def test_two_selections_on_one_market_are_two_bets():
 
 def test_the_same_selection_at_two_venues_are_two_bets():
     """One selection at two venues is two bets, since the venue is part of what makes a bet that bet."""
-    assert identity(venue='fake').ref != identity(venue='betfair').ref
+    assert identity(venue='fake').ref != identity(venue='other').ref
 
 
 def test_placing_keeps_no_state_of_its_own(tmp_path, monkeypatch):

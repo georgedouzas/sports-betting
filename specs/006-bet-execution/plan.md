@@ -1,5 +1,9 @@
 # Implementation Plan: Bet execution
 
+> REVERSED after implementation: the maintainer rejected shipping any bookmaker in the library. `BetfairVenue`
+> was removed. A venue with an API is now user-provided (`venue.py:VENUE`), like a model. The Betfair analysis
+> below is kept as the historical rationale for the venue contract's shape, not as a shipped adapter.
+
 **Branch**: `006-bet-execution` | **Date**: 2026-07-16 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `specs/006-bet-execution/spec.md`

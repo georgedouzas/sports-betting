@@ -103,7 +103,7 @@ Most bookmakers publish no betting API. For those, the user points an agent at t
 #### The venue contract
 
 - **FR-005**: The system MUST define one venue contract that every venue implements, covering: authenticate, list markets and their current prices, read balance and current exposure, place a bet, read the status of placed and open bets, and cancel a bet where the venue supports cancelling.
-- **FR-006**: The system MUST ship a reference implementation of that contract against a venue with an official, sanctioned betting API.
+- **FR-006**: The system MUST NOT ship an implementation of the contract against any specific bookmaker or exchange. A venue with an official API is supplied by the user, named the way a model is (`venue.py:VENUE`). Superseded the earlier requirement to ship a Betfair reference adapter: the maintainer rejected shipping any bookmaker in the library, since the venue is meant to be user-provided and venue-agnostic. The contract is proved in tests against a fake, not a shipped bookmaker.
 - **FR-007**: The system MUST support a venue that publishes no API by exposing generic browser and page capabilities to an agent: navigate, read the page in a form the agent can reason about, and act on it. The agent supplies the knowledge of that particular site. The system MUST NOT ship or maintain per-site adapters, and MUST NOT claim that any given site works.
 - **FR-008**: A venue that cannot cancel MUST say so rather than appear to cancel.
 

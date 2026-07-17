@@ -63,10 +63,10 @@ class BetIdentity:
 
     Examples:
         >>> from sportsbet.execution import BetIdentity
-        >>> identity = BetIdentity('betfair', 'Arsenal vs Chelsea', 'home_win', 'Arsenal')
+        >>> identity = BetIdentity('exchange', 'Arsenal vs Chelsea', 'home_win', 'Arsenal')
         >>> identity.ref
-        '1b16c73657a13b3fdd702e9225072b84'
-        >>> BetIdentity('betfair', 'Arsenal vs Chelsea', 'home_win', 'Arsenal').ref == identity.ref
+        '2f3152b1a4f9f6333904f3624320d921'
+        >>> BetIdentity('exchange', 'Arsenal vs Chelsea', 'home_win', 'Arsenal').ref == identity.ref
         True
     """
 

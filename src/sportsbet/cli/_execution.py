@@ -135,7 +135,7 @@ def execution() -> None:
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 def venue(venue_ref: str) -> None:
     """Show what a venue is and what it was told about the site."""
     with reported():
@@ -148,7 +148,7 @@ def venue(venue_ref: str) -> None:
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option(
     '--dataloader',
     '-d',
@@ -168,7 +168,7 @@ def markets(venue_ref: str, dataloader_path: str) -> None:
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 def balance(venue_ref: str) -> None:
     """Show the balance and what is currently at stake."""
     with reported():
@@ -178,7 +178,7 @@ def balance(venue_ref: str) -> None:
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option(
     '--dataloader',
     '-d',
@@ -222,7 +222,7 @@ def quote(venue_ref: str, dataloader_path: str, bettor_path: str, stake: float, 
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option(
     '--quote',
     '-q',
@@ -264,7 +264,7 @@ def place(
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option(
     '--quote',
     '-q',
@@ -283,7 +283,7 @@ def status(venue_ref: str, quote_path: str) -> None:
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option('--match', required=True, help='The match the bet is on.')
 @click.option('--market', required=True, help='The market the bet is on.')
 @click.option('--selection', required=True, help='The selection the bet backs.')
@@ -309,7 +309,7 @@ def page() -> None:
 
 
 @page.command('read')
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option('--url', help='The page to read. Without it the venue\'s own url is read.')
 @click.option('--selector', help='The part of the page to read. Reading a part keeps a turn cheap.')
 @click.option('--depth', type=int, help='How far down to read.')
@@ -321,7 +321,7 @@ def page_read(venue_ref: str, url: str | None, selector: str | None, depth: int 
 
 
 @page.command('act')
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option('--url', required=True, help='The page the ref was read on.')
 @click.option('--click', 'click_ref', help='The ref of an element to click.')
 @click.option('--type', 'type_ref', help='The ref of an element to fill.')
@@ -344,7 +344,7 @@ def page_act(
 
 
 @page.command('fix')
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option('--url', required=True, help='The page that was explored.')
 @click.option('--match', required=True, help='The match to pin the session to.')
 @click.option(
@@ -419,12 +419,22 @@ async def _fix(session: BrowserSession, url: str, match: str, locators: dict[str
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option(
-    '--dataloader', '-d', 'dataloader_path', required=True, type=click.Path(exists=True), help='A saved dataloader.',
+    '--dataloader',
+    '-d',
+    'dataloader_path',
+    required=True,
+    type=click.Path(exists=True),
+    help='A saved dataloader.',
 )
 @click.option(
-    '--bettor', '-b', 'bettor_path', required=True, type=click.Path(exists=True), help='A model saved by `fit`.',
+    '--bettor',
+    '-b',
+    'bettor_path',
+    required=True,
+    type=click.Path(exists=True),
+    help='A model saved by `fit`.',
 )
 @click.option('--stake', type=float, required=True, help='What to stake on each value bet.')
 @click.option('--confirm-total', type=float, help='The quoted total, passed back to place the bets.')

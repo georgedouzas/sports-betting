@@ -22,7 +22,6 @@ from ._base import (
     VenueBlockedError,
     receipts_frame,
 )
-from ._betfair import BetfairVenue
 from ._credentials import CredentialError, CredentialRef, resolve
 from ._place import place, quote, value_bet_intents
 from ._schedule import betting_moment, execute, feasible
@@ -30,7 +29,6 @@ from ._schedule import betting_moment, execute, feasible
 __all__: list[str] = [
     'BaseVenue',
     'BetIdentity',
-    'BetfairVenue',
     'BrowserSession',
     'CancellationUnsupportedError',
     'CredentialError',

@@ -1,5 +1,9 @@
 # Phase 0 Research: Bet execution
 
+> REVERSED after implementation: the maintainer rejected shipping any bookmaker in the library. `BetfairVenue`
+> was removed. A venue with an API is now user-provided (`venue.py:VENUE`), like a model. The Betfair analysis
+> below is kept as the historical rationale for the venue contract's shape, not as a shipped adapter.
+
 **Feature**: [spec.md](./spec.md) | **Date**: 2026-07-16
 
 Nine decisions. Two of them falsified an assumption the spec was resting on, and both
