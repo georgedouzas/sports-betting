@@ -4,6 +4,8 @@ import asyncio
 
 import pytest
 
+from sportsbet.dataloaders import DataLoader
+from sportsbet.evaluation import OddsComparisonBettor
 from sportsbet.execution import (
     BetIdentity,
     CancellationUnsupportedError,
@@ -15,7 +17,9 @@ from sportsbet.execution import (
     place,
     quote,
     resolve,
+    value_bet_intents,
 )
+from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
 from .conftest import FakeVenue
 
@@ -37,6 +41,7 @@ OPEN_EXPOSURE = 40.0
 QUOTED_EXPOSURE = 50.0
 BALANCE = 250.0
 BOTH = 2
+FALLBACK_PRICE = 1.01
 
 
 def identity(match=MATCH, market='home_win', selection='Arsenal', venue='fake'):
@@ -410,3 +415,24 @@ def test_a_cancelled_bet_can_be_placed_again():
     run(venue.cancel(identity()))
     receipts = run(place(venue, batch, limits(), batch.total_stake, batch.total_exposure))
     assert receipts['status'].iloc[0] == PlacementStatus.MATCHED_FULL.value
+
+
+def test_value_bet_intents_handles_a_shared_kickoff_and_real_odds():
+    """Two matches at the same kickoff are two intents with their own prices.
+
+    Football fills a Saturday afternoon with matches at the same time, so the fixtures index repeats, and the odds
+    column is `{provider}__{market}__{status}__{time}` rather than `{market}__odds`. An earlier version indexed the
+    fixtures by the shared kickoff, which returned every match at once and garbled the name, and looked for an odds
+    column that never existed, which floored every price at the fallback.
+    """
+    loader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
+    X, Y, O = loader.extract_train_data(odds_type='market_maximum')
+    assert X.index.duplicated().any()
+    bettor = OddsComparisonBettor(alpha=0.03, betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
+
+    intents = value_bet_intents('demo', bettor, X.head(40), O.head(40), stake=10.0)
+    assert intents
+    assert all('\n' not in intent.identity.match for intent in intents)
+    assert all(' vs ' in intent.identity.match for intent in intents)
+    assert any(intent.min_price != FALLBACK_PRICE for intent in intents)
+    assert len({intent.identity.ref for intent in intents}) == len(intents)
