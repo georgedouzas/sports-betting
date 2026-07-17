@@ -11,6 +11,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import click
@@ -30,6 +33,7 @@ from ..execution import (
     PlacementQuote,
     value_bet_intents,
 )
+from ..execution import execute as run_execute
 from ..execution import place as run_place
 from ..execution import quote as run_quote
 from ._utils import load_dataloader, print_console, reported
@@ -412,3 +416,70 @@ async def _fix(session: BrowserSession, url: str, match: str, locators: dict[str
         return session.fix(match, locators)
     finally:
         await session.stop()
+
+
+@execution.command()
+@click.option('--venue', 'venue_ref', required=True, help='A ready-made venue, or one of your own as `venue.py:VENUE`.')
+@click.option(
+    '--dataloader', '-d', 'dataloader_path', required=True, type=click.Path(exists=True), help='A saved dataloader.',
+)
+@click.option(
+    '--bettor', '-b', 'bettor_path', required=True, type=click.Path(exists=True), help='A model saved by `fit`.',
+)
+@click.option('--stake', type=float, required=True, help='What to stake on each value bet.')
+@click.option('--confirm-total', type=float, help='The quoted total, passed back to place the bets.')
+@click.option('--max-stake', type=float, default=0.0, help='The most to stake on one bet. Zero leaves it open.')
+@click.option('--max-exposure', type=float, default=0.0, help='The most to have at stake at once. Zero leaves it open.')
+@click.option('--window', help='How long to keep placing, as `2h` or `90min`. Without it, every upcoming match.')
+@click.option('--seed', type=int, default=0, help='The seed for the random order.')
+def run(
+    venue_ref: str,
+    dataloader_path: str,
+    bettor_path: str,
+    stake: float,
+    confirm_total: float | None,
+    max_stake: float,
+    max_exposure: float,
+    window: str | None,
+    seed: int,
+) -> None:
+    """Place the value bets of the upcoming matches, one match at a time.
+
+    Nothing stakes until `--confirm-total` matches the quoted total. The run logs each selection and placement to the
+    terminal as it goes.
+    """
+    with reported(), _logging_to_terminal():
+        built = _venue(venue_ref)
+        loader, _ = load_dataloader(dataloader_path)
+        bettor = load_bettor(bettor_path)
+        receipts = asyncio.run(
+            run_execute(
+                built,
+                loader,
+                bettor,
+                stake=stake,
+                max_stake=max_stake,
+                max_exposure=max_exposure,
+                confirm_total=confirm_total,
+                window=pd.Timedelta(window) if window else None,
+                seed=seed,
+            ),
+        )
+        if not receipts.empty:
+            print_console([receipts], ['Receipts'])
+
+
+@contextmanager
+def _logging_to_terminal() -> Iterator[None]:
+    """Show the run's log on the terminal while a command runs."""
+    logger = logging.getLogger('sportsbet.execution')
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    logger.addHandler(handler)
+    level = logger.level
+    logger.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(level)

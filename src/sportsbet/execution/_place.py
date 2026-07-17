@@ -1,12 +1,7 @@
-"""Implements the quoting and the placing, which is where the refusing lives.
+"""Quote a batch and place it, refusing until the quoted total is passed back.
 
-Refusing is what happens by default. A caller that says nothing gets the whole quote and no stakes, so a forgotten
-argument costs a run rather than a balance. Staking needs the figures that were quoted passed back exactly, which is
-another way of saying it needs them to have been read.
-
-The bets go on one at a time, and the exposure is counted before each of them. That is what makes the ceiling readable
-and the once-only promise keepable, since a batch in flight all at once has a total nobody can check and retries nobody
-can tell apart.
+The bets go on one at a time with the exposure counted before each, which is what keeps the limit readable and stops a
+retry from staking twice.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>

@@ -1,19 +1,8 @@
-"""Implements the browser a site is driven through, for a bookmaker that publishes no API.
+"""Drive a bookmaker's website for a venue with no API.
 
-This is not a venue and it has no `place`. Placing at a website means finding the market, clicking the price, filling
-the stake and working the confirm flow, and every one of those is knowledge of that particular site. Holding that
-knowledge would make this a per-site adapter that breaks on the site's next deploy, and reading it out of the notes
-would need a model inside the library. So the agent places, and what is here is what the agent places with.
-
-Two things follow, and the documentation says both rather than letting anyone assume otherwise. Placing once and only
-once is the agent's here, because recognising a bet that already went on means reading the site's own bet history. The
-stake and exposure ceilings are the agent's too, because they bind whoever calls the venue, and here that is the agent.
-Both hold on the API path, where the library does the placing.
-
-The page is read as an accessibility snapshot rather than as markdown. Markdown can be read and cannot be clicked, since
-it throws away which element is which, and a bet slip has to be acted on.
-
-Nothing here hides that it is automation. A site that blocks it is reported, and that is the end of it.
+This is not a venue and has no `place`: the agent places, so once-only placement and the stake limits are the agent's
+here rather than the library's. A page is read as an accessibility snapshot the agent can act on. Nothing hides that it
+is automation, and a blocked site is reported.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -83,6 +72,8 @@ class BrowserSession:
             The seconds to leave between actions.
         timeout:
             The milliseconds to wait for an element before giving up on it.
+        headless:
+            Whether to hide the browser window. `False` opens it, so you can watch the agent work.
 
     Examples:
         >>> from sportsbet.execution import BrowserSession
@@ -109,6 +100,7 @@ class BrowserSession:
         user_data_dir: str | Path | None = None,
         min_interval: float = 1.0,
         timeout: float = 30000.0,
+        headless: bool = True,
     ) -> None:
         """Keep what the session was configured with."""
         self.key = key
@@ -118,6 +110,7 @@ class BrowserSession:
         self.user_data_dir = user_data_dir
         self.min_interval = min_interval
         self.timeout = timeout
+        self.headless = headless
         self.context_: BrowserContext | None = None
         self.fixed_: FixedSession | None = None
         self._playwright: object | None = None
@@ -132,10 +125,10 @@ class BrowserSession:
         self._playwright = driver
         profile = Path(self.user_data_dir) if self.user_data_dir else None
         if profile is None:
-            browser = await driver.chromium.launch()
+            browser = await driver.chromium.launch(headless=self.headless)
             self.context_ = await browser.new_context()
         else:
-            self.context_ = await driver.chromium.launch_persistent_context(str(profile))
+            self.context_ = await driver.chromium.launch_persistent_context(str(profile), headless=self.headless)
 
     async def stop(self: BrowserSession) -> None:
         """Close the browser."""

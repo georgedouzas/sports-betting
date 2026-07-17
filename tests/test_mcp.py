@@ -34,6 +34,7 @@ TOOLS = [
     'browser_type',
     'browser_select',
     'browser_fix',
+    'execution_run',
 ]
 
 

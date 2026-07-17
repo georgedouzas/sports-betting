@@ -1,16 +1,8 @@
-"""Implements the venue that has an official betting API.
+"""The reference venue, Betfair, over its official API.
 
-Betfair is the reference because it is the only exchange of the ones surveyed that carries a reference of the caller's
-on a bet. Smarkets and Matchbook have no such field, and Betdaq's is a number that it does not police and cannot be
-filtered on, so the venue could not be the record at any of them.
-
-It takes two references rather than one, and they are not interchangeable. `customerRef` de-duplicates a resubmission
-within sixty seconds and never comes back, so it cannot answer whether a bet already happened. `customerOrderRef`
-persists and can be filtered on, and the venue validates nothing about it, so a duplicate is ours to prevent. Placing
-once and only once needs both, and since a request carries one instruction the two take the same derived value.
-
-There is no sandbox. The delayed application key is widely believed to be one and is not: it places real bets on the
-live exchange, with delayed prices. Nothing here is proved against a venue, so nothing here is proved with money.
+It is the only surveyed exchange that carries a caller reference on a bet, and it takes two: `customerRef` de-duplicates
+a resubmission for sixty seconds, and `customerOrderRef` persists and is filterable. Both are sent, with the same
+derived value, so placing is once-only. There is no placement sandbox: the delayed key places real bets.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>

@@ -38,6 +38,7 @@ PAIRS = [
     (['execution', 'status'], 'execution_read_status'),
     (['execution', 'cancel'], 'execution_cancel'),
     (['execution', 'venue'], 'execution_venue_info'),
+    (['execution', 'run'], 'execution_run'),
 ]
 
 

@@ -33,6 +33,7 @@ from ..execution import (
     PlacementQuote,
     value_bet_intents,
 )
+from ..execution import execute as run_execute
 from ..execution import place as run_place
 from ..execution import quote as run_quote
 
@@ -673,6 +674,60 @@ async def browser_fix(venue: str, match: str, locators: dict[str, str]) -> dict[
     session = await _session(venue)
     pinned = session.fix(match, locators)
     return {'match': pinned.match, 'url': pinned.url, 'locators': pinned.locators}
+
+
+def _run(
+    venue: BaseVenue,
+    dataloader: str,
+    bettor: str,
+    stake: float,
+    max_stake: float,
+    max_exposure: float,
+    confirm_total: float | None,
+    window: str | None,
+    seed: int,
+) -> pd.DataFrame:
+    """Place the value bets of the upcoming matches, one match at a time."""
+    loader, _ = load_dataloader(dataloader)
+    fitted = load_bettor(bettor)
+    return asyncio.run(
+        run_execute(
+            venue,
+            loader,
+            fitted,
+            stake=stake,
+            max_stake=max_stake,
+            max_exposure=max_exposure,
+            confirm_total=confirm_total,
+            window=pd.Timedelta(window) if window else None,
+            seed=seed,
+        ),
+    )
+
+
+@server.tool()
+async def execution_run(
+    venue: str,
+    dataloader: str,
+    bettor: str,
+    stake: float,
+    confirm_total: float | None = None,
+    max_stake: float = 0.0,
+    max_exposure: float = 0.0,
+    window: str | None = None,
+    seed: int = 0,
+) -> list[dict[str, Any]]:
+    """Place the value bets of the upcoming matches, one match at a time.
+
+    It reads the dataloader `extract_train_data` saved and the model `fit` saved, keeps the matches the model bets on
+    and can still reach, and places them in turn, waiting until each match's moment. Nothing stakes until
+    `confirm_total` matches the total it quotes. Set `window` as `2h` for a live model, to bound how long it runs.
+    """
+    built = _venue(venue)
+    receipts = await _offload(
+        _run, built, dataloader, bettor, stake, max_stake, max_exposure, confirm_total, window, seed,
+    )
+    return _records(receipts)
 
 
 def run() -> None:
