@@ -19,9 +19,11 @@ from math import isclose
 
 import pandas as pd
 
+from ..evaluation import BaseBettor
 from ._base import (
     STAKED,
     BaseVenue,
+    BetIdentity,
     ExposureLimits,
     PlacementIntent,
     PlacementQuote,
@@ -32,6 +34,56 @@ from ._base import (
 )
 
 TOLERANCE = 0.005
+FALLBACK_PRICE = 1.01
+
+
+def value_bet_intents(
+    venue: str,
+    bettor: BaseBettor,
+    X_fix: pd.DataFrame,
+    O_fix: pd.DataFrame,
+    stake: float,
+) -> list[PlacementIntent]:
+    """Return an intent for each value bet a model found.
+
+    The minimum price of each one is the price the value bet was computed at, since below it the bet is no longer a
+    value bet.
+
+    Args:
+        venue:
+            What the venue is called.
+        bettor:
+            A fitted bettor.
+        X_fix:
+            The upcoming matches.
+        O_fix:
+            The odds of the upcoming matches.
+        stake:
+            What to stake on each value bet.
+
+    Returns:
+        intents:
+            The bets the model means to place.
+    """
+    markets = list(bettor.betting_markets_)
+    value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=markets, index=X_fix.index)
+    intents = []
+    for position, (index, row) in enumerate(value_bets.iterrows()):
+        game = X_fix.loc[index]
+        match = f'{game["home_team"]} vs {game["away_team"]}'
+        for market in markets:
+            if not row[market]:
+                continue
+            price = O_fix.iloc[position].get(f'{market}__odds')
+            intents.append(
+                PlacementIntent(
+                    identity=BetIdentity(venue, match, market, str(game['home_team'])),
+                    stake=stake,
+                    min_price=float(price) if price is not None and not pd.isna(price) else FALLBACK_PRICE,
+                    value_bet=f'{match}|{market}',
+                ),
+            )
+    return intents
 
 
 async def quote(venue: BaseVenue, intents: list[PlacementIntent], limits: ExposureLimits) -> PlacementQuote:
