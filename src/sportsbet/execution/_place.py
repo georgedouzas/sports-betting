@@ -15,6 +15,7 @@ from math import isclose
 import pandas as pd
 
 from ..evaluation import BaseBettor
+from ..evaluation._base import latest_odds_column
 from ._base import (
     STAKED,
     BaseVenue,
@@ -61,15 +62,17 @@ def value_bet_intents(
             The bets the model means to place.
     """
     markets = list(bettor.betting_markets_)
-    value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=markets, index=X_fix.index)
+    odds_columns = {market: latest_odds_column(list(O_fix.columns), market) for market in markets}
+    value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=markets)
     intents = []
-    for position, (index, row) in enumerate(value_bets.iterrows()):
-        game = X_fix.loc[index]
+    for position in range(len(value_bets)):
+        game = X_fix.iloc[position]
         match = f'{game["home_team"]} vs {game["away_team"]}'
         for market in markets:
-            if not row[market]:
+            if not value_bets.iloc[position][market]:
                 continue
-            price = O_fix.iloc[position].get(f'{market}__odds')
+            column = odds_columns[market]
+            price = O_fix.iloc[position][column] if column is not None else None
             intents.append(
                 PlacementIntent(
                     identity=BetIdentity(venue, match, market, str(game['home_team'])),
