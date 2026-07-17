@@ -25,8 +25,8 @@ class CredentialRef:
 
     Examples:
         >>> from sportsbet.execution import CredentialRef
-        >>> CredentialRef('BETFAIR_APP_KEY').var
-        'BETFAIR_APP_KEY'
+        >>> CredentialRef('VENUE_API_KEY').var
+        'VENUE_API_KEY'
     """
 
     var: str

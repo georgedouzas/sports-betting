@@ -55,7 +55,6 @@ ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
     'odds-api': OddsApi,
 }
 MODELS = ['odds-comparison', 'logistic']
-VENUES = ['betfair']
 KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
 STATUSES = ['preplay', 'inplay', 'postplay']
@@ -173,41 +172,31 @@ def build_dataloader(
 
 
 def build_venue(venue: str) -> BaseVenue:
-    """Return the venue a selection describes.
+    """Return the venue a reference names.
 
-    A venue is named the way a model is named rather than the way a dataloader is. A dataloader is a sport and a short
-    list of names, so it fits in arguments. A venue carries URLs, notes and certificates, and a site-driven one carries
-    prose, so it is named by where it lives and built in Python.
-
-    The import is made here rather than at the top of the file because placing lives behind an optional extra, and this
-    module is imported on every run.
-
-    A venue with an API and a site driven in a browser are different things, and both are named the same way. The first
-    places once and only once and holds to the ceilings, because the library is what calls it. The second is a browser
-    the agent places with, so those are the agent's.
+    A venue is named the way a model is, by where it lives, as in `venue.py:VENUE`. The library ships no bookmaker: a
+    venue with an API is a `BaseVenue` you write, and a bookmaker's website is a `BrowserSession` you configure.
 
     Args:
         venue:
-            A ready-made venue, or where one of your own lives, as in `venue.py:VENUE`.
+            Where the venue lives, as in `venue.py:VENUE`.
 
     Returns:
         built:
             The venue, or the browser session.
     """
     try:
-        from .execution import BaseVenue, BetfairVenue, BrowserSession  # noqa: PLC0415
+        from .execution import BaseVenue, BrowserSession  # noqa: PLC0415
     except ImportError as missing:
         raise SelectionError(EXECUTION_EXTRA) from missing
-    if ':' in venue:
-        built = _load_object(venue)
-        if not isinstance(built, BaseVenue | BrowserSession):
-            msg = f'`{venue}` is not a venue and is not a browser session.'
-            raise SelectionError(msg)
-        return built
-    if venue == 'betfair':
-        return BetfairVenue()
-    msg = f'`{venue}` is not a venue. Ready-made: {", ".join(VENUES)}. For one of your own, use `venue.py:VENUE`.'
-    raise SelectionError(msg)
+    if ':' not in venue:
+        msg = f'`{venue}` should name a venue in a Python file, as in `venue.py:VENUE`. The library ships none.'
+        raise SelectionError(msg)
+    built = _load_object(venue)
+    if not isinstance(built, BaseVenue | BrowserSession):
+        msg = f'`{venue}` is not a venue and is not a browser session.'
+        raise SelectionError(msg)
+    return built
 
 
 def build_bettor(

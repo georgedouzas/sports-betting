@@ -725,7 +725,16 @@ async def execution_run(
     """
     built = _venue(venue)
     receipts = await _offload(
-        _run, built, dataloader, bettor, stake, max_stake, max_exposure, confirm_total, window, seed,
+        _run,
+        built,
+        dataloader,
+        bettor,
+        stake,
+        max_stake,
+        max_exposure,
+        confirm_total,
+        window,
+        seed,
     )
     return _records(receipts)
 

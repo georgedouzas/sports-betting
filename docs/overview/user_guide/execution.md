@@ -7,7 +7,7 @@ part spends real money, so read the risks first.
 
 - Driving a bookmaker's website breaches almost every bookmaker's terms of service and risks the account and its
   balance.
-- No exchange offers a placement sandbox. Betfair's delayed application key places real bets on the live exchange.
+- A venue's own test key may still place real bets. There is no substitute for reading what it does before you use it.
 - A bet goes on at the price on offer when it lands, down to the minimum you set.
 - Nothing here evades a venue's automation controls. A venue that blocks automation is reported and placement stops.
 
@@ -22,17 +22,13 @@ The browser is needed only to drive a website.
 
 ## Two venues
 
-A `BetfairVenue` has an official API and the library places at it. A `BrowserSession` is a bookmaker with no API, driven
-in a browser by an agent. Only the first keeps once-only placement and the stake limits, since the second is driven by
-the agent rather than the library.
+The library ships no bookmaker. It ships the venue contract and a browser, and you supply the venue.
 
-A venue is named the way a model is, either ready made or by where your own lives.
+A venue with an official API is a `BaseVenue` you implement, and the library places at it. A `BrowserSession` is a
+bookmaker with no API, driven in a browser by an agent. Only the first keeps once-only placement and the stake limits,
+since the second is driven by the agent rather than the library.
 
-```python
-from sportsbet.execution import BetfairVenue
-
-venue = BetfairVenue()
-```
+A venue is named the way a model is, by where it lives, as in `venue.py:VENUE`.
 
 ## Placing
 
@@ -53,9 +49,8 @@ are handled one at a time, in random order, up to `window` if you set one for li
 A venue names the variable holding a secret and never takes the secret itself.
 
 ```bash
-export BETFAIR_APP_KEY=...
-export BETFAIR_USERNAME=...
-export BETFAIR_PASSWORD=...
+export VENUE_USERNAME=...
+export VENUE_PASSWORD=...
 ```
 
 A missing variable names itself and stops. A saved bettor holds no credential.

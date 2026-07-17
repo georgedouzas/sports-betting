@@ -59,9 +59,8 @@ class SnapshotsDataLoader(BaseDataLoader):
 class FakeVenue(BaseVenue):
     """A venue a test can hold in its hand, and the only kind a test may reach.
 
-    No exchange offers a placement sandbox. Betfair's delayed application key is widely believed to be one and is not:
-    it places real bets on the live exchange. So a fake is not the second-best way of proving this code, it is the only
-    way of proving it that does not spend money.
+    No venue offers a placement sandbox, so a fake is not the second-best way of proving this code. It is the only way
+    of proving it that does not spend money.
 
     It keeps what it was asked to do and answers whether it already holds a bet, which is the one behaviour the once-
     only promise rests on. The faults are injectable because a retry, a crash and a lost connection are exactly when
