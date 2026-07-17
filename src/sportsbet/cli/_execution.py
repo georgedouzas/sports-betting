@@ -28,6 +28,7 @@ from ..execution import (
     FixedSession,
     PlacementIntent,
     PlacementQuote,
+    value_bet_intents,
 )
 from ..execution import place as run_place
 from ..execution import quote as run_quote
@@ -202,7 +203,7 @@ def quote(venue_ref: str, dataloader_path: str, bettor_path: str, stake: float, 
         if X_fix.empty or O_fix is None or O_fix.empty:
             Console().print(Panel.fit('[bold red]There are no upcoming matches to bet on.'))
             return
-        intents = _intents(built.key, bettor, X_fix, O_fix, stake)
+        intents = value_bet_intents(built.key, bettor, X_fix, O_fix, stake)
         if not intents:
             Console().print(Panel.fit('[bold red]The model found no value bets.'))
             return
@@ -214,29 +215,6 @@ def quote(venue_ref: str, dataloader_path: str, bettor_path: str, stake: float, 
             f'\n  --confirm-stake {quoted.total_stake} --confirm-exposure {quoted.total_exposure}',
         )
         _write_quote(quoted, output)
-
-
-def _intents(key: str, bettor: object, X_fix: pd.DataFrame, O_fix: pd.DataFrame, stake: float) -> list[PlacementIntent]:
-    """Return an intent for each value bet the model found."""
-    markets_ = list(bettor.betting_markets_)  # type: ignore[attr-defined]
-    value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=markets_, index=X_fix.index)  # type: ignore[attr-defined]
-    intents = []
-    for position, (index, row) in enumerate(value_bets.iterrows()):
-        game = X_fix.loc[index]
-        match = f'{game["home_team"]} vs {game["away_team"]}'
-        for market in markets_:
-            if not row[market]:
-                continue
-            price = O_fix.iloc[position].get(f'{market}__odds')
-            intents.append(
-                PlacementIntent(
-                    identity=BetIdentity(key, match, market, str(game['home_team'])),
-                    stake=stake,
-                    min_price=float(price) if price is not None and not pd.isna(price) else 1.01,
-                    value_bet=f'{match}|{market}',
-                ),
-            )
-    return intents
 
 
 @execution.command()

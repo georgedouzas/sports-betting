@@ -24,7 +24,7 @@ from ._base import (
 )
 from ._betfair import BetfairVenue
 from ._credentials import CredentialError, CredentialRef, resolve
-from ._place import place, quote
+from ._place import place, quote, value_bet_intents
 
 __all__: list[str] = [
     'BaseVenue',
@@ -48,6 +48,7 @@ __all__: list[str] = [
     'quote',
     'receipts_frame',
     'resolve',
+    'value_bet_intents',
 ]
 
 
