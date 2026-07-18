@@ -33,7 +33,7 @@ from .dataloaders import DataLoader
 from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
 
 if TYPE_CHECKING:
-    from .execution import BaseVenue
+    from .execution import BaseVenue, BrowserSession
 
 from .sources import (
     BaseOddsSource,
@@ -171,7 +171,7 @@ def build_dataloader(
     )
 
 
-def build_venue(venue: str) -> BaseVenue:
+def build_venue(venue: str) -> BaseVenue | BrowserSession:
     """Return the venue a reference names.
 
     A venue is named the way a model is, by where it lives, as in `venue.py:VENUE`. The library ships no bookmaker: a

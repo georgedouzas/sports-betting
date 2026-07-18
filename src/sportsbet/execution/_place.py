@@ -10,6 +10,7 @@ retry from staking twice.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from math import isclose
 
 import pandas as pd
@@ -32,13 +33,26 @@ from ._base import (
 TOLERANCE = 0.005
 FALLBACK_PRICE = 1.01
 
+Staking = float | Mapping[tuple[str, str, str], float]
+
+
+def _stake_of(stake: Staking, match: str, market: str, selection: str) -> float | None:
+    """Return what to stake on an event, or `None` to skip it.
+
+    A number stakes the same on every bet. A mapping keyed by the event stakes per event, and an event it omits is not
+    bet on.
+    """
+    if isinstance(stake, Mapping):
+        return stake.get((match, market, selection))
+    return stake
+
 
 def value_bet_intents(
     venue: str,
     bettor: BaseBettor,
     X_fix: pd.DataFrame,
     O_fix: pd.DataFrame,
-    stake: float,
+    stake: Staking,
 ) -> list[PlacementIntent]:
     """Return an intent for each value bet a model found.
 
@@ -55,7 +69,8 @@ def value_bet_intents(
         O_fix:
             The odds of the upcoming matches.
         stake:
-            What to stake on each value bet.
+            A number to stake the same on every value bet, or a mapping keyed by `(match, market, selection)` to stake
+            per event. A mapping stakes only the events it holds, so sizing computed offline drops the rest.
 
     Returns:
         intents:
@@ -68,15 +83,19 @@ def value_bet_intents(
     for position in range(len(value_bets)):
         game = X_fix.iloc[position]
         match = f'{game["home_team"]} vs {game["away_team"]}'
+        selection = str(game['home_team'])
         for market in markets:
             if not value_bets.iloc[position][market]:
+                continue
+            amount = _stake_of(stake, match, market, selection)
+            if not amount:
                 continue
             column = odds_columns[market]
             price = O_fix.iloc[position][column] if column is not None else None
             intents.append(
                 PlacementIntent(
-                    identity=BetIdentity(venue, match, market, str(game['home_team'])),
-                    stake=stake,
+                    identity=BetIdentity(venue, match, market, selection),
+                    stake=amount,
                     min_price=float(price) if price is not None and not pd.isna(price) else FALLBACK_PRICE,
                     value_bet=f'{match}|{market}',
                 ),
