@@ -140,10 +140,9 @@ def venue(venue_ref: str) -> None:
     """Show what a venue is and what it was told about the site."""
     with reported():
         built = build_venue(venue_ref)
+        cancels = getattr(built, 'can_cancel', False)
         Console().print(
-            Panel.fit(
-                f'[bold]{built.key}[/bold]\ncancels: {built.can_cancel}\n\n{getattr(built, "notes", "") or ""}',
-            ),
+            Panel.fit(f'[bold]{built.key}[/bold]\ncancels: {cancels}\n\n{getattr(built, "notes", "") or ""}'),
         )
 
 

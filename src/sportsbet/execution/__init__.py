@@ -6,7 +6,10 @@ until the caller passes back the exact figures that were quoted.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ._browser import BrowserSession, FixedSession, PageSnapshot
 
 from ._base import (
     BaseVenue,

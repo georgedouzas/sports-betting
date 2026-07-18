@@ -8,12 +8,13 @@ import pandas as pd
 import pytest
 
 from sportsbet.evaluation import OddsComparisonBettor
-from sportsbet.execution import betting_moment, execute, feasible
+from sportsbet.execution import ExecutionError, PlacementReceipt, PlacementStatus, betting_moment, execute, feasible
 
 from .conftest import FakeVenue
 
 NOW = pd.Timestamp('2026-07-17 12:00', tz='UTC')
 STAKE = 10.0
+EVENT_STAKE = 7.0
 BOTH = 2
 
 
@@ -223,3 +224,78 @@ def test_a_future_live_match_waits_for_its_moment():
 
     run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=record_wait))
     assert waited == [pytest.approx(90 * 60)]
+
+
+def test_authentication_runs_first_and_stops_the_run():
+    """A venue that refuses the login stops the run before anything is scheduled or placed."""
+    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
+    loader = FakeDataLoader(fixtures)
+    venue = FakeVenue(prices={('Soon vs Y', 'home_win', 'Soon'): 2.5}, blocked=True)
+    with pytest.raises(Exception, match='refused the login'):
+        run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=_no_wait))
+    assert venue.orders == {}
+
+
+def test_a_per_event_stake_vector_sizes_each_bet():
+    """A mapping stakes each event by its own amount, and drops the events it omits."""
+    fixtures = _fixtures(['2026-07-17 13:00', '2026-07-17 14:00'], [('First', 'X'), ('Second', 'Y')])
+    loader = FakeDataLoader(fixtures)
+    venue = FakeVenue(
+        prices={('First vs X', 'home_win', 'First'): 2.5, ('Second vs Y', 'home_win', 'Second'): 2.5},
+    )
+    sizing = {('First vs X', 'home_win', 'First'): EVENT_STAKE}
+    receipts = run(
+        execute(venue, loader, _bettor(), stake=sizing, confirm_total=EVENT_STAKE, clock=_clock, wait=_no_wait),
+    )
+    assert list(receipts['match']) == ['First vs X']
+    assert receipts['stake'].iloc[0] == EVENT_STAKE
+
+
+class FakeSession:
+    """A browser session stand-in: not a venue, so it has no place of its own."""
+
+    key = 'site'
+
+    def __init__(self):
+        """Start unauthenticated."""
+        self.authenticated = False
+
+    async def authenticate(self):
+        """Record the login."""
+        self.authenticated = True
+
+
+def test_a_browser_session_places_through_the_placer():
+    """The library hands each event to the placer, since it cannot click a bet slip itself."""
+    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
+    loader = FakeDataLoader(fixtures)
+    session = FakeSession()
+    handed = []
+
+    async def placer(intent, given):
+        handed.append((intent.identity.match, given))
+        return PlacementReceipt(identity=intent.identity, status=PlacementStatus.MATCHED_FULL, stake=intent.stake)
+
+    receipts = run(
+        execute(
+            session,
+            loader,
+            _bettor(),
+            stake=STAKE,
+            placer=placer,
+            confirm_total=STAKE,
+            clock=_clock,
+            wait=_no_wait,
+        ),
+    )
+    assert session.authenticated
+    assert handed == [('Soon vs Y', session)]
+    assert receipts['status'].iloc[0] == 'matched_full'
+
+
+def test_a_browser_session_without_a_placer_is_refused():
+    """A browser session needs a placer, and execute says so rather than failing obscurely."""
+    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
+    loader = FakeDataLoader(fixtures)
+    with pytest.raises(ExecutionError, match='needs a `placer`'):
+        run(execute(FakeSession(), loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=_no_wait))

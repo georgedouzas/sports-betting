@@ -20,17 +20,20 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from ._base import BaseVenue, PlacementIntent, PlacementReceipt, PlacementStatus, receipts_frame
-from ._place import TOLERANCE, value_bet_intents
+from ._base import BaseVenue, ExecutionError, PlacementIntent, PlacementReceipt, PlacementStatus, receipts_frame
+from ._place import TOLERANCE, Staking, value_bet_intents
 
 if TYPE_CHECKING:
     from sportsbet.dataloaders import BaseDataLoader
     from sportsbet.evaluation import BaseBettor
 
+    from ._browser import BrowserSession
+
 logger = logging.getLogger('sportsbet.execution')
 
 Clock = Callable[[], pd.Timestamp]
 Wait = Callable[[float], Awaitable[None]]
+Placer = Callable[[PlacementIntent, 'BrowserSession'], Awaitable[PlacementReceipt]]
 Scheduled = list[tuple[PlacementIntent, pd.Timestamp]]
 
 
@@ -96,7 +99,7 @@ def _scheduled(
     venue_key: str,
     dataloader: BaseDataLoader,
     bettor: BaseBettor,
-    stake: float,
+    stake: Staking,
     now: pd.Timestamp,
     window: pd.Timedelta | None,
     seed: int,
@@ -149,11 +152,12 @@ def _refused(intents: list[PlacementIntent], total: float, confirm_total: float 
 
 
 async def execute(
-    venue: BaseVenue,
+    venue: BaseVenue | BrowserSession,
     dataloader: BaseDataLoader,
     bettor: BaseBettor,
     *,
-    stake: float,
+    stake: Staking,
+    placer: Placer | None = None,
     max_stake: float = 0.0,
     max_exposure: float = 0.0,
     confirm_total: float | None = None,
@@ -164,19 +168,25 @@ async def execute(
 ) -> pd.DataFrame:
     """Place the value bets of the upcoming matches, one match at a time.
 
-    It reads the upcoming matches from the dataloader, keeps the ones the bettor bets on and can still reach, and places
-    them in turn, in random order, waiting until each match's moment. It stakes nothing until `confirm_total` matches
-    the total it quotes.
+    Four steps, in order. It authenticates and stops if that fails. It selects the matches the bettor bets on and can
+    still reach, sized by `stake`. It orders them by their moment. It places them in turn, waiting until each moment,
+    and stakes nothing until `confirm_total` matches the total.
+
+    A venue with an API is placed at by the library. A browser session is placed at by `placer`, which drives the site
+    for one bet and returns its receipt, since the library cannot click a bet slip without knowing the site.
 
     Args:
         venue:
-            Where the bets go.
+            Where the bets go, a `BaseVenue` or a `BrowserSession`.
         dataloader:
             The dataloader the model was fitted on. It supplies the input data.
         bettor:
             The fitted bettor.
         stake:
-            What to stake on each value bet.
+            A number to stake the same on every bet, or a mapping keyed by `(match, market, selection)` to size each
+            one, as computed offline.
+        placer:
+            Required for a browser session. It takes an intent and the session, drives the site, and returns a receipt.
         max_stake:
             The most to stake on one bet. Zero leaves it open.
         max_exposure:
@@ -199,6 +209,16 @@ async def execute(
     read_now = clock or _now
     hold = wait or asyncio.sleep
     started = read_now()
+    on_api = isinstance(venue, BaseVenue)
+    if not on_api and placer is None:
+        msg = 'A browser session needs a `placer`, since the library cannot place at a website.'
+        raise ExecutionError(msg)
+
+    try:
+        await venue.authenticate()
+    except Exception:
+        logger.info('Authentication at %s failed, so nothing was placed.', venue.key)
+        raise
 
     scheduled = _scheduled(venue.key, dataloader, bettor, stake, read_now(), window, seed)
     if not scheduled:
@@ -212,7 +232,6 @@ async def execute(
         logger.info('Nothing staked. Pass confirm_total=%s to place these bets.', total)
         return _refused(intents, total, confirm_total)
 
-    await venue.authenticate()
     receipts: list[PlacementReceipt] = []
     for intent, kickoff in scheduled:
         ahead = (betting_moment(dataloader, kickoff) - read_now()).total_seconds()
@@ -223,7 +242,11 @@ async def execute(
             logger.info('Window closed, %d matches left unplaced.', len(scheduled) - len(receipts))
             break
         logger.info('Placing %s %s at %s.', intent.identity.match, intent.identity.market, venue.key)
-        receipt = await venue.place(intent)
+        if isinstance(venue, BaseVenue):
+            receipt = await venue.place(intent)
+        else:
+            assert placer is not None
+            receipt = await placer(intent, venue)
         logger.info('%s: %s.', intent.identity.match, receipt.status.value)
         receipts.append(receipt)
         if receipt.status is PlacementStatus.BLOCKED:

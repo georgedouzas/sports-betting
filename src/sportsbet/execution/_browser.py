@@ -115,6 +115,14 @@ class BrowserSession:
         self.fixed_: FixedSession | None = None
         self._playwright: object | None = None
 
+    async def authenticate(self: BrowserSession) -> None:
+        """Open the browser at the site, so the session starts logged in from its saved profile.
+
+        This is the connect step. It does not fill a login form, since that is site knowledge the agent holds. A profile
+        in `user_data_dir` that already holds a login lands logged in. Otherwise the agent logs in through the page.
+        """
+        await self.navigate(self.url)
+
     async def start(self: BrowserSession) -> None:
         """Open the browser and keep it open, so a login lasts across calls."""
         from playwright.async_api import async_playwright  # noqa: PLC0415
