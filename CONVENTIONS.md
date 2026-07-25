@@ -103,6 +103,14 @@ The summary line is one line, imperative mood, and says what the thing does.
 `Implements the ...`, `This function ...`, `A class that ...` are meta narration. Say what it does, in the imperative,
 as if completing the sentence "This function will ...".
 
+Write it in plain English. Prefer simple, direct words over clever or roundabout phrasing, and if a line reads
+awkwardly out loud, rewrite it.
+
+```python
+✓ """Build a dataloader, a bettor or a venue from the given names."""
+✗ """Build a dataloader, a bettor or a venue from the names a surface is told."""
+```
+
 For most functions the one line is the whole docstring. A private helper and an ordinary function get a single line and
 nothing else.
 
