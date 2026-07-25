@@ -12,15 +12,14 @@ from urllib.parse import urlencode
 
 import pandas as pd
 
-from .. import ParamGrid
-from ._base import BaseOddsSource, RawItem, RawPayload
-from ._schema import EVENT_COLS
+from ... import ParamGrid
+from ..._params import EVENT_COLS
+from .._base import BaseOddsSource, RawItem, RawPayload
 
 URL = 'https://api.the-odds-api.com/v4'
 SPORTS_URL = f'{URL}/sports'
 HISTORICAL_URL = f'{URL}/historical/sports/{{sport}}/odds'
 LIVE_URL = f'{URL}/sports/{{sport}}/odds'
-
 LEAGUES_MAPPING = {
     'soccer_epl': ('England', 1),
     'soccer_efl_champ': ('England', 2),

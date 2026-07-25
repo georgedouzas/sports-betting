@@ -106,7 +106,7 @@ half time.
 ```python
 import pandas as pd
 from sportsbet.dataloaders import BaseDataLoader
-from sportsbet.sources import market_outcomes
+from sportsbet.sources import derive_market_outcomes
 
 MATCHES = [('2024-08-16', 'Arsenal', 'Chelsea', 2, 0), ('2024-08-23', 'Everton', 'Spurs', 1, 2)]
 
@@ -118,7 +118,7 @@ class LiveDataLoader(BaseDataLoader):
         stats, odds = [], []
         for date, home, away, home_goals, away_goals in MATCHES:
             identity = dict(date=date, league='England', division=1, year=2025, home_team=home, away_team=away)
-            outcomes = market_outcomes(
+            outcomes = derive_market_outcomes(
                 pd.Series([home_goals]), pd.Series([away_goals]), ['home_win', 'draw', 'away_win'],
             ).iloc[0]
             stats += [

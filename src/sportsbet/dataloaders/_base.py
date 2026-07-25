@@ -12,20 +12,16 @@ import pandas as pd
 from sklearn.utils import check_scalar
 
 from .. import FixturesData, ParamGrid, TrainData
-from ..sources._schema import (
-    EVENT_COLS,
-    IDENTITY_COLS,
+from .._params import EVENT_COLS, GROUPS_COLS, IDENTITY_COLS, STATUSES, TARGET_EVENT_STATUSES
+from ._schema import (
     build_odds_schema,
     build_stats_schema,
     derive_metadata,
 )
 
 DELIMITER = '__'
-TARGET_EVENT_STATUSES = ('inplay', 'postplay')
-INPUT_EVENT_STATUSES = ('preplay', 'inplay', 'postplay')
-STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
+STATUS_RANK = {status: ind for ind, status in enumerate(STATUSES)}
 DAY = pd.Timedelta('1D')
-PARAM_COLS = ['league', 'division', 'year']
 
 
 def format_event_time(event_time: pd.Timedelta) -> str:
@@ -240,7 +236,7 @@ class BaseDataLoader(ABC):
         self.odds_schema_ = build_odds_schema(odds_metadata)
         self.targets_ = odds_value_cols
         self.odds_type_ = odds_type
-        self.param_grid_ = stats[PARAM_COLS].drop_duplicates().to_dict('records')
+        self.param_grid_ = stats[GROUPS_COLS].drop_duplicates().to_dict('records')
 
     @staticmethod
     def no_odds() -> pd.DataFrame:
@@ -445,11 +441,8 @@ class BaseDataLoader(ABC):
         self.target_event_time_ = target_event_time if target_event_time is not None else pd.Timedelta('0min')
 
         check_scalar(input_event_status, 'input_event_status', (NoneType, str))
-        if input_event_status is not None and input_event_status not in INPUT_EVENT_STATUSES:
-            msg = (
-                f'Invalid input event status. It should be one of {INPUT_EVENT_STATUSES}. '
-                f'Got {input_event_status} instead.'
-            )
+        if input_event_status is not None and input_event_status not in STATUSES:
+            msg = f'Invalid input event status. It should be one of {STATUSES}. Got {input_event_status} instead.'
             raise ValueError(msg)
         self.input_event_status_ = input_event_status
         check_scalar(input_event_time, 'input_event_time', (NoneType, pd.Timedelta))

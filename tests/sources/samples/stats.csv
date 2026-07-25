@@ -1,4 +1,4 @@
-event_status,event_time,date,league,division,season,home_team,away_team,home_goals,away_goals,home_latest_streak,away_latest_streak
+event_status,event_time,date,league,division,year,home_team,away_team,home_goals,away_goals,home_latest_streak,away_latest_streak
 preplay,60,2024-08-16,England,1,2025,Man United,Fulham,0,0,2,-1
 preplay,0,2024-08-16,England,1,2025,Man United,Fulham,0,0,2,-1
 inplay,30,2024-08-16,England,1,2025,Man United,Fulham,0,0,2,-1

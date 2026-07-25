@@ -20,8 +20,7 @@ from sportsbet.execution import (
     value_bet_intents,
 )
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
-
-from .conftest import FakeVenue
+from tests.conftest import FakeVenue
 
 MATCH = 'Arsenal vs Chelsea'
 OTHER = 'Liverpool vs Everton'

@@ -44,9 +44,9 @@ def test_stats_schema_fails_on_postplay_nonzero_event_time(stats, stats_schema):
 def test_stats_schema_fails_on_duplicate_snapshot_key(stats, stats_schema):
     """Test statistics schema fails on duplicate snapshot key."""
     stats_wrong = stats.copy()
-    bad = pd.concat([stats_wrong, stats_wrong.iloc[[0]]], ignore_index=True)
+    stats_wrong = pd.concat([stats_wrong, stats_wrong.iloc[[0]]], ignore_index=True)
     with pytest.raises(pa.errors.SchemaError):
-        stats_schema.validate(bad)
+        stats_schema.validate(stats_wrong)
 
 
 def test_stats_schema_fails_on_extra_column_due_to_strict(stats, stats_schema):
@@ -103,9 +103,9 @@ def test_odds_schema_fails_on_postplay_nonzero_event_time(odds, odds_schema):
 def test_odds_schema_fails_on_duplicate_snapshot_key(odds, odds_schema):
     """Test statistics schema fails on duplicate snapshot key."""
     odds_wrong = odds.copy()
-    bad = pd.concat([odds_wrong, odds_wrong.iloc[[0]]], ignore_index=True)
+    odds_wrong = pd.concat([odds_wrong, odds_wrong.iloc[[0]]], ignore_index=True)
     with pytest.raises(pa.errors.SchemaError):
-        odds_schema.validate(bad)
+        odds_schema.validate(odds_wrong)
 
 
 def test_odds_schema_fails_on_extra_column_due_to_strict(odds, odds_schema):

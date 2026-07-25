@@ -12,10 +12,10 @@ from typing import ClassVar, Self
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from .. import ParamGrid
-from ._base import BaseOddsSource, BaseStatsSource, RawItem, RawPayload
+from ... import ParamGrid
+from .._base import BaseOddsSource, BaseStatsSource, RawItem, RawPayload
 
-DATA = Path(__file__).parent / 'data'
+DATA = Path(__file__).parent.parent / 'data'
 PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2024]}
 
 

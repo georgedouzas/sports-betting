@@ -110,7 +110,7 @@ import io
 import json
 
 import pandas as pd
-from sportsbet.sources import BaseOddsSource, BaseStatsSource, RawItem, market_outcomes
+from sportsbet.sources import BaseOddsSource, BaseStatsSource, RawItem, derive_market_outcomes
 
 MARKETS = ['home_win', 'draw', 'away_win']
 IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
@@ -150,7 +150,7 @@ class MyStats(BaseStatsSource):
             )
             played = games['home_goals'].ge(0)
             postplay = games.loc[played, IDENTITY].assign(event_status='postplay', event_time=0)
-            outcomes = market_outcomes(games.loc[played, 'home_goals'], games.loc[played, 'away_goals'], MARKETS)
+            outcomes = derive_market_outcomes(games.loc[played, 'home_goals'], games.loc[played, 'away_goals'], MARKETS)
             postplay = pd.concat([postplay, outcomes], axis=1)
 
             frames.append(pd.concat([preplay, postplay], ignore_index=True))

@@ -10,10 +10,9 @@ from typing import Self
 import pandas as pd
 
 from .. import ParamGrid
-from ..sources._base import BaseOddsSource, BaseStatsSource, RawItem
-from ..sources._fetch import fetch_payloads
-from ..sources._resolver import ALIASES, resolve
-from ..sources._schema import EVENT_COLS, IDENTITY_COLS
+from .._params import EVENT_COLS, IDENTITY_COLS
+from ..sources._base import BaseOddsSource, BaseStatsSource, RawItem, fetch_payloads
+from ..sources._resolver import ALIASES, resolve_odds
 from ._base import BaseDataLoader
 
 
@@ -160,7 +159,7 @@ class DataLoader(BaseDataLoader):
         odds = self._finalize(odds_source.to_snapshots(fetch_payloads(odds_items, odds_source.request_url)))
         if stats_source.name != odds_source.name and not odds.empty:
             aliases = {**ALIASES, **(self.aliases or {})}
-            odds, self.reconciliation_ = resolve(stats, odds, aliases, self.max_unmatched_rate)
+            odds = resolve_odds(stats, odds, aliases)
         return stats, odds
 
     @staticmethod
