@@ -1,4 +1,4 @@
-"""Implements the dataloader shared by every sport whose data comes from sources."""
+"""Load the modelling data of every sport whose data comes from sources."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
