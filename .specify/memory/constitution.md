@@ -1,6 +1,27 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.1.0 → 1.2.0
+Rationale: Fold the code conventions (CONVENTIONS.md) into the constitution as a
+sixth principle, so naming, docstrings, module structure and test layout are a
+gate the plan's Constitution Check verifies rather than taste enforced by hand.
+CONVENTIONS.md remains the detailed, portable companion; the principle states the
+rules in brief and names it binding. MINOR: adds a principle, no principle
+removed or redefined.
+
+Added principles:
+  - VI. Naming, Docstrings, and Module Structure — binds the code to
+    CONVENTIONS.md and states its rules in brief.
+Modified sections:
+  - Development Workflow & Quality Gates — conformance to CONVENTIONS.md is part
+    of the pre-PR check and the Constitution Check.
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
 Version change: 1.0.0 → 1.1.0
 Rationale: Sync the constitution to the surfaces that exist. Feature 005 removed
 the GUI and added the MCP server, so Principle I named a surface that is gone and
@@ -8,18 +29,6 @@ omitted the one that replaced it. Adds the rule that an agent is a client of the
 surfaces rather than a component of the library, and that credentialled or
 side-effecting capabilities live behind an optional extra. MINOR: materially
 expanded guidance, no principle removed or redefined.
-
-Modified principles:
-  - I. scikit-learn-Compatible API — surfaces are now Python API, CLI and MCP
-    server (was Python API, CLI, GUI); adds the agent-is-a-client rule.
-Modified sections:
-  - Technology & Tooling Standards — `gui`/`reflex` extra replaced by the `mcp`
-    extra; adds the optional-extra rule for credentialled side effects.
-
-Templates requiring updates:
-  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
-  ✅ .specify/templates/spec-template.md — generic; no conflict.
-  ✅ .specify/templates/tasks-template.md — generic; no conflict.
 
 ---- history ----
 Version change: (unversioned template) → 1.0.0
@@ -131,6 +140,36 @@ Rationale: The library is adopted through its documentation and gallery
 examples; undocumented capabilities effectively do not exist for users and rot
 quickly without executable coverage.
 
+### VI. Naming, Docstrings, and Module Structure
+
+Code conforms to `CONVENTIONS.md`, which is binding rather than advisory. In
+brief:
+
+- A function name begins with a verb and says exactly what the function does or
+  returns: `count_common_prefix`, not `common_prefix_length`; `normalize_identity`,
+  not `transform_identity`. State learned during `fit` ends in a trailing
+  underscore. Implementation modules, classes and helpers are private (`_name`),
+  and the package `__init__` re-exports the public surface.
+- Docstrings are imperative. A function docstring is a single line; a body
+  paragraph or an Args/Returns block appears only on a public entry point or a
+  public class whose shape is not obvious. No meta narration (`Implements ...`,
+  `This function ...`), no essays, and never a description of what the code does
+  not do.
+- A module is one concern, read bottom-up: a name is defined before it is used,
+  so helpers come first and the entry point last. A definition lives in the
+  module that owns it. A base module is self-contained and imports no sibling; a
+  base that needs a sibling's code absorbs it by merging rather than importing.
+  No import inside a function body papers over a cycle; the only lazy import
+  defers an optional extra.
+- Errors raise a named exception with the message in a variable. Functions are
+  small with early returns and no explanatory inline comments.
+- Tests mirror the source tree, are named `test_<function>_<behavior>`, carry a
+  single-line docstring, use the public API, and never touch the network.
+
+Rationale: these are the rules the maintainer has enforced by hand across the
+refactor. Encoding them makes them a gate the Constitution Check verifies, so a
+change conforms before review rather than after.
+
 ## Technology & Tooling Standards
 
 - **Language**: Python `>=3.11, <3.14`; code targets `py311` and MUST remain
@@ -155,7 +194,8 @@ quickly without executable coverage.
   green.
 - Before opening a PR, contributors MUST run `pdm run formatting`,
   `pdm run checks`, and `pdm run tests` (or the equivalent `pre-commit` +
-  `nox` invocations) and resolve all findings.
+  `nox` invocations) and resolve all findings, and MUST conform to
+  `CONVENTIONS.md` (Principle VI).
 - CI (GitHub Actions `ci.yml` / `doc.yml`) re-runs the same gates; a red CI run
   blocks merge.
 - Every PR MUST state which principles it touches and confirm the gates pass;
@@ -183,4 +223,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.1.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-16
+**Version**: 1.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-20
