@@ -48,11 +48,6 @@ class DataLoader(BaseDataLoader):
             statistics source, for the clubs the two feeds name differently. They
             are added to the ones the library already knows.
 
-        max_unmatched_rate:
-            The proportion of matches that may go without odds when the two
-            sources differ. The default `0.0` allows none, so every match keeps
-            its odds and the backtest stays on the full dataset.
-
     Attributes:
         stats_ (pd.DataFrame):
             The downloaded statistics snapshots: the selected seasons, plus each
@@ -60,10 +55,6 @@ class DataLoader(BaseDataLoader):
 
         odds_ (pd.DataFrame):
             The downloaded odds snapshots of the selected provider.
-
-        reconciliation_ (ReconciliationReport):
-            How well the two sources' matches were paired. Set only when they are
-            different sources.
 
     Examples:
         >>> from sportsbet.dataloaders import DataLoader
@@ -85,13 +76,11 @@ class DataLoader(BaseDataLoader):
         stats: BaseStatsSource | None = None,
         odds: BaseOddsSource | None = None,
         aliases: dict[str, str] | None = None,
-        max_unmatched_rate: float = 0.0,
     ) -> None:
         super().__init__(param_grid)
         self.stats = stats
         self.odds = odds
         self.aliases = aliases
-        self.max_unmatched_rate = max_unmatched_rate
 
     def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
         """Return the statistics and odds sources, checked to be about the same sport.

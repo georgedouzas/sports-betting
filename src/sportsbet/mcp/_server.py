@@ -67,7 +67,6 @@ def _selection(
     odds_regions: list[str] | None,
     odds_moments: list[str] | None,
     aliases: list[str] | None,
-    max_unmatched_rate: float,
 ) -> Selection:
     """Return what a tool was told about the data to use."""
     return {
@@ -81,7 +80,6 @@ def _selection(
         'odds_regions': odds_regions,
         'odds_moments': odds_moments,
         'aliases': aliases,
-        'max_unmatched_rate': max_unmatched_rate,
     }
 
 
@@ -203,7 +201,6 @@ async def available_params(
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
     aliases: list[str] | None = None,
-    max_unmatched_rate: float = 0.0,
 ) -> list[dict]:
     """Return the leagues, divisions and seasons that can be selected."""
     selection = _selection(
@@ -217,7 +214,6 @@ async def available_params(
         odds_regions,
         odds_moments,
         aliases,
-        max_unmatched_rate,
     )
     result: list[dict] = await _offload(_available_params, selection)
     return result
@@ -235,7 +231,6 @@ async def odds_types(
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
     aliases: list[str] | None = None,
-    max_unmatched_rate: float = 0.0,
 ) -> list[str]:
     """Return the odds types a selection carries."""
     selection = _selection(
@@ -249,7 +244,6 @@ async def odds_types(
         odds_regions,
         odds_moments,
         aliases,
-        max_unmatched_rate,
     )
     result: list[str] = await _offload(_odds_types, selection)
     return result
@@ -267,7 +261,6 @@ async def extract_train_data(
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
     aliases: list[str] | None = None,
-    max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
     drop_na_thres: float | None = None,
     target_event_status: str | None = None,
@@ -296,7 +289,6 @@ async def extract_train_data(
         odds_regions,
         odds_moments,
         aliases,
-        max_unmatched_rate,
     )
     extraction = _extraction(
         odds_type,
@@ -322,7 +314,6 @@ async def extract_exploration_data(
     odds_regions: list[str] | None = None,
     odds_moments: list[str] | None = None,
     aliases: list[str] | None = None,
-    max_unmatched_rate: float = 0.0,
     odds_type: str | None = None,
     drop_na_thres: float | None = None,
     target_event_status: str | None = None,
@@ -346,7 +337,6 @@ async def extract_exploration_data(
         odds_regions,
         odds_moments,
         aliases,
-        max_unmatched_rate,
     )
     extraction = _extraction(
         odds_type,

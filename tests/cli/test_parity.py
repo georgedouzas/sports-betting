@@ -105,4 +105,4 @@ def test_the_sources_can_be_configured():
     """
     options = _options(['dataloader', 'train', 'extract'])
     assert {'stats', 'odds', 'odds_key_env', 'odds_markets', 'odds_regions', 'odds_moments'} <= options
-    assert {'aliases', 'max_unmatched_rate'} <= options
+    assert {'aliases'} <= options
