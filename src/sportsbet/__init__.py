@@ -1,11 +1,10 @@
 """A collection of sports betting AI tools.
 
-It provides classes to extract sports betting data and create predictive models. It contains two main
-submodules:
+Extract sports betting data and create predictive models with three submodules:
 
-- [`dataloaders`][sportsbet.dataloaders]: Turn what the sources carry into data to model.
 - [`sources`][sportsbet.sources]: Where the data comes from, and the store that keeps it.
-- [`evaluation`][sportsbet.evaluation]: Provides the classes to create and evaluate sports betting predictive models.
+- [`dataloaders`][sportsbet.dataloaders]: Turn what the sources carry into data to model.
+- [`evaluation`][sportsbet.evaluation]: Create and evaluate sports betting predictive models.
 """
 
 from collections.abc import Callable

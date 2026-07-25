@@ -1,15 +1,4 @@
-"""Implements the selection, which is what a surface is told instead of being handed a file.
-
-A dataloader is a sport, the data to select from it, and the sources it reads. All of that is a short, closed list of
-names, so it fits in the arguments of a command or of a tool, and nothing needs to be written down first.
-
-A betting model is the exception. A model is a scikit-learn estimator, and an estimator can be any pipeline anybody can
-build. The ready-made ones are named here, and anything beyond them is named by where it lives, as an object rather than
-as a settings file that tries to describe one.
-
-The command line and the server are told the same things in the same way, so neither owns a format the other has to
-learn.
-"""
+"""Build a dataloader, a bettor or a venue from the names a surface is told."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

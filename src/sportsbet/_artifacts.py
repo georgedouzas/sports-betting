@@ -1,13 +1,4 @@
-"""Implements the file a surface writes so that the data is downloaded once and reused.
-
-Downloading is the slow part and, with a metered odds feed, the part that costs money. So one command downloads and
-writes what it got, and everything after it reads that file. A surface that rebuilt from the selection each time would
-buy the same seasons again on every call.
-
-The file holds the dataloader and the training data it extracted. The dataloader on its own is enough to extract
-fixtures, since it remembers what it was told, and the training data is there so that backtesting and fitting do not
-have to download it again.
-"""
+"""Save and load the dataloader and its training data, so the data is downloaded once and reused."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
