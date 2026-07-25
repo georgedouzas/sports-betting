@@ -3,7 +3,7 @@ A bettor of your own
 ====================
 
 This example illustrates BaseBettor and
-complementary_events.
+derive_complementary_events.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -14,7 +14,7 @@ import numpy as np
 from sklearn.model_selection import TimeSeriesSplit
 
 from sportsbet.dataloaders import DataLoader
-from sportsbet.evaluation import BaseBettor, backtest, complementary_events
+from sportsbet.evaluation import BaseBettor, backtest, derive_complementary_events
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
 # %%
@@ -69,10 +69,10 @@ backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(3))
 # than from a list somebody wrote down. A sport that cannot be drawn simply has two outcomes instead of three, and
 # nothing had to be told which sport this is.
 
-complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5'])
+derive_complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5'])
 
 # %%
-complementary_events(['home_win', 'away_win'])
+derive_complementary_events(['home_win', 'away_win'])
 
 # %%
 # A picture of it

@@ -1,4 +1,4 @@
-"""Includes base class and functions for evaluating betting strategies."""
+"""Define the base bettor and the odds grammar it bets on."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -25,7 +25,7 @@ STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
 N_ODDS_TOKENS = 4
 
 
-def market_base(market: str) -> str:
+def derive_market_base(market: str) -> str:
     """Return the base market name (drop the ``__status__time`` suffix)."""
     return market.split('__', maxsplit=1)[0]
 
@@ -35,7 +35,7 @@ def is_odds_column(col: str) -> bool:
     return len(col.split('__')) == N_ODDS_TOKENS
 
 
-def latest_odds_column(columns: list[str], base: str, provider: str | None = None) -> str | None:
+def find_latest_odds_column(columns: list[str], base: str, provider: str | None = None) -> str | None:
     """Return the odds column for a market base at the latest snapshot.
 
     Args:
@@ -66,15 +66,8 @@ def latest_odds_column(columns: list[str], base: str, provider: str | None = Non
 OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
 
 
-def complementary_events(markets: list[str]) -> list[list[str]]:
+def derive_complementary_events(markets: list[str]) -> list[list[str]]:
     """Return the groups of markets that are mutually exclusive and exhaustive.
-
-    They are derived from the markets the data actually carries, rather than named in advance. `over` and `under` are
-    complementary at whatever the line is, whether it is 2.5 goals or 220.5 points. The outcome of a match is whichever
-    of a home win, a draw and an away win the data has, so a sport without a draw has two of them.
-
-    It comes from the data rather than a list. A home win and an away win are complementary in a sport without a draw
-    but not in one with it, and only the data knows which sport this is.
 
     Args:
         markets:
@@ -85,15 +78,12 @@ def complementary_events(markets: list[str]) -> list[list[str]]:
             The groups of markets whose probabilities sum to one.
 
     Examples:
-        >>> from sportsbet.evaluation import complementary_events
-        >>> # The outcome of a soccer match is one of three, and a total is over or under whatever the line is.
-        >>> complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5'])
+        >>> from sportsbet.evaluation import derive_complementary_events
+        >>> derive_complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5'])
         [['home_win', 'draw', 'away_win'], ['over_2.5', 'under_2.5']]
-        >>> # A sport that cannot be drawn simply has two of them. Nothing had to be told which sport this is.
-        >>> complementary_events(['home_win', 'away_win'])
+        >>> derive_complementary_events(['home_win', 'away_win'])
         [['home_win', 'away_win']]
-        >>> # A market with nothing to be complementary to stands alone.
-        >>> complementary_events(['draw'])
+        >>> derive_complementary_events(['draw'])
         []
     """
     groups = []
@@ -168,10 +158,8 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         self.stake = stake
 
     def _get_feature_names_odds(self: Self, O: pd.DataFrame) -> NDArray[np.str_]:
-        # One odds column per selected market base, at the latest snapshot, ordered to match
-        # `betting_markets_` so positional alignment with `Y` holds.
         columns = list(O.columns)
-        odds_cols = [latest_odds_column(columns, base) for base in self.betting_markets_]
+        odds_cols = [find_latest_odds_column(columns, base) for base in self.betting_markets_]
         return np.array([col for col in odds_cols if col is not None])
 
     def _append_odds_data(self: Self, X: pd.DataFrame, O: pd.DataFrame | None) -> pd.DataFrame:
@@ -188,10 +176,9 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Y_betting_markets: list[str],
     ) -> None:
 
-        # Betting markets are identified by their base name (e.g. `home_win`)
         Y_bases = list(dict.fromkeys(Y_betting_markets))
         self.complementary_events_ = (
-            complementary_events(Y_bases) if self.COMPLEMENTARY_EVENTS is None else self.COMPLEMENTARY_EVENTS
+            derive_complementary_events(Y_bases) if self.COMPLEMENTARY_EVENTS is None else self.COMPLEMENTARY_EVENTS
         )
         if self.betting_markets is None:
             self.betting_markets_ = np.array(Y_bases)
@@ -232,9 +219,8 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         )
         self.stake_ = float(stake)
 
-        # Check features. Map each selected market base to its single target column.
         _check_feature_names(self, X, reset=True)
-        base_to_target = {market_base(col): col for col in Y.columns}
+        base_to_target = {derive_market_base(col): col for col in Y.columns}
         self.feature_names_out_ = np.array([base_to_target[base] for base in self.betting_markets_])
         if O is not None:
             self.feature_names_odds_ = self._get_feature_names_odds(O)
@@ -273,7 +259,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         )
         if {len(tokens) for tokens in Y_cols} != {3}:
             raise ValueError(error_msg)
-        Y_betting_markets = [market_base(col) for col in Y.columns]
+        Y_betting_markets = [derive_market_base(col) for col in Y.columns]
 
         return X, Y, Y_betting_markets
 

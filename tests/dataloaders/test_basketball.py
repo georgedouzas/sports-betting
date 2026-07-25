@@ -8,7 +8,7 @@ import pytest
 from sklearn.dummy import DummyClassifier
 
 from sportsbet.dataloaders import DataLoader
-from sportsbet.evaluation import ClassifierBettor, complementary_events
+from sportsbet.evaluation import ClassifierBettor, derive_complementary_events
 from sportsbet.sources import EuroLeagueStats, FootballDataOdds, NBAStats, OddsApi
 from tests.conftest import SnapshotsDataLoader
 
@@ -108,13 +108,13 @@ def test_a_two_way_outcome_sums_to_one():
     numeric = X.select_dtypes(float).columns
     bettor = ClassifierBettor(DummyClassifier(strategy='prior')).fit(X[numeric], Y, O)
     assert bettor.predict_proba(X[numeric]).sum(axis=1) == pytest.approx(1.0)
-    assert ['home_win', 'away_win'] in complementary_events(['home_win', 'away_win'])
+    assert ['home_win', 'away_win'] in derive_complementary_events(['home_win', 'away_win'])
 
 
 def test_soccer_keeps_its_draw():
     """Test a second sport does not move the first one: soccer can be drawn and still is."""
-    assert ['home_win', 'draw', 'away_win'] in complementary_events(['home_win', 'draw', 'away_win'])
-    assert ['home_win', 'away_win'] not in complementary_events(['home_win', 'draw', 'away_win'])
+    assert ['home_win', 'draw', 'away_win'] in derive_complementary_events(['home_win', 'draw', 'away_win'])
+    assert ['home_win', 'away_win'] not in derive_complementary_events(['home_win', 'draw', 'away_win'])
 
 
 def test_both_sports_share_the_engine():

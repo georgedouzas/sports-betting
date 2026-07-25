@@ -8,18 +8,23 @@ import pytest
 from sklearn.dummy import DummyClassifier
 from sklearn.exceptions import NotFittedError
 
-from sportsbet.evaluation import ClassifierBettor, complementary_events
-from sportsbet.evaluation._base import BaseBettor, latest_odds_column, market_base
+from sportsbet.evaluation import (
+    BaseBettor,
+    ClassifierBettor,
+    derive_complementary_events,
+    derive_market_base,
+    find_latest_odds_column,
+)
 from tests.evaluation import O_train, TestBettor, X_train, Y_train
 
 
-def test_market_base():
+def test_derive_market_base():
     """Test the market base helper drops the status/time suffix."""
-    assert market_base('home_win__postplay__0min') == 'home_win'
-    assert market_base('over_2.5__inplay__60min') == 'over_2.5'
+    assert derive_market_base('home_win__postplay__0min') == 'home_win'
+    assert derive_market_base('over_2.5__inplay__60min') == 'over_2.5'
 
 
-def test_latest_odds_column():
+def test_find_latest_odds_column():
     """Test the latest odds column helper picks the most recent snapshot."""
     columns = [
         'bet365__home_win__preplay__0min',
@@ -27,8 +32,8 @@ def test_latest_odds_column():
         'bet365__home_win__inplay__30min',
         'market_average__home_win__inplay__60min',
     ]
-    assert latest_odds_column(columns, 'home_win', provider='bet365') == 'bet365__home_win__inplay__90min'
-    assert latest_odds_column(columns, 'draw') is None
+    assert find_latest_odds_column(columns, 'home_win', provider='bet365') == 'bet365__home_win__inplay__90min'
+    assert find_latest_odds_column(columns, 'draw') is None
 
 
 def test_abstract_class_raise_error():
@@ -165,7 +170,7 @@ def test_fit_default():
     default_init_cash, default_stake = 1e4, 50.0
     bettor = TestBettor()
     bettor.fit(X_train, Y_train)
-    expected = np.array([market_base(col) for col in Y_train.columns])
+    expected = np.array([derive_market_base(col) for col in Y_train.columns])
     assert np.array_equal(bettor.betting_markets_, expected)
     assert bettor.init_cash_ == default_init_cash
     assert bettor.stake_ == default_stake
@@ -201,21 +206,21 @@ BASKETBALL = ['home_win', 'away_win', 'over_220.5', 'under_220.5']
 BOTH_GROUPS = 2
 
 
-def test_complementary_events_group_the_outcome_of_a_match():
+def test_derive_complementary_events_group_the_outcome_of_a_match():
     """Test the outcome group is whichever of a home win, a draw and an away win the data carries."""
-    assert ['home_win', 'draw', 'away_win'] in complementary_events(SOCCER)
+    assert ['home_win', 'draw', 'away_win'] in derive_complementary_events(SOCCER)
 
 
-def test_complementary_events_group_a_line_at_whatever_it_is():
+def test_derive_complementary_events_group_a_line_at_whatever_it_is():
     """Test over and under are complementary at any line, not only at the ones named in advance."""
-    assert ['over_1.5', 'under_1.5'] in complementary_events(['over_1.5', 'under_1.5'])
-    assert ['over_220.5', 'under_220.5'] in complementary_events(BASKETBALL)
+    assert ['over_1.5', 'under_1.5'] in derive_complementary_events(['over_1.5', 'under_1.5'])
+    assert ['over_220.5', 'under_220.5'] in derive_complementary_events(BASKETBALL)
 
 
-def test_complementary_events_have_no_draw_when_the_data_has_none():
+def test_derive_complementary_events_have_no_draw_when_the_data_has_none():
     """Test a sport that cannot be drawn has a two-way outcome, which is derived rather than declared."""
-    assert ['home_win', 'away_win'] in complementary_events(BASKETBALL)
-    assert len(complementary_events(BASKETBALL)) == BOTH_GROUPS
+    assert ['home_win', 'away_win'] in derive_complementary_events(BASKETBALL)
+    assert len(derive_complementary_events(BASKETBALL)) == BOTH_GROUPS
 
 
 def test_a_home_win_and_an_away_win_are_not_complementary_when_a_draw_exists():
@@ -223,7 +228,7 @@ def test_a_home_win_and_an_away_win_are_not_complementary_when_a_draw_exists():
 
     Only the data knows which sport it is, which is why the groups cannot be named in advance.
     """
-    assert ['home_win', 'away_win'] not in complementary_events(SOCCER)
+    assert ['home_win', 'away_win'] not in derive_complementary_events(SOCCER)
 
 
 def test_an_unknown_line_no_longer_breaks_a_bet(bettor_data):

@@ -1,4 +1,4 @@
-"""Includes base class and functions for evaluating betting strategies."""
+"""Backtest a bettor and search its parameters."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
