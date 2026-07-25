@@ -1,4 +1,4 @@
-"""It provides the server that lets an agent drive the library."""
+"""Drive the library from an MCP server."""
 
 from __future__ import annotations
 

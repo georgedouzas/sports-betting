@@ -1,11 +1,4 @@
-"""Implements the server that lets an agent drive the library.
-
-The agent lives outside the library. The library stays a set of estimators that behave the same way every time they are
-run; the agent calls them, holds the keys and makes the choices, and the server connects the two.
-
-A tool is told what to do in its arguments, exactly as a command is, so everything it needs is in the call. The argument
-names the environment variable holding a key, so the key itself stays out of a transcript.
-"""
+"""Serve the library's tools so an agent can drive it."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
