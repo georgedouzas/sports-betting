@@ -1,4 +1,4 @@
-"""Implements the sources of the sample data that ships with the library."""
+"""Read the sample odds that ship with the library."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

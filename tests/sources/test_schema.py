@@ -5,7 +5,7 @@ import pandera.pandas as pa
 import pytest
 
 
-def test_stastics_schema(stats, stats_schema):
+def test_stats_schema(stats, stats_schema):
     """Test statistics schema."""
     validated_stats = stats_schema.validate(stats)
     pd.testing.assert_frame_equal(stats, validated_stats)

@@ -1,4 +1,4 @@
-"""Implements the odds source backed by The Odds API."""
+"""Read the odds from The Odds API."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

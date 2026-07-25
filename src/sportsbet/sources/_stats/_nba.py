@@ -1,4 +1,4 @@
-"""Implements the statistics source of the NBA, backed by ESPN."""
+"""Read the NBA statistics from ESPN."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
