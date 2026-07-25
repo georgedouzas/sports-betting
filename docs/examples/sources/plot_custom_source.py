@@ -15,7 +15,7 @@ import io
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from sportsbet.sources import BaseOddsSource, BaseStatsSource, RawItem, RawPayload, market_outcomes
+from sportsbet.sources import BaseOddsSource, BaseStatsSource, RawItem, RawPayload, derive_market_outcomes
 
 IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
 MARKETS = ['home_win', 'draw', 'away_win']
@@ -55,7 +55,7 @@ class MyStats(BaseStatsSource):
         games['date'] = pd.to_datetime(games['date'], utc=True)  # the kick-off, in UTC
         preplay = games[IDENTITY].assign(event_status='preplay', event_time=0, home_form=games['home_form'])
         postplay = games[IDENTITY].assign(event_status='postplay', event_time=0)
-        outcomes = market_outcomes(games['home_goals'], games['away_goals'], MARKETS)
+        outcomes = derive_market_outcomes(games['home_goals'], games['away_goals'], MARKETS)
         return pd.concat([preplay, pd.concat([postplay, outcomes], axis=1)], ignore_index=True)
 
 

@@ -26,7 +26,7 @@ from sportsbet.sources import (
     BaseStatsSchema,
     SampleSoccerOdds,
     SampleSoccerStats,
-    market_outcomes,
+    derive_market_outcomes,
     optional_col,
     required_col,
 )
@@ -301,7 +301,7 @@ def saved_fixtures_dataloader(cli_runner: CliRunner, offline_fixtures_dataloader
 @pytest.fixture
 def stats() -> pd.DataFrame:
     """Load statistics data."""
-    stats_file = files('tests') / 'samples' / 'stats.csv'
+    stats_file = files('tests') / 'sources' / 'samples' / 'stats.csv'
     data = pd.read_csv(stats_file, parse_dates=['date'])
     data['event_time'] = pd.to_timedelta(data['event_time'], unit='m').astype('timedelta64[ns]')
     data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
@@ -311,7 +311,7 @@ def stats() -> pd.DataFrame:
 @pytest.fixture
 def odds() -> pd.DataFrame:
     """Load odds data."""
-    odds_file = files('tests') / 'samples' / 'odds.csv'
+    odds_file = files('tests') / 'sources' / 'samples' / 'odds.csv'
     data = pd.read_csv(odds_file, parse_dates=['date'])
     data['event_time'] = pd.to_timedelta(data['event_time'], unit='m').astype('timedelta64[ns]')
     data['date'] = pd.to_datetime(data['date'], utc=True).astype('datetime64[ns, UTC]')
@@ -328,7 +328,7 @@ def stats_schema() -> BaseStatsSchema:
         date: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = required_col()
         league: str = required_col()
         division: int = required_col()
-        season: int = required_col()
+        year: int = required_col()
         home_team: str = required_col()
         away_team: str = required_col()
         home_goals: int = optional_col(['inplay'], False)
@@ -349,7 +349,7 @@ def odds_schema() -> BaseOddsSchema:
         date: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = required_col()
         league: str = required_col()
         division: int = required_col()
-        season: int = required_col()
+        year: int = required_col()
         home_team: str = required_col()
         away_team: str = required_col()
         provider: str = optional_col(['preplay'], True)
@@ -494,7 +494,9 @@ def long_snapshots() -> tuple[pd.DataFrame, pd.DataFrame]:
             'away_team': match['away'],
         }
         for status, minutes, home_goals, away_goals in _timeline(match):
-            markets = market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), _MARKETS).iloc[0].to_dict()
+            markets = (
+                derive_market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), _MARKETS).iloc[0].to_dict()
+            )
             features = (
                 dict(zip(_FEATURES, match['form'], strict=True)) if status == 'preplay' else dict.fromkeys(_FEATURES)
             )

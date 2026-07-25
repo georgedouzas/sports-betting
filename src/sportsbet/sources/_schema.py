@@ -1,34 +1,19 @@
 """Schemas for validating statistics and odds data."""
 
-from typing import Annotated, Any, Self
+from typing import Any, Self
 
 import pandas as pd
 import pandera.pandas as pa
 from pandera.typing.pandas import Timedelta
 
-# Columns that identify a match snapshot and place it in time.
-IDENTITY_COLS = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
-EVENT_COLS = ['event_status', 'event_time']
-# The possible event statuses, ordered.
-STATUSES = ['preplay', 'inplay', 'postplay']
-# Types of the identity columns, used to build derived schemas.
-IDENTITY_FIELDS = {
-    'date': Annotated[pd.DatetimeTZDtype, 'ns', 'utc'],
-    'league': str,
-    'division': int,
-    'year': int,
-    'home_team': str,
-    'away_team': str,
-}
-
 
 def required_col(alias: str | None = None) -> Any:  # noqa: ANN401
-    """Define a required (snapshot-identity) column.
+    """Define a required snapshot-identity column.
 
     Args:
         alias:
             The column name to use when it differs from the field's Python
-            identifier (e.g. a dotted market name).
+            identifier.
 
     Examples:
         >>> from sportsbet.sources import BaseStatsSchema, required_col
@@ -47,10 +32,7 @@ def required_col(alias: str | None = None) -> Any:  # noqa: ANN401
 
 
 def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> Any:  # noqa: ANN401
-    """Define an optional (feature/odds) column.
-
-    A column declares the moments at which it means anything. The score at half time belongs to a match in play and to
-    nothing before it, and saying so is what lets a bet use only what was known when its price was quoted.
+    """Define an optional feature or odds column.
 
     Args:
         include:
@@ -59,7 +41,7 @@ def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> A
             Whether the column is time-invariant within a match.
         alias:
             The column name to use when it differs from the field's Python
-            identifier (e.g. a dotted market name).
+            identifier.
 
     Examples:
         >>> from sportsbet.sources import BaseStatsSchema, optional_col, required_col
@@ -127,8 +109,6 @@ class BaseSchema(pa.DataFrameModel):
 class BaseStatsSchema(BaseSchema):
     """Base schema for statistics snapshots.
 
-    Every snapshot says which match it is about and when it was taken, so a feature can always be placed in time.
-
     Examples:
         >>> from sportsbet.sources import BaseStatsSchema, optional_col, required_col
         >>>
@@ -138,18 +118,11 @@ class BaseStatsSchema(BaseSchema):
         ...     home_team: str = required_col()
         ...     away_team: str = required_col()
         ...     home_goals: float = optional_col(include=['inplay', 'postplay'], fixed=False)
-        >>>
-        >>> # Every snapshot states its own moment, so nothing has to be assumed about when it was taken.
-        >>> sorted(BaseStatsSchema.snapshot_cols())
-        ['event_status', 'event_time']
     """
 
 
 class BaseOddsSchema(BaseSchema):
     """Base schema for odds snapshots.
-
-    An odds snapshot is a price a named provider offered on a named market at a stated moment. The markets are the
-    columns, so each sport carries exactly the market columns it has.
 
     Examples:
         >>> from sportsbet.sources import BaseOddsSchema, optional_col, required_col
@@ -162,10 +135,6 @@ class BaseOddsSchema(BaseSchema):
         ...     provider: str = required_col()
         ...     home_win: float = optional_col(include=['preplay', 'inplay'], fixed=False)
         ...     away_win: float = optional_col(include=['preplay', 'inplay'], fixed=False)
-        >>>
-        >>> # The markets are read from the columns rather than registered anywhere.
-        >>> sorted(MyOddsSchema.odds_cols())
-        ['away_win', 'home_win']
     """
 
     @classmethod
@@ -177,7 +146,7 @@ class BaseOddsSchema(BaseSchema):
     @pa.dataframe_check
     @classmethod
     def postplay_missing_odds(cls, df: pd.DataFrame) -> pd.Series:
-        """Check that post-match snapshots carry no odds (settled outcomes)."""
+        """Check that post-match snapshots carry no odds."""
         odds_cols = cls.odds_cols()
         if not odds_cols:
             return pd.Series(True, index=df.index)
@@ -186,85 +155,3 @@ class BaseOddsSchema(BaseSchema):
         out = pd.Series(True, index=df.index)
         out.loc[is_post] = ok_post
         return out
-
-
-def derive_metadata(
-    data: pd.DataFrame,
-    value_cols: list[str],
-    allow_fixed: bool = True,
-) -> dict[str, dict[str, Any]]:
-    """Derive per-column `include`/`fixed`/`type` metadata from a long snapshot frame.
-
-    Every column's role is read from the data: `include` is the set of statuses at
-    which the column actually carries values, and `fixed` is whether the column is
-    constant within every match.
-
-    A price is always time-varying. It belongs to a provider and to a moment, so
-    it keeps them in its name even when only one provider offers it, which the
-    whole odds grammar rests on.
-
-    Args:
-        data:
-            A long snapshot frame with `event_status` and identity columns.
-        value_cols:
-            The value columns to describe (non-identity, non-event).
-        allow_fixed:
-            Whether a column may be constant within a match. `False` for odds.
-
-    Returns:
-        Mapping of column to `{'type', 'include', 'fixed'}`.
-    """
-
-    def _is_constant(values: pd.Series) -> bool:
-        non_null = values.dropna()
-        return non_null.empty or bool(non_null.min() == non_null.max())
-
-    grouped = data.groupby(IDENTITY_COLS, dropna=False)
-    metadata = {}
-    for col in value_cols:
-        include = [status for status in STATUSES if data.loc[data['event_status'] == status, col].notna().any()]
-        fixed = allow_fixed and bool(grouped[col].apply(_is_constant).all())
-        col_type = int if pd.api.types.is_integer_dtype(data[col]) else float
-        metadata[col] = {'type': col_type, 'include': include, 'fixed': fixed}
-    return metadata
-
-
-def _field_name(col: str) -> str:
-    """Turn a column name into a valid Python identifier (``over_2.5`` -> ``over_2_5``)."""
-    return col.replace('.', '_')
-
-
-def _value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, dict]:
-    """Build the annotations and fields for the value columns from their metadata."""
-    annotations: dict = {}
-    namespace: dict = {}
-    for col, meta in metadata.items():
-        field = _field_name(col)
-        annotations[field] = meta['type']
-        alias = col if field != col else None
-        namespace[field] = optional_col(meta['include'], fixed=meta['fixed'], alias=alias)
-    return annotations, namespace
-
-
-def build_stats_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseStatsSchema]:
-    """Build a statistics schema from the derived value-column metadata."""
-    annotations: dict = dict(IDENTITY_FIELDS)
-    namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
-    value_annotations, value_namespace = _value_namespace(metadata)
-    annotations.update(value_annotations)
-    namespace.update(value_namespace)
-    namespace['__annotations__'] = annotations
-    return type('StatsSchema', (BaseStatsSchema,), namespace)
-
-
-def build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSchema]:
-    """Build an odds schema from the derived market-column metadata."""
-    annotations: dict = dict(IDENTITY_FIELDS)
-    namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
-    annotations['provider'] = str
-    namespace['provider'] = optional_col(['preplay'], fixed=True)
-    value_annotations, value_namespace = _value_namespace(metadata)
-    annotations.update(value_annotations)
-    namespace.update(value_namespace)
-    namespace['__annotations__'] = annotations
-    return type('OddsSchema', (BaseOddsSchema,), namespace)

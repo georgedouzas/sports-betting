@@ -14,7 +14,7 @@ two name their clubs differently.
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from sportsbet.sources import UnmatchedError, resolve
+from sportsbet.sources import UnmatchedError, resolve_odds
 
 # %%
 # The problem
@@ -68,7 +68,7 @@ len(exact)
 # cannot place is raised rather than dropped.
 
 try:
-    resolve(stats, odds)
+    resolve_odds(stats, odds)
 except UnmatchedError as error:
     complaint = str(error)
 complaint
@@ -78,13 +78,13 @@ complaint
 # tells you what it suspects and leaves the decision to you. Allowing a little slack, here is how far it gets and what
 # it flags:
 
-paired, report = resolve(stats, odds, max_unmatched_rate=0.5)
+paired, report = resolve_odds(stats, odds, max_unmatched_rate=0.5)
 report.matched, report.suggestions
 
 # %%
 # You confirm the suggestion by passing it as an alias, and now every match has its odds:
 
-paired, report = resolve(stats, odds, aliases={'Spurs': 'Tottenham'})
+paired, report = resolve_odds(stats, odds, aliases={'Spurs': 'Tottenham'})
 report.matched, report.unmatched_rate
 
 # %%

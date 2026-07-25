@@ -11,9 +11,9 @@ from typing import Any, ClassVar, Self
 import numpy as np
 import pandas as pd
 
-from .. import ParamGrid
-from ._base import BaseStatsSource, RawItem, RawPayload
-from ._utils import market_outcomes
+from ... import ParamGrid
+from .._base import BaseStatsSource, RawItem, RawPayload
+from .._utils import derive_market_outcomes
 
 URL = 'https://api-live.euroleague.net/v2/competitions/E'
 SEASONS_URL = f'{URL}/seasons'
@@ -124,7 +124,7 @@ def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
         event_status='postplay',
         event_time=0,
     )
-    outcomes = market_outcomes(postplay['home_points'], postplay['away_points'], MARKETS)
+    outcomes = derive_market_outcomes(postplay['home_points'], postplay['away_points'], MARKETS)
     postplay = pd.concat([postplay, outcomes], axis=1)
 
     snapshots = pd.concat([preplay, postplay], ignore_index=True)

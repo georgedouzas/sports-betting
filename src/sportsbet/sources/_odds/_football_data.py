@@ -11,10 +11,9 @@ import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from .. import ParamGrid
-from ._base import BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload
-from ._fetch import ENCODING, read_csv_content
-from ._utils import market_outcomes
+from ... import ParamGrid
+from .._base import ENCODING, BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload, read_csv_content
+from .._utils import derive_market_outcomes
 
 URL = 'https://www.football-data.co.uk'
 BASE_URLS = [
@@ -658,7 +657,7 @@ def _to_snapshots(modelling: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
             event_status='inplay',
             event_time=45,
         )
-        outcomes = market_outcomes(inplay['home_goals'], inplay['away_goals'], MARKETS)
+        outcomes = derive_market_outcomes(inplay['home_goals'], inplay['away_goals'], MARKETS)
         inplay = pd.concat([inplay, outcomes], axis=1)
         stats_frames.append(inplay)
 
@@ -669,7 +668,7 @@ def _to_snapshots(modelling: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         event_status='postplay',
         event_time=0,
     )
-    outcomes = market_outcomes(postplay['home_goals'], postplay['away_goals'], MARKETS)
+    outcomes = derive_market_outcomes(postplay['home_goals'], postplay['away_goals'], MARKETS)
     postplay = pd.concat([postplay, outcomes], axis=1)
     stats_frames.append(postplay)
 

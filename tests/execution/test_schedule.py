@@ -9,8 +9,7 @@ import pytest
 
 from sportsbet.evaluation import OddsComparisonBettor
 from sportsbet.execution import ExecutionError, PlacementReceipt, PlacementStatus, betting_moment, execute, feasible
-
-from .conftest import FakeVenue
+from tests.conftest import FakeVenue
 
 NOW = pd.Timestamp('2026-07-17 12:00', tz='UTC')
 STAKE = 10.0

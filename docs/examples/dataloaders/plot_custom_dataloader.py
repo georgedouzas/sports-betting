@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from sportsbet.dataloaders import BaseDataLoader
-from sportsbet.sources import market_outcomes
+from sportsbet.sources import derive_market_outcomes
 
 # %%
 # One method to implement
@@ -40,7 +40,7 @@ class MyDataLoader(BaseDataLoader):
                 'home_team': home,
                 'away_team': away,
             }
-            outcomes = market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), MARKETS).iloc[0]
+            outcomes = derive_market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), MARKETS).iloc[0]
             stats += [
                 {**identity, 'event_status': 'preplay', 'event_time': pd.Timedelta('0min'), 'home_points_avg': 2.1},
                 {**identity, 'event_status': 'postplay', 'event_time': pd.Timedelta('0min'), **outcomes},

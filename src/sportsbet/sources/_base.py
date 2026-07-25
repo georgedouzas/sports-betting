@@ -1,20 +1,29 @@
-"""Implements the base classes of the data sources."""
+"""Read the raw content a data source needs, and define the base a source implements."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
 from __future__ import annotations
 
+import asyncio
+import io
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Self
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
+import aiohttp
 import pandas as pd
-
-from ._fetch import fetch_payloads
 
 if TYPE_CHECKING:
     from .. import ParamGrid
+
+CONNECTIONS_LIMIT = 20
+ENCODING = 'ISO-8859-1'
+LOCAL = 'file://'
 
 
 @dataclass(frozen=True)
@@ -73,6 +82,48 @@ class RawPayload:
 
     item: RawItem
     content: bytes
+
+
+async def _fetch_url(client: aiohttp.ClientSession, url: str) -> str:
+    """Return the text of a URL, read over the network."""
+
+    async with client.get(url) as response:
+        return await response.text(encoding=ENCODING)
+
+
+async def _fetch_urls(urls: list[str]) -> list[str]:
+    """Return the text of several URLs, read over the network at once."""
+
+    async with aiohttp.ClientSession(
+        raise_for_status=True,
+        connector=aiohttp.TCPConnector(limit=CONNECTIONS_LIMIT),
+    ) as client:
+        return await asyncio.gather(*[_fetch_url(client, url) for url in urls])
+
+
+def _read_local_file(url: str) -> bytes:
+    """Return the bytes of a `file://` URL, read from disk."""
+    return Path(url2pathname(urlparse(url).path)).read_bytes()
+
+
+def _read_urls_content(urls: list[str]) -> list[bytes]:
+    """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest."""
+    remote = [url for url in urls if not url.startswith(LOCAL)]
+    fetched = iter(asyncio.run(_fetch_urls(remote)) if remote else [])
+    return [_read_local_file(url) if url.startswith(LOCAL) else next(fetched).encode(ENCODING) for url in urls]
+
+
+def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
+    """Read each item at the URL `authorize` gives it and pair the bytes back with the item, in order."""
+    contents = _read_urls_content([authorize(item) for item in items])
+    return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
+
+
+def read_csv_content(content: bytes) -> pd.DataFrame:
+    """Return a data frame read from raw CSV content."""
+    text = content.decode(ENCODING)
+    names = pd.read_csv(io.StringIO(text), nrows=0, encoding=ENCODING).columns.to_list()
+    return pd.read_csv(io.StringIO(text), names=names, skiprows=1, encoding=ENCODING, on_bad_lines='skip')
 
 
 class BaseSource(ABC):
@@ -238,7 +289,7 @@ class BaseStatsSource(BaseSource):
     Examples:
         >>> import io
         >>> import pandas as pd
-        >>> from sportsbet.sources import BaseStatsSource, RawItem, RawPayload, market_outcomes
+        >>> from sportsbet.sources import BaseStatsSource, RawItem, RawPayload, derive_market_outcomes
         >>> IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
         >>>
         >>> class MyStats(BaseStatsSource):
@@ -264,7 +315,7 @@ class BaseStatsSource(BaseSource):
         ...         preplay = games[IDENTITY].assign(event_status='preplay', event_time=0,
         ...                                          home_form=games['home_form'])
         ...         postplay = games[IDENTITY].assign(event_status='postplay', event_time=0)
-        ...         outcomes = market_outcomes(games['home_goals'], games['away_goals'], ['home_win', 'draw',
+        ...         outcomes = derive_market_outcomes(games['home_goals'], games['away_goals'], ['home_win', 'draw',
         ...                                                                               'away_win'])
         ...         postplay = pd.concat([postplay, outcomes], axis=1)
         ...         return pd.concat([preplay, postplay], ignore_index=True)
