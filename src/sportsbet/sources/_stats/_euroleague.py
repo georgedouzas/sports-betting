@@ -1,4 +1,4 @@
-"""Implements the statistics source backed by the EuroLeague's official API."""
+"""Read the EuroLeague statistics from its official API."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

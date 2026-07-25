@@ -1,4 +1,4 @@
-"""Common parameters definitions for modules."""
+"""Define the parameters the modules share."""
 
 from typing import Annotated
 

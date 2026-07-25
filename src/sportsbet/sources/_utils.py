@@ -1,4 +1,4 @@
-"""Includes utilities shared by the sports."""
+"""Derive the market outcomes shared by the sports."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -11,9 +11,6 @@ from sklearn.utils import check_consistent_length, column_or_1d
 
 def derive_market_outcomes(home_points: Any, away_points: Any, markets: list[str]) -> pd.DataFrame:  # noqa: ANN401
     """Derive boolean outcomes for the given markets from home and away points.
-
-    It works for any sport. A sport with no draw asks only for the two win
-    markets, and the outcome comes out two-way.
 
     Args:
         home_points:

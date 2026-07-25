@@ -1,4 +1,4 @@
-"""It provides the sources the data comes from."""
+"""Read the sources the data comes from."""
 
 from __future__ import annotations
 

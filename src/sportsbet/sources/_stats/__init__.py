@@ -1,1 +1,1 @@
-"""It contains the statistics sources."""
+"""Define the statistics sources."""

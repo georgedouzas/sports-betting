@@ -1,4 +1,4 @@
-"""Implements the sources backed by the football-data.co.uk feed."""
+"""Read the football-data.co.uk statistics feed."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

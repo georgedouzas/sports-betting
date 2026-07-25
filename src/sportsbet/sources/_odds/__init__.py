@@ -1,1 +1,1 @@
-"""It contains the odds sources."""
+"""Define the odds sources."""
