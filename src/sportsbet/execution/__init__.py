@@ -1,8 +1,4 @@
-"""It provides the placing of the bets a bettor found.
-
-A bettor produces value bets and stops. This is what takes them to a venue, and it refuses by default: nothing is staked
-until the caller passes back the exact figures that were quoted.
-"""
+"""Place the value bets a bettor found at a venue."""
 
 from __future__ import annotations
 
