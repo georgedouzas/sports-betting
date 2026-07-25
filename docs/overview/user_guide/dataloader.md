@@ -203,15 +203,8 @@ vendor says `Manchester United`, `Nottingham Forest`, `Wolverhampton Wanderers`.
 game without odds, and a missing odd reads as a slightly smaller dataset, which gives a backtest that is clean, plausible
 and wrong.
 
-So statistics and odds from different sources are reconciled, behind a hard gate.
-
-```python
-X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
-dataloader.reconciliation_          # matched, unmatched_rate, unmatched_stats, unmatched_odds
-```
-
-The gate is `max_unmatched_rate`, `0.0` by default, so every match keeps its odds. Cross it and reconciliation raises
-[`UnmatchedError`][sportsbet.sources.UnmatchedError].
+So statistics and odds from different sources are reconciled. The dataloader reads through the spelling and pairs the
+two feeds, and a name it cannot place is dropped rather than guessed at.
 
 Most of the time you do nothing. Names are paired within a league and season, where both sources hold the same twenty
 clubs, so every name that could be confused is present on both sides and matches itself first. `Manchester City` pairs
@@ -219,19 +212,10 @@ with `Man City` because `Manchester United` and `Man United` are there too, clai
 
 Clubs are abbreviated by shortening their words, so names are compared by the prefixes their words share. `Wolves`
 matches `Wolverhampton Wanderers`, and `Everton` stays apart from `Liverpool`. A name is paired when it is clearly the
-best on the roster and clearly better than the next best, and the library leaves anything ambiguous to you.
+best on the roster and clearly better than the next best, and the library leaves anything ambiguous out.
 
-When it cannot place a name, it says so and shows the fix.
-
-```text
-Matched 2 of 3 matches (33.3% unmatched). These team names were not found: ['Athletic Bilbao'].
-Check them and pass them as `aliases`:
-aliases={
-    'Athletic Bilbao': 'Ath Bilbao',
-}
-```
-
-Read the suggestion, then pass it back.
+A name it cannot place is dropped, quietly. That is the danger a small alias fixes: when you know the club a leftover
+name means, you pass it, and the match keeps its odds.
 
 ```python
 DataLoader(..., aliases={'Athletic Bilbao': 'Ath Bilbao'})

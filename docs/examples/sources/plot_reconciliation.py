@@ -2,10 +2,8 @@
 Reconciling two feeds
 =====================
 
-This example illustrates resolve,
-ReconciliationReport and
-UnmatchedError. They pair the odds of one feed to the matches of another when the
-two name their clubs differently.
+This example illustrates resolve_odds. It pairs the odds of one feed to the
+matches of another when the two name their clubs differently.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -14,7 +12,7 @@ two name their clubs differently.
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from sportsbet.sources import UnmatchedError, resolve_odds
+from sportsbet.sources import resolve_odds
 
 # %%
 # The problem
@@ -63,29 +61,19 @@ len(exact)
 # What it matches on its own
 # --------------------------
 #
-# `resolve` reads through the spelling. `Man United` and `Manchester United` are the same club, so are `Newcastle` and
-# `Newcastle Utd`, and it pairs them without being told. By default not one match may go without odds, so a name it
-# cannot place is raised rather than dropped.
+# `resolve_odds` reads through the spelling. `Man United` and `Manchester United` are the same club, so are `Newcastle`
+# and `Newcastle Utd`, and it pairs them without being told. A name it cannot place, like `Spurs` for `Tottenham`, is
+# dropped rather than guessed at: attaching one club's odds to another would be worse than a missing row.
 
-try:
-    resolve_odds(stats, odds)
-except UnmatchedError as error:
-    complaint = str(error)
-complaint
+paired = resolve_odds(stats, odds)
+sorted(paired['home_team'])
 
 # %%
-# It never guesses on its own. A wrong alias would attach one club's odds to another and say nothing about it. So it
-# tells you what it suspects and leaves the decision to you. Allowing a little slack, here is how far it gets and what
-# it flags:
+# That silent drop is the danger. Three of the four matches keep their odds and the fourth quietly does not, and nothing
+# says so. When you know the club a leftover name means, you pass it as an alias, and now every match has its odds:
 
-paired, report = resolve_odds(stats, odds, max_unmatched_rate=0.5)
-report.matched, report.suggestions
-
-# %%
-# You confirm the suggestion by passing it as an alias, and now every match has its odds:
-
-paired, report = resolve_odds(stats, odds, aliases={'Spurs': 'Tottenham'})
-report.matched, report.unmatched_rate
+paired = resolve_odds(stats, odds, aliases={'Spurs': 'Tottenham'})
+sorted(paired['home_team'])
 
 # %%
 # The odds carry the identity of the statistics, so `Manchester United` is written as `Man United`:
