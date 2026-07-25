@@ -1,4 +1,4 @@
-"""Build a dataloader, a bettor or a venue from the names a surface is told."""
+"""Build a dataloader, a bettor or a venue from the given names."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
