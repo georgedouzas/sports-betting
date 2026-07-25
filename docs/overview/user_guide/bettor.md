@@ -181,7 +181,7 @@ assert abs(probabilities.sum(axis=1)[0] - 1.0) < 1e-6
 
 ### Which markets are mutually exclusive is derived from the data
 
-Nothing is named in advance. [`complementary_events`][sportsbet.evaluation.complementary_events] reads the markets your
+Nothing is named in advance. [`derive_complementary_events`][sportsbet.evaluation.derive_complementary_events] reads the markets your
 data carries and works out which of them are exhaustive.
 
 * `over` and `under` are complementary at whatever the line is, 2.5 goals, 1.5 goals, 220.5 points. A line the library
@@ -192,15 +192,15 @@ That second rule comes from the data: `home_win` and `away_win` are complementar
 by `draw` in one with it. The columns say which sport this is.
 
 ```python
-from sportsbet.evaluation import complementary_events
+from sportsbet.evaluation import derive_complementary_events
 
 # soccer: a draw is possible, so a home win and an away win are not exhaustive on their own
-assert complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']) == [
+assert derive_complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']) == [
     ['home_win', 'draw', 'away_win'], ['over_2.5', 'under_2.5'],
 ]
 
 # a sport without a draw: the outcome is two-way, and the line is wherever it is
-assert complementary_events(['home_win', 'away_win', 'over_220.5', 'under_220.5']) == [
+assert derive_complementary_events(['home_win', 'away_win', 'over_220.5', 'under_220.5']) == [
     ['home_win', 'away_win'], ['over_220.5', 'under_220.5'],
 ]
 ```

@@ -15,8 +15,7 @@ from math import isclose
 
 import pandas as pd
 
-from ..evaluation import BaseBettor
-from ..evaluation._base import latest_odds_column
+from ..evaluation import BaseBettor, find_latest_odds_column
 from ._base import (
     STAKED,
     BaseVenue,
@@ -77,7 +76,7 @@ def value_bet_intents(
             The bets the model means to place.
     """
     markets = list(bettor.betting_markets_)
-    odds_columns = {market: latest_odds_column(list(O_fix.columns), market) for market in markets}
+    odds_columns = {market: find_latest_odds_column(list(O_fix.columns), market) for market in markets}
     value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=markets)
     intents = []
     for position in range(len(value_bets)):

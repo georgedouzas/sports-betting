@@ -1,8 +1,15 @@
-"""It provides the tools to evaluate the performance of predictive models."""
+"""Evaluate the performance of predictive models."""
 
 from __future__ import annotations
 
-from ._base import BaseBettor, complementary_events, load_bettor, save_bettor
+from ._base import (
+    BaseBettor,
+    derive_complementary_events,
+    derive_market_base,
+    find_latest_odds_column,
+    load_bettor,
+    save_bettor,
+)
 from ._classifier import ClassifierBettor
 from ._model_selection import BettorGridSearchCV, backtest
 from ._rules import OddsComparisonBettor
@@ -13,7 +20,9 @@ __all__: list[str] = [
     'ClassifierBettor',
     'OddsComparisonBettor',
     'backtest',
-    'complementary_events',
+    'derive_complementary_events',
+    'derive_market_base',
+    'find_latest_odds_column',
     'load_bettor',
     'save_bettor',
 ]

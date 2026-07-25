@@ -12,7 +12,7 @@ import pandas as pd
 from sklearn.utils import check_scalar
 
 from .. import BoolData, Data
-from ._base import BaseBettor, is_odds_column, latest_odds_column, market_base
+from ._base import BaseBettor, derive_market_base, find_latest_odds_column, is_odds_column
 
 
 class OddsComparisonBettor(BaseBettor):
@@ -111,7 +111,7 @@ class OddsComparisonBettor(BaseBettor):
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame) -> Self:
         self._check_odds_types(X)
         self.alpha_ = check_scalar(self.alpha, 'alpha', target_type=float, min_val=0.0, max_val=1.0)
-        self.output_keys_ = [market_base(col) for col in Y.columns]
+        self.output_keys_ = [derive_market_base(col) for col in Y.columns]
         return self
 
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
@@ -131,7 +131,7 @@ class OddsComparisonBettor(BaseBettor):
             odds_cols = [
                 col
                 for odds_type in self.odds_types_
-                if (col := latest_odds_column(columns, key, provider=odds_type)) is not None
+                if (col := find_latest_odds_column(columns, key, provider=odds_type)) is not None
             ]
             proba_cont.append(1 / X[odds_cols].mean(axis=1))
         proba = (pd.concat(proba_cont, axis=1) - self.alpha_).fillna(0.0).to_numpy()
