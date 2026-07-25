@@ -1,6 +1,28 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.2.0 → 1.3.0
+Rationale: Fold the full code conventions into Principle VI and remove the
+separate CONVENTIONS.md, so the constitution is the single, self-contained source
+of the naming, docstring, module-structure and test rules rather than a brief
+that points at an external file. MINOR: materially expanded guidance, no
+principle removed or redefined.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — expanded from a brief that
+    bound to CONVENTIONS.md into the complete rules, stated inline.
+Modified sections:
+  - Development Workflow & Quality Gates — the pre-PR conformance check names
+    Principle VI directly rather than CONVENTIONS.md.
+Removed files:
+  - CONVENTIONS.md — its content now lives in Principle VI.
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
 Version change: 1.1.0 → 1.2.0
 Rationale: Fold the code conventions (CONVENTIONS.md) into the constitution as a
 sixth principle, so naming, docstrings, module structure and test layout are a
@@ -15,11 +37,6 @@ Added principles:
 Modified sections:
   - Development Workflow & Quality Gates — conformance to CONVENTIONS.md is part
     of the pre-PR check and the Constitution Check.
-
-Templates requiring updates:
-  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
-  ✅ .specify/templates/spec-template.md — generic; no conflict.
-  ✅ .specify/templates/tasks-template.md — generic; no conflict.
 
 ---- history ----
 Version change: 1.0.0 → 1.1.0
@@ -142,33 +159,82 @@ quickly without executable coverage.
 
 ### VI. Naming, Docstrings, and Module Structure
 
-Code conforms to `CONVENTIONS.md`, which is binding rather than advisory. In
-brief:
+These rules are binding, not advisory. They are generic Python and hold in any
+project; the examples are drawn from this codebase. The automated gate
+(Principle IV) checks the mechanical parts; this principle is the taste the gate
+cannot check.
 
-- A function name begins with a verb and says exactly what the function does or
-  returns: `count_common_prefix`, not `common_prefix_length`; `normalize_identity`,
-  not `transform_identity`. State learned during `fit` ends in a trailing
-  underscore. Implementation modules, classes and helpers are private (`_name`),
-  and the package `__init__` re-exports the public surface.
-- Docstrings are imperative. A function docstring is a single line; a body
-  paragraph or an Args/Returns block appears only on a public entry point or a
-  public class whose shape is not obvious. No meta narration (`Implements ...`,
-  `This function ...`), no essays, and never a description of what the code does
-  not do.
-- A module is one concern, read bottom-up: a name is defined before it is used,
-  so helpers come first and the entry point last. A definition lives in the
-  module that owns it. A base module is self-contained and imports no sibling; a
-  base that needs a sibling's code absorbs it by merging rather than importing.
-  No import inside a function body papers over a cycle; the only lazy import
-  defers an optional extra.
-- Errors raise a named exception with the message in a variable. Functions are
-  small with early returns and no explanatory inline comments.
-- Tests mirror the source tree, are named `test_<function>_<behavior>`, carry a
-  single-line docstring, use the public API, and never touch the network.
+**Files and layout.** A module reads top to bottom in one order: a one-line
+imperative module docstring, the license header, `from __future__ import
+annotations`, then imports grouped standard library / third party / first party
+(`ruff` sorts them, so do not sort by hand), then module constants (`UPPER_CASE`)
+and type aliases, then functions in dependency order — a name is defined before
+it is used, so the small helpers come first and the function the module exists
+for comes last. One module is one concern; when a file grows two, split it. A
+definition lives in the module that owns it. A base module is self-contained and
+imports no sibling: its purpose is to be imported, not to import, so a base that
+needs a sibling's code absorbs it by merging rather than importing. A type-only
+alias from the package root under `TYPE_CHECKING` is not a sibling. No import
+inside a function body papers over a cycle — fix the cycle; the only lazy import
+defers an optional dependency and carries a `# noqa: PLC0415` with a reason.
+
+**Naming.** A function name begins with a verb and says exactly what the function
+does or returns: `count_common_prefix`, not `common_prefix_length`;
+`normalize_identity`, not `transform_identity`; `build_roster`, not `roster`. A
+name that begins with a noun describes a value, and a function is not a value.
+Avoid empty verbs that say nothing — `process`, `handle`, `manage`, `transform`
+with no object. State learned at runtime carries a trailing underscore
+(`odds_type_`, `target_event_status_`), the scikit-learn convention. Class-level
+constants are `ClassVar`. Implementation modules, classes and helpers are private
+(`_name`); the package `__init__` re-exports the public surface with an explicit
+`__all__`. Names come from the domain, used consistently.
+
+**Docstrings.** The summary line is one line, imperative, and says what the thing
+does — never `Implements the ...`, `This function ...`, `A class that ...`, which
+are meta narration. Write it in plain English: prefer simple, direct words over
+clever or roundabout phrasing, and if a line reads awkwardly out loud, rewrite
+it. For most functions the one line is the whole docstring, and a private helper
+never gets more. A body paragraph, or an `Args`/`Returns`/`Raises` block, appears
+only on a public entry point or a public class whose shape is not obvious from
+the signature, and stays a few sentences. Never describe what the code does not
+do, never restate the code, no essays, no editorializing. Public API carries a
+runnable example checked by the doctest run; a network-touching class does not.
+
+**Comments.** Almost none. The names say what, the docstring says why. An inline
+comment that explains the next line means the line or its names are unclear — fix
+those. The only comments in source are the license header and, rarely, a
+`# noqa`/`# type: ignore` with a reason.
+
+**Errors.** Build the message in a variable, then raise it (`ruff EM`/`TRY`).
+Raise a specific named exception defined for the module or package
+(`SelectionError`, `ExecutionError`), not a bare `Exception`/`ValueError` where a
+named one carries meaning. The message tells the reader what to do — the variable
+that was missing, the value that did not match. Do not catch and swallow; catch
+narrowly or let it propagate.
+
+**Control flow.** Functions are small and do one thing; a function that needs a
+paragraph of docstring body to explain its branches is two functions. Return
+early with guard clauses. No deep nesting — extract a helper before the third
+level of indentation.
+
+**Tests.** The test tree mirrors the source tree (`sources/_stats/_nba.py` is
+tested by `tests/sources/stats/test_nba.py`). A test is named
+`test_<function>_<behavior>`: it begins with the function it exercises, then a
+terse behavior phrase with articles dropped, and its docstring is a single line —
+never a multi-line body. A test never imports a private name from a private
+module; it uses the public API the way a user does, and if it needs an internal,
+the internal wants to be public. No test reaches the network — use a recorded
+payload, a fake, or a locally served page. Fixtures are typed, small, and live in
+the nearest `conftest.py`. The three surfaces (Python API, CLI, MCP server)
+expose the same capabilities, and a parity test asserts it so it cannot drift. A
+credential is named, never passed: a function, command flag or tool argument
+takes the name of the variable holding the secret and reads it where it is used;
+a secret never becomes an argument, a log line or a pickle.
 
 Rationale: these are the rules the maintainer has enforced by hand across the
-refactor. Encoding them makes them a gate the Constitution Check verifies, so a
-change conforms before review rather than after.
+refactor. Folding them into the constitution, rather than a separate file, makes
+them one self-contained source of truth and a gate the Constitution Check
+verifies, so a change conforms before review rather than after.
 
 ## Technology & Tooling Standards
 
@@ -194,8 +260,8 @@ change conforms before review rather than after.
   green.
 - Before opening a PR, contributors MUST run `pdm run formatting`,
   `pdm run checks`, and `pdm run tests` (or the equivalent `pre-commit` +
-  `nox` invocations) and resolve all findings, and MUST conform to
-  `CONVENTIONS.md` (Principle VI).
+  `nox` invocations) and resolve all findings, and MUST conform to Principle VI
+  (Naming, Docstrings, and Module Structure).
 - CI (GitHub Actions `ci.yml` / `doc.yml`) re-runs the same gates; a red CI run
   blocks merge.
 - Every PR MUST state which principles it touches and confirm the gates pass;
@@ -223,4 +289,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-20
+**Version**: 1.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-25
