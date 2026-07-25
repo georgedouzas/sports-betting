@@ -1,4 +1,4 @@
-"""It provides the dataloaders that shape the data for modelling."""
+"""Shape the data for modelling with the dataloaders."""
 
 from __future__ import annotations
 

@@ -1,23 +1,19 @@
-"""Implements the base dataloader class shared by all dataloaders."""
+"""Extract the modelling data every dataloader shares."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
 from types import NoneType
-from typing import Self
+from typing import Any, Self
 
 import cloudpickle
 import pandas as pd
 from sklearn.utils import check_scalar
 
 from .. import FixturesData, ParamGrid, TrainData
-from .._params import EVENT_COLS, GROUPS_COLS, IDENTITY_COLS, STATUSES, TARGET_EVENT_STATUSES
-from ._schema import (
-    build_odds_schema,
-    build_stats_schema,
-    derive_metadata,
-)
+from .._params import EVENT_COLS, GROUPS_COLS, IDENTITY_COLS, IDENTITY_FIELDS, STATUSES, TARGET_EVENT_STATUSES
+from ..sources import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
 DELIMITER = '__'
 STATUS_RANK = {status: ind for ind, status in enumerate(STATUSES)}
@@ -48,6 +44,68 @@ def odds_column(provider: str, col: str, event_status: str, event_time: pd.Timed
 def target_column(col: str, target_event_status: str, target_event_time: pd.Timedelta) -> str:
     """Build a target (Y) column name."""
     return DELIMITER.join([col, target_event_status, format_event_time(target_event_time)])
+
+
+def _field_name(col: str) -> str:
+    """Turn a column name into a valid Python identifier (``over_2.5`` -> ``over_2_5``)."""
+    return col.replace('.', '_')
+
+
+def build_value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, dict]:
+    """Build the annotations and fields for the value columns from their metadata."""
+    annotations: dict = {}
+    namespace: dict = {}
+    for col, meta in metadata.items():
+        field = _field_name(col)
+        annotations[field] = meta['type']
+        alias = col if field != col else None
+        namespace[field] = optional_col(meta['include'], fixed=meta['fixed'], alias=alias)
+    return annotations, namespace
+
+
+def derive_metadata(
+    data: pd.DataFrame,
+    value_cols: list[str],
+    allow_fixed: bool = True,
+) -> dict[str, dict[str, Any]]:
+    """Derive per-column `include`/`fixed`/`type` metadata from a long snapshot frame."""
+
+    def _is_constant(values: pd.Series) -> bool:
+        non_null = values.dropna()
+        return non_null.empty or bool(non_null.min() == non_null.max())
+
+    grouped = data.groupby(IDENTITY_COLS, dropna=False)
+    metadata = {}
+    for col in value_cols:
+        include = [status for status in STATUSES if data.loc[data['event_status'] == status, col].notna().any()]
+        fixed = allow_fixed and bool(grouped[col].apply(_is_constant).all())
+        col_type = int if pd.api.types.is_integer_dtype(data[col]) else float
+        metadata[col] = {'type': col_type, 'include': include, 'fixed': fixed}
+    return metadata
+
+
+def build_stats_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseStatsSchema]:
+    """Build a statistics schema from the derived value-column metadata."""
+    annotations: dict = dict(IDENTITY_FIELDS)
+    namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
+    value_annotations, value_namespace = build_value_namespace(metadata)
+    annotations.update(value_annotations)
+    namespace.update(value_namespace)
+    namespace['__annotations__'] = annotations
+    return type('StatsSchema', (BaseStatsSchema,), namespace)
+
+
+def build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSchema]:
+    """Build an odds schema from the derived market-column metadata."""
+    annotations: dict = dict(IDENTITY_FIELDS)
+    namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
+    annotations['provider'] = str
+    namespace['provider'] = optional_col(['preplay'], fixed=True)
+    value_annotations, value_namespace = build_value_namespace(metadata)
+    annotations.update(value_annotations)
+    namespace.update(value_namespace)
+    namespace['__annotations__'] = annotations
+    return type('OddsSchema', (BaseOddsSchema,), namespace)
 
 
 class BaseDataLoader(ABC):
