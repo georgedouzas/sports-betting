@@ -232,42 +232,20 @@ Mixing sources means one calls a club `Man United` and the other calls it `Manch
 that game has no odds, and a missing odd does not look like an error. It looks like a slightly smaller dataset, and a
 backtest that is clean, plausible and wrong.
 
-So they are reconciled, and the result is a hard gate.
+So they are reconciled. The dataloader reads through the spelling and pairs the two feeds for you, and a name it cannot
+place is dropped rather than guessed at.
+
+A club the pairing leaves over is one you name yourself, by passing `aliases`, because a resemblance is not a fact and
+attaching one club's odds to another would be worse than a missing row. See
+[the dataloader guide](dataloader.md#when-two-sources-name-a-club-differently) for how a dataloader takes them.
+
+You can reconcile two tables yourself with [`resolve_odds`][sportsbet.sources.resolve_odds]. It returns the odds
+carrying the identity of the statistics, so the two line up.
 
 ```python
-X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
-dataloader.reconciliation_        # a ReconciliationReport
-```
+from sportsbet.sources import resolve_odds
 
-A [`ReconciliationReport`][sportsbet.sources.ReconciliationReport] carries `matched`, `unmatched_rate`,
-`unmatched_stats`, `unmatched_odds` and `suggestions`. Cross `max_unmatched_rate`, which defaults to zero, and you get
-[`UnmatchedError`][sportsbet.sources.UnmatchedError] rather than a holed dataset.
-
-```python
-from sportsbet.sources import UnmatchedError
-
-try:
-    dataloader.extract_train_data(odds_type='pinnacle')
-except UnmatchedError as error:
-    print(error.report.aliases())
-```
-
-```text
-{
-    'Olimpia Milano': 'EA7 Emporio Armani Milan',
-}
-```
-
-Check it, because a suggestion is a resemblance and not a fact, then pass it back as `aliases={...}`. See
-[the dataloader guide](dataloader.md#when-two-sources-name-a-club-differently) for why the library never applies one on
-its own.
-
-You can reconcile two tables yourself with [`resolve`][sportsbet.sources.resolve].
-
-```python
-from sportsbet.sources import resolve
-
-odds, report = resolve(stats, odds, aliases={'Olimpia Milano': 'EA7 Emporio Armani Milan'})
+odds = resolve_odds(stats, odds, aliases={'Olimpia Milano': 'EA7 Emporio Armani Milan'})
 ```
 
 ## Describing your own columns
