@@ -9,7 +9,7 @@ This watches. A command that gains an option and a tool that does not gain it fa
 
 import asyncio
 
-from sportsbet.cli._cli import main
+from sportsbet.cli import main
 from sportsbet.mcp import server
 
 RENAMED = {
