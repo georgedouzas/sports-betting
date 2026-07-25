@@ -1,4 +1,4 @@
-"""Module that contains the main function of the CLI."""
+"""Run the command line, wiring its command groups together."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

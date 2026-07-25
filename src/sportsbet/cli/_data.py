@@ -1,4 +1,4 @@
-"""Module that contains the dataloader commands of the CLI."""
+"""Run the dataloader commands from the command line."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

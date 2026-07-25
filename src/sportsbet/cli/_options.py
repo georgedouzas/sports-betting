@@ -1,11 +1,4 @@
-"""Module that contains the options of the CLI.
-
-A command is told what to do in its own arguments. A dataloader is a sport, what to select from it, and where its data
-comes from, and all of those are names, so they fit in the arguments themselves.
-
-What the Python API takes, a command takes. Where a name is not enough — a store, an alias, a moment — it is spelled the
-way the thing itself is spelled.
-"""
+"""Define the shared options the commands accept."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

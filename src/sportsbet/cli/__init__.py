@@ -1,4 +1,4 @@
-"""Implementation of the CLI."""
+"""Drive the library from the command line."""
 
 from __future__ import annotations
 

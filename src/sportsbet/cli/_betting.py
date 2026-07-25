@@ -1,4 +1,4 @@
-"""Module that contains the evaluation commands of the CLI."""
+"""Run the evaluation commands from the command line."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT

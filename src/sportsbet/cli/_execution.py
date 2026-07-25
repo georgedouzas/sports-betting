@@ -1,8 +1,4 @@
-"""Module that contains the execution commands of the CLI.
-
-There is no dry run flag. A dry run is what happens when the quoted figures are not passed back, so there is no default
-to get wrong and no flag to forget. `place` without them prints the quote, stakes nothing and exits non-zero.
-"""
+"""Run the execution commands from the command line."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
