@@ -1,4 +1,4 @@
-"""Module that contains the utilities functions of the CLI."""
+"""Print the command results as tables."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
