@@ -47,13 +47,6 @@ SELECTION: list[Callable[[FC], FC]] = [
         multiple=True,
         help='A team the sources spell differently, as `stats name=odds name`. Repeatable.',
     ),
-    click.option(
-        '--max-unmatched-rate',
-        type=float,
-        default=0.0,
-        show_default=True,
-        help='The share of teams that may fail to pair.',
-    ),
 ]
 
 HORIZON: list[Callable[[FC], FC]] = [

@@ -36,7 +36,6 @@ SELECTED = (
     'odds_regions',
     'odds_moments',
     'aliases',
-    'max_unmatched_rate',
 )
 EXTRACTED = (
     'drop_na_thres',
