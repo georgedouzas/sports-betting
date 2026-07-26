@@ -10,9 +10,7 @@ from .._common._football_data import _FootballDataSource
 
 
 class FootballDataStats(_FootballDataSource, BaseStatsSource):
-    """The statistics of the football-data.co.uk feed.
-
-    It downloads the feed on your own machine and transforms it locally, so the data stays with you. It needs no key.
+    """The soccer schedule, results and match statistics from the football-data.co.uk feed.
 
     Read more in the [user guide][user-guide].
 

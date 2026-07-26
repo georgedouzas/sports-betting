@@ -750,11 +750,7 @@ def _process_training(payloads: list[RawPayload]) -> list[tuple[str, int, int, p
 
 
 def _find_latest_years(catalogue: list[tuple[str, int, int, str]], processed: list) -> pd.DataFrame:
-    """Return the latest published year of each league and division.
-
-    It comes from the whole feed catalogue rather than the selection, so an upcoming match belongs to the season it is
-    actually part of.
-    """
+    """Return the latest published year of each league and division from the whole feed catalogue."""
     years = [{'league': league, 'division': division, 'year': year} for league, division, year, _ in catalogue]
     years.extend({'league': league, 'division': division, 'year': year} for league, division, year, _ in processed)
     return pd.DataFrame(years).groupby(['league', 'division']).max().reset_index()
@@ -880,11 +876,7 @@ def _parse_index(league: str, content: bytes) -> list[tuple[str, int, int, str]]
 
 
 class _FootballDataSource(BaseSource):
-    """A source backed by the football-data.co.uk feed.
-
-    The statistics and the odds come from the same upstream file, so both declare the same items and the file is
-    downloaded once.
-    """
+    """A source backed by the football-data.co.uk feed, its statistics and odds read from one file."""
 
     sport: ClassVar[str | None] = 'soccer'
     name: ClassVar[str] = 'football_data'

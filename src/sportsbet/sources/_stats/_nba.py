@@ -67,16 +67,7 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
 
 
 class NBAStats(BaseStatsSource):
-    """The statistics of the NBA, as ESPN publishes them.
-
-    It is free and needs no key. It carries the schedule and the final score of every game, which is what the targets
-    and the form of a team are built from, and it carries them while a season is being played rather than months after
-    it has ended.
-
-    There is no draw in basketball, since a tie goes to overtime, so the outcome is two-way. There is no totals market
-    either: a bookmaker sets a different line for every game, and a market whose line moves is not a column.
-
-    The odds are another source, and there is no free one for basketball anywhere.
+    """The NBA schedule and final scores from ESPN, updated through a season, with home and away markets.
 
     Read more in the [user guide][user-guide].
 

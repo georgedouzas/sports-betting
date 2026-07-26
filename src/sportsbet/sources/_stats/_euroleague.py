@@ -53,14 +53,7 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
 
 
 class EuroLeagueStats(BaseStatsSource):
-    """The statistics of the EuroLeague's official API.
-
-    It is free and needs no key. It carries the schedule and the final score of every game, which is what the targets
-    and the form of a team are built from.
-
-    There is no draw in basketball, since a tie goes to overtime, so the outcome is two-way. There is no totals market
-    either: the total points of a game run from about 125 to 229 and a bookmaker sets a different line for every one of
-    them, and a market whose line moves is not a column.
+    """The EuroLeague schedule and final scores from its official API, with home and away markets.
 
     Read more in the [user guide][user-guide].
 
@@ -73,7 +66,7 @@ class EuroLeagueStats(BaseStatsSource):
         >>> # A whole season arrives in one request, and asking what it publishes costs one more.
         >>> len(source.list_index_items())
         1
-        >>> # The statistics are free; nobody gives basketball odds away, so those are yours to buy.
+        >>> # The statistics are free. The odds are yours to buy.
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
         ...     stats=source,
