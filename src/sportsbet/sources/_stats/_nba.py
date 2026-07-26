@@ -18,11 +18,9 @@ from .._common._basketball import DIVISION, SEASONS_KEY, _snapshots
 
 SEASONS_URL = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons?limit=100'
 GAMES_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start}-{end}&limit=1000'
-
 LEAGUE = 'NBA'
-
-PRESEASON = 1
 EXHIBITION = 'ALLSTAR'
+PRESEASON = 1
 MONTHS = [(-1, month) for month in (9, 10, 11, 12)] + [(0, month) for month in (1, 2, 3, 4, 5, 6, 7)]
 
 
@@ -85,7 +83,7 @@ class NBAStats(BaseStatsSource):
         ... )
         >>> dataloader.sport_
         'basketball'
-        >>> # The same sport is the same dataloader. A league is a source, not a dataloader.
+        >>> # A league is a source. The same sport is the same dataloader.
         >>> from sportsbet.sources import EuroLeagueStats
         >>> NBAStats().sport == EuroLeagueStats().sport
         True
@@ -95,7 +93,7 @@ class NBAStats(BaseStatsSource):
     name: ClassVar[str] = 'nba'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the seasons the competition publishes, which is one free request whatever is selected."""
+        """Return the seasons the competition publishes."""
         return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
@@ -110,7 +108,7 @@ class NBAStats(BaseStatsSource):
         )
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per month of each selected season, since the feed caps a request at a thousand games."""
+        """Return one item per month of each selected season."""
         items = []
         for param in params:
             if param['league'] != LEAGUE:

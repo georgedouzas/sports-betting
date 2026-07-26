@@ -27,7 +27,7 @@ class _SampleSource:
     sport: ClassVar[str | None] = 'soccer'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return no items, since the library already knows what it ships."""
+        """Return no items."""
         return []
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:

@@ -1,4 +1,4 @@
-"""Read the raw data from its sources."""
+"""Read match statistics and odds from the feeds that publish them."""
 
 from __future__ import annotations
 

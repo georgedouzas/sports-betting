@@ -85,7 +85,7 @@ def _timestamp(moment: pd.Timestamp) -> str:
 
 
 def _key_timestamp(moment: pd.Timestamp) -> str:
-    """Render an instant so it can be part of an item key, which becomes a file name."""
+    """Render an instant for use in an item key."""
     return moment.tz_convert('UTC').strftime('%Y%m%dT%H%M%SZ')
 
 
@@ -100,7 +100,7 @@ def _events(payload: RawPayload) -> tuple[list[dict], str]:
 class OddsApi(BaseOddsSource):
     """The time-stamped odds of The Odds API, quoting a match at each moment it reaches.
 
-    The free tier publishes the closing price alone. Historical prices are a paid tier from 6 June 2020, and every
+    The closing price is public. Historical prices are a paid tier from 6 June 2020, and every
     market, region and moment is a separate request. The key is read from the environment variable named by `key_env`.
 
     Read more in the [user guide][user-guide].
@@ -118,9 +118,8 @@ class OddsApi(BaseOddsSource):
 
         moments:
             The moments of a match to price, as `(event_status, minutes)` pairs.
-            The default `None` prices the moments the statistics carry, so every
-            price pairs with something known at that moment. Every moment is a
-            separate snapshot, so it multiplies the requests.
+            The default `None` prices the moments the statistics carry. Every
+            moment is a separate snapshot.
 
     Examples:
         >>> import os
@@ -129,10 +128,10 @@ class OddsApi(BaseOddsSource):
         >>> source = OddsApi(key_env='ODDS_API_KEY', markets=['h2h'], regions=['eu'])
         >>> source.name, source.kind
         ('odds_api', 'odds')
-        >>> # It sells every sport, so it carries none of its own and takes the sport it is paired with.
+        >>> # It carries no sport of its own and takes the sport it is paired with.
         >>> source.sport is None
         True
-        >>> # The key is read from the environment when the request is made, so it never reaches the item.
+        >>> # The key is read from the environment when the request is made.
         >>> item = RawItem(source='odds_api', key='snapshot', url='https://api.the-odds-api.com/v4/sports?all=true')
         >>> 'secret' in item.url
         False
@@ -163,7 +162,7 @@ class OddsApi(BaseOddsSource):
 
     @staticmethod
     def _moments(schedule: pd.DataFrame) -> list[tuple[str, int]]:
-        """Return the moments the statistics carry, which are the ones worth a price."""
+        """Return the moments the statistics carry."""
         moments = schedule[list(EVENT_COLS)].drop_duplicates()
         return sorted(
             {
@@ -174,7 +173,7 @@ class OddsApi(BaseOddsSource):
         )
 
     def _query(self: Self) -> dict[str, str]:
-        """Return the query parameters the vendor expects, without the credential."""
+        """Return the query parameters the vendor expects."""
         markets, regions, _ = self._settings()
         return {'regions': ','.join(regions), 'markets': ','.join(markets), 'oddsFormat': 'decimal'}
 
@@ -193,11 +192,11 @@ class OddsApi(BaseOddsSource):
         return f'{item.url}{separator}apiKey={os.environ[self.key_env]}'
 
     def needs_schedule(self: Self) -> bool:
-        """Return `True`, since its prices are addressed by instant and so need the kick-off."""
+        """Return `True`."""
         return True
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the catalogue of the vendor, which is free."""
+        """Return the catalogue of the vendor."""
         return [RawItem(source=self.name, key=SPORTS_KEY, url=f'{SPORTS_URL}?all=true')]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:

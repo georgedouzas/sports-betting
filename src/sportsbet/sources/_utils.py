@@ -3,13 +3,13 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from typing import Any
-
 import pandas as pd
 from sklearn.utils import check_consistent_length, column_or_1d
 
 
-def derive_market_outcomes(home_points: Any, away_points: Any, markets: list[str]) -> pd.DataFrame:  # noqa: ANN401
+def derive_market_outcomes(
+    home_points: pd.Series | pd.DataFrame, away_points: pd.Series | pd.DataFrame, markets: list[str],
+) -> pd.DataFrame:
     """Derive boolean outcomes for the given markets from home and away points.
 
     Args:

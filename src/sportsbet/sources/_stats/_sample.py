@@ -23,7 +23,7 @@ class SampleSoccerStats(_SampleSource, BaseStatsSource):
         >>> source = SampleSoccerStats()
         >>> source.name, source.kind, source.sport
         ('sample_soccer', 'stats', 'soccer')
-        >>> # It ships with the library, so it knows what it carries without reading anything.
+        >>> # The bundled data is known up front.
         >>> source.list_available_params()
         [{'division': 1, 'league': 'England', 'year': 2024}, {'division': 1, 'league': 'Spain', 'year': 2024}]
         >>> dataloader = DataLoader(

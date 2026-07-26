@@ -18,7 +18,7 @@ FEATURES = ['points_for', 'points_against', 'wins']
 
 
 def _form(games: pd.DataFrame) -> pd.DataFrame:
-    """Return each team's scoring form before each game, shifted so a game sees only the earlier ones."""
+    """Return each team's scoring form from the games before each one."""
     played = games['home_points'].ge(0) & games['away_points'].ge(0)
     sides = [
         pd.DataFrame(

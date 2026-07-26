@@ -525,7 +525,7 @@ def _rename_modelling_columns(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
-    """Extract the rolling and expanding team form, shifted so a match carries the form of the matches before it."""
+    """Extract each team's rolling and expanding form from the matches before each one."""
     team_cols = ['home_team', 'away_team']
     target_cols = [
         col
@@ -777,7 +777,7 @@ def _build_modelling_frames(
     processed: list[tuple[str, int, int, pd.DataFrame]],
     fixtures: pd.DataFrame,
 ) -> list[tuple[int, pd.DataFrame]]:
-    """Build the wide modelling frame of each season, its upcoming matches appended so they carry the season's form."""
+    """Build each season's wide modelling frame, its upcoming matches appended and given the season's form."""
     modelling = []
     for league, division, year, training in processed:
         mask = (
@@ -836,7 +836,7 @@ def _parse_year(season: str) -> int:
 
 
 def _collect_selected_leagues(selection: ParamGrid | None) -> set[str] | None:
-    """Return the leagues a selection names, or `None` when it names none and so every one of them is wanted."""
+    """Return the leagues a selection names, or `None` when it names none."""
     if not selection:
         return None
     grids = selection if isinstance(selection, list) else [selection]
@@ -882,7 +882,7 @@ class _FootballDataSource(BaseSource):
     name: ClassVar[str] = 'football_data'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the index pages and whole-history files of the selected leagues, from which the catalogue is read."""
+        """Return the index pages and whole-history files of the selected leagues."""
         leagues = _collect_selected_leagues(selection)
         items = [
             RawItem(source=self.name, key=f'{INDEX_PREFIX}_{league}', url=_build_index_url(league))

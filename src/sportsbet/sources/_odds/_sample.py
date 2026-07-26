@@ -22,7 +22,7 @@ class SampleSoccerOdds(_SampleSource, BaseOddsSource):
         ('sample_soccer', 'odds', 'soccer')
         >>> dataloader = DataLoader(stats=SampleSoccerStats(), odds=source)
         >>> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')
-        >>> # The providers and the markets are read from the data, not registered anywhere.
+        >>> # The providers and the markets are read from the data.
         >>> dataloader.get_odds_types()
         ['market_average', 'market_maximum']
         >>> list(Y.columns)
