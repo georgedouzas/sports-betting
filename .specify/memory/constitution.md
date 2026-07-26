@@ -1,6 +1,34 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.9.0 → 1.10.0
+Rationale: Add the lint-suppression rule to Principle VI: a `# noqa`/`# type:
+ignore` is a last resort for a genuine one-off and carries its code and a reason;
+a suppression that recurs across the repo is configured once in pyproject.toml
+rather than repeated inline. MINOR: expanded guidance, no principle removed.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — added the avoid-inline-noqa
+    rule (configure a widespread suppression in pyproject.toml).
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
+Version change: 1.8.0 → 1.9.0
+Rationale: Clarify Principle VI docstrings: a constructor parameter or dataclass
+field is documented under Args, while an Attributes block is reserved for learned
+state (the trailing-underscore attributes), and a self-evident field name is not
+restated. MINOR: expanded guidance, no principle removed or redefined.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — added the Args-vs-Attributes
+    rule (Attributes is for learned state only) and the no-restating-obvious-names
+    reminder.
+
+---- history ----
 Version change: 1.7.0 → 1.8.0
 Rationale: Sharpen Principle VI docstrings on describing content: a docstring
 states what the thing is and holds, not its virtues (free, needs no key), the
@@ -339,9 +367,12 @@ it. For most functions the one line is the whole docstring, and a private helper
 never gets more. A public entry point and a public class carry an
 `Args`/`Returns` block (and `Raises` where they raise) that documents every
 parameter and what is returned — a public signature is not self-explanatory to a
-caller, so the docstring names each argument and the result. Keep each entry
+caller, so the docstring names each argument and the result. A constructor
+parameter or a dataclass field is documented under `Args`; an `Attributes` block
+is only for learned state, the trailing-underscore attributes. Keep each entry
 terse and the whole body to a few sentences. Never describe what the code does
-not do, never restate the code, no essays, no editorializing. A docstring
+not do, never restate the code (a `url` field needs no `where to read it from`),
+no essays, no editorializing. A docstring
 describes what the thing is and what it holds, plainly: not its virtues (`free`,
 `needs no key`, `the data stays on your machine`), not the rationale for its shape
 (`since basketball has no draw`), and not what downstream code builds from it —
@@ -357,7 +388,11 @@ overview of the submodules — rather than a single imperative line.
 **Comments.** Almost none. The names say what, the docstring says why. An inline
 comment that explains the next line means the line or its names are unclear — fix
 those. The only comments in source are the license header and, rarely, a
-`# noqa`/`# type: ignore` with a reason.
+`# noqa`/`# type: ignore` with a reason. A suppression is a last resort for a
+genuine one-off, and it carries the rule code and why. When the same suppression
+recurs across the repo, it is not repeated inline: the rule is configured once in
+`pyproject.toml` (a scoped `per-file-ignores` or an `ignore`), so the decision
+lives in one place rather than scattered through the source.
 
 **Errors.** Build the message in a variable, then raise it (`ruff EM`/`TRY`).
 Raise a specific named exception defined for the module or package
@@ -443,4 +478,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.8.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26
+**Version**: 1.10.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26

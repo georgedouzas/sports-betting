@@ -1,4 +1,4 @@
-"""Read the raw content a data source needs, and define the base a source implements."""
+"""Define the base a data source implements and read its raw content."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -11,15 +11,14 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Self
+from typing import ClassVar, Self
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 import aiohttp
 import pandas as pd
 
-if TYPE_CHECKING:
-    from ..core import ParamGrid
+from ..core import ParamGrid
 
 CONNECTIONS_LIMIT = 20
 ENCODING = 'ISO-8859-1'
@@ -28,27 +27,24 @@ LOCAL = 'file://'
 
 @dataclass(frozen=True)
 class RawItem:
-    """One thing to read: a URL, or a `file://` path for a feed that ships with the library.
+    """A raw item to fetch, identified within its source by a key, at a URL or `file://` path.
 
-    Two sources declaring the same `source` and `key` declare the same item, so data shared by a statistics and an odds
-    source is read once rather than twice.
+    Two items with the same source and key are equal.
 
-    Attributes:
+    Args:
         source:
-            The name of the source that declared it.
-
+            The source that declared it.
         key:
-            The identity of the item within the source.
-
+            The item's identity within the source.
         url:
-            Where to read it from.
+            The URL, or a `file://` path for a bundled file.
 
     Examples:
         >>> from sportsbet.sources import RawItem
         >>> item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
         >>> item.key
         'England_1_2025'
-        >>> # The same source and key is the same item, so it is read once.
+        >>> # The same source and key make the same item.
         >>> item == RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
         True
     """
@@ -60,14 +56,13 @@ class RawItem:
 
 @dataclass(frozen=True)
 class RawPayload:
-    r"""What a source returned, kept verbatim.
+    r"""A payload a source returned, pairing the fetched item with its raw bytes.
 
-    Attributes:
+    Args:
         item:
-            What was asked for.
-
+            The item that was fetched.
         content:
-            Exactly what came back.
+            The bytes of the response.
 
     Examples:
         >>> from sportsbet.sources import RawItem, RawPayload
@@ -75,7 +70,7 @@ class RawPayload:
         >>> payload = RawPayload(item=item, content=b'date,home_team,away_team\n2025-08-16,A,B\n')
         >>> payload.item.key
         'England_1_2025'
-        >>> # The bytes are exactly what the feed returned, so a transform can be changed and replayed for free.
+        >>> # The bytes are exactly what the feed returned.
         >>> payload.content.splitlines()[0]
         b'date,home_team,away_team'
     """
@@ -124,7 +119,7 @@ def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) ->
             A callable turning an item into the URL to fetch it from, adding any credential.
 
     Returns:
-        The payloads, each pairing an item with the bytes that came back, in the order given.
+        The payloads, each pairing an item with its bytes, in the order given.
     """
     contents = _read_urls_content([authorize(item) for item in items])
     return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
@@ -151,7 +146,7 @@ class BaseSource(ABC):
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
     The dataloader does the reading. `sport` names the one sport it carries, or is `None` for a vendor that carries
     several and takes the sport of the source it is paired with. It also answers what it publishes through
-    `list_available_params`, which a `param_grid` is written against.
+    `list_available_params`.
 
     Examples:
         >>> from sportsbet.sources import FootballDataStats, OddsApi
@@ -161,7 +156,7 @@ class BaseSource(ABC):
         >>> # A vendor selling every sport carries none of its own, and takes the sport it is paired with.
         >>> OddsApi(key_env='ODDS_API_KEY', markets=['h2h']).sport is None
         True
-        >>> # Asking what a source publishes declares items rather than fetching them.
+        >>> # Asking what a source publishes declares the items to read.
         >>> items = stats.list_index_items()
         >>> items[0].source
         'football_data'
@@ -175,11 +170,9 @@ class BaseSource(ABC):
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the items needed to discover what the source publishes.
 
-        A feed with no index is read in full to discover it, so discovery can cost as much as the data.
-
         Args:
             selection:
-                What is being looked for. `None` asks for everything, which is what discovery needs.
+                What is being looked for. `None` asks for everything.
 
         Returns:
             items:
@@ -202,8 +195,7 @@ class BaseSource(ABC):
     def list_available_params(self: Self) -> list[dict]:
         """Return the league, division and season combinations the source publishes.
 
-        Start here: a `param_grid` names what to select, and you write it once you know what there is to select. What a
-        source publishes depends on how it is configured, since a credential may cover only part of what it offers.
+        What a source publishes depends on how it is configured.
 
         Returns:
             params:
@@ -221,8 +213,7 @@ class BaseSource(ABC):
 
             schedule:
                 The matches of the selected parameters, with their kick-off instants. An odds source that addresses its
-                prices by timestamp needs it, since a season alone does not say when its matches are played. It is
-                `None` for a source that carries its own schedule.
+                prices by timestamp needs it. It is `None` for a source that carries its own schedule.
 
         Returns:
             items:
@@ -261,9 +252,7 @@ class BaseSource(ABC):
         return False
 
     def request_url(self: Self, item: RawItem) -> str:
-        """Return the URL to fetch an item from.
-
-        The credential is added here, at the moment of the request, so it belongs to the request alone.
+        """Return the URL to fetch an item from, with the credential added at the moment of the request.
 
         Args:
             item:
@@ -327,7 +316,7 @@ class BaseStatsSource(BaseSource):
         ...         return pd.concat([preplay, postplay], ignore_index=True)
         >>>
         >>> source = MyStats()
-        >>> # It never fetches. It says what it needs, and the dataloader reads it.
+        >>> # It says what it needs, and the dataloader reads it.
         >>> source.list_required_items([{'year': 2025}])[0].url
         'https://example.com/2025.csv'
         >>> csv = b'date,league,division,year,home_team,away_team,home_form,home_goals,away_goals\n'
@@ -380,7 +369,7 @@ class BaseOddsSource(BaseSource):
         >>> csv += b'2025-08-16,Ruritania,1,2025,A,B,acme,1.8,3.4,4.2\n'
         >>> item = source.list_required_items([{'year': 2025}])[0]
         >>> snapshots = source.to_snapshots([RawPayload(item=item, content=csv)])
-        >>> # The markets are the columns, and the provider is a column too, so nothing has to be registered.
+        >>> # The markets are the columns, and the provider is a column too.
         >>> snapshots[['provider', 'home_win', 'event_status']].to_dict('records')
         [{'provider': 'acme', 'home_win': 1.8, 'event_status': 'preplay'}]
     """

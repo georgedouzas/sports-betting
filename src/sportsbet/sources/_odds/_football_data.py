@@ -19,7 +19,7 @@ class FootballDataOdds(_FootballDataSource, BaseOddsSource):
         >>> source = FootballDataOdds()
         >>> source.name, source.kind, source.sport
         ('football_data', 'odds', 'soccer')
-        >>> # It reads the same upstream files as the statistics, so the same items fetch once.
+        >>> # It reads the same upstream files as the statistics.
         >>> from sportsbet.sources import FootballDataStats
         >>> stats_items = FootballDataStats().list_index_items({'league': ['Italy']})
         >>> source.list_index_items({'league': ['Italy']}) == stats_items

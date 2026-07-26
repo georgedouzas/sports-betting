@@ -29,7 +29,7 @@ def required_col(alias: str | None = None) -> Any:  # noqa: ANN401
         ...     home_team: str = required_col()
         ...     away_team: str = required_col()
         >>>
-        >>> # A required column may not be missing, so an identity is never half of one.
+        >>> # A required column may not be missing.
         >>> MyStatsSchema.to_schema().columns['home_team'].nullable
         False
     """
@@ -62,7 +62,7 @@ def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> A
         >>> # There is no score before the match starts.
         >>> MyStatsSchema.to_schema().columns['home_goals'].metadata['include']
         ['inplay', 'postplay']
-        >>> # A stadium does not change size at half time, so it is carried once rather than per moment.
+        >>> # A stadium does not change size at half time.
         >>> MyStatsSchema.to_schema().columns['stadium_capacity'].metadata['fixed']
         True
     """

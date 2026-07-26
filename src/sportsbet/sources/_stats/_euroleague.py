@@ -18,7 +18,6 @@ from .._common._basketball import DIVISION, SEASONS_KEY, _snapshots
 URL = 'https://api-live.euroleague.net/v2/competitions/E'
 SEASONS_URL = f'{URL}/seasons'
 GAMES_URL = f'{URL}/seasons/E{{season}}/games'
-
 LEAGUE = 'Euroleague'
 
 
@@ -66,7 +65,7 @@ class EuroLeagueStats(BaseStatsSource):
         >>> # A whole season arrives in one request, and asking what it publishes costs one more.
         >>> len(source.list_index_items())
         1
-        >>> # The statistics are free. The odds are yours to buy.
+        >>> # Pair the statistics with an odds source.
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
         ...     stats=source,
@@ -80,7 +79,7 @@ class EuroLeagueStats(BaseStatsSource):
     name: ClassVar[str] = 'euroleague'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the seasons the competition publishes, which is one free request whatever is selected."""
+        """Return the seasons the competition publishes."""
         return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
@@ -94,7 +93,7 @@ class EuroLeagueStats(BaseStatsSource):
         )
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per selected season, since a whole season comes back in a single response."""
+        """Return one item per selected season."""
         return [
             RawItem(
                 source=self.name,
