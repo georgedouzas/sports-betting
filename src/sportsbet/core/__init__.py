@@ -25,6 +25,7 @@ from ._types import (
     Schema,
     TrainData,
 )
+from ._utils import load_object
 
 __all__ = [
     'ALIASES',
@@ -48,4 +49,5 @@ __all__ = [
     'ParamGrid',
     'Schema',
     'TrainData',
+    'load_object',
 ]

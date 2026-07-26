@@ -7,8 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..core import BuildError
-from ..core._reference import _load_object
+from ..core import BuildError, load_object
 from ._base import BaseVenue
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ def build_venue(venue: str) -> BaseVenue | BrowserSession:
     if ':' not in venue:
         msg = f'`{venue}` should name a venue in a Python file, as in `venue.py:VENUE`. The library ships none.'
         raise BuildError(msg)
-    built = _load_object(venue)
+    built = load_object(venue)
     try:
         from ._browser import BrowserSession  # noqa: PLC0415
     except ImportError as missing:

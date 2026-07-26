@@ -9,8 +9,7 @@ from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
 from sklearn.utils import all_estimators
 
-from ..core import BuildError
-from ..core._reference import _load_object
+from ..core import BuildError, load_object
 from ._base import BaseBettor
 from ._classifier import ClassifierBettor
 from ._model_selection import BettorGridSearchCV
@@ -46,7 +45,7 @@ def build_bettor(model: str) -> BaseBettor:
             When the expression or the reference does not describe a bettor.
     """
     if ':' in model and '(' not in model:
-        built = _load_object(model)
+        built = load_object(model)
     else:
         try:
             built = eval(model, _bettor_namespace())  # noqa: S307  # nosec B307
