@@ -1,4 +1,4 @@
-"""Extract the modelling data every dataloader shares."""
+"""Define the base dataloader that extracts the modelling data."""
 
 from __future__ import annotations
 
