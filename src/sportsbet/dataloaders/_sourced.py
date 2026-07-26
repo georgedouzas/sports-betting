@@ -9,8 +9,7 @@ from typing import Self
 
 import pandas as pd
 
-from .. import ParamGrid
-from .._params import EVENT_COLS, IDENTITY_COLS
+from ..core import EVENT_COLS, IDENTITY_COLS, ParamGrid
 from ..sources._base import BaseOddsSource, BaseStatsSource, RawItem, fetch_payloads
 from ..sources._resolver import ALIASES, resolve_odds
 from ._base import BaseDataLoader

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .._params import MATCH_COLS
+from ..core import MATCH_COLS
 from ._base import (
     BaseOddsSource,
     BaseSource,

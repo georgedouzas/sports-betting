@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from ... import ParamGrid
+from ...core import ParamGrid
 from .._base import ENCODING, BaseOddsSource, BaseSource, BaseStatsSource, RawItem, RawPayload, read_csv_content
 from .._utils import derive_market_outcomes
 

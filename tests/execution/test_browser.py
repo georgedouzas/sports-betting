@@ -10,8 +10,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from sportsbet import BuildError, build_venue
-from sportsbet.execution import BaseVenue, BrowserSession, ExecutionError, VenueBlockedError
+from sportsbet.core import BuildError
+from sportsbet.execution import BaseVenue, BrowserSession, ExecutionError, VenueBlockedError, build_venue
 
 SLIP = """<!doctype html><html><body>
 <form aria-label="Bet slip">

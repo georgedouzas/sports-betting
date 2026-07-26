@@ -10,7 +10,7 @@ import unicodedata
 
 import pandas as pd
 
-from .._params import ALIASES, GROUPS_COLS, MATCH_COLS, TEAMS_COLS
+from ..core import ALIASES, GROUPS_COLS, MATCH_COLS, TEAMS_COLS
 
 NOISE = {'fc', 'afc', 'cf', 'sc', 'ac', 'as', 'ss', 'us', 'if', 'bk', 'club', 'the'}
 MIN_PREFIX = 3

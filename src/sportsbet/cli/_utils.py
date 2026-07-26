@@ -18,9 +18,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .. import BuildError, build_bettor, build_dataloader
-from ..dataloaders import BaseDataLoader
-from ..evaluation import BaseBettor
+from ..core import BuildError
+from ..dataloaders import BaseDataLoader, build_dataloader
+from ..evaluation import BaseBettor, build_bettor
 
 SELECTED = (
     'leagues',

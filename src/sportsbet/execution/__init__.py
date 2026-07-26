@@ -22,6 +22,7 @@ from ._base import (
     receipts_frame,
 )
 from ._credentials import CredentialError, CredentialRef, resolve
+from ._factory import build_venue
 from ._place import place, quote, value_bet_intents
 from ._schedule import betting_moment, execute, feasible
 
@@ -43,6 +44,7 @@ __all__: list[str] = [
     'PlacementStatus',
     'VenueBlockedError',
     'betting_moment',
+    'build_venue',
     'execute',
     'feasible',
     'place',

@@ -19,7 +19,7 @@ from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.utils import check_consistent_length
 from sklearn.utils.validation import check_is_fitted
 
-from .. import BoolData, Data, Indices
+from ..core import BoolData, Data, Indices
 from ._base import BaseBettor
 
 TSCV = TimeSeriesSplit(n_splits=3)
