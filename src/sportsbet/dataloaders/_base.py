@@ -194,20 +194,12 @@ class BaseDataLoader(ABC):
         return self._snapshots()
 
     @property
-    def sources(self: Self) -> tuple:
-        """The data sources of the dataloader.
-
-        A source says what it publishes, which is where a `param_grid` starts. It is empty for a dataloader carrying its
-        own data.
-        """
+    def sources_(self: Self) -> tuple:
+        """The data sources, empty for a dataloader carrying its own data."""
         return ()
 
     def _all_params(self: Self) -> list[dict]:
-        """Return the combinations the sources publish, used to filter `param_grid`.
-
-        A `param_grid` names what to select, and the source's `available_params` says what there is to select. A
-        dataloader carrying its own data has no catalogue to answer from.
-        """
+        """Return the parameter combinations the sources publish, used to filter `param_grid`."""
         msg = f'{type(self).__name__} carries its own data, so it publishes no catalogue of parameters.'
         raise NotImplementedError(msg)
 
@@ -224,12 +216,7 @@ class BaseDataLoader(ABC):
 
     @staticmethod
     def _upcoming(data: pd.DataFrame) -> pd.Series:
-        """Return which snapshots belong to a match that has not been played yet.
-
-        A match counts as upcoming by its date, which lies in the future. A missing result is a separate matter: a feed
-        sometimes drops one — an abandoned game, a season it never finished recording — and those matches stay in the
-        past. Dating from the future keeps the fixtures to the matches genuinely still to come.
-        """
+        """Return which snapshots belong to a match dated in the future."""
         return data['date'] >= pd.Timestamp.now(tz='UTC')
 
     @staticmethod
@@ -267,7 +254,7 @@ class BaseDataLoader(ABC):
         stats, odds = self._snapshots()
         stats = self._finalize(stats)
         if not [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]:
-            odds = self.no_odds()
+            odds = self._build_empty_odds()
         odds = self._finalize(odds)
         self._validate_snapshots(stats, odds)
         providers = sorted(odds['provider'].dropna().unique().tolist())
@@ -289,12 +276,8 @@ class BaseDataLoader(ABC):
         self.param_grid_ = stats[GROUPS_COLS].drop_duplicates().to_dict('records')
 
     @staticmethod
-    def no_odds() -> pd.DataFrame:
-        """Return the odds of a dataloader that has none: the right shape, and no rows.
-
-        An extraction that asks for targets is told there are no markets to predict, and the features remain available
-        on their own.
-        """
+    def _build_empty_odds() -> pd.DataFrame:
+        """Build the empty odds of a dataloader that has none, shaped like real odds."""
         odds = pd.DataFrame(columns=[*EVENT_COLS, *IDENTITY_COLS, 'provider'])
         odds['date'] = pd.to_datetime(odds['date'], utc=True).astype('datetime64[ns, UTC]')
         odds['event_time'] = pd.to_timedelta(odds['event_time']).astype('timedelta64[ns]')
@@ -305,10 +288,7 @@ class BaseDataLoader(ABC):
         return odds
 
     def _apply_drop_na(self: Self, X: pd.DataFrame, drop_na_thres: float) -> pd.DataFrame:
-        """Drop feature columns whose missingness exceeds `drop_na_thres`.
-
-        It is a proportion in `[0.0, 1.0]`, checked to lie in that range.
-        """
+        """Drop feature columns whose missingness exceeds `drop_na_thres`, a proportion in `[0.0, 1.0]`."""
         check_scalar(drop_na_thres, 'drop_na_thres', (int, float), min_val=0.0, max_val=1.0)
         if not X.empty:
             keep = X.columns[X.isna().mean() <= (1.0 - drop_na_thres)]
@@ -329,11 +309,7 @@ class BaseDataLoader(ABC):
         input_event_status: str | None = None,
         input_event_time: pd.Timedelta | None = None,
     ) -> pd.Series:
-        """Mask of snapshots strictly before the target, optionally capped at an input horizon.
-
-        A snapshot is kept when it is strictly before the target moment and, when an input horizon is given, at or
-        before it.
-        """
+        """Return the mask of snapshots strictly before the target, optionally capped at an input horizon."""
         rank = data['event_status'].map(STATUS_RANK)
         time = data['event_time']
         target_rank = STATUS_RANK[target_event_status]
@@ -345,12 +321,7 @@ class BaseDataLoader(ABC):
         return before_target & up_to_input
 
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
-        """Pivot long snapshots into wide, moment-aware feature columns.
-
-        Every match is kept, even one whose features are all missing. The first round of a season has no form behind it,
-        so its features are empty, and the pivot reindexes onto the full set of matches to keep it: it has two teams, a
-        date and a price, and is bettable.
-        """
+        """Pivot long snapshots into wide, moment-aware feature columns, keeping every match."""
         index_cols = self._identity_cols()
         feature_cols = [col for col in stats.columns if col not in self.stats_schema_.snapshot_cols()]
         X = stats.pivot_table(values=feature_cols, index=index_cols, columns=EVENT_COLS, aggfunc='first')
@@ -423,11 +394,7 @@ class BaseDataLoader(ABC):
         input_event_status: str | None = None,
         input_event_time: pd.Timedelta | None = None,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Build aligned, date-indexed ``X`` and ``O`` for the given snapshots.
-
-        A bet is placed at the moment its odds are quoted, so the features come from that moment or earlier, the ones
-        the bettor actually had. The features stop where the odds do, unless a horizon says otherwise.
-        """
+        """Build aligned, date-indexed `X` and `O`, taking features no later than the odds are quoted."""
         bet = self._bet_moment(odds, target_event_status, target_event_time)
         if input_event_status is None:
             if bet is not None:
@@ -522,13 +489,11 @@ class BaseDataLoader(ABC):
             msg = 'Stats and odds snapshots columns do not match.'
             raise AssertionError(msg)
 
-        # Check if inplay or postplay events exist
         event_statuses = [status for status in self.stats_['event_status'].unique() if status != 'preplay']
         if not event_statuses:
             msg = 'No `inplay` or `postplay` events were found.'
             raise ValueError(msg)
 
-        # Validate and resolve the target moment and input horizon
         target_event_status, target_event_time = self._resolve_params(
             target_event_status,
             target_event_time,
@@ -536,8 +501,6 @@ class BaseDataLoader(ABC):
             input_event_time,
         )
 
-        # A match is trained on when it is resolvable at the target moment. The training data is the selected
-        # seasons, so a match still to be played has no target yet, and the fixtures download it separately.
         index_cols = self._identity_cols()
         target_mask = (self.stats_['event_status'] == target_event_status) & (
             self.stats_['event_time'] == target_event_time

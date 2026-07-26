@@ -26,7 +26,7 @@ dataloader = DataLoader(
     stats=SampleSoccerStats(),
     odds=SampleSoccerOdds(),
 )
-dataloader.sport
+dataloader.sport_
 
 # %%
 # Selecting the data
@@ -35,7 +35,7 @@ dataloader.sport
 # `param_grid` selects what to train on. Any dimension left out takes all of its available values, and a combination
 # the sources do not publish is never requested.
 
-dataloader.sources
+dataloader.sources_
 
 # %%
 # The available odds types are the providers the data carries, and they are read from it rather than registered.

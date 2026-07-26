@@ -181,7 +181,7 @@ class NBAStats(BaseStatsSource):
         ...     stats=source,
         ...     odds=OddsApi(key='...', markets=['h2h']),
         ... )
-        >>> dataloader.sport
+        >>> dataloader.sport_
         'basketball'
         >>> # The same sport is the same dataloader. A league is a source, not a dataloader.
         >>> from sportsbet.sources import EuroLeagueStats
