@@ -1,4 +1,4 @@
-"""Load the object a reference names."""
+"""Core utilities."""
 
 from __future__ import annotations
 
@@ -8,11 +8,18 @@ from pathlib import Path
 from ._errors import BuildError
 
 
-def _load_object(reference: str) -> object:
-    """Return the object a reference names, which is a Python file and a name inside it."""
+def load_object(reference: str) -> object:
+    """Return the object a reference names.
+
+    Args:
+        reference: A string with a path to a Python file and the name of an object inside it, separated by a colon.
+
+    Returns:
+        The object the reference names.
+    """
     path, _, name = reference.rpartition(':')
     if not name:
-        msg = f'`{reference}` should name an object inside a Python file, as in `models.py:BETTOR`.'
+        msg = f'`{reference}` should name an object inside a Python file, as in `models.py:bettor`.'
         raise BuildError(msg)
     if not Path(path).exists():
         msg = f'The file `{path}` does not exist.'
