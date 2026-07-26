@@ -1,4 +1,4 @@
-"""Core utilities."""
+"""Load referenced objects and convert event times to and from column tokens."""
 
 from __future__ import annotations
 
@@ -43,6 +43,9 @@ def load_object(reference: str) -> object:
 
     Returns:
         The object the reference names.
+
+    Raises:
+        BuildError: If the reference is malformed, the file is missing or unreadable, or it has no such object.
     """
     path, _, name = reference.rpartition(':')
     if not name:
