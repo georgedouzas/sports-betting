@@ -21,6 +21,7 @@ from ..core import (
     FixturesData,
     ParamGrid,
     TrainData,
+    format_event_time,
 )
 from ..sources import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
@@ -29,28 +30,17 @@ STATUS_RANK = {status: ind for ind, status in enumerate(STATUSES)}
 DAY = pd.Timedelta('1D')
 
 
-def format_event_time(event_time: pd.Timedelta) -> str:
-    """Render an event time as whole minutes, e.g. ``60min``."""
-    total_minutes = int(event_time.total_seconds() / 60)
-    return f'{total_minutes}min'
-
-
-def parse_event_time(token: str) -> pd.Timedelta:
-    """Parse an ``{n}min`` token back into a time delta."""
-    return pd.Timedelta(minutes=int(token[: -len('min')]))
-
-
-def feature_column(col: str, event_status: str, event_time: pd.Timedelta) -> str:
+def _feature_column(col: str, event_status: str, event_time: pd.Timedelta) -> str:
     """Build a time-varying feature column name."""
     return DELIMITER.join([col, event_status, format_event_time(event_time)])
 
 
-def odds_column(provider: str, col: str, event_status: str, event_time: pd.Timedelta) -> str:
+def _odds_column(provider: str, col: str, event_status: str, event_time: pd.Timedelta) -> str:
     """Build an odds column name."""
     return DELIMITER.join([provider, col, event_status, format_event_time(event_time)])
 
 
-def target_column(col: str, target_event_status: str, target_event_time: pd.Timedelta) -> str:
+def _target_column(col: str, target_event_status: str, target_event_time: pd.Timedelta) -> str:
     """Build a target (Y) column name."""
     return DELIMITER.join([col, target_event_status, format_event_time(target_event_time)])
 
@@ -60,7 +50,7 @@ def _field_name(col: str) -> str:
     return col.replace('.', '_')
 
 
-def build_value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, dict]:
+def _build_value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, dict]:
     """Build the annotations and fields for the value columns from their metadata."""
     annotations: dict = {}
     namespace: dict = {}
@@ -72,7 +62,7 @@ def build_value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, di
     return annotations, namespace
 
 
-def derive_metadata(
+def _derive_metadata(
     data: pd.DataFrame,
     value_cols: list[str],
     allow_fixed: bool = True,
@@ -93,24 +83,24 @@ def derive_metadata(
     return metadata
 
 
-def build_stats_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseStatsSchema]:
+def _build_stats_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseStatsSchema]:
     """Build a statistics schema from the derived value-column metadata."""
     annotations: dict = dict(IDENTITY_FIELDS)
     namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
-    value_annotations, value_namespace = build_value_namespace(metadata)
+    value_annotations, value_namespace = _build_value_namespace(metadata)
     annotations.update(value_annotations)
     namespace.update(value_namespace)
     namespace['__annotations__'] = annotations
     return type('StatsSchema', (BaseStatsSchema,), namespace)
 
 
-def build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSchema]:
+def _build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSchema]:
     """Build an odds schema from the derived market-column metadata."""
     annotations: dict = dict(IDENTITY_FIELDS)
     namespace: dict = {col: required_col() for col in IDENTITY_FIELDS}
     annotations['provider'] = str
     namespace['provider'] = optional_col(['preplay'], fixed=True)
-    value_annotations, value_namespace = build_value_namespace(metadata)
+    value_annotations, value_namespace = _build_value_namespace(metadata)
     annotations.update(value_annotations)
     namespace.update(value_namespace)
     namespace['__annotations__'] = annotations
@@ -295,14 +285,14 @@ class BaseDataLoader(ABC):
             raise ValueError(msg)
         stats_value_cols = [col for col in stats.columns if col not in EVENT_COLS + IDENTITY_COLS]
         odds_value_cols = [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]
-        stats_metadata = derive_metadata(stats, stats_value_cols)
-        odds_metadata = derive_metadata(odds, odds_value_cols, allow_fixed=False)
+        stats_metadata = _derive_metadata(stats, stats_value_cols)
+        odds_metadata = _derive_metadata(odds, odds_value_cols, allow_fixed=False)
 
         odds = odds[odds['provider'] == odds_type] if odds_type is not None else odds.iloc[0:0]
-        self.stats_ = build_stats_schema(stats_metadata).validate(stats)
-        self.odds_ = build_odds_schema(odds_metadata).validate(odds)
-        self.stats_schema_ = build_stats_schema(stats_metadata)
-        self.odds_schema_ = build_odds_schema(odds_metadata)
+        self.stats_ = _build_stats_schema(stats_metadata).validate(stats)
+        self.odds_ = _build_odds_schema(odds_metadata).validate(odds)
+        self.stats_schema_ = _build_stats_schema(stats_metadata)
+        self.odds_schema_ = _build_odds_schema(odds_metadata)
         self.targets_ = odds_value_cols
         self.odds_type_ = odds_type
         self.param_grid_ = stats[GROUPS_COLS].drop_duplicates().to_dict('records')
@@ -385,7 +375,7 @@ class BaseDataLoader(ABC):
         )
         X = X[list(cols.itertuples(index=False, name=None))]
         X.columns = [
-            col if self.stats_schema_.col_metadata(col)['fixed'] else feature_column(col, event_status, event_time)
+            col if self.stats_schema_.col_metadata(col)['fixed'] else _feature_column(col, event_status, event_time)
             for col, event_status, event_time in X.columns
         ]
         matches = stats[index_cols].drop_duplicates().sort_values(index_cols).set_index(index_cols).index
@@ -413,7 +403,7 @@ class BaseDataLoader(ABC):
             (
                 col
                 if self.odds_schema_.col_metadata(col)['fixed']
-                else odds_column(provider, col, event_status, event_time)
+                else _odds_column(provider, col, event_status, event_time)
             )
             for col, event_status, event_time, provider in O.columns
         ]
@@ -482,7 +472,7 @@ class BaseDataLoader(ABC):
         targets = stats.loc[mask, self._identity_cols() + self.targets_].set_index(self._identity_cols())
         targets = targets.reindex(index)
         columns_mapping = {
-            target: target_column(target, target_event_status, target_event_time) for target in self.targets_
+            target: _target_column(target, target_event_status, target_event_time) for target in self.targets_
         }
         return targets.rename(columns=columns_mapping)
 

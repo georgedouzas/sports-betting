@@ -25,7 +25,7 @@ from ._types import (
     Schema,
     TrainData,
 )
-from ._utils import load_object
+from ._utils import format_event_time, load_object, parse_event_time
 
 __all__ = [
     'ALIASES',
@@ -49,5 +49,7 @@ __all__ = [
     'ParamGrid',
     'Schema',
     'TrainData',
+    'format_event_time',
     'load_object',
+    'parse_event_time',
 ]
