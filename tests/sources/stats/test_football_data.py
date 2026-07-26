@@ -45,8 +45,8 @@ def test_stats_and_odds_declare_the_same_items(sources):
     """Test the shared feed file is declared once, so it is downloaded once and not twice."""
     stats, odds = sources
     params = [{'league': 'England', 'division': 1, 'year': 2025}]
-    stats_items = stats.required_items(params)
-    odds_items = odds.required_items(params)
+    stats_items = stats.list_required_items(params)
+    odds_items = odds.list_required_items(params)
     assert stats_items == odds_items
     assert len(set(stats_items + odds_items)) == len(stats_items)
 
@@ -111,7 +111,7 @@ def test_sources_perform_no_input_output(sources):
     """Test a source never fetches, so extraction can never download by accident."""
     stats, odds = sources
     params = [{'league': 'England', 'division': 1, 'year': 2025}]
-    assert stats.required_items(params)
+    assert stats.list_required_items(params)
     assert stats.to_snapshots(payloads()) is not None
     assert odds.to_snapshots(payloads()) is not None
 
@@ -152,28 +152,28 @@ def test_a_league_that_was_not_selected_is_not_downloaded():
     that was asked for, and the index is re-read on every preparation, so they were paid for again every time.
     """
     source = FootballDataStats()
-    selected = [item.key for item in source.index_items({'league': ['Italy'], 'year': [2020]})]
+    selected = [item.key for item in source.list_index_items({'league': ['Italy'], 'year': [2020]})]
     assert selected == ['index_Italy']
 
 
 def test_a_league_published_as_its_whole_history_is_downloaded_when_it_is_selected():
     """Test a league whose file is its catalogue is still fetched when it is the one being asked for."""
     source = FootballDataStats()
-    selected = [item.key for item in source.index_items({'league': ['Brazil']})]
+    selected = [item.key for item in source.list_index_items({'league': ['Brazil']})]
     assert selected == ['Brazil_1']
 
 
 def test_discovery_still_asks_about_every_league():
     """Test nothing is skipped when nothing has been selected, since nothing can be selected before it is known."""
     source = FootballDataStats()
-    assert len(source.index_items()) == len(source.index_items({'year': [2020]}))
-    assert len(source.index_items()) > 1
+    assert len(source.list_index_items()) == len(source.list_index_items({'year': [2020]}))
+    assert len(source.list_index_items()) > 1
 
 
 def test_a_selection_of_several_grids_asks_about_every_league_any_of_them_names():
     """Test a list of grids is read as a whole, so no league that was asked for is left undownloaded."""
     source = FootballDataStats()
-    selected = [item.key for item in source.index_items([{'league': ['Italy']}, {'league': ['Brazil']}])]
+    selected = [item.key for item in source.list_index_items([{'league': ['Italy']}, {'league': ['Brazil']}])]
     assert sorted(selected) == ['Brazil_1', 'index_Italy']
 
 
@@ -183,5 +183,5 @@ def test_a_grid_that_names_no_league_names_all_of_them():
     Downloading too much is wasteful. Downloading too little leaves a league that was asked for missing, which is worse.
     """
     source = FootballDataStats()
-    selected = source.index_items([{'league': ['Italy']}, {'year': [2020]}])
-    assert len(selected) == len(source.index_items())
+    selected = source.list_index_items([{'league': ['Italy']}, {'year': [2020]}])
+    assert len(selected) == len(source.list_index_items())

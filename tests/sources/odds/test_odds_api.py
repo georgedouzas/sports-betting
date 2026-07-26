@@ -76,55 +76,56 @@ def _event(home, away, kickoff=KICKOFF, last_update='2024-08-16T18:55:00Z'):
 
 
 @pytest.fixture
-def source():
-    """An odds source with a key that is never used, since nothing is fetched."""
-    return OddsApi(key='secret-key')
+def source(monkeypatch):
+    """An odds source whose key is read from the environment, never fetched."""
+    monkeypatch.setenv('ODDS_API_KEY', 'secret-key')
+    return OddsApi(key_env='ODDS_API_KEY')
 
 
 def _payload(source, key, content):
     """Build the payload of an item the source declared."""
-    item = next(item for item in source.required_items([], SCHEDULE) if item.key == key)
+    item = next(item for item in source.list_required_items([], SCHEDULE) if item.key == key)
     return RawPayload(item=item, content=content)
 
 
 def test_the_catalogue_covers_only_the_mapped_leagues(source):
     """Test a competition the vendor lists but the library does not map is left out rather than guessed at."""
-    payloads = [RawPayload(item=source.index_items()[0], content=SPORTS)]
-    params = source.catalogue(payloads)
+    payloads = [RawPayload(item=source.list_index_items()[0], content=SPORTS)]
+    params = source.read_catalogue(payloads)
     leagues = {param['league'] for param in params}
     assert leagues == {'England', 'Spain'}
 
 
 def test_the_catalogue_starts_where_the_history_does(source):
     """Test the vendor's history begins in 2020, so earlier seasons are never offered."""
-    payloads = [RawPayload(item=source.index_items()[0], content=SPORTS)]
-    years = {param['year'] for param in source.catalogue(payloads)}
+    payloads = [RawPayload(item=source.list_index_items()[0], content=SPORTS)]
+    years = {param['year'] for param in source.read_catalogue(payloads)}
     assert min(years) == FIRST_YEAR
     assert BEFORE_HISTORY not in years
 
 
 def test_matches_that_kick_off_together_share_a_snapshot(source):
     """Test one snapshot prices every match played at that instant, so it is paid for once."""
-    items = source.required_items([], SCHEDULE)
+    items = source.list_required_items([], SCHEDULE)
     historical = [item for item in items if 'live' not in item.key]
     assert len(historical) == len(source._settings()[2])
 
 
 def test_the_key_never_reaches_an_item(source):
     """Test the credential is never written to the store."""
-    items = source.required_items([], SCHEDULE)
+    items = source.list_required_items([], SCHEDULE)
     assert not [item for item in items if 'secret-key' in item.url or 'apiKey' in item.url]
     assert 'apiKey=secret-key' in source.request_url(items[0])
 
 
 def test_nothing_is_asked_for_without_a_schedule(source):
     """Test a season alone does not say when its matches are played, so nothing is requested."""
-    assert source.required_items([{'league': 'England', 'division': 1, 'year': 2025}]) == []
+    assert source.list_required_items([{'league': 'England', 'division': 1, 'year': 2025}]) == []
 
 
 def test_the_inplay_snapshot_carries_the_price_at_that_minute(source):
     """Test the odds are those available at the minute the bet would be placed, which is the point of the source."""
-    key = next(item.key for item in source.required_items([], SCHEDULE) if item.key.endswith('inplay__45'))
+    key = next(item.key for item in source.list_required_items([], SCHEDULE) if item.key.endswith('inplay__45'))
     content = json.dumps(
         {
             'timestamp': '2024-08-16T19:45:00Z',
@@ -140,7 +141,7 @@ def test_the_inplay_snapshot_carries_the_price_at_that_minute(source):
 
 def test_the_markets_are_named_the_way_the_library_names_them(source):
     """Test the vendor's head-to-head and totals become the library's markets."""
-    key = next(item.key for item in source.required_items([], SCHEDULE) if item.key.endswith('preplay__0'))
+    key = next(item.key for item in source.list_required_items([], SCHEDULE) if item.key.endswith('preplay__0'))
     content = json.dumps({'timestamp': '2024-08-16T18:59:00Z', 'data': [_event('Arsenal', 'Chelsea')]}).encode()
     snapshots = source.to_snapshots([_payload(source, key, content)])
     row = snapshots.iloc[0]
@@ -153,7 +154,7 @@ def test_the_markets_are_named_the_way_the_library_names_them(source):
 
 def test_a_match_the_snapshot_was_not_asked_for_is_left_out(source):
     """Test a snapshot prices every match running at that instant, but only the ones it was asked for are kept."""
-    key = next(item.key for item in source.required_items([], SCHEDULE) if item.key.endswith('inplay__45'))
+    key = next(item.key for item in source.list_required_items([], SCHEDULE) if item.key.endswith('inplay__45'))
     other = _event('Everton', 'Spurs', kickoff=pd.Timestamp('2024-08-16 14:00', tz='UTC'))
     content = json.dumps({'timestamp': '2024-08-16T19:45:00Z', 'data': [_event('Arsenal', 'Chelsea'), other]}).encode()
     snapshots = source.to_snapshots([_payload(source, key, content)])
@@ -162,7 +163,7 @@ def test_a_match_the_snapshot_was_not_asked_for_is_left_out(source):
 
 def test_the_season_comes_from_the_statistics(source):
     """Test the season is the one the statistics gave, not one guessed from the kick-off month."""
-    key = next(item.key for item in source.required_items([], SCHEDULE) if item.key.endswith('preplay__0'))
+    key = next(item.key for item in source.list_required_items([], SCHEDULE) if item.key.endswith('preplay__0'))
     content = json.dumps({'timestamp': '2024-08-16T18:59:00Z', 'data': [_event('Arsenal', 'Chelsea')]}).encode()
     snapshots = source.to_snapshots([_payload(source, key, content)])
     assert set(snapshots['year']) == {2025}
@@ -172,7 +173,7 @@ def test_the_season_comes_from_the_statistics(source):
 
 def test_the_live_endpoint_prices_a_running_match_at_its_minute(source):
     """Test a match already under way is priced at the minute it has reached, so a live bet can be served."""
-    key = next(item.key for item in source.required_items([], SCHEDULE) if 'live' in item.key)
+    key = next(item.key for item in source.list_required_items([], SCHEDULE) if 'live' in item.key)
     running = _event('Arsenal', 'Chelsea', last_update='2024-08-16T19:30:00Z')
     content = json.dumps([running]).encode()
     snapshots = source.to_snapshots([_payload(source, key, content)])
@@ -182,7 +183,7 @@ def test_the_live_endpoint_prices_a_running_match_at_its_minute(source):
 
 def test_the_live_endpoint_prices_an_upcoming_match_before_kickoff(source):
     """Test a match that has not started is priced pre-play, so a fixture can be served."""
-    key = next(item.key for item in source.required_items([], SCHEDULE) if 'live' in item.key)
+    key = next(item.key for item in source.list_required_items([], SCHEDULE) if 'live' in item.key)
     upcoming = _event('Arsenal', 'Chelsea', last_update='2024-08-16T18:30:00Z')
     content = json.dumps([upcoming]).encode()
     snapshots = source.to_snapshots([_payload(source, key, content)])

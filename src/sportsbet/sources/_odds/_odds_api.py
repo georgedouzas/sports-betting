@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, datetime
 from typing import Any, ClassVar, Self
 from urllib.parse import urlencode
@@ -102,8 +103,8 @@ class OddsApi(BaseOddsSource):
     It carries time-stamped prices, so an in-play bet can be backtested against the odds that were actually available at
     the minute it would have been placed. The free feed publishes the closing price alone.
 
-    It needs your own key, and the data it buys stays on your machine. The key is added to a request when the
-    request is made, so it belongs to the request alone.
+    It reads your key from an environment variable you name, so the key is never an argument or saved with the
+    dataloader. The data it buys stays on your machine, and the key is read only when a request is made.
 
     Historical prices are a paid tier and begin on 6 June 2020. Every market, region and moment is a separate request,
     so extract without `download` first and see how many it would take.
@@ -111,8 +112,9 @@ class OddsApi(BaseOddsSource):
     Read more in the [user guide][user-guide].
 
     Args:
-        key:
-            Your API key.
+        key_env:
+            The name of the environment variable holding your API key. It is read when a request is made, so the key
+            itself is never passed or stored.
 
         markets:
             The markets to price, e.g. `['h2h', 'totals']`. The default `None` uses both.
@@ -128,14 +130,16 @@ class OddsApi(BaseOddsSource):
             separate snapshot, so it multiplies the requests.
 
     Examples:
+        >>> import os
         >>> from sportsbet.sources import OddsApi, RawItem
-        >>> source = OddsApi(key='secret', markets=['h2h'], regions=['eu'])
+        >>> os.environ['ODDS_API_KEY'] = 'secret'
+        >>> source = OddsApi(key_env='ODDS_API_KEY', markets=['h2h'], regions=['eu'])
         >>> source.name, source.kind
         ('odds_api', 'odds')
         >>> # It sells every sport, so it carries none of its own and takes the sport it is paired with.
         >>> source.sport is None
         True
-        >>> # The key is added when the request is made, so it never reaches the item.
+        >>> # The key is read from the environment when the request is made, so it never reaches the item.
         >>> item = RawItem(source='odds_api', key='snapshot', url='https://api.the-odds-api.com/v4/sports?all=true')
         >>> 'secret' in item.url
         False
@@ -147,12 +151,12 @@ class OddsApi(BaseOddsSource):
 
     def __init__(
         self: Self,
-        key: str,
+        key_env: str,
         markets: list[str] | None = None,
         regions: list[str] | None = None,
         moments: list[tuple[str, int]] | None = None,
     ) -> None:
-        self.key = key
+        self.key_env = key_env
         self.markets = markets
         self.regions = regions
         self.moments = moments
@@ -166,11 +170,7 @@ class OddsApi(BaseOddsSource):
 
     @staticmethod
     def _moments(schedule: pd.DataFrame) -> list[tuple[str, int]]:
-        """Return the moments the statistics carry, which are the ones worth a price.
-
-        A price is bought to be paired with what was known at that moment, so the moments the statistics carry are the
-        ones worth buying. A sport whose statistics stop at the whistle prices up to the whistle.
-        """
+        """Return the moments the statistics carry, which are the ones worth a price."""
         moments = schedule[list(EVENT_COLS)].drop_duplicates()
         return sorted(
             {
@@ -186,9 +186,7 @@ class OddsApi(BaseOddsSource):
         return {'regions': ','.join(regions), 'markets': ','.join(markets), 'oddsFormat': 'decimal'}
 
     def request_url(self: Self, item: RawItem) -> str:
-        """Return the URL to fetch an item from, with the key added.
-
-        The key is added here and nowhere else, so it belongs to the request alone.
+        """Return the URL to fetch an item from, with the key read from the environment and added.
 
         Args:
             item:
@@ -199,30 +197,18 @@ class OddsApi(BaseOddsSource):
                 Where to fetch it from.
         """
         separator = '&' if '?' in item.url else '?'
-        return f'{item.url}{separator}apiKey={self.key}'
+        return f'{item.url}{separator}apiKey={os.environ[self.key_env]}'
 
     def needs_schedule(self: Self) -> bool:
-        """Return that the source has to be told when the matches are.
-
-        Its prices are addressed by instant rather than by season, so `kick-off + 45min` is a timestamp it can only
-        build once it knows the kick-off.
-
-        Returns:
-            needed:
-                Always `True`.
-        """
+        """Return `True`, since its prices are addressed by instant and so need the kick-off."""
         return True
 
-    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
+    def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the catalogue of the vendor, which is free."""
         return [RawItem(source=self.name, key=SPORTS_KEY, url=f'{SPORTS_URL}?all=true')]
 
-    def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the combinations the vendor covers.
-
-        The vendor has no notion of a season, so the years are its historical coverage. A competition is included when
-        the vendor lists it and it maps to a league.
-        """
+    def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
+        """Return the combinations the vendor covers, the years being its historical coverage."""
         if not payloads:
             return []
         sports = json.loads(payloads[0].content)
@@ -235,23 +221,8 @@ class OddsApi(BaseOddsSource):
             for year in years
         ]
 
-    def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per snapshot the selected matches need.
-
-        A snapshot holds every match priced at that instant, so matches that kick off together share an item and are
-        paid for once.
-
-        Args:
-            params:
-                The selected parameter combinations.
-
-            schedule:
-                The matches of the selected parameters, with their kick-off instants.
-
-        Returns:
-            items:
-                The snapshots to fetch.
-        """
+    def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
+        """Return one item per snapshot the selected matches need, matches kicking off together sharing one."""
         if schedule is None or schedule.empty:
             return []
         _, _, moments = self._settings()
@@ -280,19 +251,7 @@ class OddsApi(BaseOddsSource):
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Transform the vendor's responses into the long odds snapshots.
-
-        A snapshot holds every match the vendor priced at that instant, so only the matches the item was asked for are
-        kept: the others are priced by their own item, at their own moment.
-
-        Args:
-            payloads:
-                The payloads of the required items.
-
-        Returns:
-            snapshots:
-                The long odds snapshots.
-        """
+        """Transform the vendor's responses into long odds snapshots, keeping the matches each item asked for."""
         records: list[dict] = []
         for payload in payloads:
             events, endpoint = _events(payload)
@@ -316,11 +275,7 @@ class OddsApi(BaseOddsSource):
         return records
 
     def _live_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
-        """Return the odds of the matches the live endpoint priced.
-
-        A match that has kicked off is priced at the minute it has reached, so an upcoming and a running match are both
-        carried by the same request.
-        """
+        """Return the odds of the matches the live endpoint priced, upcoming and running alike."""
         sport, year, *_ = _parse_key(payload.item.key)
         league, division = LEAGUES_MAPPING[sport]
         now = _last_update(events)
@@ -366,11 +321,7 @@ class OddsApi(BaseOddsSource):
 
 
 def _parse_key(key: str) -> tuple[str, int, pd.Timestamp | None, str, int]:
-    """Return the sport, the season, the instant and the moment an item key encodes.
-
-    The season comes from the statistics rather than from the kick-off, since a league played over a calendar year names
-    its seasons differently from one played across two.
-    """
+    """Return the sport, the season, the instant and the moment an item key encodes."""
     parts = key.split(DELIMITER)
     if parts[-1] == LIVE_KEY:
         sport, year, _ = parts

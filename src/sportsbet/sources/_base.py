@@ -114,13 +114,32 @@ def _read_urls_content(urls: list[str]) -> list[bytes]:
 
 
 def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
-    """Read each item at the URL `authorize` gives it and pair the bytes back with the item, in order."""
+    """Read each item at the URL `authorize` gives it and pair the bytes back with the item, in order.
+
+    Args:
+        items:
+            The items to read.
+
+        authorize:
+            A callable turning an item into the URL to fetch it from, adding any credential.
+
+    Returns:
+        The payloads, each pairing an item with the bytes that came back, in the order given.
+    """
     contents = _read_urls_content([authorize(item) for item in items])
     return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
 
 
 def read_csv_content(content: bytes) -> pd.DataFrame:
-    """Return a data frame read from raw CSV content."""
+    """Return a data frame read from raw CSV content.
+
+    Args:
+        content:
+            The raw CSV bytes.
+
+    Returns:
+        The parsed data frame.
+    """
     text = content.decode(ENCODING)
     names = pd.read_csv(io.StringIO(text), nrows=0, encoding=ENCODING).columns.to_list()
     return pd.read_csv(io.StringIO(text), names=names, skiprows=1, encoding=ENCODING, on_bad_lines='skip')
@@ -137,7 +156,7 @@ class BaseSource(ABC):
     Its planning and transform methods declare what to read and turn the payloads into snapshots; the dataloader does
     the reading. A source is therefore a pure description of a feed, easy to write and to test.
 
-    It also answers what it publishes, through `available_params`. That question has to be answerable before a
+    It also answers what it publishes, through `list_available_params`. That question has to be answerable before a
     `param_grid` is written, so it belongs here and not on a dataloader that is configured with one.
 
     Examples:
@@ -146,10 +165,10 @@ class BaseSource(ABC):
         >>> stats.name, stats.kind, stats.sport
         ('football_data', 'stats', 'soccer')
         >>> # A vendor selling every sport carries none of its own, and takes the sport it is paired with.
-        >>> OddsApi(key='...', markets=['h2h']).sport is None
+        >>> OddsApi(key_env='ODDS_API_KEY', markets=['h2h']).sport is None
         True
         >>> # Asking what a source publishes declares items rather than fetching them.
-        >>> items = stats.index_items()
+        >>> items = stats.list_index_items()
         >>> items[0].source
         'football_data'
     """
@@ -159,7 +178,7 @@ class BaseSource(ABC):
     sport: ClassVar[str | None] = None
 
     @abstractmethod
-    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
+    def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the items needed to discover what the source publishes.
 
         A feed that lists its seasons on an index page is cheap to ask. One that publishes a league as a single file of
@@ -180,7 +199,7 @@ class BaseSource(ABC):
         """
 
     @abstractmethod
-    def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
+    def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the parameter combinations the index payloads describe.
 
         Args:
@@ -192,7 +211,7 @@ class BaseSource(ABC):
                 The available `league`, `division` and `year` combinations.
         """
 
-    def available_params(self: Self) -> list[dict]:
+    def list_available_params(self: Self) -> list[dict]:
         """Return the league, division and season combinations the source publishes.
 
         Start here: a `param_grid` names what to select, and you write it once you know what there is to select. What a
@@ -202,10 +221,10 @@ class BaseSource(ABC):
             params:
                 The available `league`, `division` and `year` combinations.
         """
-        return self.catalogue(fetch_payloads(self.index_items(), self.request_url))
+        return self.read_catalogue(fetch_payloads(self.list_index_items(), self.request_url))
 
     @abstractmethod
-    def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
+    def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the raw items the selected parameters need.
 
         Args:
@@ -222,7 +241,7 @@ class BaseSource(ABC):
                 The items to read. Deterministic for the same parameters.
         """
 
-    def fixtures_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
+    def list_fixtures_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the raw items the upcoming matches need.
 
         The default is the same items training needs, which suits a source whose season file already carries the matches
@@ -241,7 +260,7 @@ class BaseSource(ABC):
             items:
                 The items whose payloads yield the upcoming matches.
         """
-        return self.required_items(params, schedule)
+        return self.list_required_items(params, schedule)
 
     def needs_schedule(self: Self) -> bool:
         """Return whether the source has to be told when the matches are.
@@ -250,7 +269,7 @@ class BaseSource(ABC):
 
         Returns:
             needed:
-                Whether `required_items` needs a schedule.
+                Whether `list_required_items` needs a schedule.
         """
         return False
 
@@ -298,13 +317,13 @@ class BaseStatsSource(BaseSource):
         ...     name = 'my_stats'
         ...     sport = 'soccer'
         ...
-        ...     def index_items(self, selection=None):
+        ...     def list_index_items(self, selection=None):
         ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
         ...
-        ...     def catalogue(self, payloads):
+        ...     def read_catalogue(self, payloads):
         ...         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
         ...
-        ...     def required_items(self, params, schedule=None):
+        ...     def list_required_items(self, params, schedule=None):
         ...         return [RawItem(source=self.name, key=f'Ruritania_1_{param["year"]}',
         ...                         url=f'https://example.com/{param["year"]}.csv')
         ...                 for param in params]
@@ -322,11 +341,12 @@ class BaseStatsSource(BaseSource):
         >>>
         >>> source = MyStats()
         >>> # It never fetches. It says what it needs, and the dataloader reads it.
-        >>> source.required_items([{'year': 2025}])[0].url
+        >>> source.list_required_items([{'year': 2025}])[0].url
         'https://example.com/2025.csv'
         >>> csv = b'date,league,division,year,home_team,away_team,home_form,home_goals,away_goals\n'
         >>> csv += b'2025-08-16,Ruritania,1,2025,A,B,0.5,2,1\n'
-        >>> snapshots = source.to_snapshots([RawPayload(item=source.required_items([{'year': 2025}])[0], content=csv)])
+        >>> item = source.list_required_items([{'year': 2025}])[0]
+        >>> snapshots = source.to_snapshots([RawPayload(item=item, content=csv)])
         >>> sorted(snapshots['event_status'].unique())
         ['postplay', 'preplay']
         >>> snapshots.loc[snapshots['event_status'].eq('postplay'), 'home_win'].item()
@@ -350,13 +370,13 @@ class BaseOddsSource(BaseSource):
         ...     name = 'my_odds'
         ...     sport = 'soccer'
         ...
-        ...     def index_items(self, selection=None):
+        ...     def list_index_items(self, selection=None):
         ...         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
         ...
-        ...     def catalogue(self, payloads):
+        ...     def read_catalogue(self, payloads):
         ...         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
         ...
-        ...     def required_items(self, params, schedule=None):
+        ...     def list_required_items(self, params, schedule=None):
         ...         return [RawItem(source=self.name, key=f'odds_{param["year"]}',
         ...                         url=f'https://example.com/odds/{param["year"]}.csv')
         ...                 for param in params]
@@ -371,7 +391,7 @@ class BaseOddsSource(BaseSource):
         'odds'
         >>> csv = b'date,league,division,year,home_team,away_team,provider,home_win,draw,away_win\n'
         >>> csv += b'2025-08-16,Ruritania,1,2025,A,B,acme,1.8,3.4,4.2\n'
-        >>> item = source.required_items([{'year': 2025}])[0]
+        >>> item = source.list_required_items([{'year': 2025}])[0]
         >>> snapshots = source.to_snapshots([RawPayload(item=item, content=csv)])
         >>> # The markets are the columns, and the provider is a column too, so nothing has to be registered.
         >>> snapshots[['provider', 'home_win', 'event_status']].to_dict('records')

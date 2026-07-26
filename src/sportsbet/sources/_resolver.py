@@ -19,7 +19,15 @@ MIN_MARGIN = 0.15
 
 
 def normalize_team_name(name: str) -> str:
-    """Return a team name with the differences that carry no meaning taken out."""
+    """Return a team name with the differences that carry no meaning taken out.
+
+    Args:
+        name:
+            The team name to normalize.
+
+    Returns:
+        The normalized name: lower case, without accents, punctuation or noise words.
+    """
     text = unicodedata.normalize('NFKD', str(name))
     text = ''.join(character for character in text if not unicodedata.combining(character))
     text = re.sub(r'[^a-z0-9 ]', '', text.lower())
@@ -28,7 +36,18 @@ def normalize_team_name(name: str) -> str:
 
 
 def count_common_prefix(one: str, other: str) -> int:
-    """Return how many characters two strings begin with in common."""
+    """Return how many characters two strings begin with in common.
+
+    Args:
+        one:
+            The first string.
+
+        other:
+            The second string.
+
+    Returns:
+        The number of leading characters the two share.
+    """
     common = 0
     for character, candidate in zip(one, other, strict=False):
         if character != candidate:
@@ -38,7 +57,18 @@ def count_common_prefix(one: str, other: str) -> int:
 
 
 def measure_names_similarity(one: str, other: str) -> float:
-    """Return how alike two names are, by the tokens they begin with in common."""
+    """Return how alike two names are, by the tokens they begin with in common.
+
+    Args:
+        one:
+            The first name.
+
+        other:
+            The second name.
+
+    Returns:
+        A score in `[0.0, 1.0]`, higher the more the names share.
+    """
     tokens, others = sorted([one.split(), other.split()], key=len)
     if not tokens or not others:
         return 0.0
@@ -57,7 +87,18 @@ def pair_rosters(
     normalized_stats_names: set[str],
     normalized_odds_names: set[str],
 ) -> tuple[dict[str, str], set[str], set[str]]:
-    """Return the odds names paired to the stats names, and the names left unpaired on each side."""
+    """Return the odds names paired to the stats names, and the names left unpaired on each side.
+
+    Args:
+        normalized_stats_names:
+            The normalized club names of the statistics source.
+
+        normalized_odds_names:
+            The normalized club names of the odds source.
+
+    Returns:
+        The odds-to-stats name pairing, the odds names left unpaired, and the stats names left unpaired.
+    """
     matched = {name: name for name in normalized_odds_names & normalized_stats_names}
     unpaired_odds = normalized_odds_names - set(matched)
     unpaired_stats = normalized_stats_names - set(matched.values())
@@ -80,11 +121,19 @@ def pair_rosters(
 
 
 def build_roster(data: pd.DataFrame) -> dict[str, str]:
-    """Return the clubs of a frame, keyed by their normalized name and valued by how they are written."""
+    """Return the clubs of a frame, keyed by their normalized name and valued by how they are written.
+
+    Args:
+        data:
+            The snapshots whose team columns hold the clubs.
+
+    Returns:
+        The clubs, keyed by normalized name and valued by their original spelling.
+    """
     return {normalize_team_name(name): name for col in TEAMS_COLS for name in data[col]}
 
 
-def map_odds_names(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -> dict:
+def _map_odds_names(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -> dict:
     """Return, per league and season, the odds names mapped to the statistics names."""
     given = {normalize_team_name(name): normalize_team_name(alias) for name, alias in aliases.items()}
     mapping: dict = {}
@@ -100,7 +149,18 @@ def map_odds_names(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, s
 
 
 def normalize_identity(data: pd.DataFrame, mapping: dict | None = None) -> pd.DataFrame:
-    """Return the match columns with the team names normalized, and remapped when a mapping is given."""
+    """Return the match columns with the team names normalized, and remapped when a mapping is given.
+
+    Args:
+        data:
+            The snapshots whose match columns are read.
+
+        mapping:
+            The per-league, per-season odds-to-stats name mapping. `None` only normalizes.
+
+    Returns:
+        The match columns with normalized, and optionally remapped, team names.
+    """
     identity = data[MATCH_COLS].copy()
     for col in TEAMS_COLS:
         identity[col] = identity[col].map(normalize_team_name)
@@ -158,7 +218,7 @@ def resolve_odds(
         >>> len(paired)
         1
     """
-    mapping = map_odds_names(stats, odds, {**ALIASES, **(aliases or {})})
+    mapping = _map_odds_names(stats, odds, {**ALIASES, **(aliases or {})})
     matches = stats[[*MATCH_COLS, 'date']].drop_duplicates(subset=MATCH_COLS)
     canonical = normalize_identity(matches).assign(
         date_=matches['date'].to_numpy(),

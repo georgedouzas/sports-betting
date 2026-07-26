@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from ..core import MATCH_COLS
 from ._base import (
     BaseOddsSource,
     BaseSource,
@@ -37,7 +36,6 @@ from ._stats._sample import SampleSoccerStats
 from ._utils import derive_market_outcomes
 
 __all__: list[str] = [
-    'MATCH_COLS',
     'BaseOddsSchema',
     'BaseOddsSource',
     'BaseSource',

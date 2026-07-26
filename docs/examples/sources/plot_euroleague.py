@@ -27,7 +27,7 @@ stats.name, stats.kind, stats.sport
 # %%
 # The seasons it publishes. A whole season arrives in a single request, and it needs no key.
 
-params = stats.available_params()
+params = stats.list_available_params()
 sorted({param['year'] for param in params})[-5:]
 
 # %%

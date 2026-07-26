@@ -27,17 +27,17 @@ class _Available:
 
     name = 'available'
 
-    def index_items(self, selection=None):
+    def list_index_items(self, selection=None):
         return []
 
-    def catalogue(self, payloads):
+    def read_catalogue(self, payloads):
         return [
             {'league': 'England', 'division': 1, 'year': 2024},
             {'league': 'England', 'division': 2, 'year': 2024},
             {'league': 'Netherlands', 'division': 1, 'year': 2024},
         ]
 
-    def required_items(self, params, schedule=None):
+    def list_required_items(self, params, schedule=None):
         return []
 
     def to_snapshots(self, payloads):
@@ -54,7 +54,7 @@ class _AvailableOdds(_Available, BaseOddsSource):
 
 def test_a_source_is_asked_without_a_dataloader():
     """Test what is available is asked of the source, since a param_grid cannot be written before it is known."""
-    params = _AvailableStats().available_params()
+    params = _AvailableStats().list_available_params()
     assert {'league': 'England', 'division': 2, 'year': 2024} in params
     assert {'league': 'Netherlands', 'division': 2, 'year': 2024} not in params
 

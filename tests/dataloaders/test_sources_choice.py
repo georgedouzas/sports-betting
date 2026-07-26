@@ -19,14 +19,14 @@ def test_a_dataloader_will_not_choose_where_the_data_comes_from():
 def test_the_sport_belongs_to_the_source():
     """Test a feed of soccer is a feed of soccer, whatever it is handed to."""
     assert DataLoader(stats=FootballDataStats(), odds=FootballDataOdds()).sport_ == 'soccer'
-    assert DataLoader(stats=EuroLeagueStats(), odds=OddsApi(key='k')).sport_ == 'basketball'
-    assert DataLoader(stats=NBAStats(), odds=OddsApi(key='k')).sport_ == 'basketball'
+    assert DataLoader(stats=EuroLeagueStats(), odds=OddsApi(key_env='ODDS_API_KEY')).sport_ == 'basketball'
+    assert DataLoader(stats=NBAStats(), odds=OddsApi(key_env='ODDS_API_KEY')).sport_ == 'basketball'
 
 
 def test_a_vendor_of_many_sports_takes_the_sport_it_is_paired_with():
     """Test an odds vendor covering several sports is not a sport of its own."""
     assert OddsApi.sport is None
-    assert DataLoader(stats=NBAStats(), odds=OddsApi(key='k')).sport_ == 'basketball'
+    assert DataLoader(stats=NBAStats(), odds=OddsApi(key_env='ODDS_API_KEY')).sport_ == 'basketball'
 
 
 def test_statistics_and_odds_of_different_sports_are_refused():

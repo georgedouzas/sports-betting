@@ -26,13 +26,13 @@ class _TestSource(BaseSource):
 
     name = 'test'
 
-    def index_items(self, selection=None):
+    def list_index_items(self, selection=None):
         return [RawItem(source=self.name, key='index', url='index.html')]
 
-    def catalogue(self, payloads):
+    def read_catalogue(self, payloads):
         return PARAMS
 
-    def required_items(self, params, schedule=None):
+    def list_required_items(self, params, schedule=None):
         return [
             RawItem(
                 source=self.name,
@@ -57,7 +57,7 @@ class _TestOddsSource(_TestSource, BaseOddsSource):
 def test_required_items_is_deterministic():
     """Test the same parameters declare the same items in the same order."""
     source = _TestSource()
-    assert source.required_items(PARAMS) == source.required_items(PARAMS)
+    assert source.list_required_items(PARAMS) == source.list_required_items(PARAMS)
 
 
 def test_items_are_identified_by_source_and_key():

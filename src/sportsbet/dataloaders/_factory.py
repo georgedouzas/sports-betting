@@ -73,11 +73,10 @@ def _odds_source(
         raise BuildError(msg)
     if odds not in KEYED_SOURCES:
         return ODDS_SOURCES[odds]()
-    key = os.environ.get(key_env)
-    if not key:
+    if not os.environ.get(key_env):
         msg = f'`{odds}` needs a key. Set `{key_env}`, or name another variable with `--odds-key-env`.'
         raise BuildError(msg)
-    return OddsApi(key=key, markets=markets or None, regions=regions or None, moments=_moments(moments))
+    return OddsApi(key_env=key_env, markets=markets or None, regions=regions or None, moments=_moments(moments))
 
 
 def build_dataloader(

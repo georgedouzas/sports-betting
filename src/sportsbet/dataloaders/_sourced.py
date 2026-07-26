@@ -115,8 +115,8 @@ class DataLoader(BaseDataLoader):
         The source is told what was selected, so a feed whose catalogue is as large as its data reads only the part of
         it that could hold the selection. A selection of three leagues reads the index of those three.
         """
-        payloads = fetch_payloads(source.index_items(self.param_grid), source.request_url)
-        return source.catalogue(payloads)
+        payloads = fetch_payloads(source.list_index_items(self.param_grid), source.request_url)
+        return source.read_catalogue(payloads)
 
     def _all_params(self: Self) -> list[dict]:
         """Return the combinations both sources publish for the selection.
@@ -164,10 +164,12 @@ class DataLoader(BaseDataLoader):
         stats_source, odds_source = self._resolved()
         params = self._filter_params(self._all_params())
         stats = self._finalize(
-            stats_source.to_snapshots(fetch_payloads(stats_source.required_items(params), stats_source.request_url)),
+            stats_source.to_snapshots(
+                fetch_payloads(stats_source.list_required_items(params), stats_source.request_url),
+            ),
         )
         schedule = self._moments(stats) if odds_source is not None and odds_source.needs_schedule() else None
-        odds_items = odds_source.required_items(params, schedule) if odds_source is not None else []
+        odds_items = odds_source.list_required_items(params, schedule) if odds_source is not None else []
         return self._paired(stats, odds_items)
 
     def _fixtures_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -179,9 +181,11 @@ class DataLoader(BaseDataLoader):
         stats_source, odds_source = self._resolved()
         params = self._filter_params(self._all_params())
         stats = self._finalize(
-            stats_source.to_snapshots(fetch_payloads(stats_source.fixtures_items(params), stats_source.request_url)),
+            stats_source.to_snapshots(
+                fetch_payloads(stats_source.list_fixtures_items(params), stats_source.request_url),
+            ),
         )
         upcoming = stats.loc[self._upcoming(stats)] if not stats.empty else stats
         schedule = self._moments(upcoming) if odds_source is not None and odds_source.needs_schedule() else None
-        odds_items = odds_source.fixtures_items(params, schedule) if odds_source is not None else []
+        odds_items = odds_source.list_fixtures_items(params, schedule) if odds_source is not None else []
         return self._paired(stats, odds_items)

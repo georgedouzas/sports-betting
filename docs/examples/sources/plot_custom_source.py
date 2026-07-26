@@ -34,13 +34,13 @@ class MyStats(BaseStatsSource):
     name = 'my_stats'
     sport = 'soccer'
 
-    def index_items(self, selection=None):
+    def list_index_items(self, selection=None):
         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
-    def catalogue(self, payloads):
+    def read_catalogue(self, payloads):
         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
 
-    def required_items(self, params, schedule=None):
+    def list_required_items(self, params, schedule=None):
         return [
             RawItem(
                 source=self.name,
@@ -63,7 +63,7 @@ class MyStats(BaseStatsSource):
 # It declares what it needs. The dataloader reads it.
 
 source = MyStats()
-source.required_items([{'year': 2025}])[0]
+source.list_required_items([{'year': 2025}])[0]
 
 # %%
 # Given the bytes that came back, it says what the snapshots are. Here we hand it a payload directly, which is exactly
@@ -71,7 +71,7 @@ source.required_items([{'year': 2025}])[0]
 
 csv = b'date,league,division,year,home_team,away_team,home_form,home_goals,away_goals\n'
 csv += b'2025-08-16,Ruritania,1,2025,A,B,0.5,2,1\n'
-snapshots = source.to_snapshots([RawPayload(item=source.required_items([{'year': 2025}])[0], content=csv)])
+snapshots = source.to_snapshots([RawPayload(item=source.list_required_items([{'year': 2025}])[0], content=csv)])
 snapshots
 
 # %%
@@ -88,13 +88,13 @@ class MyOdds(BaseOddsSource):
     name = 'my_odds'
     sport = 'soccer'
 
-    def index_items(self, selection=None):
+    def list_index_items(self, selection=None):
         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
-    def catalogue(self, payloads):
+    def read_catalogue(self, payloads):
         return [{'league': 'Ruritania', 'division': 1, 'year': 2025}]
 
-    def required_items(self, params, schedule=None):
+    def list_required_items(self, params, schedule=None):
         return [
             RawItem(source=self.name, key=f'odds_{param["year"]}', url=f'https://example.com/odds/{param["year"]}.csv')
             for param in params
@@ -110,7 +110,7 @@ class MyOdds(BaseOddsSource):
 csv = b'date,league,division,year,home_team,away_team,provider,home_win,draw,away_win\n'
 csv += b'2025-08-16,Ruritania,1,2025,A,B,acme,1.8,3.4,4.2\n'
 odds_source = MyOdds()
-odds_source.to_snapshots([RawPayload(item=odds_source.required_items([{'year': 2025}])[0], content=csv)])
+odds_source.to_snapshots([RawPayload(item=odds_source.list_required_items([{'year': 2025}])[0], content=csv)])
 
 # %%
 # Hand both to a dataloader and everything on the other pages applies to them:
@@ -126,7 +126,7 @@ odds_source.to_snapshots([RawPayload(item=odds_source.required_items([{'year': 2
 #
 # 1. Never fetch. If a source could fetch, an extraction could download by accident.
 # 2. `date` is the kick-off instant, in UTC. Resolve your feed's time zone at your own boundary.
-# 3. Fixtures come from `fixtures_items`. It defaults to the training items, so override it only when the upcoming
+# 3. Fixtures come from `list_fixtures_items`. It defaults to the training items, so override it only when the upcoming
 #    matches live in a different file than the finished seasons.
 # 4. Credentials go in `request_url`, never in a `RawItem`. The item is what the transform sees and what you save.
 

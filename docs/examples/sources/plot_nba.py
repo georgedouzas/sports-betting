@@ -29,7 +29,7 @@ stats.name, stats.kind, stats.sport
 # A season is named by the year it ends in, so 2026 is the 2025-26 season. It carries the regular season, the
 # play-in and the play-offs, but never the pre-season and never the all-star weekend, whose teams are not clubs.
 
-params = stats.available_params()
+params = stats.list_available_params()
 sorted({param['year'] for param in params})[-5:]
 
 # %%

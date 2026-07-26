@@ -299,7 +299,7 @@ class BaseDataLoader(ABC):
 
     def _identity_cols(self: Self) -> list[str]:
         """Snapshot columns that identify a match (all snapshot cols but the event ones)."""
-        return [col for col in self.stats_schema_.snapshot_cols() if col not in EVENT_COLS]
+        return [col for col in self.stats_schema_.list_snapshot_cols() if col not in EVENT_COLS]
 
     def _feature_mask(
         self: Self,
@@ -323,21 +323,23 @@ class BaseDataLoader(ABC):
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
         """Pivot long snapshots into wide, moment-aware feature columns, keeping every match."""
         index_cols = self._identity_cols()
-        feature_cols = [col for col in stats.columns if col not in self.stats_schema_.snapshot_cols()]
+        feature_cols = [col for col in stats.columns if col not in self.stats_schema_.list_snapshot_cols()]
         X = stats.pivot_table(values=feature_cols, index=index_cols, columns=EVENT_COLS, aggfunc='first')
         keep = [
             (col, event_status, event_time)
             for col, event_status, event_time in X.columns
-            if event_status in self.stats_schema_.col_metadata(col)['include']
+            if event_status in self.stats_schema_.get_col_metadata(col)['include']
         ]
         X = X[keep]
         cols = pd.DataFrame(X.columns.tolist(), columns=['col', 'event_status', 'event_time'])
         cols = cols.groupby(['col'], group_keys=False)[['col', 'event_status', 'event_time']].apply(
-            lambda group: group.iloc[:1] if self.stats_schema_.col_metadata(group.iloc[0]['col'])['fixed'] else group,
+            lambda group: (
+                group.iloc[:1] if self.stats_schema_.get_col_metadata(group.iloc[0]['col'])['fixed'] else group
+            ),
         )
         X = X[list(cols.itertuples(index=False, name=None))]
         X.columns = [
-            col if self.stats_schema_.col_metadata(col)['fixed'] else _feature_column(col, event_status, event_time)
+            col if self.stats_schema_.get_col_metadata(col)['fixed'] else _feature_column(col, event_status, event_time)
             for col, event_status, event_time in X.columns
         ]
         matches = stats[index_cols].drop_duplicates().sort_values(index_cols).set_index(index_cols).index
@@ -346,25 +348,29 @@ class BaseDataLoader(ABC):
     def _pivot_odds(self: Self, odds: pd.DataFrame) -> pd.DataFrame:
         """Pivot long odds snapshots into wide, per-provider odds columns."""
         index_cols = self._identity_cols()
-        odds_cols = [col for col in odds.columns if col not in self.odds_schema_.snapshot_cols() and col != 'provider']
+        odds_cols = [
+            col for col in odds.columns if col not in self.odds_schema_.list_snapshot_cols() and col != 'provider'
+        ]
         O = odds.pivot_table(values=odds_cols, index=index_cols, columns=[*EVENT_COLS, 'provider'], aggfunc='first')
         keep = [
             (col, event_status, event_time, provider)
             for col, event_status, event_time, provider in O.columns
-            if event_status in self.odds_schema_.col_metadata(col)['include']
+            if event_status in self.odds_schema_.get_col_metadata(col)['include']
         ]
         O = O[keep]
         cols = pd.DataFrame(O.columns.tolist(), columns=['col', 'event_status', 'event_time', 'provider'])
         cols = cols.groupby(['col', 'provider'], group_keys=False)[
             ['col', 'event_status', 'event_time', 'provider']
         ].apply(
-            lambda group: group.iloc[:1] if self.odds_schema_.col_metadata(group.iloc[0]['col'])['fixed'] else group,
+            lambda group: (
+                group.iloc[:1] if self.odds_schema_.get_col_metadata(group.iloc[0]['col'])['fixed'] else group
+            ),
         )
         O = O[list(cols.itertuples(index=False, name=None))]
         O.columns = [
             (
                 col
-                if self.odds_schema_.col_metadata(col)['fixed']
+                if self.odds_schema_.get_col_metadata(col)['fixed']
                 else _odds_column(provider, col, event_status, event_time)
             )
             for col, event_status, event_time, provider in O.columns
@@ -485,7 +491,7 @@ class BaseDataLoader(ABC):
 
         self.stats_schema_.validate(self.stats_)
         self.odds_schema_.validate(self.odds_)
-        if self.stats_schema_.snapshot_cols() != self.odds_schema_.snapshot_cols():
+        if self.stats_schema_.list_snapshot_cols() != self.odds_schema_.list_snapshot_cols():
             msg = 'Stats and odds snapshots columns do not match.'
             raise AssertionError(msg)
 

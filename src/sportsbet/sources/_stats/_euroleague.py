@@ -13,28 +13,17 @@ import pandas as pd
 
 from ...core import ParamGrid
 from .._base import BaseStatsSource, RawItem, RawPayload
-from .._utils import derive_market_outcomes
+from .._common._basketball import DIVISION, SEASONS_KEY, _snapshots
 
 URL = 'https://api-live.euroleague.net/v2/competitions/E'
 SEASONS_URL = f'{URL}/seasons'
 GAMES_URL = f'{URL}/seasons/E{{season}}/games'
 
 LEAGUE = 'Euroleague'
-DIVISION = 1
-MARKETS = ['home_win', 'away_win']
-SEASONS_KEY = 'seasons'
-ROLLING_GAMES = 3
-FEATURES = ['points_for', 'points_against', 'wins']
-IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
 
 
 def _games(content: bytes, year: int) -> pd.DataFrame:
-    """Return the games of a season, as the API publishes them.
-
-    The tip-off is taken from the field the API gives in UTC. The one it calls `date` is in its own head-office time,
-    whatever country the game is played in — a game in Istanbul reads 18:30 there and tips off at 20:30 locally — so the
-    UTC field is the one that places the game at the right instant.
-    """
+    """Return the games of a season, taking the tip-off from the API's UTC field."""
     games: list[dict[str, Any]] = json.loads(content).get('data', [])
     records = []
     for game in games:
@@ -63,76 +52,6 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
     return frame.sort_values('date').reset_index(drop=True)
 
 
-def _form(games: pd.DataFrame) -> pd.DataFrame:
-    """Return what each team had done before each of its games.
-
-    The upcoming games are already part of the frame, so one of them carries the form of the games before it. Every
-    average is shifted by one, so a game sees only the games before it.
-
-    Points scored, points conceded, and the wins that follow from them. The feed carries a score line, so that is what
-    the form is built from.
-    """
-    played = games['home_points'].ge(0) & games['away_points'].ge(0)
-    sides = [
-        pd.DataFrame(
-            {
-                'team': games[f'{side}_team'],
-                'date': games['date'],
-                'points_for': games[f'{side}_points'].where(played),
-                'points_against': games[f'{other}_points'].where(played),
-                'wins': (games[f'{side}_points'] > games[f'{other}_points']).where(played).astype(float),
-            },
-        )
-        for side, other in (('home', 'away'), ('away', 'home'))
-    ]
-    form = pd.concat(sides).set_index(['team', 'date']).sort_index()
-
-    averages = [f'{col}_avg' for col in FEATURES]
-    latest = [f'{col}_latest_avg' for col in FEATURES]
-    form[averages] = form.groupby('team')[FEATURES].expanding().mean().to_numpy()
-    form[averages] = form.groupby('team')[averages].shift(1)
-    form[latest] = form.groupby('team')[FEATURES].rolling(window=ROLLING_GAMES, min_periods=1).mean().to_numpy()
-    form[latest] = form.groupby('team')[latest].shift(1)
-    return form.drop(columns=FEATURES).reset_index()
-
-
-def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
-    """Return the long snapshots of a season.
-
-    A game that has not been played gets only its pre-play snapshot, so it becomes a fixture.
-    """
-    if games.empty:
-        return games
-    form = _form(games)
-    feature_cols = [col for col in form.columns if col.endswith('avg')]
-    preplay = games[IDENTITY].copy()
-    for side in ('home', 'away'):
-        sided = [f'{side}_{col}' for col in feature_cols]
-        side_form = form.rename(columns=dict(zip(feature_cols, sided, strict=True)))
-        preplay = preplay.merge(
-            side_form[['team', 'date', *sided]],
-            left_on=['date', f'{side}_team'],
-            right_on=['date', 'team'],
-            how='left',
-        ).drop(columns='team')
-    preplay = preplay.assign(event_status='preplay', event_time=0)
-
-    played = games['home_points'].ge(0) & games['away_points'].ge(0)
-    postplay = games.loc[played, IDENTITY].assign(
-        home_points=games.loc[played, 'home_points'].astype(int),
-        away_points=games.loc[played, 'away_points'].astype(int),
-        event_status='postplay',
-        event_time=0,
-    )
-    outcomes = derive_market_outcomes(postplay['home_points'], postplay['away_points'], MARKETS)
-    postplay = pd.concat([postplay, outcomes], axis=1)
-
-    snapshots = pd.concat([preplay, postplay], ignore_index=True)
-    sided = [f'{side}_{col}' for side in ('home', 'away') for col in feature_cols]
-    order = ['event_status', 'event_time', *IDENTITY, 'home_points', 'away_points', *MARKETS, *sided]
-    return snapshots.reindex(columns=[col for col in order if col in snapshots.columns])
-
-
 class EuroLeagueStats(BaseStatsSource):
     """The statistics of the EuroLeague's official API.
 
@@ -152,13 +71,13 @@ class EuroLeagueStats(BaseStatsSource):
         >>> source.name, source.kind, source.sport
         ('euroleague', 'stats', 'basketball')
         >>> # A whole season arrives in one request, and asking what it publishes costs one more.
-        >>> len(source.index_items())
+        >>> len(source.list_index_items())
         1
         >>> # The statistics are free; nobody gives basketball odds away, so those are yours to buy.
         >>> dataloader = DataLoader(
         ...     param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
         ...     stats=source,
-        ...     odds=OddsApi(key='...', markets=['h2h']),
+        ...     odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h']),
         ... )
         >>> dataloader.sport_
         'basketball'
@@ -167,15 +86,12 @@ class EuroLeagueStats(BaseStatsSource):
     sport: ClassVar[str | None] = 'basketball'
     name: ClassVar[str] = 'euroleague'
 
-    def index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
+    def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the seasons the competition publishes, which is one free request whatever is selected."""
         return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
 
-    def catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the seasons the competition publishes.
-
-        A season is named by the year it ends in, as everywhere else in the library, so the API's `E2024` is 2025.
-        """
+    def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
+        """Return the seasons the competition publishes, each named by the year it ends in."""
         if not payloads:
             return []
         seasons = json.loads(payloads[0].content).get('data', [])
@@ -184,11 +100,8 @@ class EuroLeagueStats(BaseStatsSource):
             key=lambda params: params['year'],
         )
 
-    def required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per selected season.
-
-        A whole season comes back in a single response, so a season costs one request rather than one per round.
-        """
+    def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
+        """Return one item per selected season, since a whole season comes back in a single response."""
         return [
             RawItem(
                 source=self.name,
