@@ -1,4 +1,4 @@
-"""Read the sources the data comes from."""
+"""Read the raw data from its sources."""
 
 from __future__ import annotations
 
