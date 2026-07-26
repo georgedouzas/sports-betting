@@ -17,7 +17,8 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
-from .._selection import build_venue
+from .. import build_venue
+from ..dataloaders import load_dataloader
 from ..evaluation import load_bettor
 from ..execution import (
     BaseVenue,
@@ -32,7 +33,7 @@ from ..execution import (
 from ..execution import execute as run_execute
 from ..execution import place as run_place
 from ..execution import quote as run_quote
-from ._utils import load_dataloader, print_console, reported
+from ._utils import print_console, reported
 
 
 def _venue(venue_ref: str) -> BaseVenue:
@@ -156,7 +157,7 @@ def markets(venue_ref: str, dataloader_path: str) -> None:
     """Show the markets a venue offers on the upcoming matches, with their prices."""
     with reported():
         built = _venue(venue_ref)
-        loader, _ = load_dataloader(dataloader_path)
+        loader = load_dataloader(dataloader_path)
         X_fix, _, _ = loader.extract_fixtures_data()
         matches = [f'{row.home_team} vs {row.away_team}' for row in X_fix.itertuples()]
         print_console([asyncio.run(built.list_markets(matches))], ['Markets'])
@@ -196,7 +197,7 @@ def quote(venue_ref: str, dataloader_path: str, bettor_path: str, stake: float, 
     """Show what would be staked on the upcoming matches, and write it for `place`."""
     with reported():
         built = _venue(venue_ref)
-        loader, _ = load_dataloader(dataloader_path)
+        loader = load_dataloader(dataloader_path)
         bettor = load_bettor(bettor_path)
         X_fix, _, O_fix = loader.extract_fixtures_data()
         if X_fix.empty or O_fix is None or O_fix.empty:
@@ -455,7 +456,7 @@ def run(
     """
     with reported(), _logging_to_terminal():
         built = _venue(venue_ref)
-        loader, _ = load_dataloader(dataloader_path)
+        loader = load_dataloader(dataloader_path)
         bettor = load_bettor(bettor_path)
         receipts = asyncio.run(
             run_execute(

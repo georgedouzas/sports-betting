@@ -13,10 +13,11 @@ from rich.console import Console
 from rich.panel import Panel
 from sklearn.model_selection import TimeSeriesSplit
 
+from ..dataloaders import load_dataloader
 from ..evaluation import backtest as run_backtest
 from ..evaluation import load_bettor, save_bettor
 from ._options import BACKTEST, DATALOADER, MODEL, OUTPUT, options
-from ._utils import load_dataloader, modelled, print_console, reported
+from ._utils import modelled, print_console, reported
 
 
 def _needs_model(selection: dict[str, object]) -> None:
@@ -51,7 +52,7 @@ def backtest(
     with reported(), modelled(selection) as bettor:
         if bettor is None:
             return
-        _, (X_train, Y_train, O_train) = load_dataloader(dataloader_path)
+        X_train, Y_train, O_train = load_dataloader(dataloader_path).extract_train_data()
         if O_train is None or O_train.empty:
             Console().print(Panel.fit('[bold red]There are no odds, so there is nothing to backtest against.'))
             return
@@ -80,7 +81,7 @@ def fit(dataloader_path: str, output: str, **selection: object) -> None:
     with reported(), modelled(selection) as bettor:
         if bettor is None:
             return
-        _, (X_train, Y_train, O_train) = load_dataloader(dataloader_path)
+        X_train, Y_train, O_train = load_dataloader(dataloader_path).extract_train_data()
         bettor.fit(X_train, Y_train, O_train)
         save_bettor(bettor, output)
         Console().print(f'Saved the fitted model to [bold]{output}[/bold].')
@@ -100,7 +101,7 @@ def fit(dataloader_path: str, output: str, **selection: object) -> None:
 def bet(dataloader_path: str, bettor_path: str, data_path: str | None) -> None:
     """Predict the value bets of the upcoming matches with a model saved by `fit`."""
     with reported():
-        loader, _ = load_dataloader(dataloader_path)
+        loader = load_dataloader(dataloader_path)
         bettor = load_bettor(bettor_path)
         X_fix, _, O_fix = loader.extract_fixtures_data()
         if X_fix.empty or O_fix is None or O_fix.empty:

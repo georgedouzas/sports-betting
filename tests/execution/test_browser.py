@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from sportsbet._selection import SelectionError, build_venue
+from sportsbet import BuildError, build_venue
 from sportsbet.execution import BaseVenue, BrowserSession, ExecutionError, VenueBlockedError
 
 SLIP = """<!doctype html><html><body>
@@ -130,7 +130,7 @@ def test_something_that_is_neither_is_refused(tmp_path):
     """A reference that names something that is not a venue and not a session says so."""
     written = tmp_path / 'venue.py'
     written.write_text('VENUE = 42\n')
-    with pytest.raises(SelectionError, match='not a venue and is not a browser session'):
+    with pytest.raises(BuildError, match='not a venue and is not a browser session'):
         build_venue(f'{written}:VENUE')
 
 

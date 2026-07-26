@@ -271,7 +271,9 @@ class BaseDataLoader(ABC):
         return sorted(odds['provider'].dropna().unique().tolist())
 
     def _load(self: Self, odds_type: str | None) -> None:
-        """Read and validate the snapshots, derive their metadata and build the inputs."""
+        """Read and validate the snapshots, derive their metadata and build the inputs, reusing what is held."""
+        if getattr(self, 'stats_', None) is not None and self.odds_type_ == odds_type:
+            return
         stats, odds = self._snapshots()
         stats = self._finalize(stats)
         if not [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]:
@@ -573,7 +575,7 @@ class BaseDataLoader(ABC):
     def extract_train_data(
         self: Self,
         *,
-        drop_na_thres: float = 0.0,
+        drop_na_thres: float | None = None,
         odds_type: str | None = None,
         target_event_status: str | None = None,
         target_event_time: pd.Timedelta | None = None,
@@ -587,13 +589,15 @@ class BaseDataLoader(ABC):
         It downloads the selected seasons and returns the historical data a betting strategy is built and backtested on.
         Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in `X`,
         optionally capped at an input horizon, the target-moment outcomes become the labels `Y`, and the odds become
-        `O`. Call it again to download the data again, and keep it with `save`. When the odds source carries no markets
-        there is nothing to predict, so call `extract_exploration_data` for the features on their own.
+        `O`. A dataloader that already downloaded reuses the snapshots it holds rather than fetching again, so calling it
+        with no arguments on a reloaded dataloader rebuilds the same data offline; keep one with `save`. When the odds
+        source carries no markets there is nothing to predict, so call `extract_exploration_data` for the features on
+        their own.
 
         Args:
             drop_na_thres:
                 Threshold in `[0.0, 1.0]` controlling how aggressively feature
-                columns with missing values are dropped. `0.0` keeps all columns.
+                columns with missing values are dropped. `None` keeps all columns.
             odds_type:
                 One of `get_odds_types()`. `None` returns no odds.
             target_event_status:
@@ -613,9 +617,24 @@ class BaseDataLoader(ABC):
                 Moment-aware features `X`, target outcomes `Y` and odds `O`. The
                 three components share the same date index and rows.
         """
+        arguments = (
+            drop_na_thres,
+            odds_type,
+            target_event_status,
+            target_event_time,
+            input_event_status,
+            input_event_time,
+        )
+        if all(argument is None for argument in arguments) and hasattr(self, 'odds_type_'):
+            odds_type = self.odds_type_
+            drop_na_thres = self.drop_na_thres_
+            target_event_status = self.target_event_status_
+            target_event_time = self.target_event_time_
+            input_event_status = self.input_event_status_
+            input_event_time = self.input_event_time_
         X, O, target_event_status, target_event_time = self._extract_inputs(
             odds_type,
-            drop_na_thres,
+            0.0 if drop_na_thres is None else drop_na_thres,
             target_event_status,
             target_event_time,
             input_event_status,
@@ -628,8 +647,6 @@ class BaseDataLoader(ABC):
                 'own.'
             )
             raise ValueError(msg)
-
-        # Extract output data
         index_cols = self._identity_cols()
         train_mask = pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._train_ids)
         Y = self._extract_targets(

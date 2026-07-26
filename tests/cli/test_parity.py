@@ -10,7 +10,7 @@ import pytest
 
 from sportsbet.cli import main
 from sportsbet.dataloaders import BaseDataLoader, DataLoader
-from sportsbet.evaluation import OddsComparisonBettor, backtest
+from sportsbet.evaluation import backtest
 from sportsbet.sources import OddsApi
 
 UNREACHABLE = {'self', 'param_grid', 'key', 'classifier', 'X', 'Y', 'O', 'bettor'}
@@ -35,7 +35,6 @@ def _parameters(callable_):
         (['dataloader', 'train', 'extract'], BaseDataLoader.extract_train_data, {}),
         (['dataloader', 'exploration', 'extract'], BaseDataLoader.extract_exploration_data, {}),
         (['evaluation', 'backtest'], backtest, {}),
-        (['evaluation', 'backtest'], OddsComparisonBettor.__init__, {'odds_types': 'model_odds_types'}),
         (
             ['dataloader', 'train', 'extract'],
             OddsApi.__init__,

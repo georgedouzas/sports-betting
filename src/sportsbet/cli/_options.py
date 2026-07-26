@@ -10,7 +10,7 @@ from collections.abc import Callable
 import click
 from click.decorators import FC
 
-from .._selection import DEFAULT_KEY_ENV, MODELS, ODDS_SOURCES, STATS_SOURCES, STATUSES
+from .._factory import DEFAULT_KEY_ENV, ODDS_SOURCES, STATS_SOURCES, STATUSES
 
 SELECTION: list[Callable[[FC], FC]] = [
     click.option('--league', 'leagues', multiple=True, help='A league to select. Repeat it to select more.'),
@@ -74,20 +74,11 @@ MODEL: list[Callable[[FC], FC]] = [
     click.option(
         '--model',
         help=(
-            f'A ready-made model ({", ".join(MODELS)}), or a scikit-learn one you built yourself, named by where it '
-            f'lives, as in `models.py:BETTOR`.'
+            'A scikit-learn estimator as a Python expression, as in `"OddsComparisonBettor(alpha=0.05)"` or '
+            '`"ClassifierBettor(LogisticRegression(C=1.0))"`, or one you built, named by where it lives, as in '
+            '`models.py:BETTOR`.'
         ),
     ),
-    click.option('--alpha', default=0.05, show_default=True, help='The tolerance of `odds-comparison`.'),
-    click.option(
-        '--model-odds-type',
-        'model_odds_types',
-        multiple=True,
-        help='An odds type `odds-comparison` compares. Repeatable. The default compares all of them.',
-    ),
-    click.option('--init-cash', type=float, help='The cash a backtest starts with.'),
-    click.option('--stake', type=float, help='The stake of each bet.'),
-    click.option('--betting-market', 'betting_markets', multiple=True, help='A market to bet on. Repeatable.'),
 ]
 
 BACKTEST: list[Callable[[FC], FC]] = [
