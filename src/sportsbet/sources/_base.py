@@ -148,16 +148,10 @@ def read_csv_content(content: bytes) -> pd.DataFrame:
 class BaseSource(ABC):
     """The abstract base class for data sources.
 
-    A source knows which sport it carries, since a feed of soccer matches is a feed of soccer matches whatever is done
-    with it. `sport` is `None` for a source that carries several, as a vendor of odds does, and such a source takes the
-    sport of the one it is paired with.
-
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
-    Its planning and transform methods declare what to read and turn the payloads into snapshots; the dataloader does
-    the reading. A source is therefore a pure description of a feed, easy to write and to test.
-
-    It also answers what it publishes, through `list_available_params`. That question has to be answerable before a
-    `param_grid` is written, so it belongs here and not on a dataloader that is configured with one.
+    The dataloader does the reading. `sport` names the one sport it carries, or is `None` for a vendor that carries
+    several and takes the sport of the source it is paired with. It also answers what it publishes through
+    `list_available_params`, which a `param_grid` is written against.
 
     Examples:
         >>> from sportsbet.sources import FootballDataStats, OddsApi
@@ -181,17 +175,11 @@ class BaseSource(ABC):
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the items needed to discover what the source publishes.
 
-        A feed that lists its seasons on an index page is cheap to ask. One that publishes a league as a single file of
-        every season it ever played has no index, so the file is the catalogue, and reading it means downloading it.
-        Asking such a feed what it publishes therefore costs as much as the data.
-
-        So a source is told what is being looked for, and answers with what it needs in order to place it. It reads
-        only the leagues the selection names.
+        A feed with no index is read in full to discover it, so discovery can cost as much as the data.
 
         Args:
             selection:
-                What is being looked for. `None` asks for everything the source publishes, which is what discovery
-                needs, since nothing can be selected before it is known what exists.
+                What is being looked for. `None` asks for everything, which is what discovery needs.
 
         Returns:
             items:
@@ -246,8 +234,7 @@ class BaseSource(ABC):
 
         The default is the same items training needs, which suits a source whose season file already carries the matches
         still to be played, or an odds source that prices whatever the schedule lists. A source whose upcoming matches
-        live somewhere else — a separate fixtures file, the season in progress rather than the one selected — overrides
-        it.
+        live somewhere else, in a separate fixtures file or the season in progress, overrides it.
 
         Args:
             params:

@@ -10,10 +10,7 @@ from .._common._football_data import _FootballDataSource
 
 
 class FootballDataOdds(_FootballDataSource, BaseOddsSource):
-    """The odds of the football-data.co.uk feed.
-
-    It carries the closing odds of the market average and the market maximum. They are pre-match prices, so they
-    backtest a pre-match bet; a source with time-stamped prices backtests an in-play one.
+    """The pre-match closing odds of the market average and market maximum from the football-data.co.uk feed.
 
     Read more in the [user guide][user-guide].
 

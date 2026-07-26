@@ -12,16 +12,10 @@ from .._common._sample import _SampleSource
 
 
 class SampleSoccerStats(_SampleSource, BaseStatsSource):
-    """The statistics of the soccer sample data that ships with the library.
+    """A frozen real season of the English and Spanish soccer first divisions, bundled with the library.
 
-    It is a real season of the English and Spanish first divisions, taken from
-    [football-data.co.uk](https://www.football-data.co.uk) and frozen, carrying the identity of every match, the form of
-    the two teams before it, the score at half time and the result. It needs no key and runs offline, which is what
-    makes it the data of the examples and the tests.
-
-    The season is finished, so every match in it is played: it gives training data. A fixture is a match that has not
-    been played, and a finished season has none. To bet on something, use a live source such as
-    [`FootballDataStats`][sportsbet.sources.FootballDataStats].
+    It carries the identity of every match, each team's form before it, the half-time score and the result. The season
+    is finished, so it holds training data but no fixtures.
 
     Examples:
         >>> from sportsbet.dataloaders import DataLoader

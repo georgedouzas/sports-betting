@@ -12,10 +12,7 @@ from .._common._sample import _SampleSource
 
 
 class SampleSoccerOdds(_SampleSource, BaseOddsSource):
-    """The odds of the soccer sample data that ships with the library.
-
-    The market average and the market maximum of the same real season, as the free feed publishes them. They are the
-    prices offered before kick-off, so a bet placed on them is a pre-match bet.
+    """The market average and market maximum pre-match odds of the bundled soccer sample season.
 
     Examples:
         >>> from sportsbet.dataloaders import DataLoader

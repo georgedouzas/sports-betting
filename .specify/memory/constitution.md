@@ -1,6 +1,23 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.7.0 → 1.8.0
+Rationale: Sharpen Principle VI docstrings on describing content: a docstring
+states what the thing is and holds, not its virtues (free, needs no key), the
+rationale for its shape, or what downstream code builds from it; and it joins no
+two clauses with a semicolon or a dash, each point being its own sentence. MINOR:
+expanded guidance, no principle removed or redefined.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — added the describe-the-content
+    rule and the no-semicolon / no-dash punctuation rule for docstrings.
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
 Version change: 1.6.0 → 1.7.0
 Rationale: Sharpen Principle VI naming for instance state: a method begins with a
 verb while a property names a value (a noun phrase, never verb-first); a public
@@ -324,8 +341,14 @@ never gets more. A public entry point and a public class carry an
 parameter and what is returned — a public signature is not self-explanatory to a
 caller, so the docstring names each argument and the result. Keep each entry
 terse and the whole body to a few sentences. Never describe what the code does
-not do, never restate the code, no essays, no editorializing. Public API carries
-a runnable example checked by the doctest run; a network-touching class does not.
+not do, never restate the code, no essays, no editorializing. A docstring
+describes what the thing is and what it holds, plainly: not its virtues (`free`,
+`needs no key`, `the data stays on your machine`), not the rationale for its shape
+(`since basketball has no draw`), and not what downstream code builds from it —
+state the content, not the sales pitch, the justification, or the uses. A
+docstring joins no two clauses with a semicolon or a dash: each point is its own
+sentence. Public API carries a runnable example checked by the doctest run; a
+network-touching class does not.
 
 The top-level package `__init__` is the exception to the one-line rule: it is the
 library's front page, so it may carry a fuller docstring — a tagline and a short
@@ -420,4 +443,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.7.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26
+**Version**: 1.8.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26

@@ -98,23 +98,16 @@ def _events(payload: RawPayload) -> tuple[list[dict], str]:
 
 
 class OddsApi(BaseOddsSource):
-    """The odds of The Odds API.
+    """The time-stamped odds of The Odds API, quoting a match at each moment it reaches.
 
-    It carries time-stamped prices, so an in-play bet can be backtested against the odds that were actually available at
-    the minute it would have been placed. The free feed publishes the closing price alone.
-
-    It reads your key from an environment variable you name, so the key is never an argument or saved with the
-    dataloader. The data it buys stays on your machine, and the key is read only when a request is made.
-
-    Historical prices are a paid tier and begin on 6 June 2020. Every market, region and moment is a separate request,
-    so extract without `download` first and see how many it would take.
+    The free tier publishes the closing price alone. Historical prices are a paid tier from 6 June 2020, and every
+    market, region and moment is a separate request. The key is read from the environment variable named by `key_env`.
 
     Read more in the [user guide][user-guide].
 
     Args:
         key_env:
-            The name of the environment variable holding your API key. It is read when a request is made, so the key
-            itself is never passed or stored.
+            The name of the environment variable holding your API key.
 
         markets:
             The markets to price, e.g. `['h2h', 'totals']`. The default `None` uses both.
@@ -181,7 +174,7 @@ class OddsApi(BaseOddsSource):
         )
 
     def _query(self: Self) -> dict[str, str]:
-        """Return the query parameters the vendor expects; the credential is added later."""
+        """Return the query parameters the vendor expects, without the credential."""
         markets, regions, _ = self._settings()
         return {'regions': ','.join(regions), 'markets': ','.join(markets), 'oddsFormat': 'decimal'}
 

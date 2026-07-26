@@ -20,12 +20,7 @@ PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2
 
 
 class _SampleSource:
-    """The half of a sample source that is the same whether it carries statistics or odds.
-
-    The data ships with the library, so the catalogue is known up front and every item is a file on your own disk. The
-    dataloader reads it exactly as it reads a feed on the internet, and the sport, the markets and the moments come out
-    of the data the same way.
-    """
+    """The half of a sample source shared by its statistics and odds, backed by the bundled files."""
 
     name: ClassVar[str] = 'sample_soccer'
     kind: ClassVar[str]
