@@ -22,7 +22,7 @@ from sportsbet.sources import FootballDataOdds, FootballDataStats
 # a dataloader.
 
 stats = FootballDataStats()
-params = stats.available_params()
+params = stats.list_available_params()
 len(params)
 
 # %%

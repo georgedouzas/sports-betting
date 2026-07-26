@@ -25,7 +25,7 @@ from sportsbet.sources import NBAStats, OddsApi, RawItem
 #
 # Every market, every region and every moment is a separate request, so each one multiplies the work.
 
-odds = OddsApi(key='your-key', markets=['h2h'], regions=['eu'])
+odds = OddsApi(key_env='ODDS_API_KEY', markets=['h2h'], regions=['eu'])
 odds.name, odds.kind
 
 # %%
@@ -62,7 +62,7 @@ odds.request_url(item)
 # dataloader = DataLoader(
 #     param_grid={'league': ['NBA'], 'year': [2026]},
 #     stats=NBAStats(),
-#     odds=OddsApi(key=os.environ['ODDS_API_KEY'], markets=['h2h']),
+#     odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h']),
 # )
 # X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 # ```
@@ -70,7 +70,7 @@ odds.request_url(item)
 # Extracting is what spends: every market, region and moment is its own request, and what those requests cost is
 # between you and the vendor. Ask the source what it would fetch first, and price it before you commit.
 
-NBAStats().sport, OddsApi(key='your-key').sport
+NBAStats().sport, OddsApi(key_env='ODDS_API_KEY').sport
 
 # %%
 # What a price is saying

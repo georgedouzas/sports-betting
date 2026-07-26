@@ -27,7 +27,7 @@ stats.name, stats.kind, stats.sport
 # %%
 # It ships with the library, so it knows what it publishes without reading anything.
 
-stats.available_params()
+stats.list_available_params()
 
 # %%
 # Extracting the data

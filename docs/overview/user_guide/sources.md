@@ -27,7 +27,7 @@ from sportsbet.sources import FootballDataStats, OddsApi
 dataloader = DataLoader(
     param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
     stats=FootballDataStats(),                                   # free
-    odds=OddsApi(key='...', markets=['h2h', 'totals']),          # yours
+    odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h', 'totals']),          # yours
 )
 ```
 
@@ -43,16 +43,16 @@ class BaseSource:
     kind: ClassVar[str]              # 'stats' or 'odds'
     sport: ClassVar[str | None]      # what the data is about, or None if the source serves any sport
 
-    def index_items(self, selection=None) -> list[RawItem]:
+    def list_index_items(self, selection=None) -> list[RawItem]:
         """What do I need to read to know what I publish?"""
 
-    def catalogue(self, payloads) -> list[dict]:
+    def read_catalogue(self, payloads) -> list[dict]:
         """Given those, which league/division/year combinations do I publish?"""
 
-    def required_items(self, params, schedule=None) -> list[RawItem]:
+    def list_required_items(self, params, schedule=None) -> list[RawItem]:
         """Given a selection, what do I need read?"""
 
-    def fixtures_items(self, params, schedule=None) -> list[RawItem]:
+    def list_fixtures_items(self, params, schedule=None) -> list[RawItem]:
         """And what do I need read for the upcoming matches? (defaults to required_items)"""
 
     def to_snapshots(self, payloads) -> pd.DataFrame:
@@ -90,7 +90,7 @@ a fact. What they are worth is between you and whoever you buy them from.
 Two sources declaring the same `source` and `key` declare the same item, so it is fetched once. That is how
 `FootballDataStats` and `FootballDataOdds`, which read the same upstream CSV, avoid downloading it twice.
 
-A [`RawPayload`][sportsbet.sources.RawPayload] is what came back, kept verbatim. It is what your `catalogue` and
+A [`RawPayload`][sportsbet.sources.RawPayload] is what came back, kept verbatim. It is what your `read_catalogue` and
 `to_snapshots` are handed.
 
 ```python
@@ -121,14 +121,14 @@ class MyStats(BaseStatsSource):
 
     name = 'my_stats'
 
-    def index_items(self):
+    def list_index_items(self):
         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
-    def catalogue(self, payloads):
+    def read_catalogue(self, payloads):
         seasons = json.loads(payloads[0].content)
         return [{'league': 'Ruritania', 'division': 1, 'year': year} for year in seasons]
 
-    def required_items(self, params, schedule=None):
+    def list_required_items(self, params, schedule=None):
         return [
             RawItem(
                 source=self.name,
@@ -162,13 +162,13 @@ class MyOdds(BaseOddsSource):
 
     name = 'my_odds'
 
-    def index_items(self):
+    def list_index_items(self):
         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
-    def catalogue(self, payloads):
+    def read_catalogue(self, payloads):
         return [{'league': 'Ruritania', 'division': 1, 'year': y} for y in json.loads(payloads[0].content)]
 
-    def required_items(self, params, schedule=None):
+    def list_required_items(self, params, schedule=None):
         return [
             RawItem(source=self.name, key=f'odds_{param["year"]}', url=f'https://example.com/odds/{param["year"]}.csv')
             for param in params
@@ -201,13 +201,13 @@ and you have a sport that cannot be drawn, and the bettor works out the two way 
 
 ### Four rules to follow
 
-1. Keep the four methods pure. `index_items`, `catalogue`, `required_items` and `to_snapshots` declare and transform,
+1. Keep the four methods pure. `list_index_items`, `read_catalogue`, `list_required_items` and `to_snapshots` declare and transform,
    and the dataloader does the reading, so a source stays testable offline.
 2. `date` is the kick off instant, in UTC. Resolve your feed's time zone at your boundary, so `date + event_time` is the
    wall clock instant of a snapshot, the address an odds vendor is asked for. Both feeds the library ships hide this:
    football-data publishes every league in UK time, and the EuroLeague every game in Central European time. Assume
    nothing.
-3. The upcoming matches come from `fixtures_items`. The default reads the same items as training, which suits a feed
+3. The upcoming matches come from `list_fixtures_items`. The default reads the same items as training, which suits a feed
    whose season file already lists the matches still to be played. Override it when they live elsewhere.
 4. Credentials go in `request_url`. The `RawItem` is what the transform sees and what you might save, so a key stays out
    of it.

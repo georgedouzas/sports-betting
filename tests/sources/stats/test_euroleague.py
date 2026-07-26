@@ -48,14 +48,14 @@ def source():
 
 def _payloads(source):
     """Build the payload of a season the source declared."""
-    item = source.required_items([{'league': 'Euroleague', 'division': 1, 'year': 2025}])[0]
+    item = source.list_required_items([{'league': 'Euroleague', 'division': 1, 'year': 2025}])[0]
     return [RawPayload(item=item, content=GAMES)]
 
 
 def test_the_catalogue_comes_from_the_api(source):
     """Test the seasons are read from the competition, never fabricated from a range of years."""
-    payloads = [RawPayload(item=source.index_items()[0], content=SEASONS)]
-    assert source.catalogue(payloads) == [
+    payloads = [RawPayload(item=source.list_index_items()[0], content=SEASONS)]
+    assert source.read_catalogue(payloads) == [
         {'league': 'Euroleague', 'division': 1, 'year': 2024},
         {'league': 'Euroleague', 'division': 1, 'year': 2025},
     ]
@@ -63,13 +63,13 @@ def test_the_catalogue_comes_from_the_api(source):
 
 def test_a_season_is_named_by_the_year_it_ends_in(source):
     """Test the API's `E2024` is the 2024-25 season, so the library calls it 2025."""
-    payloads = [RawPayload(item=source.index_items()[0], content=SEASONS)]
-    assert {params['year'] for params in source.catalogue(payloads)} == {2024, 2025}
+    payloads = [RawPayload(item=source.list_index_items()[0], content=SEASONS)]
+    assert {params['year'] for params in source.read_catalogue(payloads)} == {2024, 2025}
 
 
 def test_a_whole_season_is_one_request(source):
     """Test a season comes back in a single response, so it costs one request rather than one per round."""
-    items = source.required_items([{'league': 'Euroleague', 'division': 1, 'year': 2025}])
+    items = source.list_required_items([{'league': 'Euroleague', 'division': 1, 'year': 2025}])
     assert len(items) == 1
     assert 'seasons/E2024/games' in items[0].url
 

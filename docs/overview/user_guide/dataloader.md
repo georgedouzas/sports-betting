@@ -90,14 +90,14 @@ Ask the source what exists before writing a `param_grid`. Discovery lives on the
 ```python
 from sportsbet.sources import FootballDataStats
 
-params = FootballDataStats().available_params()
+params = FootballDataStats().list_available_params()
 # Only the league/division/year combinations the feed actually publishes are
 # ever offered, so an invalid one can never be requested.
 assert {'division': 1, 'league': 'England', 'year': 2024} in params
 assert all({'league', 'division', 'year'} == set(combination) for combination in params)
 ```
 
-`available_params` is an instance method, since what a source publishes depends on its configuration: a credential may
+`list_available_params` is an instance method, since what a source publishes depends on its configuration: a credential may
 cover part of it. The catalogue is read fresh each call, so a new season appears as soon as the feed publishes it.
 
 The dataloader offers the seasons both your statistics and odds sources publish, their intersection, so every selected
@@ -180,7 +180,7 @@ from sportsbet.sources import FootballDataStats, OddsApi
 dataloader = DataLoader(
     param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
     stats=FootballDataStats(),                                    # free
-    odds=OddsApi(key='...', markets=['h2h', 'totals'], regions=['eu']),   # yours
+    odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h', 'totals'], regions=['eu']),   # yours
 )
 ```
 
@@ -462,7 +462,7 @@ from sportsbet.sources import EuroLeagueStats, OddsApi
 dataloader = DataLoader(
     param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
     stats=EuroLeagueStats(),                       # free, no key
-    odds=OddsApi(key='...', markets=['h2h']),      # yours
+    odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h']),      # yours
 )
 X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 ```
@@ -492,7 +492,7 @@ from sportsbet.sources import NBAStats, OddsApi
 dataloader = DataLoader(
     param_grid={'league': ['NBA'], 'year': [2026]},
     stats=NBAStats(),                              # free, no key
-    odds=OddsApi(key='...', markets=['h2h']),      # yours
+    odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h']),      # yours
 )
 ```
 

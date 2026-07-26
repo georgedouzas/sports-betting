@@ -129,7 +129,7 @@ def test_odds_schema_fails_on_postplay_odds_not_nan(odds, odds_schema):
     post_idx = odds_wrong.index[odds_wrong['event_status'] == 'postplay']
     idx = post_idx[0]
     for col in odds_wrong.columns:
-        if col not in ('event_status', 'event_time', 'provider') and col not in odds_schema.snapshot_cols():
+        if col not in ('event_status', 'event_time', 'provider') and col not in odds_schema.list_snapshot_cols():
             odds_wrong.loc[idx, col] = 1.23
     with pytest.raises(pa.errors.SchemaError):
         odds_schema.validate(odds_wrong)

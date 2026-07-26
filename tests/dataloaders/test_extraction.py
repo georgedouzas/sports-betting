@@ -29,16 +29,16 @@ class _Feed:
     def __init__(self: '_Feed', fetched: list[str]) -> None:
         self.fetched = fetched
 
-    def index_items(self, selection=None):
+    def list_index_items(self, selection=None):
         return [RawItem(source=self.name, key='catalogue', url='file:///dev/null')]
 
-    def catalogue(self, payloads):
+    def read_catalogue(self, payloads):
         return [*PARAMS, CURRENT]
 
-    def required_items(self, params, schedule=None):
+    def list_required_items(self, params, schedule=None):
         return [RawItem(source=self.name, key=f'train_{param["year"]}', url='file:///dev/null') for param in params]
 
-    def fixtures_items(self, params, schedule=None):
+    def list_fixtures_items(self, params, schedule=None):
         return [RawItem(source=self.name, key='current', url='file:///dev/null')]
 
     def to_snapshots(self, payloads):

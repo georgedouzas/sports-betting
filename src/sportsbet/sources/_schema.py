@@ -1,4 +1,9 @@
-"""Schemas for validating statistics and odds data."""
+"""Validate statistics and odds snapshots against their schemas."""
+
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
+
+from __future__ import annotations
 
 from typing import Any, Self
 
@@ -64,7 +69,7 @@ def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> A
     return pa.Field(nullable=True, metadata={'include': include, 'fixed': fixed}, alias=alias)
 
 
-class BaseSchema(pa.DataFrameModel):
+class _BaseSchema(pa.DataFrameModel):
     """Sport-agnostic base schema for event snapshots."""
 
     event_status: str = required_col()
@@ -81,7 +86,7 @@ class BaseSchema(pa.DataFrameModel):
         return status_check & (preplay_check | inplay_check | postplay_check)
 
     @classmethod
-    def snapshot_cols(cls: type[Self]) -> list[str]:
+    def list_snapshot_cols(cls: type[Self]) -> list[str]:
         """Return the snapshot-identity columns."""
         schema = cls.to_schema()
         return [
@@ -91,22 +96,22 @@ class BaseSchema(pa.DataFrameModel):
         ]
 
     @classmethod
-    def col_metadata(cls: type[Self], col: str) -> dict[str, Any]:
+    def get_col_metadata(cls: type[Self], col: str) -> dict[str, Any]:
         """Return the `include`/`fixed`/`snapshot` metadata of a column."""
         schema_col = dict(cls.to_schema().columns)[col]
         return (schema_col.properties or {}).get('metadata') or {}
 
     @pa.dataframe_check
     @classmethod
-    def snapshot_unique(cls: type[Self], df: pd.DataFrame) -> bool:
+    def check_snapshot_unique(cls: type[Self], df: pd.DataFrame) -> bool:
         """Check that no two rows share the same snapshot identity."""
-        return not df.duplicated(subset=cls.snapshot_cols()).any()
+        return not df.duplicated(subset=cls.list_snapshot_cols()).any()
 
     class Config:
         strict = True
 
 
-class BaseStatsSchema(BaseSchema):
+class BaseStatsSchema(_BaseSchema):
     """Base schema for statistics snapshots.
 
     Examples:
@@ -121,7 +126,7 @@ class BaseStatsSchema(BaseSchema):
     """
 
 
-class BaseOddsSchema(BaseSchema):
+class BaseOddsSchema(_BaseSchema):
     """Base schema for odds snapshots.
 
     Examples:
@@ -138,16 +143,16 @@ class BaseOddsSchema(BaseSchema):
     """
 
     @classmethod
-    def odds_cols(cls) -> list[str]:
+    def list_odds_cols(cls) -> list[str]:
         """Return the odds (market) columns."""
         schema_cols = list(cls.to_schema().columns.keys())
-        return [col for col in schema_cols if col not in cls.snapshot_cols() and col != 'provider']
+        return [col for col in schema_cols if col not in cls.list_snapshot_cols() and col != 'provider']
 
     @pa.dataframe_check
     @classmethod
-    def postplay_missing_odds(cls, df: pd.DataFrame) -> pd.Series:
+    def check_postplay_missing_odds(cls, df: pd.DataFrame) -> pd.Series:
         """Check that post-match snapshots carry no odds."""
-        odds_cols = cls.odds_cols()
+        odds_cols = cls.list_odds_cols()
         if not odds_cols:
             return pd.Series(True, index=df.index)
         is_post = df['event_status'].eq('postplay')

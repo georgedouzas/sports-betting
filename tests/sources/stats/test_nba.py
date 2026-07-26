@@ -107,14 +107,14 @@ def source():
 
 def _payloads(source, content=GAMES):
     """Build the payload of a month the source declared."""
-    item = source.required_items([{'league': 'NBA', 'division': 1, 'year': 2026}])[0]
+    item = source.list_required_items([{'league': 'NBA', 'division': 1, 'year': 2026}])[0]
     return [RawPayload(item=item, content=content)]
 
 
 def test_the_catalogue_comes_from_the_feed(source):
     """Test the seasons are read from the feed, never fabricated from a range of years."""
-    payloads = [RawPayload(item=source.index_items()[0], content=SEASONS)]
-    assert source.catalogue(payloads) == [
+    payloads = [RawPayload(item=source.list_index_items()[0], content=SEASONS)]
+    assert source.read_catalogue(payloads) == [
         {'league': 'NBA', 'division': 1, 'year': 2024},
         {'league': 'NBA', 'division': 1, 'year': 2025},
         {'league': 'NBA', 'division': 1, 'year': 2026},
@@ -127,8 +127,8 @@ def test_a_season_is_named_by_the_year_it_ends_in_with_no_conversion(source):
     It already names a season by the year it ends in, so unlike the EuroLeague, whose `E2024` is the 2024-25 season,
     there is nothing to convert. Adding a year here would shift every season and empty the catalogue the odds share.
     """
-    payloads = [RawPayload(item=source.index_items()[0], content=SEASONS)]
-    assert {params['year'] for params in source.catalogue(payloads)} == {2024, 2025, 2026}
+    payloads = [RawPayload(item=source.list_index_items()[0], content=SEASONS)]
+    assert {params['year'] for params in source.read_catalogue(payloads)} == {2024, 2025, 2026}
 
 
 def test_a_season_is_asked_for_one_month_at_a_time(source):
@@ -138,7 +138,7 @@ def test_a_season_is_asked_for_one_month_at_a_time(source):
     hundred. A month is two hundred and forty at its busiest. Widening this window would silently lose games, so this
     test exists to make widening it fail here rather than in a backtest.
     """
-    items = source.required_items([{'league': 'NBA', 'division': 1, 'year': 2026}])
+    items = source.list_required_items([{'league': 'NBA', 'division': 1, 'year': 2026}])
     assert len(items) == MONTHS
     windows = [item.url.split('dates=')[1].split('&')[0] for item in items]
     for window in windows:
