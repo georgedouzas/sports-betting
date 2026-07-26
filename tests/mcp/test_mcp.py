@@ -123,10 +123,10 @@ def test_an_assistant_can_go_from_nothing_to_value_bets(offline_dataloader, tmp_
     assert train['output'] == saved
 
     assert 'X' in _call('extract_fixtures_data', dataloader=saved)
-    assert _call('backtest', dataloader=saved, model='odds-comparison', cv=2)
+    assert _call('backtest', dataloader=saved, model='OddsComparisonBettor()', cv=2)
 
     model = str(tmp_path / 'model.pkl')
-    fitted = _call('fit', dataloader=saved, output=model, model='odds-comparison')
+    fitted = _call('fit', dataloader=saved, output=model, model='OddsComparisonBettor()')
     assert fitted['output'] == model
     assert fitted['betting_markets']
 
@@ -146,9 +146,9 @@ def test_the_seasons_are_downloaded_once(offline_dataloader, tmp_path):
     monkey = pytest.MonkeyPatch()
     monkey.setattr('sportsbet.mcp._server.build_dataloader', lambda **rest: built.append(True))
     try:
-        _call('backtest', dataloader=saved, model='odds-comparison', cv=2)
+        _call('backtest', dataloader=saved, model='OddsComparisonBettor()', cv=2)
         model = str(tmp_path / 'model.pkl')
-        _call('fit', dataloader=saved, output=model, model='odds-comparison')
+        _call('fit', dataloader=saved, output=model, model='OddsComparisonBettor()')
         _call('bet', dataloader=saved, bettor=model)
         _call('extract_fixtures_data', dataloader=saved)
     finally:
@@ -159,19 +159,17 @@ def test_the_seasons_are_downloaded_once(offline_dataloader, tmp_path):
 def test_the_tools_reach_what_the_commands_reach():
     """Test an assistant can say everything a command can say."""
     tools = {tool.name: set(tool.inputSchema['properties']) for tool in asyncio.run(server.list_tools())}
-    strategy = {'model', 'alpha', 'betting_markets', 'init_cash', 'stake', 'model_odds_types'}
-    assert strategy <= tools['backtest']
-    assert strategy <= tools['fit']
+    assert 'model' in tools['backtest']
+    assert 'model' in tools['fit']
     assert 'cv' in tools['backtest']
 
 
-def test_a_strategy_reaches_the_model(offline_dataloader, tmp_path):
+def test_the_model_expression_reaches_the_model(offline_dataloader, tmp_path):
     """Test what a tool is told about the model is what the model is given."""
     saved = str(tmp_path / 'dataloader.pkl')
     _call('extract_train_data', **SELECTION, odds_type='market_average', output=saved)
-    common = {'dataloader': saved, 'model': 'odds-comparison', 'cv': 2}
-    one = _call('backtest', **common, betting_markets=['home_win'])
-    every = _call('backtest', **common)
+    one = _call('backtest', dataloader=saved, model='OddsComparisonBettor(betting_markets=["home_win"])', cv=2)
+    every = _call('backtest', dataloader=saved, model='OddsComparisonBettor()', cv=2)
     assert one[0]['Number of bets'] < every[0]['Number of bets']
 
 

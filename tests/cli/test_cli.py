@@ -1,12 +1,11 @@
 """Test the CLI, which downloads once into a saved dataloader and reuses it."""
 
-import cloudpickle
 import pandas as pd
 import pytest
 from sklearn.model_selection import TimeSeriesSplit
 
 from sportsbet.cli import main
-from sportsbet.dataloaders import DataLoader
+from sportsbet.dataloaders import DataLoader, load_dataloader
 from sportsbet.evaluation import OddsComparisonBettor, backtest
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
@@ -29,8 +28,7 @@ def test_the_training_data_matches_the_api(cli_runner, offline_dataloader, tmp_p
     path = tmp_path / 'dataloader.pkl'
     result = cli_runner.invoke(main, ['dataloader', 'train', 'extract', *SELECTION, *MARKET, '-o', str(path)])
     assert result.exit_code == 0, result.output
-    with path.open('rb') as file:
-        X_cli, _, _ = cloudpickle.load(file)['train']
+    X_cli, _, _ = load_dataloader(str(path)).extract_train_data()
 
     loader = DataLoader(param_grid={'league': ['England', 'Spain']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
     X_api, _, _ = loader.extract_train_data(odds_type='market_average', target_event_status='postplay')
@@ -50,9 +48,7 @@ def test_a_backtest_matches_the_api(cli_runner, saved_dataloader, tmp_path):
             '--dataloader',
             str(saved_dataloader),
             '--model',
-            'odds-comparison',
-            '--alpha',
-            '0.03',
+            'OddsComparisonBettor(alpha=0.03)',
             '--cv',
             '2',
             '-o',
@@ -132,10 +128,10 @@ def test_a_model_of_your_own_is_named_by_where_it_lives(cli_runner, saved_datalo
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_a_model_that_does_not_exist_says_what_there_is(cli_runner, saved_dataloader):
-    """Test a model nobody has heard of is answered with the ones there are."""
+def test_a_model_that_does_not_exist_says_how_to_write_one(cli_runner, saved_dataloader):
+    """Test a model nobody has heard of is answered with how to write one."""
     result = cli_runner.invoke(
         main,
         ['evaluation', 'backtest', '--dataloader', str(saved_dataloader), '--model', 'wishful-thinking'],
     )
-    assert 'odds-comparison' in result.output
+    assert 'is not a model' in result.output

@@ -18,12 +18,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .._artifacts import load_dataloader, save_dataloader
-from .._selection import SelectionError, build_bettor, build_dataloader
+from .. import BuildError, build_bettor, build_dataloader
 from ..dataloaders import BaseDataLoader
 from ..evaluation import BaseBettor
-
-__all__: list[str] = ['load_dataloader', 'save_dataloader']
 
 SELECTED = (
     'leagues',
@@ -45,7 +42,7 @@ EXTRACTED = (
     'input_event_status',
     'input_event_time',
 )
-MODELLED = ('model', 'alpha', 'init_cash', 'stake', 'betting_markets', 'model_odds_types')
+MODELLED = ('model',)
 TIMED = ('target_event_time', 'input_event_time')
 
 
@@ -64,7 +61,7 @@ def selected(selection: dict[str, object]) -> Iterator[BaseDataLoader | None]:
     """Build the dataloader a command was told to use, or say what is wrong with what it was told."""
     try:
         yield build_dataloader(**_told(selection, SELECTED))
-    except SelectionError as error:
+    except BuildError as error:
         Console().print(Panel.fit(f'[bold red]{error}'))
         yield None
 
@@ -74,7 +71,7 @@ def modelled(selection: dict[str, object]) -> Iterator[BaseBettor | None]:
     """Build the bettor a command was told to use, or say what is wrong with what it was told."""
     try:
         yield build_bettor(**_told(selection, MODELLED))
-    except SelectionError as error:
+    except BuildError as error:
         Console().print(Panel.fit(f'[bold red]{error}'))
         yield None
 
@@ -96,7 +93,7 @@ def reported() -> Iterator[None]:
     """
     try:
         yield
-    except (SelectionError, ValueError) as error:
+    except (BuildError, ValueError) as error:
         Console().print(Panel.fit(f'[bold red]{error}'))
         raise SystemExit(1) from None
 

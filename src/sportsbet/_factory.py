@@ -1,4 +1,4 @@
-"""Build a dataloader, a bettor or a venue from the given names."""
+"""Build a dataloader, a bettor or a venue from the strings a surface is given."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -11,15 +11,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sklearn.compose import make_column_transformer
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.utils import all_estimators
 
 from . import ParamGrid
 from .dataloaders import DataLoader
-from .evaluation import BaseBettor, ClassifierBettor, OddsComparisonBettor
+from .evaluation import BaseBettor, BettorGridSearchCV, ClassifierBettor, OddsComparisonBettor
 
 if TYPE_CHECKING:
     from .execution import BaseVenue, BrowserSession
@@ -43,15 +40,14 @@ ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
     'football-data': FootballDataOdds,
     'odds-api': OddsApi,
 }
-MODELS = ['odds-comparison', 'logistic']
 KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
 STATUSES = ['preplay', 'inplay', 'postplay']
 EXECUTION_EXTRA = "Placing bets needs the execution extra. Install it with `pip install 'sports-betting[execution]'`."
 
 
-class SelectionError(ValueError):
-    """Raised when what a surface was told does not describe something that can be built."""
+class BuildError(ValueError):
+    """Raised when the given names do not describe something that can be built."""
 
 
 def _load_object(reference: str) -> object:
@@ -59,19 +55,19 @@ def _load_object(reference: str) -> object:
     path, _, name = reference.rpartition(':')
     if not name:
         msg = f'`{reference}` should name an object inside a Python file, as in `models.py:BETTOR`.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     if not Path(path).exists():
         msg = f'The file `{path}` does not exist.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     spec = spec_from_file_location('sportsbet_model', path)
     if spec is None or spec.loader is None:
         msg = f'The file `{path}` could not be read as Python.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     mod = module_from_spec(spec)
     spec.loader.exec_module(mod)
     if not hasattr(mod, name):
         msg = f'The file `{path}` has no `{name}` in it.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     return getattr(mod, name)
 
 
@@ -84,7 +80,7 @@ def _moments(moments: list[str] | None) -> list[tuple[str, int]] | None:
         status, _, minutes = moment.partition(':')
         if status not in STATUSES or not minutes.isdigit():
             msg = f'`{moment}` should be a status and a minute, as in `inplay:45`.'
-            raise SelectionError(msg)
+            raise BuildError(msg)
         parsed.append((status, int(minutes)))
     return parsed
 
@@ -98,7 +94,7 @@ def _aliases(aliases: list[str] | None) -> dict[str, str] | None:
         stats_name, sep, odds_name = alias.partition('=')
         if not sep or not stats_name or not odds_name:
             msg = f'`{alias}` should be two names, as in `Olimpia Milano=EA7 Emporio Armani Milan`.'
-            raise SelectionError(msg)
+            raise BuildError(msg)
         paired[stats_name] = odds_name
     return paired
 
@@ -113,13 +109,13 @@ def _odds_source(
     """Return the odds source a name asks for, reading a key from the environment when it needs one."""
     if odds not in ODDS_SOURCES:
         msg = f'`{odds}` is not an odds source. Available: {", ".join(sorted(ODDS_SOURCES))}.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     if odds not in KEYED_SOURCES:
         return ODDS_SOURCES[odds]()
     key = os.environ.get(key_env)
     if not key:
         msg = f'`{odds}` needs a key. Set `{key_env}`, or name another variable with `--odds-key-env`.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     return OddsApi(key=key, markets=markets or None, regions=regions or None, moments=_moments(moments))
 
 
@@ -135,18 +131,37 @@ def build_dataloader(
     odds_moments: list[str] | None = None,
     aliases: list[str] | None = None,
 ) -> DataLoader:
-    """Return the dataloader a selection describes.
+    """Build a dataloader from the names of its sources and the seasons to select.
 
-    The statistics have to be named. Which feed the data came from decides what is in it, what it costs and whether
-    anyone may redistribute it, so you name it yourself. It also decides the sport, so the sport comes from the source
-    rather than a separate argument.
+    Args:
+        stats:
+            The statistics source to read, one of the ready-made names (`football-data`, `euroleague`, `nba`).
+        odds:
+            The odds source to pair with the statistics, or `None` for a dataloader with no odds.
+        leagues:
+            The leagues to select, or `None` for every league the sources publish.
+        divisions:
+            The divisions to select, or `None` for every division.
+        years:
+            The years to select, or `None` for every year.
+        odds_key_env:
+            The name of the environment variable holding the odds source's API key, read when the source needs one.
+        odds_markets:
+            The markets the odds source should price, or `None` for its own default.
+        odds_regions:
+            The regions the odds source should price, or `None` for its own default.
+        odds_moments:
+            The moments the odds source should price, each as `status:minute`, or `None` for its default.
+        aliases:
+            The teams the sources spell differently, each as `stats name=odds name`.
 
-    The odds are optional. With no odds you get the features on their own, which is enough to explore the data or to
-    learn from it without a target of ours.
+    Returns:
+        dataloader:
+            The dataloader that downloads and shapes the selected data.
     """
     if stats not in STATS_SOURCES:
         msg = f'`{stats}` is not a statistics source. Available: {", ".join(sorted(STATS_SOURCES))}.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     selected: ParamGrid = {
         name: values for name, values in (('league', leagues), ('division', divisions), ('year', years)) if values
     }
@@ -159,14 +174,12 @@ def build_dataloader(
 
 
 def build_venue(venue: str) -> BaseVenue | BrowserSession:
-    """Return the venue a reference names.
-
-    A venue is named the way a model is, by where it lives, as in `venue.py:VENUE`. The library ships no bookmaker: a
-    venue with an API is a `BaseVenue` you write, and a bookmaker's website is a `BrowserSession` you configure.
+    """Build a venue from a reference to where it lives.
 
     Args:
         venue:
-            Where the venue lives, as in `venue.py:VENUE`.
+            Where the venue lives, as in `venue.py:VENUE`. The library ships no bookmaker: a venue with an API
+            is a `BaseVenue` you write, and a bookmaker's website is a `BrowserSession` you configure.
 
     Returns:
         built:
@@ -175,54 +188,57 @@ def build_venue(venue: str) -> BaseVenue | BrowserSession:
     try:
         from .execution import BaseVenue, BrowserSession  # noqa: PLC0415
     except ImportError as missing:
-        raise SelectionError(EXECUTION_EXTRA) from missing
+        raise BuildError(EXECUTION_EXTRA) from missing
     if ':' not in venue:
         msg = f'`{venue}` should name a venue in a Python file, as in `venue.py:VENUE`. The library ships none.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     built = _load_object(venue)
     if not isinstance(built, BaseVenue | BrowserSession):
         msg = f'`{venue}` is not a venue and is not a browser session.'
-        raise SelectionError(msg)
+        raise BuildError(msg)
     return built
 
 
-def build_bettor(
-    model: str,
-    alpha: float = 0.05,
-    init_cash: float | None = None,
-    stake: float | None = None,
-    betting_markets: list[str] | None = None,
-    model_odds_types: list[str] | None = None,
-) -> BaseBettor:
-    """Return the betting model a selection describes.
+def _bettor_namespace() -> dict[str, object]:
+    """Return the estimators an inline model expression may name."""
+    namespace: dict[str, object] = dict(all_estimators())
+    namespace['make_pipeline'] = make_pipeline
+    namespace['make_column_transformer'] = make_column_transformer
+    namespace['ClassifierBettor'] = ClassifierBettor
+    namespace['OddsComparisonBettor'] = OddsComparisonBettor
+    namespace['BettorGridSearchCV'] = BettorGridSearchCV
+    return namespace
 
-    A ready-made model is named. Anything else is a scikit-learn estimator, so it is named by where it lives —
-    `models.py:BETTOR` — and it is built in Python, where it belongs.
+
+def build_bettor(model: str) -> BaseBettor:
+    """Build a betting model from a scikit-learn expression or a reference to your own.
+
+    Args:
+        model:
+            A scikit-learn estimator written as a Python expression, with the library's bettors and every
+            scikit-learn estimator already in scope, as in `ClassifierBettor(LogisticRegression(C=1.0))`; or a
+            bettor you built in a file, named by where it lives, as in `models.py:BETTOR`.
+
+    Returns:
+        bettor:
+            The betting model, ready to fit.
+
+    Raises:
+        BuildError:
+            When the expression or the reference does not describe a bettor.
     """
-    markets = betting_markets or None
-    if ':' in model:
+    if ':' in model and '(' not in model:
         built = _load_object(model)
-        if not isinstance(built, BaseBettor):
-            msg = f'`{model}` is not a bettor.'
-            raise SelectionError(msg)
-        return built
-    if model == 'odds-comparison':
-        return OddsComparisonBettor(
-            odds_types=model_odds_types or None,
-            alpha=alpha,
-            betting_markets=markets,
-            init_cash=init_cash,
-            stake=stake,
-        )
-    if model == 'logistic':
-        classifier = make_pipeline(
-            make_column_transformer(
-                (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']),
-                remainder='passthrough',
-            ),
-            SimpleImputer(),
-            MultiOutputClassifier(LogisticRegression(solver='liblinear', random_state=7, class_weight='balanced')),
-        )
-        return ClassifierBettor(classifier, betting_markets=markets, init_cash=init_cash, stake=stake)
-    msg = f'`{model}` is not a model. Ready-made: {", ".join(MODELS)}. For one of your own, use `models.py:BETTOR`.'
-    raise SelectionError(msg)
+    else:
+        try:
+            built = eval(model, _bettor_namespace())  # noqa: S307
+        except Exception as error:
+            msg = (
+                f'`{model}` is not a model. Write it as a scikit-learn expression, as in '
+                '`OddsComparisonBettor(alpha=0.05)`, or point to one with `models.py:BETTOR`.'
+            )
+            raise BuildError(msg) from error
+    if not isinstance(built, BaseBettor):
+        msg = f'`{model}` is not a bettor.'
+        raise BuildError(msg)
+    return built

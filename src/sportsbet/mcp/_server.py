@@ -13,8 +13,9 @@ import pandas as pd
 from mcp.server.fastmcp import FastMCP
 from sklearn.model_selection import TimeSeriesSplit
 
-from .._artifacts import load_dataloader, save_dataloader
-from .._selection import DEFAULT_KEY_ENV, build_bettor, build_dataloader, build_venue
+from .. import build_bettor, build_dataloader, build_venue
+from .._factory import DEFAULT_KEY_ENV
+from ..dataloaders import load_dataloader
 from ..evaluation import backtest as run_backtest
 from ..evaluation import load_bettor, save_bettor
 from ..execution import (
@@ -34,7 +35,6 @@ server: FastMCP = FastMCP('sportsbet')
 
 Answer = TypeVar('Answer')
 Selection = dict[str, Any]
-Strategy = dict[str, Any]
 
 
 async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
@@ -104,25 +104,6 @@ def _extraction(
     return {name: value for name, value in settings.items() if value is not None}
 
 
-def _strategy(
-    model: str,
-    alpha: float,
-    betting_markets: list[str] | None,
-    init_cash: float | None,
-    stake: float | None,
-    model_odds_types: list[str] | None,
-) -> Strategy:
-    """Return what a tool was told about the betting model to use."""
-    return {
-        'model': model,
-        'alpha': alpha,
-        'betting_markets': betting_markets,
-        'init_cash': init_cash,
-        'stake': stake,
-        'model_odds_types': model_odds_types,
-    }
-
-
 def _available_params(selection: Selection) -> list[dict]:
     """Return what can be selected."""
     stats_source, *_ = build_dataloader(**selection).sources
@@ -143,7 +124,7 @@ def _extract_train_data(selection: Selection, extraction: dict[str, Any], output
     dataloader = build_dataloader(**selection)
     X, Y, O = dataloader.extract_train_data(**extraction)
     if output is not None:
-        save_dataloader(output, dataloader, (X, Y, O))
+        dataloader.save(output)
     return {'X': _records(X), 'Y': _records(Y), 'O': _records(O), 'output': output}
 
 
@@ -156,22 +137,22 @@ def _extract_exploration_data(selection: Selection, extraction: dict[str, Any]) 
 
 def _extract_fixtures_data(dataloader: str) -> dict[str, Any]:
     """Return the games that have not been played yet, from a saved dataloader."""
-    loader, _ = load_dataloader(dataloader)
+    loader = load_dataloader(dataloader)
     X, _, O = loader.extract_fixtures_data()
     return {'X': _records(X), 'O': _records(O)}
 
 
-def _backtest(dataloader: str, strategy: Strategy, cv: int, n_jobs: int, verbose: int) -> list[dict[str, Any]]:
+def _backtest(dataloader: str, model: str, cv: int, n_jobs: int, verbose: int) -> list[dict[str, Any]]:
     """Return the backtesting results of a model on a saved dataloader."""
-    _, (X, Y, O) = load_dataloader(dataloader)
-    bettor = build_bettor(**strategy)
+    X, Y, O = load_dataloader(dataloader).extract_train_data()
+    bettor = build_bettor(model)
     return _records(run_backtest(bettor, X, Y, O, cv=TimeSeriesSplit(cv), n_jobs=n_jobs, verbose=verbose))
 
 
-def _fit(dataloader: str, strategy: Strategy, output: str) -> dict[str, Any]:
+def _fit(dataloader: str, model: str, output: str) -> dict[str, Any]:
     """Fit a model on a saved dataloader and save it, so it is fitted once and reused."""
-    _, (X, Y, O) = load_dataloader(dataloader)
-    bettor = build_bettor(**strategy)
+    X, Y, O = load_dataloader(dataloader).extract_train_data()
+    bettor = build_bettor(model)
     bettor.fit(X, Y, O)
     save_bettor(bettor, output)
     return {'output': output, 'betting_markets': list(bettor.betting_markets_)}
@@ -179,7 +160,7 @@ def _fit(dataloader: str, strategy: Strategy, output: str) -> dict[str, Any]:
 
 def _bet(dataloader: str, bettor: str) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet."""
-    loader, _ = load_dataloader(dataloader)
+    loader = load_dataloader(dataloader)
     fitted = load_bettor(bettor)
     X_fix, _, O_fix = loader.extract_fixtures_data()
     if X_fix.empty or O_fix is None or O_fix.empty:
@@ -363,43 +344,28 @@ async def extract_fixtures_data(dataloader: str) -> dict[str, Any]:
 @server.tool()
 async def backtest(
     dataloader: str,
-    model: str = 'odds-comparison',
-    alpha: float = 0.05,
-    betting_markets: list[str] | None = None,
-    init_cash: float | None = None,
-    stake: float | None = None,
-    model_odds_types: list[str] | None = None,
+    model: str,
     cv: int = 3,
     n_jobs: int = -1,
     verbose: int = 0,
 ) -> list[dict[str, Any]]:
     """Return the backtesting results of a betting model on a saved dataloader.
 
-    A ready-made model is named. A scikit-learn one built in Python is named by where it lives, as in
-    `models.py:BETTOR`, since no set of arguments can describe an estimator.
+    The model is a scikit-learn estimator written as a Python expression, as in `OddsComparisonBettor(alpha=0.05)`, or
+    one built in a file, named by where it lives, as in `models.py:BETTOR`.
     """
-    strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
-    result: list[dict[str, Any]] = await _offload(_backtest, dataloader, strategy, cv, n_jobs, verbose)
+    result: list[dict[str, Any]] = await _offload(_backtest, dataloader, model, cv, n_jobs, verbose)
     return result
 
 
 @server.tool()
-async def fit(
-    dataloader: str,
-    output: str,
-    model: str = 'odds-comparison',
-    alpha: float = 0.05,
-    betting_markets: list[str] | None = None,
-    init_cash: float | None = None,
-    stake: float | None = None,
-    model_odds_types: list[str] | None = None,
-) -> dict[str, Any]:
+async def fit(dataloader: str, output: str, model: str) -> dict[str, Any]:
     """Fit a model on a saved dataloader and save it, so it is fitted once and reused.
 
-    `bet` reads what this writes.
+    The model is a scikit-learn estimator written as a Python expression, as in `OddsComparisonBettor(alpha=0.05)`, or
+    one built in a file, named by where it lives, as in `models.py:BETTOR`. `bet` reads what this writes.
     """
-    strategy = _strategy(model, alpha, betting_markets, init_cash, stake, model_odds_types)
-    result: dict[str, Any] = await _offload(_fit, dataloader, strategy, output)
+    result: dict[str, Any] = await _offload(_fit, dataloader, model, output)
     return result
 
 
@@ -511,7 +477,7 @@ async def execution_list_markets(venue: str, matches: list[str]) -> list[dict[st
 
 def _fixtures(dataloader: str, bettor: str) -> tuple[Any, Any, Any]:
     """Return the fitted model and the upcoming matches it bets on."""
-    loader, _ = load_dataloader(dataloader)
+    loader = load_dataloader(dataloader)
     fitted = load_bettor(bettor)
     X_fix, _, O_fix = loader.extract_fixtures_data()
     return fitted, X_fix, O_fix
@@ -671,7 +637,7 @@ def _run(
     seed: int,
 ) -> pd.DataFrame:
     """Place the value bets of the upcoming matches, one match at a time."""
-    loader, _ = load_dataloader(dataloader)
+    loader = load_dataloader(dataloader)
     fitted = load_bettor(bettor)
     return asyncio.run(
         run_execute(

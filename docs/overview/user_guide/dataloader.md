@@ -649,8 +649,9 @@ assert O_train.columns.tolist() == O_fix.columns.tolist()
 
 ## Saving and loading
 
-Save a dataloader with `save` and reload it with `load_dataloader`, keeping the selection and the extracted column
-layout.
+Save a dataloader with `save` and reload it with `load_dataloader`. It comes back with the snapshots it downloaded, so
+`extract_train_data` gives you the training data again without touching the network: the data is downloaded once and
+kept, not downloaded again and stored twice.
 
 ```python
 import tempfile
@@ -660,9 +661,10 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 dataloader = DataLoader(
     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
 )
-dataloader.extract_train_data(odds_type='market_average')
+X, Y, O = dataloader.extract_train_data(odds_type='market_average')
 path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')
 dataloader.save(path)
 reloaded = load_dataloader(path)
-assert reloaded.param_grid_ == dataloader.param_grid_
+X_again, Y_again, O_again = reloaded.extract_train_data()
+assert X_again.equals(X)
 ```

@@ -12,8 +12,9 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
+from ..dataloaders import load_dataloader
 from ._options import DATALOADER, EXTRACTION, HORIZON, OUTPUT, SELECTION, options
-from ._utils import extraction, load_dataloader, print_console, reported, save_dataloader, selected
+from ._utils import extraction, print_console, reported, selected
 
 
 @click.group()
@@ -76,7 +77,7 @@ def extract_train(output: str, **selection: object) -> None:
         if loader is None:
             return
         X_train, Y_train, O_train = loader.extract_train_data(**extraction(selection))
-        save_dataloader(output, loader, (X_train, Y_train, O_train))
+        loader.save(output)
         has_odds = O_train is not None and not O_train.empty
         frames = [X_train, *([Y_train] if Y_train is not None else []), *([O_train] if has_odds else [])]
         titles = [
@@ -124,7 +125,7 @@ def fixtures() -> None:
 def extract_fixtures(dataloader_path: str, data_path: str | None) -> None:
     """Download the upcoming matches of a saved dataloader."""
     with reported():
-        loader, _ = load_dataloader(dataloader_path)
+        loader = load_dataloader(dataloader_path)
         X_fix, _, O_fix = loader.extract_fixtures_data()
         if X_fix.empty:
             Console().print(Panel.fit('[bold red]There are no upcoming matches.'))

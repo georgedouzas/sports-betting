@@ -1,6 +1,41 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.4.0 → 1.5.0
+Rationale: Add DRY to Principle VI — a fact or derivation lives in one place,
+don't store what can be derived, and don't reimplement a capability the library
+already has. Recurring smell here. MINOR: materially expanded guidance, no
+principle removed or redefined.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — added the DRY rule.
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
+Version change: 1.3.0 → 1.4.0
+Rationale: Sharpen Principle VI with three rules the codebase was missing: a
+module is named for the concern it owns and not for the data it consumes or a
+colliding dependency concept; a public entry point documents every parameter and
+its return in an Args/Returns block; a public name is re-exported through the
+package __init__ and imported from the public surface, never from the private
+module that defines it. Adds verb-honesty (load/resolve is not build). MINOR:
+materially expanded guidance, no principle removed or redefined.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — added module naming, the
+    public-surface re-export rule, verb honesty, and mandatory Args/Returns on
+    public entry points.
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
 Version change: 1.2.0 → 1.3.0
 Rationale: Fold the full code conventions into Principle VI and remove the
 separate CONVENTIONS.md, so the constitution is the single, self-contained source
@@ -164,6 +199,15 @@ project; the examples are drawn from this codebase. The automated gate
 (Principle IV) checks the mechanical parts; this principle is the taste the gate
 cannot check.
 
+**Don't repeat yourself.** A fact, a definition, or a derivation lives in exactly
+one place — repetition is the typical smell here, so when the same thing is
+expressed twice, collapse it to one. Do not store what can be derived from what
+you already keep: persist the source and derive the projection on demand, not
+both (a saved dataloader keeps its downloaded snapshots and rebuilds its training
+data from them, rather than storing the training data alongside). Do not
+reimplement a capability the library already has: save and load a dataloader with
+its own `save`/`load`, not a second copy of that logic in another module.
+
 **Files and layout.** A module reads top to bottom in one order: a one-line
 imperative module docstring, the license header, `from __future__ import
 annotations`, then imports grouped standard library / third party / first party
@@ -178,27 +222,44 @@ alias from the package root under `TYPE_CHECKING` is not a sibling. No import
 inside a function body papers over a cycle — fix the cycle; the only lazy import
 defers an optional dependency and carries a `# noqa: PLC0415` with a reason.
 
-**Naming.** A function name begins with a verb and says exactly what the function
-does or returns: `count_common_prefix`, not `common_prefix_length`;
+**Naming.** A function name begins with a verb and names what the function
+actually does or returns: `count_common_prefix`, not `common_prefix_length`;
 `normalize_identity`, not `transform_identity`; `build_roster`, not `roster`. A
-name that begins with a noun describes a value, and a function is not a value.
-Avoid empty verbs that say nothing — `process`, `handle`, `manage`, `transform`
-with no object. State learned at runtime carries a trailing underscore
-(`odds_type_`, `target_event_status_`), the scikit-learn convention. Class-level
-constants are `ClassVar`. Implementation modules, classes and helpers are private
+name that begins with a noun describes a value, and a function is not a value. The
+verb is honest: a function that loads or resolves an object from a reference is
+`load_`/`resolve_`, not `build_`. Avoid empty verbs that say nothing — `process`,
+`handle`, `manage`, `transform` with no object. State learned at runtime carries
+a trailing underscore (`odds_type_`, `target_event_status_`), the scikit-learn
+convention. Class-level constants are `ClassVar`. Names come from the domain, used
+consistently.
+
+A module is named for the concern it owns: a descriptive noun for what it does or
+holds (`_resolver`, `_schedule`, `_factory`), not for the data it consumes
+(`_selection` for a module that builds objects) and not for the surface that
+happens to call it. It must not reuse a name that collides with a dependency's
+concept — `_selection` shadowed scikit-learn's `model_selection`.
+
+**Public surface.** Implementation modules, classes and helpers are private
 (`_name`); the package `__init__` re-exports the public surface with an explicit
-`__all__`. Names come from the domain, used consistently.
+`__all__`. A public function, class or exception used outside the module that
+defines it is re-exported through that `__init__` and imported from the public
+surface — `from sportsbet import build_dataloader`, never `from
+sportsbet._factory import build_dataloader`. This holds for all code, production
+and tests alike; reaching into another package's private module for a public name
+is the smell the re-export removes.
 
 **Docstrings.** The summary line is one line, imperative, and says what the thing
 does — never `Implements the ...`, `This function ...`, `A class that ...`, which
 are meta narration. Write it in plain English: prefer simple, direct words over
 clever or roundabout phrasing, and if a line reads awkwardly out loud, rewrite
 it. For most functions the one line is the whole docstring, and a private helper
-never gets more. A body paragraph, or an `Args`/`Returns`/`Raises` block, appears
-only on a public entry point or a public class whose shape is not obvious from
-the signature, and stays a few sentences. Never describe what the code does not
-do, never restate the code, no essays, no editorializing. Public API carries a
-runnable example checked by the doctest run; a network-touching class does not.
+never gets more. A public entry point and a public class carry an
+`Args`/`Returns` block (and `Raises` where they raise) that documents every
+parameter and what is returned — a public signature is not self-explanatory to a
+caller, so the docstring names each argument and the result. Keep each entry
+terse and the whole body to a few sentences. Never describe what the code does
+not do, never restate the code, no essays, no editorializing. Public API carries
+a runnable example checked by the doctest run; a network-touching class does not.
 
 **Comments.** Almost none. The names say what, the docstring says why. An inline
 comment that explains the next line means the line or its names are unclear — fix
@@ -289,4 +350,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-25
+**Version**: 1.5.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26

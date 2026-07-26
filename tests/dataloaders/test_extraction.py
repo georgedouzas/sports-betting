@@ -87,12 +87,12 @@ def test_fixtures_fetch_the_current_season_not_the_selected_one(dataloader: Data
     assert 'train_2024' not in fetched
 
 
-def test_extracting_again_downloads_again(dataloader: DataLoader, fetched: list[str]) -> None:
-    """Test each extraction downloads afresh, so the object always carries the latest data."""
+def test_extracting_again_reuses_the_snapshots(dataloader: DataLoader, fetched: list[str]) -> None:
+    """Test a second extraction reuses the snapshots already held rather than downloading again."""
     dataloader.extract_exploration_data()
     fetched.clear()
     dataloader.extract_exploration_data()
-    assert 'train_2024' in fetched
+    assert fetched == []
 
 
 @pytest.mark.parametrize('drop_na_thres', [1.5, -0.5])

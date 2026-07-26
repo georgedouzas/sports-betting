@@ -4,7 +4,12 @@ import pytest
 
 from sportsbet.cli import main
 
-ODDS_COMPARISON = ['--model', 'odds-comparison', '--alpha', '0.03']
+ODDS_COMPARISON = ['--model', 'OddsComparisonBettor(alpha=0.03)']
+CLASSIFIER = (
+    'ClassifierBettor(make_pipeline('
+    'make_column_transformer((OneHotEncoder(handle_unknown="ignore"), ["league", "home_team", "away_team"]), '
+    'remainder="passthrough"), SimpleImputer(), MultiOutputClassifier(LogisticRegression(solver="liblinear"))))'
+)
 
 
 def test_a_command_needs_to_be_told_the_model(cli_runner, saved_dataloader):
@@ -74,11 +79,11 @@ def test_bet_needs_a_fitted_model(cli_runner, saved_fixtures_dataloader):
 
 
 @pytest.mark.xdist_group(name='serial')
-def test_a_ready_made_classifier_needs_no_python(cli_runner, saved_dataloader):
-    """Test the ready-made models cover the ordinary case without a line of code being written."""
+def test_a_classifier_is_set_through_an_expression(cli_runner, saved_dataloader):
+    """Test a scikit-learn classifier is backtested from a one-line expression, with no file written."""
     result = cli_runner.invoke(
         main,
-        ['evaluation', 'backtest', '--dataloader', str(saved_dataloader), '--model', 'logistic', '--cv', '2'],
+        ['evaluation', 'backtest', '--dataloader', str(saved_dataloader), '--model', CLASSIFIER, '--cv', '2'],
     )
     assert result.exit_code == 0, result.output
     assert 'Backtesting results' in result.output
@@ -99,9 +104,7 @@ def test_a_model_can_bet_on_a_single_market(cli_runner, saved_dataloader):
             '--dataloader',
             str(saved_dataloader),
             '--model',
-            'odds-comparison',
-            '--betting-market',
-            'home_win',
+            'OddsComparisonBettor(betting_markets=["home_win"])',
             '--cv',
             '2',
         ],
@@ -112,7 +115,7 @@ def test_a_model_can_bet_on_a_single_market(cli_runner, saved_dataloader):
 
 @pytest.mark.xdist_group(name='serial')
 def test_the_odds_a_model_compares_can_be_chosen(cli_runner, saved_dataloader):
-    """Test the odds `odds-comparison` compares are chosen from the command line, as they are from Python."""
+    """Test the odds an odds-comparison model compares are chosen in the expression, as they are from Python."""
     result = cli_runner.invoke(
         main,
         [
@@ -121,9 +124,7 @@ def test_the_odds_a_model_compares_can_be_chosen(cli_runner, saved_dataloader):
             '--dataloader',
             str(saved_dataloader),
             '--model',
-            'odds-comparison',
-            '--model-odds-type',
-            'market_average',
+            'OddsComparisonBettor(odds_types=["market_average"])',
             '--cv',
             '2',
         ],
