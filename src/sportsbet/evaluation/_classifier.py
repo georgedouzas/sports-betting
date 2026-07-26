@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, MetaEstimatorMixin, clone, is_classifier
 
-from .. import BoolData, Data
+from ..core import BoolData, Data
 from ._base import BaseBettor
 
 

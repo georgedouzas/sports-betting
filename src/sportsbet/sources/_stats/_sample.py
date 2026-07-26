@@ -12,7 +12,7 @@ from typing import ClassVar, Self
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 
-from ... import ParamGrid
+from ...core import ParamGrid
 from .._base import BaseOddsSource, BaseStatsSource, RawItem, RawPayload
 
 DATA = Path(__file__).parent.parent / 'data'

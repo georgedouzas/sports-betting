@@ -1,4 +1,4 @@
-"""Build a dataloader, a bettor or a venue from the strings a surface is given."""
+"""Build a dataloader from the names of its sources and the seasons to select."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -6,22 +6,9 @@
 from __future__ import annotations
 
 import os
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
-from typing import TYPE_CHECKING
 
-from sklearn.compose import make_column_transformer
-from sklearn.pipeline import make_pipeline
-from sklearn.utils import all_estimators
-
-from . import ParamGrid
-from .dataloaders import DataLoader
-from .evaluation import BaseBettor, BettorGridSearchCV, ClassifierBettor, OddsComparisonBettor
-
-if TYPE_CHECKING:
-    from .execution import BaseVenue, BrowserSession
-
-from .sources import (
+from ..core import STATUSES, BuildError, ParamGrid
+from ..sources import (
     BaseOddsSource,
     BaseStatsSource,
     EuroLeagueStats,
@@ -30,6 +17,7 @@ from .sources import (
     NBAStats,
     OddsApi,
 )
+from ._sourced import DataLoader
 
 STATS_SOURCES: dict[str, type[BaseStatsSource]] = {
     'football-data': FootballDataStats,
@@ -42,33 +30,6 @@ ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
 }
 KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
-STATUSES = ['preplay', 'inplay', 'postplay']
-EXECUTION_EXTRA = "Placing bets needs the execution extra. Install it with `pip install 'sports-betting[execution]'`."
-
-
-class BuildError(ValueError):
-    """Raised when the given names do not describe something that can be built."""
-
-
-def _load_object(reference: str) -> object:
-    """Return the object a reference names, which is a Python file and a name inside it."""
-    path, _, name = reference.rpartition(':')
-    if not name:
-        msg = f'`{reference}` should name an object inside a Python file, as in `models.py:BETTOR`.'
-        raise BuildError(msg)
-    if not Path(path).exists():
-        msg = f'The file `{path}` does not exist.'
-        raise BuildError(msg)
-    spec = spec_from_file_location('sportsbet_model', path)
-    if spec is None or spec.loader is None:
-        msg = f'The file `{path}` could not be read as Python.'
-        raise BuildError(msg)
-    mod = module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    if not hasattr(mod, name):
-        msg = f'The file `{path}` has no `{name}` in it.'
-        raise BuildError(msg)
-    return getattr(mod, name)
 
 
 def _moments(moments: list[str] | None) -> list[tuple[str, int]] | None:
@@ -171,74 +132,3 @@ def build_dataloader(
         odds=_odds_source(odds, odds_key_env, odds_markets, odds_regions, odds_moments) if odds else None,
         aliases=_aliases(aliases),
     )
-
-
-def build_venue(venue: str) -> BaseVenue | BrowserSession:
-    """Build a venue from a reference to where it lives.
-
-    Args:
-        venue:
-            Where the venue lives, as in `venue.py:VENUE`. The library ships no bookmaker: a venue with an API
-            is a `BaseVenue` you write, and a bookmaker's website is a `BrowserSession` you configure.
-
-    Returns:
-        built:
-            The venue, or the browser session.
-    """
-    try:
-        from .execution import BaseVenue, BrowserSession  # noqa: PLC0415
-    except ImportError as missing:
-        raise BuildError(EXECUTION_EXTRA) from missing
-    if ':' not in venue:
-        msg = f'`{venue}` should name a venue in a Python file, as in `venue.py:VENUE`. The library ships none.'
-        raise BuildError(msg)
-    built = _load_object(venue)
-    if not isinstance(built, BaseVenue | BrowserSession):
-        msg = f'`{venue}` is not a venue and is not a browser session.'
-        raise BuildError(msg)
-    return built
-
-
-def _bettor_namespace() -> dict[str, object]:
-    """Return the estimators an inline model expression may name."""
-    namespace: dict[str, object] = dict(all_estimators())
-    namespace['make_pipeline'] = make_pipeline
-    namespace['make_column_transformer'] = make_column_transformer
-    namespace['ClassifierBettor'] = ClassifierBettor
-    namespace['OddsComparisonBettor'] = OddsComparisonBettor
-    namespace['BettorGridSearchCV'] = BettorGridSearchCV
-    return namespace
-
-
-def build_bettor(model: str) -> BaseBettor:
-    """Build a betting model from a scikit-learn expression or a reference to your own.
-
-    Args:
-        model:
-            A scikit-learn estimator written as a Python expression, with the library's bettors and every
-            scikit-learn estimator already in scope, as in `ClassifierBettor(LogisticRegression(C=1.0))`; or a
-            bettor you built in a file, named by where it lives, as in `models.py:BETTOR`.
-
-    Returns:
-        bettor:
-            The betting model, ready to fit.
-
-    Raises:
-        BuildError:
-            When the expression or the reference does not describe a bettor.
-    """
-    if ':' in model and '(' not in model:
-        built = _load_object(model)
-    else:
-        try:
-            built = eval(model, _bettor_namespace())  # noqa: S307
-        except Exception as error:
-            msg = (
-                f'`{model}` is not a model. Write it as a scikit-learn expression, as in '
-                '`OddsComparisonBettor(alpha=0.05)`, or point to one with `models.py:BETTOR`.'
-            )
-            raise BuildError(msg) from error
-    if not isinstance(built, BaseBettor):
-        msg = f'`{model}` is not a bettor.'
-        raise BuildError(msg)
-    return built

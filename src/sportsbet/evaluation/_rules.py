@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.utils import check_scalar
 
-from .. import BoolData, Data
+from ..core import BoolData, Data
 from ._base import BaseBettor, derive_market_base, find_latest_odds_column, is_odds_column
 
 

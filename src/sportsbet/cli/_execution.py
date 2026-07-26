@@ -17,7 +17,6 @@ import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
 
-from .. import build_venue
 from ..dataloaders import load_dataloader
 from ..evaluation import load_bettor
 from ..execution import (
@@ -28,6 +27,7 @@ from ..execution import (
     FixedSession,
     PlacementIntent,
     PlacementQuote,
+    build_venue,
     value_bet_intents,
 )
 from ..execution import execute as run_execute

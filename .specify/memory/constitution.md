@@ -1,6 +1,28 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.5.0 → 1.6.0
+Rationale: Add Principle VI rules the codebase needed: the top level of a package
+holds subpackages and its __init__, not loose implementation modules; the shared
+leaves (types, constants, build primitives) live in a `core` subpackage, while a
+builder lives in the package that owns what it builds (build_dataloader in
+dataloaders, build_bettor in evaluation, build_venue in execution) so every import
+runs downward and no cycle forms; a public name is re-exported once, at its owning
+package's surface, and imported from there rather than promoted a second time by a
+parent package; and the top-level package __init__ may carry a fuller front-page
+docstring. MINOR: materially expanded guidance, no principle removed or redefined.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — added the core-subpackage and
+    builder-with-what-it-builds rules, the re-export-once rule, and the top-__init__
+    docstring exception.
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
 Version change: 1.4.0 → 1.5.0
 Rationale: Add DRY to Principle VI — a fact or derivation lives in one place,
 don't store what can be derived, and don't reimplement a capability the library
@@ -218,9 +240,21 @@ for comes last. One module is one concern; when a file grows two, split it. A
 definition lives in the module that owns it. A base module is self-contained and
 imports no sibling: its purpose is to be imported, not to import, so a base that
 needs a sibling's code absorbs it by merging rather than importing. A type-only
-alias from the package root under `TYPE_CHECKING` is not a sibling. No import
-inside a function body papers over a cycle — fix the cycle; the only lazy import
-defers an optional dependency and carries a `# noqa: PLC0415` with a reason.
+alias from `commons` under `TYPE_CHECKING` is not a sibling. No import inside a
+function body papers over a cycle — fix the cycle; the only lazy import defers an
+optional dependency and carries a `# noqa: PLC0415` with a reason.
+
+The top level of a package holds subpackages and its `__init__`, not loose
+implementation modules: the shared leaves the whole tree imports — the type
+vocabulary (`_types`), the shared constants (`_params`), the shared building
+primitives (the build error, the reference loader) — live in a `core` subpackage,
+and the rest of the tree imports them from `core`, never from the package root. A
+builder lives in the package that owns what it builds and is re-exported from
+there: `build_dataloader` in `dataloaders`, `build_bettor` in `evaluation`,
+`build_venue` in `execution`. That keeps every import running downward — `core` →
+domain packages → surfaces — so no cycle can form, and the top `__init__` is left
+holding nothing but its docstring. Prefer this layering over a `# noqa: E402` and
+an explanatory comment that paper over an out-of-order import.
 
 **Naming.** A function name begins with a verb and names what the function
 actually does or returns: `count_common_prefix`, not `common_prefix_length`;
@@ -242,11 +276,14 @@ concept — `_selection` shadowed scikit-learn's `model_selection`.
 **Public surface.** Implementation modules, classes and helpers are private
 (`_name`); the package `__init__` re-exports the public surface with an explicit
 `__all__`. A public function, class or exception used outside the module that
-defines it is re-exported through that `__init__` and imported from the public
-surface — `from sportsbet import build_dataloader`, never `from
-sportsbet._factory import build_dataloader`. This holds for all code, production
-and tests alike; reaching into another package's private module for a public name
-is the smell the re-export removes.
+defines it is re-exported through its owning package's `__init__` and imported
+from that surface — `from sportsbet.dataloaders import build_dataloader`, never
+`from sportsbet.dataloaders._factory import build_dataloader`. It is re-exported
+once, where it lives: a parent package does not re-export a subpackage's surface a
+second time,
+so a consumer imports from the package that owns the name. This holds for all
+code, production and tests alike; reaching into another package's private module
+for a public name is the smell the re-export removes.
 
 **Docstrings.** The summary line is one line, imperative, and says what the thing
 does — never `Implements the ...`, `This function ...`, `A class that ...`, which
@@ -260,6 +297,10 @@ caller, so the docstring names each argument and the result. Keep each entry
 terse and the whole body to a few sentences. Never describe what the code does
 not do, never restate the code, no essays, no editorializing. Public API carries
 a runnable example checked by the doctest run; a network-touching class does not.
+
+The top-level package `__init__` is the exception to the one-line rule: it is the
+library's front page, so it may carry a fuller docstring — a tagline and a short
+overview of the submodules — rather than a single imperative line.
 
 **Comments.** Almost none. The names say what, the docstring says why. An inline
 comment that explains the next line means the line or its names are unclear — fix
@@ -350,4 +391,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.5.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26
+**Version**: 1.6.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26

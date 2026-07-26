@@ -19,7 +19,7 @@ import aiohttp
 import pandas as pd
 
 if TYPE_CHECKING:
-    from .. import ParamGrid
+    from ..core import ParamGrid
 
 CONNECTIONS_LIMIT = 20
 ENCODING = 'ISO-8859-1'

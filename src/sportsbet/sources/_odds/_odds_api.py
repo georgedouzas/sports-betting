@@ -12,8 +12,7 @@ from urllib.parse import urlencode
 
 import pandas as pd
 
-from ... import ParamGrid
-from ..._params import EVENT_COLS
+from ...core import EVENT_COLS, ParamGrid
 from .._base import BaseOddsSource, RawItem, RawPayload
 
 URL = 'https://api.the-odds-api.com/v4'

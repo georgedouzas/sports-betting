@@ -18,7 +18,7 @@ from sklearn.exceptions import NotFittedError
 from sklearn.utils import check_consistent_length, check_scalar
 from sklearn.utils.validation import _check_feature_names, check_is_fitted
 
-from .. import BoolData, Data
+from ..core import BoolData, Data
 from ..dataloaders._base import parse_event_time
 
 STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}

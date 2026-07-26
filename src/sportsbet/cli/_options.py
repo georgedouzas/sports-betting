@@ -10,7 +10,8 @@ from collections.abc import Callable
 import click
 from click.decorators import FC
 
-from .._factory import DEFAULT_KEY_ENV, ODDS_SOURCES, STATS_SOURCES, STATUSES
+from ..core import STATUSES
+from ..dataloaders._factory import DEFAULT_KEY_ENV, ODDS_SOURCES, STATS_SOURCES
 
 SELECTION: list[Callable[[FC], FC]] = [
     click.option('--league', 'leagues', multiple=True, help='A league to select. Repeat it to select more.'),

@@ -11,8 +11,17 @@ import cloudpickle
 import pandas as pd
 from sklearn.utils import check_scalar
 
-from .. import FixturesData, ParamGrid, TrainData
-from .._params import EVENT_COLS, GROUPS_COLS, IDENTITY_COLS, IDENTITY_FIELDS, STATUSES, TARGET_EVENT_STATUSES
+from ..core import (
+    EVENT_COLS,
+    GROUPS_COLS,
+    IDENTITY_COLS,
+    IDENTITY_FIELDS,
+    STATUSES,
+    TARGET_EVENT_STATUSES,
+    FixturesData,
+    ParamGrid,
+    TrainData,
+)
 from ..sources import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
 DELIMITER = '__'
@@ -272,7 +281,7 @@ class BaseDataLoader(ABC):
 
     def _load(self: Self, odds_type: str | None) -> None:
         """Read and validate the snapshots, derive their metadata and build the inputs, reusing what is held."""
-        if getattr(self, 'stats_', None) is not None and self.odds_type_ == odds_type:
+        if getattr(self, 'stats_', None) is not None and getattr(self, 'odds_type_', None) == odds_type:
             return
         stats, odds = self._snapshots()
         stats = self._finalize(stats)
@@ -589,8 +598,8 @@ class BaseDataLoader(ABC):
         It downloads the selected seasons and returns the historical data a betting strategy is built and backtested on.
         Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in `X`,
         optionally capped at an input horizon, the target-moment outcomes become the labels `Y`, and the odds become
-        `O`. A dataloader that already downloaded reuses the snapshots it holds rather than fetching again, so calling it
-        with no arguments on a reloaded dataloader rebuilds the same data offline; keep one with `save`. When the odds
+        `O`. A dataloader that already downloaded reuses the snapshots it holds instead of fetching again, so a bare
+        call on a reloaded dataloader rebuilds the same data offline; keep one with `save`. When the odds
         source carries no markets there is nothing to predict, so call `extract_exploration_data` for the features on
         their own.
 

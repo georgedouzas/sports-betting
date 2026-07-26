@@ -7,7 +7,7 @@ from typing import Self
 import numpy as np
 import pandas as pd
 
-from sportsbet import Data
+from sportsbet.core import Data
 from sportsbet.dataloaders import DataLoader
 from sportsbet.evaluation._base import BaseBettor
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
