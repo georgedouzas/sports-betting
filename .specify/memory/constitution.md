@@ -1,6 +1,28 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.6.0 → 1.7.0
+Rationale: Sharpen Principle VI naming for instance state: a method begins with a
+verb while a property names a value (a noun phrase, never verb-first); a public
+instance name is either a constructor parameter stored unmodified in __init__ with
+no underscore, or a runtime derivation carrying the trailing underscore, whether a
+stored attribute or a computed property (so `sources`/`sport` become
+`sources_`/`sport_`); anything else an instance exposes is private, while
+class-level constants that declare what a class is (a source's sport/name/kind)
+stay `ClassVar`. MINOR: materially expanded guidance, no principle removed or
+redefined.
+
+Modified principles:
+  - VI. Naming, Docstrings, and Module Structure — added the method-verb /
+    property-noun distinction and the instance-attribute rule (constructor
+    parameter, else trailing-underscore derivation, else private).
+
+Templates requiring updates:
+  ✅ .specify/templates/plan-template.md — Constitution Check gate is generic.
+  ✅ .specify/templates/spec-template.md — generic; no conflict.
+  ✅ .specify/templates/tasks-template.md — generic; no conflict.
+
+---- history ----
 Version change: 1.5.0 → 1.6.0
 Rationale: Add Principle VI rules the codebase needed: the top level of a package
 holds subpackages and its __init__, not loose implementation modules; the shared
@@ -262,10 +284,17 @@ actually does or returns: `count_common_prefix`, not `common_prefix_length`;
 name that begins with a noun describes a value, and a function is not a value. The
 verb is honest: a function that loads or resolves an object from a reference is
 `load_`/`resolve_`, not `build_`. Avoid empty verbs that say nothing — `process`,
-`handle`, `manage`, `transform` with no object. State learned at runtime carries
-a trailing underscore (`odds_type_`, `target_event_status_`), the scikit-learn
-convention. Class-level constants are `ClassVar`. Names come from the domain, used
-consistently.
+`handle`, `manage`, `transform` with no object. A method is an action and begins
+with a verb; a property names a value and is a noun phrase (`sport_`, `sources_`),
+never verb-first. State the instance derives at runtime carries a trailing
+underscore — the scikit-learn convention — whether it is a stored attribute
+(`odds_type_`, `target_event_status_`) or a computed property (`sources_`,
+`sport_`). A public instance name is therefore one of two things: a constructor
+parameter, stored unmodified under its own name in `__init__` with no underscore,
+or a derivation, carrying the trailing underscore. Anything else an instance
+exposes is private. Class-level constants that declare what a class is — a
+source's `sport`, `name`, `kind` — are `ClassVar` and stand apart from this. Names
+come from the domain, used consistently.
 
 A module is named for the concern it owns: a descriptive noun for what it does or
 holds (`_resolver`, `_schedule`, `_factory`), not for the data it consumes
@@ -391,4 +420,4 @@ It applies to all code, documentation, and tooling changes in this repository.
   `CONTRIBUTING.md` and `docs/development/`; those documents MUST stay
   consistent with this constitution.
 
-**Version**: 1.6.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26
+**Version**: 1.7.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26

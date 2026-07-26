@@ -1040,7 +1040,7 @@ class FootballDataStats(_FootballDataSource, BaseStatsSource):
         ...     stats=source,
         ...     odds=FootballDataOdds(),
         ... )
-        >>> dataloader.sport
+        >>> dataloader.sport_
         'soccer'
     """
 

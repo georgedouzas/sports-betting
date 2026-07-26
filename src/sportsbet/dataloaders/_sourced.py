@@ -64,7 +64,7 @@ class DataLoader(BaseDataLoader):
         ...     odds=FootballDataOdds(),
         ... )
         >>> # The sources say what sport it is; the loader never chose.
-        >>> dataloader.sport
+        >>> dataloader.sport_
         'soccer'
         >>> # X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')
     """
@@ -99,13 +99,13 @@ class DataLoader(BaseDataLoader):
         return self.stats, self.odds
 
     @property
-    def sport(self: Self) -> str | None:
+    def sport_(self: Self) -> str | None:
         """The sport the sources carry."""
         stats_source, _ = self._resolved()
         return stats_source.sport
 
     @property
-    def sources(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
+    def sources_(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
         """The statistics and odds sources."""
         return self._resolved()
 
@@ -143,7 +143,7 @@ class DataLoader(BaseDataLoader):
         """
         stats_source, odds_source = self._resolved()
         if odds_source is None:
-            return stats, self.no_odds()
+            return stats, self._build_empty_odds()
         odds = self._finalize(odds_source.to_snapshots(fetch_payloads(odds_items, odds_source.request_url)))
         if stats_source.name != odds_source.name and not odds.empty:
             aliases = {**ALIASES, **(self.aliases or {})}

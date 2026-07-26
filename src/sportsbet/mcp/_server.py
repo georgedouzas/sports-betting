@@ -106,7 +106,7 @@ def _extraction(
 
 def _available_params(selection: Selection) -> list[dict]:
     """Return what can be selected."""
-    stats_source, *_ = build_dataloader(**selection).sources
+    stats_source, *_ = build_dataloader(**selection).sources_
     return stats_source.available_params()
 
 

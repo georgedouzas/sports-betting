@@ -37,7 +37,7 @@ def params(**selection: object) -> None:
     with reported(), selected(selection) as loader:
         if loader is None:
             return
-        stats_source, *_ = loader.sources
+        stats_source, *_ = loader.sources_
         available = stats_source.available_params()
         cols = list({param for params in available for param in params})
         frame = pd.DataFrame({col: [params.get(col, '-') for params in available] for col in cols})

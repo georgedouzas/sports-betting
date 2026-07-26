@@ -160,7 +160,7 @@ class EuroLeagueStats(BaseStatsSource):
         ...     stats=source,
         ...     odds=OddsApi(key='...', markets=['h2h']),
         ... )
-        >>> dataloader.sport
+        >>> dataloader.sport_
         'basketball'
     """
 

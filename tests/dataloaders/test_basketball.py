@@ -50,7 +50,7 @@ def test_the_sport_is_the_source_s_and_not_the_dataloader_s():
     """Test a feed of basketball is a feed of basketball, whatever it is handed to."""
     assert EuroLeagueStats.sport == 'basketball'
     assert NBAStats.sport == 'basketball'
-    assert DataLoader(stats=NBAStats(), odds=OddsApi(key='k')).sport == 'basketball'
+    assert DataLoader(stats=NBAStats(), odds=OddsApi(key='k')).sport_ == 'basketball'
 
 
 def test_statistics_and_odds_of_different_sports_are_refused():
@@ -60,7 +60,7 @@ def test_statistics_and_odds_of_different_sports_are_refused():
     found in the other.
     """
     with pytest.raises(ValueError, match='about different sports'):
-        _ = DataLoader(stats=NBAStats(), odds=FootballDataOdds()).sources
+        _ = DataLoader(stats=NBAStats(), odds=FootballDataOdds()).sources_
 
 
 def test_a_dataloader_will_not_choose_a_source_for_you():

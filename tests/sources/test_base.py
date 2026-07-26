@@ -99,7 +99,7 @@ def test_sources_are_stored_unmodified():
 
 def test_a_dataloader_with_its_own_data_has_no_sources(stats, odds):
     """Test a dataloader carrying its own data reports no sources, since it downloads nothing."""
-    assert SnapshotsDataLoader(stats, odds).sources == ()
+    assert SnapshotsDataLoader(stats, odds).sources_ == ()
 
 
 def test_read_csv_content_reads_a_dataframe_from_bytes():

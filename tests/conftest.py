@@ -49,7 +49,7 @@ class SnapshotsDataLoader(BaseDataLoader):
         """Keep the snapshots the test provided."""
         super().__init__(param_grid)
         self.stats = stats
-        self.odds = BaseDataLoader.no_odds() if odds is None else odds
+        self.odds = BaseDataLoader._build_empty_odds() if odds is None else odds
 
     def _snapshots(self: 'SnapshotsDataLoader') -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the snapshots the test provided."""
