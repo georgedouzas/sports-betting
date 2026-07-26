@@ -187,19 +187,10 @@ class BaseDataLoader(ABC):
 
     @abstractmethod
     def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return the long training `stats`/`odds` snapshots.
-
-        Every dataloader implements this. A dataloader backed by sources downloads them; one carrying its own data
-        returns it.
-        """
+        """Return the long training `stats`/`odds` snapshots."""
 
     def _fixtures_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return the long `stats`/`odds` snapshots of the upcoming matches.
-
-        The default is the training snapshots, which is right for a dataloader carrying its own data: the fixtures are
-        the unplayed matches already in it. A dataloader backed by sources overrides it to download the current data the
-        upcoming matches need.
-        """
+        """Return the long `stats`/`odds` snapshots of the upcoming matches, the training ones by default."""
         return self._snapshots()
 
     @property
