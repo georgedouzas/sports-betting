@@ -1,4 +1,4 @@
-"""Shape the data for modelling with the dataloaders."""
+"""Shape the source data for modelling."""
 
 from __future__ import annotations
 
