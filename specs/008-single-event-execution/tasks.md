@@ -163,15 +163,15 @@ inputs cannot describe more than one event.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T026 [P] Rewrite the runnable example around the single-event unit in
+- [x] T026 [P] Rewrite the runnable example around the single-event unit in
   `docs/examples/execution/plot_place_value_bets.py` (rename to `plot_single_event.py` if clearer), offline where it
   can be.
-- [ ] T027 [P] Rewrite `docs/overview/user_guide/execution.md` for the single-event flow: explore, log in, monitor,
+- [x] T027 [P] Rewrite `docs/overview/user_guide/execution.md` for the single-event flow: explore, log in, monitor,
   dry run versus `--live`, and the one-event responsibility.
-- [ ] T028 Regenerate `docs/generated` through the docs build. Never hand-edit it.
-- [ ] T029 Land the retirement and the feature as conventional commits, with a `BREAKING CHANGE` footer listing the
+- [x] T028 Regenerate `docs/generated` through the docs build. Never hand-edit it.
+- [x] T029 Land the retirement and the feature as conventional commits, with a `BREAKING CHANGE` footer listing the
   removed public names from contracts/retirement.md, so `pdm run changelog` records the API change.
-- [ ] T030 Run the full gate on 3.11, 3.12, and 3.13 and walk quickstart.md Scenarios 1 to 6. Confirm green.
+- [x] T030 Run the full gate on 3.11, 3.12, and 3.13 and walk quickstart.md Scenarios 1 to 6. Confirm green.
 
 ---
 
