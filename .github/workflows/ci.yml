@@ -91,6 +91,10 @@ jobs:
       run: pdm install -dG maintenance -dG tests -G mcp
 
     - name: Run the test suite
+      env:
+        # Install numpy from its wheel, never a from-source MinGW build, which
+        # segfaults on the Windows Python 3.13 runner. pdm resolves through uv.
+        UV_NO_BUILD_PACKAGE: numpy
       run: pdm tests
 
   doc:
