@@ -1,3 +1,3 @@
 # Model evaluation
 
-Evaluate the performance of models on sports betting data.
+Evaluate how models perform on sports betting data.

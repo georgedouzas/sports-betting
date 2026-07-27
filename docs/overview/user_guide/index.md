@@ -3,13 +3,13 @@
 
 # User guide
 
-`sports-betting` extracts sports betting data and trains predictive models on it. There are two objects to know, a dataloader
-and a bettor.
+`sports-betting` extracts sports betting data and trains predictive models on it. You need to know two objects. A
+dataloader gets the data. A bettor bets on it.
 
 ## Dataloader
 
-Betting data rarely arrives in a shape you can model. The dataloader extracts it in a consistent format. Here is one for
-the Italian and Spanish leagues, seasons 2023 and 2024.
+Betting data rarely comes in a shape you can model directly. The dataloader extracts it in a consistent format. Here is
+a dataloader for the Italian and Spanish leagues, seasons 2023 and 2024.
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -21,7 +21,7 @@ dataloader = DataLoader(
 )
 ```
 
-Extract the training data, with the market maximum odds.
+Extract the training data with the market maximum odds.
 
 ```python
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maximum')
@@ -35,8 +35,9 @@ X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 
 ## Bettor
 
-With the training and fixtures data in hand, a bettor evaluates a model and predicts the value bets of the upcoming matches. Here
-is a [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor] around a [scikit-learn] `KNeighborsClassifier`.
+You now have the training and fixtures data. A bettor evaluates a model and predicts the value bets of the upcoming
+matches. Here is a [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor] around a [scikit-learn]
+`KNeighborsClassifier`.
 
 ```python
 from sportsbet.evaluation import ClassifierBettor, backtest

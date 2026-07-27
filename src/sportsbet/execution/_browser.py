@@ -36,7 +36,7 @@ class PageSnapshot:
 
 @dataclass(frozen=True)
 class FixedSession:
-    """The locators exploring found, pinned to a match.
+    """The locators found during exploration, pinned to a match.
 
     Args:
         match: The match the session is pinned to.
@@ -52,7 +52,7 @@ class FixedSession:
 class BrowserSession:
     """A bookmaker's website, driven in a real browser on your own account.
 
-    Everything about the site comes from the user.
+    You provide everything the session knows about the site.
 
     Args:
         key:

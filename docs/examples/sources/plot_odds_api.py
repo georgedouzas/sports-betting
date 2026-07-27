@@ -2,10 +2,10 @@
 The Odds API
 ============
 
-This example illustrates OddsApi, the paid odds source that carries time-stamped prices.
+This example shows OddsApi, the paid odds source that carries time-stamped prices.
 
-Nothing here is bought and nothing is downloaded: the example shows how the source is configured and how your key is
-handled, which is what you want to understand before spending anything.
+Nothing here is bought and nothing is downloaded. The example shows how you configure the source and how it handles
+your key. You want to understand both before you spend anything.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -26,16 +26,16 @@ os.environ['ODDS_API_KEY'] = 'your-key'
 # Configuring it
 # --------------
 #
-# It carries prices with a timestamp, so an in-play bet can be backtested against the odds that were actually on offer
-# at the minute it would have been placed. The free feeds cannot do that: they publish the closing price only.
+# It carries prices with a timestamp. So you can backtest an in-play bet against the odds that were on offer at the
+# minute you would have placed it. The free feeds cannot do that, because they publish the closing price only.
 #
-# Every market, every region and every moment is a separate request, so each one multiplies the work.
+# Every market, region and moment is a separate request. Each one adds to the work.
 
 odds = OddsApi(key_env='ODDS_API_KEY', markets=['h2h'], regions=['eu'])
 odds.name, odds.kind
 
 # %%
-# It sells every sport, so it carries none of its own and takes the sport of the statistics it is paired with.
+# It sells every sport. So it carries no sport of its own and takes the sport of the statistics you pair it with.
 
 {'carries no sport of its own': odds.sport is None}
 
@@ -43,8 +43,8 @@ odds.name, odds.kind
 # Your key never reaches the data
 # -------------------------------
 #
-# The key is added to a request at the moment the request is made. It is never part of a `RawItem`, so it is never
-# written to disk.
+# The source adds the key to a request at the moment it makes the request. The key is never part of a `RawItem`, so it
+# is never written to disk.
 
 item = RawItem(source='odds_api', key='snapshot', url='https://api.the-odds-api.com/v4/sports?all=true')
 {'key in the item': 'your-key' in item.url}
@@ -56,8 +56,8 @@ odds.request_url(item)
 # Using it
 # --------
 #
-# Pair it with free statistics, here the NBA, and read your key from the environment rather than writing it into a
-# file that could be committed:
+# Pair it with free statistics, here the NBA. Read your key from the environment rather than write it into a file that
+# could be committed:
 #
 # ```python
 # import os
@@ -73,14 +73,14 @@ odds.request_url(item)
 # X, Y, O = dataloader.extract_train_data(odds_type='pinnacle')
 # ```
 #
-# Extracting is what spends: every market, region and moment is its own request, and what those requests cost is
-# between you and the vendor. Ask the source what it would fetch first, and price it before you commit.
+# Extracting is what spends money. Every market, region and moment is its own request, and the vendor sets what those
+# requests cost. Ask the source what it would fetch first, and price it before you commit.
 
 NBAStats().sport, OddsApi(key_env='ODDS_API_KEY').sport
 
 # %%
-# What a price is saying
-# ----------------------
+# What a price implies
+# --------------------
 
 odds_range = np.linspace(1.05, 10, 200)
 

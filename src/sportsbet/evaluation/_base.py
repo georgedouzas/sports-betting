@@ -121,8 +121,8 @@ def _check_markets_compatible(Y_betting_markets: list[str], O_betting_markets: l
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
     """The base class for bettors.
 
-    A bettor turns probabilities into bets. A bet is placed when the model's probability for an outcome is higher than
-    the one its price implies. Implement `_fit` and `_predict_proba`.
+    A bettor turns probabilities into bets. It places a bet when the model gives an outcome a higher probability than
+    its price implies. To build one, implement `_fit` and `_predict_proba`.
 
     Args:
         betting_markets:

@@ -2,8 +2,7 @@
 Dataloader
 ==========
 
-This example illustrates DataLoader, the object that turns the data of your
-sources into training and fixtures data.
+This example shows DataLoader. It turns the data of your sources into training and fixtures data.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -18,8 +17,8 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 # There is one dataloader
 # -----------------------
 #
-# Not one per sport. The sport is a property of the sources, so a dataloader never has to be told what it is looking at.
-# You choose the sources, so you always know where your data came from.
+# There is not one dataloader per sport. The sport is a property of the sources, so you never tell the dataloader what
+# it is looking at. You choose the sources, so you always know where your data came from.
 
 dataloader = DataLoader(
     param_grid={'league': ['England'], 'division': [1], 'year': [2024]},
@@ -32,13 +31,14 @@ dataloader.sport_
 # Selecting the data
 # ------------------
 #
-# `param_grid` selects what to train on. Any dimension left out takes all of its available values, and a combination
-# the sources do not publish is never requested.
+# `param_grid` selects what to train on. Any dimension you leave out takes all of its available values. The dataloader
+# never requests a combination the sources do not publish.
 
 dataloader.sources_
 
 # %%
-# The available odds types are the providers the data carries, and they are read from it rather than registered.
+# The available odds types are the providers the data carries. The dataloader reads them from the data rather than from
+# a registry.
 
 dataloader.get_odds_types()
 
@@ -46,8 +46,8 @@ dataloader.get_odds_types()
 # Extracting the training data
 # ----------------------------
 #
-# This is where the download happens. It pulls the selected seasons and hands back three frames, and the dataloader
-# keeps them, so once you have extracted, `save` carries the data with it and nothing has to be fetched twice.
+# This is where the download happens. It pulls the selected seasons and returns three frames. The dataloader keeps
+# them. So once you have extracted, `save` carries the data with it and nothing has to be fetched twice.
 
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
@@ -67,11 +67,11 @@ O_train
 # Extracting the fixtures data
 # ----------------------------
 #
-# A fixture is a match that has not been played. It is not restricted by `param_grid`, which selects what to train
-# on, and a match you could have trained on has by definition already been played. So you may train on England and bet
-# on Italy. What the two frames share is their columns, not their contents.
+# A fixture is a match that has not been played. `param_grid` selects what to train on, and it does not restrict the
+# fixtures. A match you could have trained on has already been played. So you may train on England and bet on Italy. The
+# two frames share their columns, not their contents.
 #
-# The sample is a finished season, so it has no fixtures at all. Use a live source to get some.
+# The sample is a finished season, so it has no fixtures. Use a live source to get some.
 
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 {'fixtures': len(X_fix), 'same columns': list(X_fix.columns) == list(X_train.columns)}

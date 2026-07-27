@@ -2,7 +2,7 @@
 Football Data soccer feed
 =========================
 
-This example illustrates FootballDataStats and FootballDataOdds, the free soccer feed of football-data.co.uk.
+This example shows FootballDataStats and FootballDataOdds, the free soccer feed from football-data.co.uk.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -18,8 +18,7 @@ from sportsbet.sources import FootballDataOdds, FootballDataStats
 # Asking the source what exists
 # -----------------------------
 #
-# A parameter grid cannot be written before it is known what exists, so the question goes to the source rather than to
-# a dataloader.
+# You cannot write a parameter grid before you know what exists. So you ask the source, not a dataloader.
 
 stats = FootballDataStats()
 params = stats.list_available_params()
@@ -31,7 +30,7 @@ len(params)
 sorted({param['league'] for param in params})
 
 # %%
-# It is free, and it is the only feed in the library that gives both statistics and odds for nothing. The odds are the
+# It is free. It is the only feed in the library that gives both statistics and odds for nothing. The odds are the
 # closing prices offered before kick-off.
 
 odds = FootballDataOdds()
@@ -41,8 +40,8 @@ odds.name, odds.kind, odds.sport
 # Extracting the data
 # -------------------
 #
-# Both sources read the same upstream files, so declaring the same items means they are downloaded once rather than
-# twice.
+# Both sources read the same upstream files. They declare the same items, so the dataloader downloads each file once,
+# not twice.
 
 dataloader = DataLoader(
     param_grid={'league': ['Spain'], 'division': [1], 'year': [2024]},

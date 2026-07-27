@@ -2,8 +2,8 @@
 Odds comparison bettor
 ======================
 
-This example illustrates OddsComparisonBettor, which bets by comparing
-the odds of different providers rather than by learning from the features.
+This example shows OddsComparisonBettor. It bets by comparing the odds of different providers rather than by learning
+from the features.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -32,17 +32,17 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maxi
 # A model that needs no features
 # ------------------------------
 #
-# It compares what one provider offers with what another does. When the best price in the market is far enough above the
-# average, the outcome is priced more generously than the market as a whole believes, and that is the bet.
+# It compares what one provider offers with what another offers. When the best price in the market is far enough above
+# the average, the outcome is priced more generously than the market as a whole believes. That is the bet.
 #
-# `alpha` is how far above is far enough.
+# `alpha` sets how far above the average is far enough.
 
 bettor = OddsComparisonBettor(alpha=0.03, betting_markets=['home_win', 'draw', 'away_win'])
 _ = bettor.fit(X_train, Y_train, O_train)
 
 # %%
-# The value bets, one boolean column per market. This bettor models the odds themselves, so it needs them at prediction
-# time as well as at training time, unlike a classifier bettor, which learns from the features alone.
+# These are the value bets, one boolean column per market. This bettor models the odds themselves, so it needs them at
+# prediction time as well as at training time. A classifier bettor learns from the features alone.
 
 bettor.bet(X_train, O_train)
 
@@ -57,8 +57,9 @@ results
 # Turning the one knob
 # --------------------
 #
-# `alpha` is the whole model. Small, and it bets on almost every match, taking any price a shade above the average.
-# Large, and it waits for the rare, glaring mispricing. Sweep it and you can watch the bettor go from greedy to picky.
+# `alpha` is the whole model. A small `alpha` bets on almost every match and takes any price a little above the
+# average. A large `alpha` waits for the rare, clear mispricing. Sweep `alpha` and watch the bettor go from greedy to
+# picky.
 
 alphas = np.linspace(0.0, 0.12, 13)
 placed = []

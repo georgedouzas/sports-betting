@@ -2,8 +2,7 @@
 A bettor of your own
 ====================
 
-This example illustrates BaseBettor and
-derive_complementary_events.
+This example shows BaseBettor and derive_complementary_events.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -21,9 +20,9 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 # Two methods to implement
 # ------------------------
 #
-# A bettor turns probabilities into bets. Implement `_fit` and `_predict_proba`, and the value bets, the backtest
-# and the bankroll all follow: a bet is placed when the probability your model gives an outcome is higher than the one
-# the price implies.
+# A bettor turns probabilities into bets. Implement `_fit` and `_predict_proba`, and the value bets, the backtest and
+# the bankroll all follow. The bettor places a bet when the probability your model gives an outcome is higher than the
+# probability the price implies.
 
 
 class BaseRateBettor(BaseBettor):
@@ -65,9 +64,9 @@ backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(3))
 # Which markets are mutually exclusive
 # ------------------------------------
 #
-# The probabilities of a group of complementary markets must sum to one, and the groups come from the data rather
-# than from a list somebody wrote down. A sport that cannot be drawn simply has two outcomes instead of three, and
-# nothing had to be told which sport this is.
+# The probabilities of a group of complementary markets must sum to one. The groups come from the data, not from a list
+# somebody wrote down. A sport that cannot be drawn has two outcomes instead of three, and nothing had to be told which
+# sport this is.
 
 derive_complementary_events(['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5'])
 

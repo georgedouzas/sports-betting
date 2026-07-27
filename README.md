@@ -49,43 +49,53 @@
 
 ## Introduction
 
-`sports-betting` is a set of tools for creating, testing and using sports betting models. You can use it from an AI agent, from
-Python, or from the command line.
+`sports-betting` is a set of tools for building, testing, and using sports betting models. You can use it from an AI
+agent, from Python, or from the command line.
 
-Its two main components are dataloaders and bettors:
+The library has two main parts, dataloaders and bettors.
 
-- A dataloader downloads the data and shapes it for modelling. It is built from a statistics source and an odds source. You choose
-  both, so you always know where your data came from.
+- A dataloader downloads the data and shapes it for modelling. You build it from a statistics source and an odds source.
+  You choose both, so you always know where your data came from.
 - A bettor backtests a betting strategy and predicts the value bets of upcoming events. It wraps any scikit-learn
   estimator.
 
-Once a bettor has found the value bets, execution places them. A venue with an official betting API is placed at by the
-library. A bookmaker with no API is driven in a browser by your agent, on your own account, with the risk of that
-stated plainly.
+A bettor finds value bets. The execution part places one of them. It takes a fitted bettor, one match, and a stake. It
+watches the match. At the moment the model was fitted for, it places the bet once. Some bookmakers have a betting API,
+and the library places the bet through the API. Other bookmakers have no API, so your agent drives their website on your
+own account. You place the bet at a bookmaker where you hold an account. This spends real money.
 
 ## Installation
 
-For user installation, `sports-betting` is currently available on the PyPi's repository, and you can install it via `pip`:
+### Install
+
+`sports-betting` is on PyPI. Install it with `pip`.
 
 ```bash
-pip install sports_betting
+pip install sports-betting
 ```
 
-To drive the library from an AI agent, install the MCP server:
+### MCP server
+
+The MCP server lets you drive the library from an AI agent. Install it with the `mcp` extra.
 
 ```bash
-pip install 'sports_betting[mcp]'
+pip install 'sports-betting[mcp]'
 ```
 
-To place bets as well as find them, add the execution extra. Driving a bookmaker's website also needs a browser:
+### Execution
+
+Execution places bets. It also drives a bookmaker's website, which needs a browser. Install the extras, then install the
+browser.
 
 ```bash
-pip install 'sports_betting[mcp,execution]'
+pip install 'sports-betting[mcp,execution]'
 python -m playwright install chromium
 ```
 
-Development installation requires to clone the repository and then use [PDM](https://github.com/pdm-project/pdm) to install the
-project as well as the main and development dependencies:
+### Development
+
+For development, clone the repository and install the project with [PDM](https://github.com/pdm-project/pdm). This
+installs the main and development dependencies.
 
 ```bash
 git clone https://github.com/georgedouzas/sports-betting.git
@@ -97,196 +107,33 @@ pdm install
 
 ### AI agent
 
-The agent is a first-class way into the library. It reaches everything Python and the command line reach, and it does
-more besides. It explores the data, tables the results, plots them, writes the model, and does anything else you ask. A
-betting model is a scikit-learn estimator, and an agent can write one, run it, and tell you whether it was any good.
+The agent is a first-class way to use the library. It reaches everything that Python and the command line reach. It
+also does more. It explores the data, builds tables, plots results, and writes the model. A betting model is a
+scikit-learn estimator. An agent can write one, run it, and tell you how well it did.
+
+Install the MCP server and register it with your agent.
 
 ```bash
-pip install 'sports_betting[mcp]'
+pip install 'sports-betting[mcp]'
 claude mcp add sportsbet -- sportsbet-mcp
 ```
 
-What follows is a chat with Claude, using the library through the MCP server, with the real output.
+You can then ask the agent to work through a full task. A typical session runs in these steps.
 
-You: What soccer data can I work with?
+- Ask what data is available. The agent reads the catalogue, which is free.
+- Ask for a strategy on some leagues and seasons. The agent downloads the seasons and backtests models.
+- Ask which league holds the edge. The agent breaks the result down.
+- Ask for the value bets in the upcoming fixtures. The agent extracts the fixtures and applies the model.
+- Ask it to place a bet. The agent runs the single-event execution.
 
-> Claude: 918 league, division and season combinations across 27 leagues, from 1994 to 2026.
->
-> England goes deepest, with five divisions. Germany, Italy, France, Spain, Scotland, the Netherlands, Belgium,
-> Portugal, Turkey and Greece have one or two each, and there are single-division feeds for another sixteen countries,
-> from Argentina to the USA.
->
-> Every one comes with historical odds from several bookmakers, so a backtest runs against real prices. I have not
-> downloaded anything, since reading the catalogue is free.
-
-You: Find me a strategy that works on the top two divisions of Germany, Italy and France, 2021 to 2024.
-
-> Claude: Downloaded 24 season files. Then I searched, rather than guessing.
->
-> First, which market is even worth betting. A logistic model on each, at the best odds in the market:
->
-> | Market | Yield per bet | Bets per fold |
-> | --- | ---: | ---: |
-> | home_win | −3.8% | 901 |
-> | draw | +3.9% | 1,319 |
-> | away_win | −3.6% | 1,217 |
-> | over_2.5 | +0.3% | 642 |
-> | under_2.5 | −2.2% | 702 |
->
-> Only the draw pays. That is not a surprise: the draw is the outcome punters least like backing, so the price drifts.
->
-> Then, whether the market is worth searching over. The markets to bet on are a hyperparameter like any other, so I put
-> them in the grid alongside the model's regularisation and let the search pick:
->
-> ```python
-> BettorGridSearchCV(
->     estimator=ClassifierBettor(classifier, init_cash=10000.0, stake=50.0),
->     param_grid={
->         'classifier__multioutputclassifier__estimator__C': [0.1, 1.0, 50.0],
->         'betting_markets': [['home_win'], ['draw'], ['away_win'], ['home_win', 'draw', 'away_win']],
->     },
->     cv=TimeSeriesSplit(3),
-> )
-> ```
->
-> Backtested over five time-ordered folds:
->
-> | Testing period | Bets | Yield per bet | Final cash |
-> | --- | ---: | ---: | ---: |
-> | Feb 2021 to Nov 2021 | 1,407 | +1.0% | £10,715 |
-> | Nov 2021 to May 2022 | 1,406 | +8.3% | £15,812 |
-> | May 2022 to Feb 2023 | 1,406 | −0.5% | £9,675 |
-> | Feb 2023 to Nov 2023 | 1,406 | +4.5% | £13,161 |
-> | Nov 2023 to Jun 2024 | 1,407 | −0.2% | £9,858 |
->
-> Mean yield +2.6%, positive in three folds of five. Better than the fixed model, which managed +1.2%.
->
-> Worth being honest about: I have now tried a dozen configurations on this data. Some of that +2.6% is me searching,
-> not the model knowing. Before you stake anything, hold a season back and check it there.
-
-You: Which league is that draw edge actually in?
-
-> Claude: Almost entirely Italy.
->
-> | League | Yield per bet on the draw |
-> | --- | ---: |
-> | Italy | +9.0% |
-> | Germany | +2.9% |
-> | France | −0.6% |
->
-> That is a big number and I would treat it with suspicion rather than excitement. It is one league over four seasons,
-> found after I had already looked at several splits.
-
-You: Write me the Italy draw model, then, and show me the folds.
-
-> Claude: Here it is, a logistic regression on the two Italian divisions, betting only the draw:
->
-> ```python
-> from sklearn.compose import make_column_transformer
-> from sklearn.impute import SimpleImputer
-> from sklearn.linear_model import LogisticRegression
-> from sklearn.multioutput import MultiOutputClassifier
-> from sklearn.pipeline import make_pipeline
-> from sklearn.preprocessing import OneHotEncoder
-> from sportsbet.evaluation import ClassifierBettor
->
-> classifier = make_pipeline(
->     make_column_transformer(
->         (OneHotEncoder(handle_unknown='ignore'), ['league', 'home_team', 'away_team']), remainder='passthrough'
->     ),
->     SimpleImputer(),
->     MultiOutputClassifier(LogisticRegression(solver='liblinear', class_weight='balanced')),
-> )
-> bettor = ClassifierBettor(classifier, betting_markets=['draw'], init_cash=10000.0, stake=50.0)
-> ```
->
-> | Testing period | Bets | Yield per bet | Final cash |
-> | --- | ---: | ---: | ---: |
-> | Mar 2021 to Nov 2021 | 440 | +1.7% | £10,365 |
-> | Nov 2021 to Aug 2022 | 461 | +12.7% | £12,934 |
-> | Aug 2022 to Mar 2023 | 487 | +4.5% | £11,097 |
-> | Mar 2023 to Nov 2023 | 470 | +8.9% | £12,085 |
-> | Nov 2023 to Jun 2024 | 485 | +17.2% | £14,171 |
->
-> Positive in all five folds, mean +9.0%. That is the kind of result I would want to distrust hardest. I found it by
-> narrowing to the league that already looked good. Give me a season I have never touched and I will tell you if it
-> holds.
-
-You: Fine. Any value bets in the upcoming fixtures?
-
-> Claude: None right now. `extract_fixtures_data` comes back empty for Germany, Italy and France: their seasons are in
-> the summer break, so there is no upcoming match to price.
->
-> The mechanism is worth seeing. `param_grid` chose the seasons to train on, and those are all played. The fixtures come
-> from a separate download, the current season of the leagues you selected, so training and fixtures never overlap.
->
-> ```python
-> dataloader = DataLoader(
->     param_grid={'league': ['Germany', 'Italy', 'France'], 'division': [1, 2], 'year': [2021, 2022, 2023, 2024]},
->     stats=FootballDataStats(), odds=FootballDataOdds(),
-> )
-> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')   # the seasons above, to train on
-> X_fix, _, O_fix = dataloader.extract_fixtures_data()                  # the current season's upcoming matches
-> ```
->
-> They share their columns, so when the season restarts the model trained on the history bets on the fixtures. To bet on
-> another league, select it. Given what we found I would hold off staking: the edge is Italy alone, four seasons found
-> after a dozen tries. Hold a season back and check it there first.
-
-You: Say the season is on and there are value bets. How would you actually place them?
-
-> Claude: By quoting first and staking only once you have seen the quote. The leagues are in their summer break, so I
-> will show it on two example draws rather than invent live prices. Here is the quote for a £50 stake on each:
->
-> ```text
-> total_stake 100.0 | total_exposure 100.0
-> ```
->
-> Running it now, the way you would by default, places nothing:
->
-> ```text
->              match market selection  status  stake  detail
-> Juventus vs Napoli   draw  Juventus dry_run    0.0  Nothing was staked. To place these bets, pass back the quoted stake of 100.0 and the quoted exposure of 100.0.
->      Roma vs Lazio   draw      Roma dry_run    0.0  Nothing was staked. To place these bets, pass back the quoted stake of 100.0 and the quoted exposure of 100.0.
-> ```
->
-> A dry run is not a flag I remembered to set. It is what happens until I pass the quoted figures back exactly. If I
-> pass the wrong ones, it still stakes nothing and tells me the real ones:
->
-> ```text
->              status  detail
-> refused_unconfirmed  Nothing was staked. The quoted stake is 100.0 and the quoted exposure is 100.0, but 10.0 and 10.0 were passed back.
-> refused_unconfirmed  Nothing was staked. The quoted stake is 100.0 and the quoted exposure is 100.0, but 10.0 and 10.0 were passed back.
-> ```
->
-> Only the quoted figures place the bets, one at a time, each with a receipt:
->
-> ```text
->              match market selection       status  stake  price
-> Juventus vs Napoli   draw  Juventus matched_full   50.0   3.10
->      Roma vs Lazio   draw      Roma matched_full   50.0   3.25
-> ```
->
-> That was a venue with an official API, which I place at for you. A bookmaker with no API is different: I drive its
-> website on your account, which breaches essentially every bookmaker's terms of service and risks the account and the
-> balance in it. I read the page as something I can act on, and I refuse to click a confirm button the site has
-> disabled rather than pretend the bet went on:
->
-> ```yaml
-> - form "Bet slip" [ref=e2]:
->   - textbox "Stake" [ref=e3]: "10.00"
->   - button "Place bet" [ref=e4]
->   - button "Confirm bet" [disabled] [ref=e5]
-> ```
-
-The agent names the environment variable holding your API key, never the key itself. Extracting the data downloads it,
-so a paid odds feed spends only when you extract. Do it once and `save` the dataloader rather than re-extracting.
-Placing spends real money, so it refuses until you confirm the quote, and it never evades a venue that blocks
-automation.
+The agent names the environment variable that holds your API key. It never prints the key. Extracting the data
+downloads it, so a paid odds feed spends money only when you extract. Extract once and save the dataloader instead of
+extracting again. Driving a bookmaker's website on your account breaches most bookmakers' terms of service and risks the
+account and its balance.
 
 ### Python API
 
-The same functionality, in code. A dataloader is created by a statistics source and an odds source:
+You can do the same work in code. You build a dataloader from a statistics source and an odds source.
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -301,8 +148,8 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maxi
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 ```
 
-A betting model is any scikit-learn estimator wrapped in a bettor. Here we backtest a bettor that wraps a logistic regression
-classifier:
+A betting model is any scikit-learn estimator wrapped in a bettor. The next example backtests a bettor that wraps a
+logistic regression classifier.
 
 ```python
 from sklearn.compose import make_column_transformer
@@ -338,14 +185,14 @@ Training start Training end Testing start Testing end
 Fit it with `bettor.fit(X_train, Y_train, O_train)`, then `bettor.bet(X_fix, O_fix)` returns the value bets of the
 upcoming matches.
 
-The fixtures are downloaded separately by `extract_fixtures_data`, which returns the upcoming betting events. The
-training and fixtures data share their columns, so the model trained on the history can bet on the fixtures.
+`extract_fixtures_data` downloads the fixtures separately and returns the upcoming betting events. The training data and
+the fixtures data share their columns, so the model trained on the history can bet on the fixtures.
 
 ### CLI
 
-The same scenario from the command line, which mirrors the API. `dataloader` extracts the data and `evaluation` works a
-model on it. `dataloader train extract` downloads the seasons once and saves the dataloader. The evaluation commands
-read that file, so the data is downloaded once and the model is trained once.
+The command line mirrors the API. The `dataloader` command extracts the data. The `evaluation` command works a model on
+it. `dataloader train extract` downloads the seasons once and saves the dataloader. The evaluation commands read that
+file, so the download runs once and the training runs once.
 
 ```bash
 # Download the seasons once and save the dataloader
@@ -368,9 +215,9 @@ sportsbet evaluation fit --dataloader dataloader.pkl --model logistic \
 sportsbet evaluation bet --dataloader dataloader.pkl --bettor model.pkl
 ```
 
-The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from,
-and `dataloader train extract` downloads it. The ready-made models cover the common cases. A model of your own is
-Python, so you write it in a file and name it, as in `--model models.py:bettor`, where `bettor` is the object below.
+The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from.
+`dataloader train extract` downloads it. The ready-made models cover the common cases. You can also write your own model
+in a Python file and name it, as in `--model models.py:bettor`, where `bettor` is the object below.
 
 ```python
 # models.py

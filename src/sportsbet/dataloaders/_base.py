@@ -108,12 +108,11 @@ def _build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSche
 class BaseDataLoader(ABC):
     """Read and validate source snapshots and extract moment-aware modelling data.
 
-    A dataloader reads long event-snapshot `stats` and `odds` data, validates it,
-    derives the available providers, markets and per-column metadata from the data
-    itself, and extracts moment-aware training and fixtures data. Everything but the
-    data source is implemented here. A concrete dataloader implements the abstract
-    [`_load_snapshots`][sportsbet.dataloaders.BaseDataLoader] method, and overrides the
-    optional `_list_all_params` hook when its data is downloadable.
+    A dataloader reads long `stats` and `odds` event snapshots and validates them. It derives the available
+    providers, markets and per-column metadata from the data. It then extracts moment-aware training and fixtures
+    data. This base class does everything except read the data source. A concrete dataloader implements the abstract
+    [`_load_snapshots`][sportsbet.dataloaders.BaseDataLoader] method. It overrides the optional `_list_all_params`
+    hook when its data is downloadable.
 
     Args:
         param_grid:
@@ -571,12 +570,13 @@ class BaseDataLoader(ABC):
 
         Read more in the [user guide][user-guide].
 
-        It downloads the selected seasons and returns the historical data a betting strategy is built and backtested on.
-        Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in `X`,
-        optionally capped at an input horizon, the target-moment outcomes become the labels `Y`, and the odds become
-        `O`. A dataloader that already downloaded reuses the snapshots it holds instead of fetching again. A bare
-        call on a reloaded dataloader rebuilds the same data offline. Keep one with `save`. When the odds source
-        carries no markets there is nothing to predict. Use `extract_exploration_data` for the features on their own.
+        It downloads the selected seasons. It returns the historical data you build and backtest a betting strategy
+        on. Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in
+        `X`. An input horizon can cap which snapshots become features. The target-moment outcomes become the labels
+        `Y`. The odds become `O`. A dataloader that already downloaded reuses the snapshots it holds instead of
+        fetching again. A bare call on a reloaded dataloader rebuilds the same data offline. Save one with `save`.
+        When the odds source carries no markets, there is nothing to predict. Use `extract_exploration_data` to get
+        the features on their own.
 
         Args:
             drop_na_thres:
@@ -664,9 +664,9 @@ class BaseDataLoader(ABC):
 
         Read more in the [user guide][user-guide].
 
-        It downloads the selected seasons and returns the features `X`, with no targets and no odds. Use it to look at a
-        sport before choosing a `param_grid` or a model, or when the source carries no odds and so has nothing to
-        predict. The features follow the target moment and input horizon you pass.
+        It downloads the selected seasons. It returns the features `X`, with no targets and no odds. Use it to look at
+        a sport before you choose a `param_grid` or a model. Use it too when the source carries no odds and has nothing
+        to predict. The features follow the target moment and input horizon you pass.
 
         Args:
             drop_na_thres:
@@ -704,12 +704,13 @@ class BaseDataLoader(ABC):
 
         Read more in the [user guide][user-guide].
 
-        A fixture is a match that has not been played yet. This downloads the upcoming matches of the selected leagues
-        and returns them shaped exactly like the training data, so the model trained on the history bets on the
-        fixtures. The two share their columns, not their contents: `param_grid` chose the seasons to train on, and a
+        A fixture is a match that has not been played yet. This downloads the upcoming matches of the selected leagues.
+        It returns them shaped exactly like the training data, so a model trained on the history can bet on the
+        fixtures. The two share their columns, not their contents. `param_grid` chose the seasons to train on, and a
         match still to be played is in none of them.
 
-        `extract_train_data` fixes those columns, so it is called first. The multi-output targets `Y` are always `None`.
+        Call `extract_train_data` first, because it fixes those columns. The multi-output targets `Y` are always
+        `None`.
 
         Returns:
             (X, None, O):

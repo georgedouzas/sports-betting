@@ -2,9 +2,8 @@
 A source of your own
 ====================
 
-This example illustrates BaseStatsSource,
-BaseOddsSource, RawItem and
-RawPayload, by writing a feed for a league the library has never heard of.
+This example shows BaseStatsSource, BaseOddsSource, RawItem and RawPayload. It writes a feed for a league the library
+does not know.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -21,11 +20,11 @@ IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
 MARKETS = ['home_win', 'draw', 'away_win']
 
 # %%
-# Four questions, and never a fetch
-# ---------------------------------
+# A source describes a feed
+# -------------------------
 #
-# A source says what it needs read and how to turn it into snapshots. It never fetches. The dataloader reads the
-# items it declares, so a source stays a plain description of a feed, easy to write and to test.
+# A source says what to read and how to turn it into snapshots. It never fetches. The dataloader reads the items the
+# source declares. So a source stays a plain description of a feed. It is easy to write and to test.
 
 
 class MyStats(BaseStatsSource):
@@ -60,14 +59,14 @@ class MyStats(BaseStatsSource):
 
 
 # %%
-# It declares what it needs. The dataloader reads it.
+# The source declares what it needs. The dataloader reads it.
 
 source = MyStats()
 source.list_required_items([{'year': 2025}])[0]
 
 # %%
-# Given the bytes that came back, it says what the snapshots are. Here we hand it a payload directly, which is exactly
-# what the dataloader would have handed it.
+# The source turns the returned bytes into snapshots. Here we hand it a payload directly. The dataloader would hand it
+# the same payload.
 
 csv = b'date,league,division,year,home_team,away_team,home_form,home_goals,away_goals\n'
 csv += b'2025-08-16,Ruritania,1,2025,A,B,0.5,2,1\n'
@@ -78,8 +77,8 @@ snapshots
 # The odds are a source too
 # -------------------------
 #
-# The markets are its columns and the bookmaker is its `provider` column, so nothing has to be registered anywhere.
-# Drop `draw` and you have a sport that cannot be drawn, and the bettor works the two-way market out on its own.
+# The markets are its columns. The bookmaker is its `provider` column. So nothing has to be registered anywhere. Drop
+# `draw` and you have a sport that cannot be drawn. The bettor works out the two-way market on its own.
 
 
 class MyOdds(BaseOddsSource):
@@ -113,7 +112,7 @@ odds_source = MyOdds()
 odds_source.to_snapshots([RawPayload(item=odds_source.list_required_items([{'year': 2025}])[0], content=csv)])
 
 # %%
-# Hand both to a dataloader and everything on the other pages applies to them:
+# Give both to a dataloader. Then everything on the other pages applies to them:
 #
 # ```python
 # from sportsbet.dataloaders import DataLoader
@@ -122,13 +121,13 @@ odds_source.to_snapshots([RawPayload(item=odds_source.list_required_items([{'yea
 # X, Y, O = dataloader.extract_train_data(odds_type='acme')
 # ```
 #
-# Four rules that are not style:
+# Four rules matter here:
 #
-# 1. Never fetch. If a source could fetch, an extraction could download by accident.
-# 2. `date` is the kick-off instant, in UTC. Resolve your feed's time zone at your own boundary.
-# 3. Fixtures come from `list_fixtures_items`. It defaults to the training items, so override it only when the upcoming
+# 1. Never fetch. A source that could fetch might download during an extraction by accident.
+# 2. `date` is the kick-off instant in UTC. Convert your feed's time zone at your own boundary.
+# 3. Fixtures come from `list_fixtures_items`. It defaults to the training items. Override it only when the upcoming
 #    matches live in a different file than the finished seasons.
-# 4. Credentials go in `request_url`, never in a `RawItem`. The item is what the transform sees and what you save.
+# 4. Credentials go in `request_url`, never in a `RawItem`. The transform sees the item, and you save the item.
 
 # %%
 # A picture of it
