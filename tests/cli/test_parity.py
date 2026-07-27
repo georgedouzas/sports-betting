@@ -52,7 +52,7 @@ def test_a_command_reaches_what_the_api_reaches(command, api, renamed):
 
 def test_execution_reaches_what_the_api_reaches():
     """Test every execution capability is reachable from the command line."""
-    for command in (['venue'], ['markets'], ['balance'], ['quote'], ['place'], ['status'], ['cancel']):
+    for command in (['venue'], ['markets'], ['balance'], ['status'], ['cancel']):
         assert 'venue_ref' in _options(['execution', *command])
 
 
@@ -69,29 +69,10 @@ def test_cancelling_names_the_bet_by_what_makes_it_that_bet():
     assert {'match', 'market', 'selection'} <= _options(['execution', 'cancel'])
 
 
-def test_placing_takes_both_confirmations_and_both_ceilings():
-    """Test the command line can refuse and can be confirmed.
-
-    Nothing is staked without both figures, so a command line missing either could not place at all, and one missing a
-    ceiling could not refuse.
-    """
-    options = _options(['execution', 'place'])
-    assert {'confirm_stake', 'confirm_exposure'} <= options
-    assert {'max_stake', 'max_exposure', 'kill'} <= options
-
-
-def test_placing_has_no_dry_run_flag():
-    """Test a dry run is the absence of a confirmation rather than a flag.
-
-    A flag has a default, and a default that places is a default that spends. There is nothing here to set wrongly.
-    """
-    assert 'dry_run' not in _options(['execution', 'place'])
-
-
 def test_no_command_takes_a_secret():
     """Test a secret is never a command line option, since an option is a shell history entry."""
     forbidden = {'key', 'password', 'secret', 'token', 'app_key', 'username', 'credential'}
-    for group in ('venue', 'markets', 'balance', 'quote', 'place', 'status', 'cancel'):
+    for group in ('venue', 'markets', 'balance', 'status', 'cancel'):
         options = _options(['execution', group])
         assert not options & forbidden, f'`execution {group}` can be handed {sorted(options & forbidden)}'
 

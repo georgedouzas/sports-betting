@@ -8,6 +8,7 @@ import asyncio
 import pandas as pd
 import pytest
 
+from sportsbet.execution import BetIdentity, PlacementReceipt, PlacementStatus, build_receipts_frame
 from sportsbet.mcp import server
 
 SELECTION = {'stats': 'football-data', 'odds': 'football-data', 'leagues': ['England']}
@@ -24,17 +25,15 @@ TOOLS = [
     'execution_authenticate',
     'execution_read_balance',
     'execution_list_markets',
-    'execution_quote',
-    'execution_place',
     'execution_read_status',
     'execution_cancel',
+    'execution_run',
     'browser_navigate',
     'browser_snapshot',
     'browser_click',
     'browser_type',
     'browser_select',
     'browser_fix',
-    'execution_run',
 ]
 
 
@@ -173,94 +172,6 @@ def test_the_model_expression_reaches_the_model(offline_dataloader, tmp_path):
     assert one[0]['Number of bets'] < every[0]['Number of bets']
 
 
-VENUE_FILE = """
-from tests.conftest import FakeVenue
-
-VENUE = FakeVenue(prices={('Arsenal vs Chelsea', 'home_win', 'Arsenal'): 2.10})
-"""
-MODEL_FILE = """
-import numpy as np
-
-from sportsbet.evaluation import OddsComparisonBettor
-
-
-class KeenBettor(OddsComparisonBettor):
-    def bet(self, X, O):
-        return np.ones((len(X), len(self.betting_markets_)), dtype=bool)
-
-
-BETTOR = KeenBettor(betting_markets=['home_win'])
-"""
-STAKE = 10.0
-
-
-def _venue_ref(tmp_path):
-    """Write a venue an agent can name, and return the reference."""
-    path = tmp_path / 'venue.py'
-    path.write_text(VENUE_FILE)
-    return f'{path}:VENUE'
-
-
-@pytest.fixture
-def ready(offline_fixtures_dataloader, tmp_path):
-    """Return a venue, a saved dataloader and a fitted model, the way an agent would have them."""
-    venue = _venue_ref(tmp_path)
-    dataloader = str(tmp_path / 'dataloader.pkl')
-    model = str(tmp_path / 'model.pkl')
-    keen = tmp_path / 'models.py'
-    keen.write_text(MODEL_FILE)
-    _call('extract_train_data', **SELECTION, odds_type='market_average', output=dataloader)
-    _call('fit', dataloader=dataloader, output=model, model=f'{keen}:BETTOR')
-    return venue, dataloader, model
-
-
-def test_an_agent_that_stakes_nothing_gets_the_quote(ready):
-    """Test a tool call with no confirmation stakes nothing.
-
-    An agent is the caller most likely to skim, which is why the rule is in the code rather than in the description.
-    """
-    venue, dataloader, model = ready
-    quote = _call('execution_quote', venue=venue, dataloader=dataloader, bettor=model, stake=STAKE)
-    assert quote['intents']
-    receipts = _call('execution_place', venue=venue, quote=quote)
-    assert {receipt['status'] for receipt in receipts} == {'dry_run'}
-    assert sum(receipt['stake'] for receipt in receipts) == 0.0
-
-
-def test_an_agent_passing_the_wrong_figures_is_told_the_real_ones(ready):
-    """Test a tool call with figures that do not match stakes nothing and states the real figures."""
-    venue, dataloader, model = ready
-    quote = _call('execution_quote', venue=venue, dataloader=dataloader, bettor=model, stake=STAKE)
-    receipts = _call('execution_place', venue=venue, quote=quote, confirm_stake=999.0, confirm_exposure=999.0)
-    assert {receipt['status'] for receipt in receipts} == {'refused_unconfirmed'}
-    assert sum(receipt['stake'] for receipt in receipts) == 0.0
-    assert str(quote['total_stake']) in receipts[0]['detail']
-
-
-def test_an_agent_passing_the_quoted_figures_places_the_bets(ready):
-    """Test a tool call with the quoted figures places the bets."""
-    venue, dataloader, model = ready
-    quote = _call('execution_quote', venue=venue, dataloader=dataloader, bettor=model, stake=STAKE)
-    receipts = _call(
-        'execution_place',
-        venue=venue,
-        quote=quote,
-        confirm_stake=quote['total_stake'],
-        confirm_exposure=quote['total_exposure'],
-    )
-    assert {receipt['status'] for receipt in receipts} <= {'matched_full', 'rejected'}
-    assert sum(receipt['stake'] for receipt in receipts) == quote['total_stake']
-
-
-def test_quoting_downloads_nothing_and_fits_nothing(ready, monkeypatch):
-    """Test quoting reads what was saved rather than going back to the source or refitting."""
-    venue, dataloader, model = ready
-    built = []
-    monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', lambda **rest: built.append(True))
-    _call('execution_quote', venue=venue, dataloader=dataloader, bettor=model, stake=STAKE)
-    assert built == []
-
-
 def test_the_notes_of_a_website_reach_the_agent(tmp_path):
     """Test the site knowledge of a browser session reaches the agent and the library never reads it.
 
@@ -280,3 +191,33 @@ def test_the_notes_of_a_website_reach_the_agent(tmp_path):
     assert info['key'] == 'novibet'
     assert info['notes'] == 'The slip opens on the right. Confirm is two steps.'
     assert info['url'] == 'https://example.invalid/stoixima'
+
+
+def test_execution_run_dry_run_returns_the_bet_it_would_make(monkeypatch):
+    """A dry run through the tool returns the one receipt the unit would place, staking nothing."""
+
+    async def fake_execute_event(event, bettor, loader, session, *, stake, urls, live, poll):
+        receipt = PlacementReceipt(
+            identity=BetIdentity('stub', event, 'home_win', 'Arsenal'),
+            status=PlacementStatus.DRY_RUN,
+            value_bet=f'{event}|home_win',
+        )
+        return build_receipts_frame([receipt])
+
+    monkeypatch.setattr('sportsbet.mcp._server.build_venue', lambda ref: object())
+    monkeypatch.setattr('sportsbet.mcp._server.load_dataloader', lambda path: object())
+    monkeypatch.setattr('sportsbet.mcp._server.load_bettor', lambda path: object())
+    monkeypatch.setattr('sportsbet.mcp._server.execute_event', fake_execute_event)
+    records = _call(
+        'execution_run',
+        venue='venue.py:VENUE',
+        dataloader='loader.pkl',
+        bettor='model.pkl',
+        event='Arsenal vs Chelsea',
+        stake=10.0,
+        urls=['https://book.invalid/ac'],
+        live=False,
+    )
+    assert len(records) == 1
+    assert records[0]['selection'] == 'Arsenal'
+    assert records[0]['status'] == 'dry_run'

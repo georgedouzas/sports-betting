@@ -6,6 +6,7 @@
 
 import asyncio
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, TypeVar
 
 import pandas as pd
@@ -20,15 +21,10 @@ from ..execution import (
     BetIdentity,
     BrowserSession,
     ExecutionError,
-    ExposureLimits,
     PlacementIntent,
-    PlacementQuote,
-    build_value_bet_intents,
     build_venue,
+    execute_event,
 )
-from ..execution import execute as run_execute
-from ..execution import place as run_place
-from ..execution import quote as run_quote
 
 server: FastMCP = FastMCP('sportsbet')
 
@@ -382,35 +378,32 @@ def _build_intents(key: str, records: list[dict[str, Any]]) -> list[PlacementInt
     ]
 
 
-def _to_quote_records(quoted: PlacementQuote) -> dict[str, Any]:
-    """Return a quote an agent can read and pass back."""
-    return {
-        'total_stake': quoted.total_stake,
-        'total_exposure': quoted.total_exposure,
-        'quoted_at': quoted.quoted_at.isoformat(),
-        'intents': [
-            {
-                'match': intent.identity.match,
-                'market': intent.identity.market,
-                'selection': intent.identity.selection,
-                'stake': intent.stake,
-                'min_price': intent.min_price,
-                'value_bet': intent.value_bet,
-                'ref': intent.identity.ref_,
-            }
-            for intent in quoted.intents
-        ],
-    }
-
-
-def _build_quote(key: str, held: dict[str, Any]) -> PlacementQuote:
-    """Return the quote a caller passed back."""
-    return PlacementQuote(
-        intents=_build_intents(key, held['intents']),
-        total_stake=float(held['total_stake']),
-        total_exposure=float(held['total_exposure']),
-        quoted_at=pd.Timestamp(held['quoted_at']).to_pydatetime(),
+def _run_event(
+    venue: str,
+    dataloader: str,
+    bettor: str,
+    event: str,
+    stake: float,
+    urls: list[str],
+    live: bool,
+    poll: str,
+    output: str | None,
+) -> pd.DataFrame:
+    """Watch one event and place the model's bet at its moment."""
+    session = build_venue(venue)
+    if isinstance(session, BaseVenue):
+        msg = f'`{venue}` is a venue with an API rather than a browser session, so `execution_run` does not apply.'
+        raise ExecutionError(msg)
+    loader = load_dataloader(dataloader)
+    fitted = load_bettor(bettor)
+    receipts = asyncio.run(
+        execute_event(event, fitted, loader, session, stake=stake, urls=urls, live=live, poll=pd.Timedelta(poll)),
     )
+    if output is not None:
+        written = Path(output) / 'sports-betting-data'
+        written.mkdir(parents=True, exist_ok=True)
+        receipts.to_csv(written / 'receipts.csv', index=False)
+    return receipts
 
 
 @server.tool()
@@ -450,54 +443,6 @@ async def execution_list_markets(venue: str, matches: list[str]) -> list[dict[st
     return _to_records(await built.list_markets(matches))
 
 
-def _load_fixtures(dataloader: str, bettor: str) -> tuple[Any, Any, Any]:
-    """Return the fitted model and the upcoming matches it bets on."""
-    loader = load_dataloader(dataloader)
-    fitted = load_bettor(bettor)
-    X_fix, _, O_fix = loader.extract_fixtures_data()
-    return fitted, X_fix, O_fix
-
-
-@server.tool()
-async def execution_quote(venue: str, dataloader: str, bettor: str, stake: float) -> dict[str, Any]:
-    """Return what would be staked on the upcoming matches, before anything is.
-
-    Pass `total_stake` and `total_exposure` back to `execution_place` to place the bets. Nothing is staked until you do.
-
-    It reads the dataloader `extract_train_data` saved and the model `fit` saved.
-    """
-    built = _load_venue(venue)
-    await built.authenticate()
-    fitted, X_fix, O_fix = await _offload(_load_fixtures, dataloader, bettor)
-    if X_fix.empty or O_fix is None or O_fix.empty:
-        return {'total_stake': 0.0, 'total_exposure': 0.0, 'quoted_at': None, 'intents': []}
-    intents = build_value_bet_intents(built.key, fitted, X_fix, O_fix, stake)
-    quoted = await run_quote(built, intents, ExposureLimits())
-    return _to_quote_records(quoted)
-
-
-@server.tool()
-async def execution_place(
-    venue: str,
-    quote: dict[str, Any],
-    confirm_stake: float | None = None,
-    confirm_exposure: float | None = None,
-    max_stake: float = 0.0,
-    max_exposure: float = 0.0,
-    kill: bool = False,
-) -> list[dict[str, Any]]:
-    """Place a quoted batch, staking nothing unless the quoted figures are passed back exactly.
-
-    `confirm_stake` and `confirm_exposure` are the figures `execution_quote` returned. Anything else stakes nothing and
-    says what the figures really are.
-    """
-    built = _load_venue(venue)
-    await built.authenticate()
-    limits = ExposureLimits(max_stake_per_bet=max_stake, max_total_exposure=max_exposure, killed=kill)
-    receipts = await run_place(built, _build_quote(built.key, quote), limits, confirm_stake, confirm_exposure)
-    return _to_records(receipts)
-
-
 @server.tool()
 async def execution_read_status(venue: str, intents: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return what the venue holds for these bets."""
@@ -516,12 +461,34 @@ async def execution_cancel(venue: str, match: str, market: str, selection: str) 
     return {'status': receipt.status.value, 'detail': receipt.detail}
 
 
+@server.tool()
+async def execution_run(
+    venue: str,
+    dataloader: str,
+    bettor: str,
+    event: str,
+    stake: float,
+    urls: list[str] | None = None,
+    live: bool = False,
+    poll: str = '30s',
+    output: str | None = None,
+) -> list[dict[str, Any]]:
+    """Watch one event and place the model's bet at its moment.
+
+    It reads the dataloader `extract_train_data` saved and the model `fit` saved, explores the URLs to match the event,
+    ensures the browser session is logged in, monitors the event to its fitted moment, and places the stake on the
+    model's selection when the model finds value. Without `live` it stakes nothing.
+    """
+    receipts = await _offload(_run_event, venue, dataloader, bettor, event, stake, urls or [], live, poll, output)
+    return _to_records(receipts)
+
+
 async def _open_session(venue: str) -> BrowserSession:
     """Return the browser session a reference names, opening it once and keeping it open."""
     if venue not in _SESSIONS:
         built = build_venue(venue)
         if isinstance(built, BaseVenue):
-            msg = f'`{venue}` is a venue with an API, so it is placed at with `execution_place` rather than driven.'
+            msg = f'`{venue}` is a venue with an API rather than a browser session, so the browser tools do not apply.'
             raise ExecutionError(msg)
         await built.start()
         _SESSIONS[venue] = built
@@ -579,69 +546,6 @@ async def browser_fix(venue: str, match: str, locators: dict[str, str]) -> dict[
     session = await _open_session(venue)
     pinned = session.fix(match, locators)
     return {'match': pinned.match, 'url': pinned.url, 'locators': pinned.locators}
-
-
-def _place_run(
-    venue: BaseVenue,
-    dataloader: str,
-    bettor: str,
-    stake: float,
-    max_stake: float,
-    max_exposure: float,
-    confirm_total: float | None,
-    window: str | None,
-    seed: int,
-) -> pd.DataFrame:
-    """Place the value bets of the upcoming matches, one match at a time."""
-    loader = load_dataloader(dataloader)
-    fitted = load_bettor(bettor)
-    return asyncio.run(
-        run_execute(
-            venue,
-            loader,
-            fitted,
-            stake=stake,
-            max_stake=max_stake,
-            max_exposure=max_exposure,
-            confirm_total=confirm_total,
-            window=pd.Timedelta(window) if window else None,
-            seed=seed,
-        ),
-    )
-
-
-@server.tool()
-async def execution_run(
-    venue: str,
-    dataloader: str,
-    bettor: str,
-    stake: float,
-    confirm_total: float | None = None,
-    max_stake: float = 0.0,
-    max_exposure: float = 0.0,
-    window: str | None = None,
-    seed: int = 0,
-) -> list[dict[str, Any]]:
-    """Place the value bets of the upcoming matches, one match at a time.
-
-    It reads the dataloader `extract_train_data` saved and the model `fit` saved, keeps the matches the model bets on
-    and can still reach, and places them in turn, waiting until each match's moment. Nothing stakes until
-    `confirm_total` matches the total it quotes. Set `window` as `2h` for a live model, to bound how long it runs.
-    """
-    built = _load_venue(venue)
-    receipts = await _offload(
-        _place_run,
-        built,
-        dataloader,
-        bettor,
-        stake,
-        max_stake,
-        max_exposure,
-        confirm_total,
-        window,
-        seed,
-    )
-    return _to_records(receipts)
 
 
 def run() -> None:
