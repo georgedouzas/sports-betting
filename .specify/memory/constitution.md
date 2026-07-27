@@ -1,6 +1,26 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.3.0 -> 2.4.0
+Rationale: Rewrite the Writing Style rules for plain, human, structured prose, and forbid the clever, inverted,
+passive-for-effect, idiomatic, and defensive style the old rules allowed. Require that every documentation and docstring
+example runs, proven by the build, with no un-runnable demo and no example that needs a secret or the network. Record
+the 0.15.0 release lessons: a locally set secret can hide a broken example, so the build runs the examples with no
+secret, and the release keeps `development` a superset of the released `main` with no version-tag collision. MINOR:
+strengthened guidance, nothing removed.
+
+Modified sections:
+  - Writing Style: rewrote the rules for plain, human, structured prose, with concrete do and do-not points.
+  - Principle V: every documentation and docstring example runs, proven by the build, with no secret and no network.
+  - Project Profile: a local secret can hide an example, and release keeps development a superset of main with no tag
+    collision.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 2.2.0 -> 2.3.0
 Rationale: The gate is the full sequence in order, formatting, then checks, then the documentation build, then tests.
 The documentation build executes the examples, so a broken example fails the gate and the build is never skipped. A
@@ -92,13 +112,19 @@ gate cannot check. Both are binding.
 
 ## Writing Style
 
-This constitution, and the prose documents in the repository, follow one style so they read consistently and diff
-cleanly. The rule below is the same one the Docstrings conventions place on code.
+This constitution, the prose documents, the docstrings, and the examples follow one style. Write for a reader who wants
+to understand, not to be impressed.
 
-- A line is at most 120 characters, the same limit as the code.
-- A sentence uses no semicolon and no dash as punctuation. Each point is its own sentence. Hyphenated words such as
-  trailing-underscore and repo-agnostic are fine.
-- The English is plain and correct: simple direct words, short sentences, nothing clever or roundabout.
+- Write short, direct sentences. Put one idea in each.
+- Say who does what in the normal order, subject then verb then object. Write "The library places the bet at the
+  venue", not "A venue is placed at by the library".
+- Do not invert word order for effect. Do not use the passive voice unless the doer is unknown or does not matter.
+- Use plain words. Do not use idioms, metaphors, or literary flourish. It reads as a person wrote it for another
+  person, not as a performance.
+- State a real risk once, in the right place, plainly. Do not hedge, and do not repeat a warning.
+- Give a document headings and subsections so a reader can scan it. Do not write a page as one undivided block.
+- A line is at most 120 characters. A sentence uses no semicolon and no dash as punctuation. Hyphenated words such as
+  trailing-underscore are fine.
 
 ## Core Principles
 
@@ -145,7 +171,10 @@ dependencies from silently degrading.
 
 Every public module, class, and function MUST have a docstring in the project's chosen style. A user-facing behavioral
 change MUST update the affected documentation, and MUST add or amend a changelog entry when it changes public behavior.
-Runnable examples are part of the documented contract and MUST stay working.
+Every code example in the documentation and the docstrings MUST run, and the build proves it: the documentation build
+runs the gallery examples and the doctest run runs the docstring examples. No example is a fragment, pseudo-code, or a
+demo that cannot run. No example depends on a secret or the network. An example that would uses sample data, a
+placeholder, or a fake, or it is removed.
 
 Rationale: a library is adopted through its documentation. An undocumented capability does not exist for users, and it
 rots without executable coverage.
@@ -374,10 +403,14 @@ This section instantiates the body above for this repository. It is the only rep
   `--doctest-modules`, and `mypy`. The docs build executes every gallery example, so a broken example fails the gate.
 - Reading the gate: its verdict is the `nox` session summary line, such as `Session tests-3.13 was successful`. An exit
   code read from a piped command reports the last stage of the pipe, not the run, so it can read green over a red run.
-  A reused `nox` environment can carry a stale toolchain, so a clean run can find a lint rule a cached one missed.
+  A reused `nox` environment can carry a stale toolchain, so a clean run can find a lint rule a cached one missed. A
+  locally set secret can hide an example that needs one, so the build runs the examples with no secret.
+- Releasing: the release tool computes the next version from the commits since the last tag. So `development` stays a
+  superset of the released `main`, and the computed version does not collide with a tag that already exists. Reconcile
+  the branches before a release.
 - Style: line length 120, Google docstrings, and `black` with skip-string-normalization.
 - Package layering: `core`, then the domain packages `sources`, `dataloaders`, `evaluation`, and `execution`, then the
   surfaces `cli` and `mcp`. Builders live with what they build: `build_dataloader`, `build_bettor`, and `build_venue`.
 - Named exceptions: `BuildError`, `SelectionError`, `ExecutionError`, and `CredentialError`.
 
-**Version**: 2.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-27
+**Version**: 2.4.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-28
