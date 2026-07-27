@@ -1,7 +1,5 @@
 """Evaluate the performance of predictive models."""
 
-from __future__ import annotations
-
 from ._base import (
     BaseBettor,
     derive_complementary_events,

@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 import asyncio
 import io
@@ -22,7 +21,7 @@ from ..core import ParamGrid
 
 CONNECTIONS_LIMIT = 20
 ENCODING = 'ISO-8859-1'
-LOCAL = 'file://'
+FILE_SCHEME = 'file://'
 
 
 @dataclass(frozen=True)
@@ -103,9 +102,9 @@ def _read_local_file(url: str) -> bytes:
 
 def _read_urls_content(urls: list[str]) -> list[bytes]:
     """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest."""
-    remote = [url for url in urls if not url.startswith(LOCAL)]
+    remote = [url for url in urls if not url.startswith(FILE_SCHEME)]
     fetched = iter(asyncio.run(_fetch_urls(remote)) if remote else [])
-    return [_read_local_file(url) if url.startswith(LOCAL) else next(fetched).encode(ENCODING) for url in urls]
+    return [_read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING) for url in urls]
 
 
 def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
@@ -144,9 +143,8 @@ class BaseSource(ABC):
     """The abstract base class for data sources.
 
     A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
-    The dataloader does the reading. `sport` names the one sport it carries, or is `None` for a vendor that carries
-    several and takes the sport of the source it is paired with. It also answers what it publishes through
-    `list_available_params`.
+    `sport` names the one sport it carries, or is `None` for a vendor that carries several and takes the sport of the
+    source it is paired with. It also answers what it publishes through `list_available_params`.
 
     Examples:
         >>> from sportsbet.sources import FootballDataStats, OddsApi

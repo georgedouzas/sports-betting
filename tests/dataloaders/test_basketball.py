@@ -16,7 +16,7 @@ GAMES = [('Alba Berlin', 'Zalgiris', 77, 87), ('Zalgiris', 'Alba Berlin', 90, 80
 TWO_WAY = 2
 
 
-def _snapshots():
+def _load_snapshots():
     """Build the long snapshots of a basketball season."""
     identity = {'league': 'Euroleague', 'division': 1, 'year': 2025}
     stats, odds = [], []
@@ -79,7 +79,7 @@ def test_odds_that_carry_no_markets_say_so():
     The markets a model learns are the ones its odds price, so it used to fail inside schema validation complaining
     about a column type, which said nothing about the fact that the odds were missing.
     """
-    stats, odds = _snapshots()
+    stats, odds = _load_snapshots()
     empty = odds.iloc[0:0][['event_status', 'event_time', 'date', 'league', 'division', 'year']].assign(
         home_team=[],
         away_team=[],
@@ -91,7 +91,7 @@ def test_odds_that_carry_no_markets_say_so():
 
 def test_the_targets_of_a_game_that_cannot_be_drawn():
     """Test basketball has no draw, and nothing is configured to make that so."""
-    stats, odds = _snapshots()
+    stats, odds = _load_snapshots()
     _, Y, _ = SnapshotsDataLoader(stats, odds).extract_train_data(odds_type='pinnacle')
     markets = {col.split('__')[0] for col in Y.columns}
     assert markets == {'home_win', 'away_win'}
@@ -103,7 +103,7 @@ def test_a_two_way_outcome_sums_to_one():
 
     They are not in a sport that can, and only the data knows which sport it is.
     """
-    stats, odds = _snapshots()
+    stats, odds = _load_snapshots()
     X, Y, O = SnapshotsDataLoader(stats, odds).extract_train_data(odds_type='pinnacle')
     numeric = X.select_dtypes(float).columns
     bettor = ClassifierBettor(DummyClassifier(strategy='prior')).fit(X[numeric], Y, O)

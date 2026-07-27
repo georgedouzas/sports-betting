@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 import json
 import os
@@ -97,11 +96,57 @@ def _events(payload: RawPayload) -> tuple[list[dict], str]:
     return content, 'live'
 
 
+def _parse_key(key: str) -> tuple[str, int, pd.Timestamp | None, str, int]:
+    """Return the sport, the season, the instant and the moment an item key encodes."""
+    parts = key.split(DELIMITER)
+    if parts[-1] == LIVE_KEY:
+        sport, year, _ = parts
+        return sport, int(year), None, 'preplay', 0
+    sport, year, snapshot, event_status, minutes = parts
+    return sport, int(year), pd.Timestamp(snapshot, tz='UTC'), event_status, int(minutes)
+
+
+def _last_update(events: list[dict]) -> pd.Timestamp | None:
+    """Return the latest instant the vendor priced anything at, which stands in for now."""
+    updates = [
+        pd.Timestamp(bookmaker['last_update'])
+        for event in events
+        for bookmaker in event.get('bookmakers', [])
+        if bookmaker.get('last_update')
+    ]
+    return max(updates) if updates else None
+
+
+def _round_minutes(elapsed: float) -> int:
+    """Round an elapsed time to the granularity the vendor prices at."""
+    return int(round(elapsed / SNAPSHOT_MINUTES) * SNAPSHOT_MINUTES)
+
+
+def _outcomes(bookmaker: dict, home_team: str, away_team: str) -> dict:
+    """Return the markets of a bookmaker, named the way the library names them."""
+    outcomes: dict[str, float] = {}
+    for market in bookmaker.get('markets', []):
+        for outcome in market.get('outcomes', []):
+            name, price, point = outcome.get('name'), outcome.get('price'), outcome.get('point')
+            if market['key'] == 'h2h':
+                if name == home_team:
+                    outcomes['home_win'] = price
+                elif name == away_team:
+                    outcomes['away_win'] = price
+                elif name == 'Draw':
+                    outcomes['draw'] = price
+            elif market['key'] == 'totals' and point == TOTALS_POINT:
+                if name == 'Over':
+                    outcomes['over_2.5'] = price
+                elif name == 'Under':
+                    outcomes['under_2.5'] = price
+    return outcomes
+
+
 class OddsApi(BaseOddsSource):
     """The time-stamped odds of The Odds API, quoting a match at each moment it reaches.
 
-    The closing price is public. Historical prices are a paid tier from 6 June 2020, and every
-    market, region and moment is a separate request. The key is read from the environment variable named by `key_env`.
+    The key is read from the environment variable named by `key_env`.
 
     Read more in the [user guide][user-guide].
 
@@ -113,13 +158,11 @@ class OddsApi(BaseOddsSource):
             The markets to price, e.g. `['h2h', 'totals']`. The default `None` uses both.
 
         regions:
-            The bookmaker regions, e.g. `['eu', 'uk']`. The default `None` uses `['eu']`. Every region multiplies the
-            cost.
+            The bookmaker regions, e.g. `['eu', 'uk']`. The default `None` uses `['eu']`.
 
         moments:
             The moments of a match to price, as `(event_status, minutes)` pairs.
-            The default `None` prices the moments the statistics carry. Every
-            moment is a separate snapshot.
+            The default `None` prices the moments the statistics carry.
 
     Examples:
         >>> import os
@@ -310,50 +353,3 @@ class OddsApi(BaseOddsSource):
                 },
             )
         return records
-
-
-def _parse_key(key: str) -> tuple[str, int, pd.Timestamp | None, str, int]:
-    """Return the sport, the season, the instant and the moment an item key encodes."""
-    parts = key.split(DELIMITER)
-    if parts[-1] == LIVE_KEY:
-        sport, year, _ = parts
-        return sport, int(year), None, 'preplay', 0
-    sport, year, snapshot, event_status, minutes = parts
-    return sport, int(year), pd.Timestamp(snapshot, tz='UTC'), event_status, int(minutes)
-
-
-def _last_update(events: list[dict]) -> pd.Timestamp | None:
-    """Return the latest instant the vendor priced anything at, which stands in for now."""
-    updates = [
-        pd.Timestamp(bookmaker['last_update'])
-        for event in events
-        for bookmaker in event.get('bookmakers', [])
-        if bookmaker.get('last_update')
-    ]
-    return max(updates) if updates else None
-
-
-def _round_minutes(elapsed: float) -> int:
-    """Round an elapsed time to the granularity the vendor prices at."""
-    return int(round(elapsed / SNAPSHOT_MINUTES) * SNAPSHOT_MINUTES)
-
-
-def _outcomes(bookmaker: dict, home_team: str, away_team: str) -> dict:
-    """Return the markets of a bookmaker, named the way the library names them."""
-    outcomes: dict[str, float] = {}
-    for market in bookmaker.get('markets', []):
-        for outcome in market.get('outcomes', []):
-            name, price, point = outcome.get('name'), outcome.get('price'), outcome.get('point')
-            if market['key'] == 'h2h':
-                if name == home_team:
-                    outcomes['home_win'] = price
-                elif name == away_team:
-                    outcomes['away_win'] = price
-                elif name == 'Draw':
-                    outcomes['draw'] = price
-            elif market['key'] == 'totals' and point == TOTALS_POINT:
-                if name == 'Over':
-                    outcomes['over_2.5'] = price
-                elif name == 'Under':
-                    outcomes['under_2.5'] = price
-    return outcomes

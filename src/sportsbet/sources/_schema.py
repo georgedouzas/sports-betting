@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from typing import Any, Self
 
@@ -11,14 +10,19 @@ import pandas as pd
 import pandera.pandas as pa
 from pandera.typing.pandas import Timedelta
 
+from ..core import STATUSES
 
-def required_col(alias: str | None = None) -> Any:  # noqa: ANN401
+
+def required_col(alias: str | None = None) -> Any:  # noqa: ANN401  # varied defaults
     """Define a required snapshot-identity column.
 
     Args:
         alias:
             The column name to use when it differs from the field's Python
             identifier.
+
+    Returns:
+        A pandera field marking the column as a required snapshot-identity column.
 
     Examples:
         >>> from sportsbet.sources import BaseStatsSchema, required_col
@@ -36,7 +40,7 @@ def required_col(alias: str | None = None) -> Any:  # noqa: ANN401
     return pa.Field(nullable=False, metadata={'snapshot': True}, alias=alias)
 
 
-def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> Any:  # noqa: ANN401
+def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> Any:  # noqa: ANN401  # varied defaults
     """Define an optional feature or odds column.
 
     Args:
@@ -47,6 +51,9 @@ def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> A
         alias:
             The column name to use when it differs from the field's Python
             identifier.
+
+    Returns:
+        A pandera field marking the column as an optional feature or odds column.
 
     Examples:
         >>> from sportsbet.sources import BaseStatsSchema, optional_col, required_col
@@ -82,7 +89,7 @@ class _BaseSchema(pa.DataFrameModel):
         preplay_check = (df['event_status'] == 'preplay') & (df['event_time'] >= pd.Timedelta(0))
         inplay_check = (df['event_status'] == 'inplay') & (df['event_time'] > pd.Timedelta(0))
         postplay_check = (df['event_status'] == 'postplay') & (df['event_time'] == pd.Timedelta(0))
-        status_check = df['event_status'].isin(['preplay', 'inplay', 'postplay'])
+        status_check = df['event_status'].isin(STATUSES)
         return status_check & (preplay_check | inplay_check | postplay_check)
 
     @classmethod

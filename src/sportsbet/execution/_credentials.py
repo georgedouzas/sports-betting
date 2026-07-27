@@ -1,8 +1,4 @@
-"""Read a secret from the variable named for it, never from an argument.
-
-An argument reaches a shell history, a transcript and a traceback, so a named variable is read where it is used and
-travels nowhere.
-"""
+"""Read a secret from the variable named for it, never from an argument."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -23,6 +19,9 @@ class CredentialError(ExecutionError):
 class CredentialRef:
     """The name of a variable holding a secret.
 
+    Args:
+        var: The name of the variable.
+
     Examples:
         >>> from sportsbet.execution import CredentialRef
         >>> CredentialRef('VENUE_API_KEY').var
@@ -32,7 +31,7 @@ class CredentialRef:
     var: str
 
     def __str__(self: CredentialRef) -> str:
-        """Return the name, since the value is not this object's to show."""
+        """Return the variable name."""
         return self.var
 
 
@@ -46,6 +45,9 @@ def resolve(ref: CredentialRef) -> str:
     Returns:
         secret:
             What the variable holds.
+
+    Raises:
+        CredentialError: If the variable is unset or empty.
     """
     secret = os.environ.get(ref.var)
     if not secret:

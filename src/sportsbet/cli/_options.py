@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from collections.abc import Callable
 
@@ -11,7 +10,7 @@ import click
 from click.decorators import FC
 
 from ..core import STATUSES
-from ..dataloaders._factory import DEFAULT_KEY_ENV, ODDS_SOURCES, STATS_SOURCES
+from ..dataloaders import DEFAULT_KEY_ENV, ODDS_SOURCES, STATS_SOURCES
 
 SELECTION: list[Callable[[FC], FC]] = [
     click.option('--league', 'leagues', multiple=True, help='A league to select. Repeat it to select more.'),
@@ -26,7 +25,7 @@ SELECTION: list[Callable[[FC], FC]] = [
     click.option(
         '--odds',
         type=click.Choice(sorted(ODDS_SOURCES)),
-        help='Where the odds come from. Without it there is nothing to bet on, only features to explore.',
+        help='Where the odds come from.',
     ),
     click.option(
         '--odds-key-env',

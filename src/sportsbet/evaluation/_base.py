@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
@@ -18,18 +17,26 @@ from sklearn.exceptions import NotFittedError
 from sklearn.utils import check_consistent_length, check_scalar
 from sklearn.utils.validation import _check_feature_names, check_is_fitted
 
-from ..core import BoolData, Data, parse_event_time
+from ..core import STATUS_RANK, BoolData, Data, parse_event_time
 
-STATUS_RANK = {'preplay': 0, 'inplay': 1, 'postplay': 2}
 N_ODDS_TOKENS = 4
+OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
 
 
 def derive_market_base(market: str) -> str:
-    """Return the base market name (drop the ``__status__time`` suffix)."""
+    """Return the base market name (drop the ``__status__time`` suffix).
+
+    Args:
+        market:
+            The market column name to reduce to its base.
+
+    Returns:
+        The base market name (e.g. `home_win`).
+    """
     return market.split('__', maxsplit=1)[0]
 
 
-def is_odds_column(col: str) -> bool:
+def _is_odds_column(col: str) -> bool:
     """Return whether a column follows the four-token odds grammar."""
     return len(col.split('__')) == N_ODDS_TOKENS
 
@@ -51,7 +58,7 @@ def find_latest_odds_column(columns: list[str], base: str, provider: str | None 
     best: str | None = None
     best_key: tuple[int, pd.Timedelta] | None = None
     for col in columns:
-        if not is_odds_column(col):
+        if not _is_odds_column(col):
             continue
         col_provider, col_base, status, time = col.split('__')
         if col_base != base or (provider is not None and col_provider != provider):
@@ -60,9 +67,6 @@ def find_latest_odds_column(columns: list[str], base: str, provider: str | None 
         if best_key is None or key > best_key:
             best_key, best = key, col
     return best
-
-
-OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
 
 
 def derive_complementary_events(markets: list[str]) -> list[list[str]]:
@@ -98,15 +102,37 @@ def derive_complementary_events(markets: list[str]) -> list[list[str]]:
     return groups
 
 
+def _check_is_dataframe(data: pd.DataFrame, name: str, *, date_index: bool = False) -> None:
+    """Raise when data is not a dataframe, or lacks a date index when one is required."""
+    labels = {'X': 'Input', 'Y': 'Output', 'O': 'Odds'}
+    if not isinstance(data, pd.DataFrame) or (date_index and not isinstance(data.index, pd.DatetimeIndex)):
+        suffix = ' with a date index' if date_index else ''
+        error_msg = f'{labels[name]} data `{name}` should be pandas dataframe{suffix}.'
+        raise TypeError(error_msg)
+
+
+def _check_markets_compatible(Y_betting_markets: list[str], O_betting_markets: list[str]) -> None:
+    """Raise when the output and odds column names name different markets."""
+    if set(Y_betting_markets) != set(O_betting_markets):
+        error_msg = 'Output and odds data column names are not compatible.'
+        raise ValueError(error_msg)
+
+
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
     """The base class for bettors.
 
-    A bettor turns probabilities into bets. Implement `_fit` and `_predict_proba`, and the value bets, the backtest and
-    the bankroll follow: a bet is placed when the probability the model gives an outcome is higher than the one the
-    price implies.
+    A bettor turns probabilities into bets. A bet is placed when the model's probability for an outcome is higher than
+    the one its price implies. Implement `_fit` and `_predict_proba`.
 
-    Warning: This class should not be used directly. Use the derive classes
-    instead.
+    Args:
+        betting_markets:
+            Select the betting markets from the ones included in the data.
+
+        init_cash:
+            The initial cash to use when betting.
+
+        stake:
+            The stake of each bet.
 
     Examples:
         >>> import numpy as np
@@ -134,17 +160,14 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         >>> results = backtest(bettor, X, Y, O)
         >>> 'Yield percentage per bet' in results.columns
         True
-        >>> # `bet` gives the value bets, one row per match and one column per market. Point it at the fixtures of a
-        >>> # live source to bet on what has not been played; the sample season is finished, so it has none.
+        >>> # `bet` gives the value bets, one row per match and one column per market.
         >>> bettor.fit(X, Y, O).bet(X, O).shape
         (380, 3)
     """
 
-    TOL = 1e-6
-    # Mutually-exclusive markets, identified by their base name (e.g. ``home_win``).
+    TOL: ClassVar[float] = 1e-6
     COMPLEMENTARY_EVENTS: ClassVar[list[list[str]] | None] = None
-
-    _append_odds = False
+    _APPEND_ODDS: ClassVar[bool] = False
 
     def __init__(
         self: Self,
@@ -162,8 +185,8 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         return np.array([col for col in odds_cols if col is not None])
 
     def _append_odds_data(self: Self, X: pd.DataFrame, O: pd.DataFrame | None) -> pd.DataFrame:
-        """Merge `O` into `X` for bettors that model odds directly (e.g. odds comparison)."""
-        if self._append_odds and O is not None:
+        """Merge `O` into `X` when the bettor models odds directly."""
+        if self._APPEND_ODDS and O is not None:
             return pd.concat([X, O], axis=1)
         return X
 
@@ -192,7 +215,6 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         else:
             self.betting_markets_ = np.array(self.betting_markets)
 
-        # Initial cash
         init_cash = self.init_cash
         if init_cash is None:
             init_cash = 1e4
@@ -205,7 +227,6 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         )
         self.init_cash_ = float(init_cash)
 
-        # Stake
         stake = self.stake
         if stake is None:
             stake = 50.0
@@ -233,24 +254,17 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             raise AttributeError(error_msg) from nfe
         return [np.array([0, 1]) for _ in enumerate(self.betting_markets_)]
 
-    def _validate_X_Y(  # noqa: N802
+    def _validate_X_Y(  # noqa: N802  # X, Y, O are the scikit-learn data-matrix names
         self: Self,
         X: pd.DataFrame,
         Y: pd.DataFrame,
     ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
 
-        # Check number of samples
         check_consistent_length(X, Y)
 
-        # Check data type
-        if not isinstance(X, pd.DataFrame) or not isinstance(X.index, pd.DatetimeIndex):
-            error_msg = 'Input data `X` should be pandas dataframe with a date index.'
-            raise TypeError(error_msg)
-        if not isinstance(Y, pd.DataFrame):
-            error_msg = 'Output data `Y` should be pandas dataframe.'
-            raise TypeError(error_msg)
+        _check_is_dataframe(X, 'X', date_index=True)
+        _check_is_dataframe(Y, 'Y')
 
-        # Check Y columns follow the target grammar `{betting_market}__{event_status}__{event_time}`
         Y_cols = [col.split('__') for col in Y.columns]
         error_msg = (
             "Output data column names should follow a naming "
@@ -262,30 +276,23 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
 
         return X, Y, Y_betting_markets
 
-    def _validate_X_O(  # noqa: N802
+    def _validate_X_O(  # noqa: N802  # X, Y, O are the scikit-learn data-matrix names
         self: Self,
         X: pd.DataFrame,
         O: pd.DataFrame,
     ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
 
-        # Check number of samples
         check_consistent_length(X, O)
 
-        # Check data type
-        if not isinstance(X, pd.DataFrame) or not isinstance(X.index, pd.DatetimeIndex):
-            error_msg = 'Input data `X` should be pandas dataframe with a date index.'
-            raise TypeError(error_msg)
-        if not isinstance(O, pd.DataFrame):
-            error_msg = 'Odds data `O` should be pandas dataframe.'
-            raise TypeError(error_msg)
+        _check_is_dataframe(X, 'X', date_index=True)
+        _check_is_dataframe(O, 'O')
 
-        # Check O columns follow `{provider}__{betting_market}__{event_status}__{event_time}`
         O_cols = [col.split('__') for col in O.columns]
         error_msg = (
             "Odds data column names should follow a naming "
             "convention of the form `f'{provider}__{betting_market}__{event_status}__{event_time}'`"
         )
-        if {len(tokens) for tokens in O_cols} != {4}:
+        if {len(tokens) for tokens in O_cols} != {N_ODDS_TOKENS}:
             raise ValueError(error_msg)
         O_providers = [tokens[0] for tokens in O_cols]
         if len(set(O_providers)) != 1:
@@ -328,13 +335,19 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Returns:
             self:
                 The fitted bettor object.
+
+        Raises:
+            TypeError:
+                If `X`, `Y` or `O` are not pandas dataframes, or `X` has no date index.
+
+            ValueError:
+                If the `Y` or `O` column names are malformed, or the output and odds
+                markets are not compatible.
         """
         X, Y, Y_betting_markets = self._validate_X_Y(X, Y)
         if O is not None:
             X, O, O_betting_markets = self._validate_X_O(X, O)
-            if set(Y_betting_markets) != set(O_betting_markets):
-                error_msg = 'Output and odds data column names are not compatible.'
-                raise ValueError(error_msg)
+            _check_markets_compatible(Y_betting_markets, O_betting_markets)
         X_fit = self._append_odds_data(X, O)
         self._check(X_fit, Y, O, Y_betting_markets)
         return self._fit(X_fit, Y[self.feature_names_out_], O[self.feature_names_odds_] if O is not None else None)
@@ -349,6 +362,11 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Returns:
             Y:
                 The positive class probabilities.
+
+        Raises:
+            TypeError:
+                If the predicted probabilities and selected betting markets have
+                incompatible shapes.
         """
         check_is_fitted(self)
         _check_feature_names(self, X, reset=False)
@@ -390,6 +408,14 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Returns:
             B:
                 The value bets.
+
+        Raises:
+            TypeError:
+                If `X` or `O` are not pandas dataframes, or `X` has no date index.
+
+            ValueError:
+                If the `O` column names are malformed, or do not include the selected
+                betting markets.
         """
         Y_proba_pred = self.predict_proba(self._append_odds_data(X, O))
         X, O, O_betting_markets = self._validate_X_O(X, O)
@@ -428,13 +454,19 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Returns:
             score:
                 Annual sharpe ratio of predicted value bets.
+
+        Raises:
+            TypeError:
+                If `X`, `Y` or `O` are not pandas dataframes, or `X` has no date index.
+
+            ValueError:
+                If the `Y` or `O` column names are malformed, or the output and odds
+                markets are not compatible.
         """
         check_is_fitted(self)
         X, Y, Y_betting_markets = self._validate_X_Y(X, Y)
         X, O, O_betting_markets = self._validate_X_O(X, O)
-        if set(Y_betting_markets) != set(O_betting_markets):
-            error_msg = 'Output and odds data column names are not compatible.'
-            raise ValueError(error_msg)
+        _check_markets_compatible(Y_betting_markets, O_betting_markets)
         value_bets = self.bet(X, O)
         Y = Y[self.feature_names_out_]
         O = O[self._get_feature_names_odds(O)]
@@ -464,10 +496,6 @@ def save_bettor(bettor: BaseBettor, path: str) -> None:
         path:
             The path to save the object.
 
-    Returns:
-        self:
-            The bettor object.
-
     Examples:
         >>> import tempfile
         >>> from pathlib import Path
@@ -481,7 +509,7 @@ def save_bettor(bettor: BaseBettor, path: str) -> None:
         >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
         >>> bettor = OddsComparisonBettor(betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
         >>> save_bettor(bettor, path)
-        >>> # A fitted bettor comes back fitted, so the model that was backtested is the model that bets.
+        >>> # A fitted bettor comes back fitted.
         >>> load_bettor(path).betting_markets_.tolist()
         ['home_win', 'draw', 'away_win']
     """

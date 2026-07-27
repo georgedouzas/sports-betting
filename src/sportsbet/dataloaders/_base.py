@@ -1,7 +1,5 @@
 """Define the base dataloader that extracts the modelling data."""
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from pathlib import Path
 from types import NoneType
@@ -16,8 +14,9 @@ from ..core import (
     GROUPS_COLS,
     IDENTITY_COLS,
     IDENTITY_FIELDS,
+    NON_PREPLAY_EVENT_STATUSES,
+    STATUS_RANK,
     STATUSES,
-    TARGET_EVENT_STATUSES,
     FixturesData,
     ParamGrid,
     TrainData,
@@ -26,26 +25,25 @@ from ..core import (
 from ..sources import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
 DELIMITER = '__'
-STATUS_RANK = {status: ind for ind, status in enumerate(STATUSES)}
 DAY = pd.Timedelta('1D')
 
 
-def _feature_column(col: str, event_status: str, event_time: pd.Timedelta) -> str:
+def _build_feature_column(col: str, event_status: str, event_time: pd.Timedelta) -> str:
     """Build a time-varying feature column name."""
     return DELIMITER.join([col, event_status, format_event_time(event_time)])
 
 
-def _odds_column(provider: str, col: str, event_status: str, event_time: pd.Timedelta) -> str:
+def _build_odds_column(provider: str, col: str, event_status: str, event_time: pd.Timedelta) -> str:
     """Build an odds column name."""
     return DELIMITER.join([provider, col, event_status, format_event_time(event_time)])
 
 
-def _target_column(col: str, target_event_status: str, target_event_time: pd.Timedelta) -> str:
+def _build_target_column(col: str, target_event_status: str, target_event_time: pd.Timedelta) -> str:
     """Build a target (Y) column name."""
     return DELIMITER.join([col, target_event_status, format_event_time(target_event_time)])
 
 
-def _field_name(col: str) -> str:
+def _to_field_name(col: str) -> str:
     """Turn a column name into a valid Python identifier (``over_2.5`` -> ``over_2_5``)."""
     return col.replace('.', '_')
 
@@ -55,7 +53,7 @@ def _build_value_namespace(metadata: dict[str, dict[str, Any]]) -> tuple[dict, d
     annotations: dict = {}
     namespace: dict = {}
     for col, meta in metadata.items():
-        field = _field_name(col)
+        field = _to_field_name(col)
         annotations[field] = meta['type']
         alias = col if field != col else None
         namespace[field] = optional_col(meta['include'], fixed=meta['fixed'], alias=alias)
@@ -108,15 +106,14 @@ def _build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSche
 
 
 class BaseDataLoader(ABC):
-    """The abstract base class for dataloaders.
+    """Read and validate source snapshots and extract moment-aware modelling data.
 
     A dataloader reads long event-snapshot `stats` and `odds` data, validates it,
     derives the available providers, markets and per-column metadata from the data
     itself, and extracts moment-aware training and fixtures data. Everything but the
-    data source is implemented here; a concrete dataloader only needs to implement
-    the abstract [`_snapshots`][sportsbet.dataloaders.BaseDataLoader] method and, when
-    its data is downloadable, override the optional `_all_params` hook to enable
-    parameter discovery.
+    data source is implemented here. A concrete dataloader implements the abstract
+    [`_load_snapshots`][sportsbet.dataloaders.BaseDataLoader] method, and overrides the
+    optional `_list_all_params` hook when its data is downloadable.
 
     Args:
         param_grid:
@@ -150,6 +147,27 @@ class BaseDataLoader(ABC):
         odds_cols_ (pd.Index):
             The columns of `O` for training and fixtures data.
 
+        stats_schema_ (Schema):
+            The validated schema of the `stats` snapshots.
+
+        odds_schema_ (Schema):
+            The validated schema of the `odds` snapshots.
+
+        targets_ (list[str]):
+            The market columns the targets are built from.
+
+        target_event_status_ (str):
+            The resolved status of the target moment.
+
+        target_event_time_ (pd.Timedelta):
+            The resolved time of the target moment.
+
+        input_event_status_ (str | None):
+            The resolved status of the input horizon.
+
+        input_event_time_ (pd.Timedelta):
+            The resolved time of the input horizon.
+
     Examples:
         >>> import pandas as pd
         >>> from sportsbet.dataloaders import BaseDataLoader
@@ -160,7 +178,7 @@ class BaseDataLoader(ABC):
         >>> class MyDataLoader(BaseDataLoader):
         ...     'A dataloader of data that is already on your machine.'
         ...
-        ...     def _snapshots(self):
+        ...     def _load_snapshots(self):
         ...         stats = pd.DataFrame([
         ...             {**identity, 'event_status': 'preplay', 'event_time': pd.Timedelta(0), 'home_form': 1.0},
         ...             {**identity, 'event_status': 'postplay', 'event_time': pd.Timedelta(0), 'home_win': 1},
@@ -172,7 +190,7 @@ class BaseDataLoader(ABC):
         ...         return stats, odds
         >>>
         >>> dataloader = MyDataLoader()
-        >>> # The providers and the markets are derived from the data, so nothing has to be registered.
+        >>> # The providers and the markets are derived from the data.
         >>> dataloader.get_odds_types()
         ['acme']
         >>> X, Y, O = dataloader.extract_train_data(odds_type='acme')
@@ -186,19 +204,19 @@ class BaseDataLoader(ABC):
         self.param_grid = param_grid
 
     @abstractmethod
-    def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _load_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the long training `stats`/`odds` snapshots."""
 
-    def _fixtures_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _load_fixtures_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the long `stats`/`odds` snapshots of the upcoming matches, the training ones by default."""
-        return self._snapshots()
+        return self._load_snapshots()
 
     @property
     def sources_(self: Self) -> tuple:
         """The data sources, empty for a dataloader carrying its own data."""
         return ()
 
-    def _all_params(self: Self) -> list[dict]:
+    def _list_all_params(self: Self) -> list[dict]:
         """Return the parameter combinations the sources publish, used to filter `param_grid`."""
         msg = f'{type(self).__name__} carries its own data, so it publishes no catalogue of parameters.'
         raise NotImplementedError(msg)
@@ -215,7 +233,7 @@ class BaseDataLoader(ABC):
         ]
 
     @staticmethod
-    def _upcoming(data: pd.DataFrame) -> pd.Series:
+    def _is_upcoming(data: pd.DataFrame) -> pd.Series:
         """Return which snapshots belong to a match dated in the future."""
         return data['date'] >= pd.Timestamp.now(tz='UTC')
 
@@ -243,15 +261,19 @@ class BaseDataLoader(ABC):
             raise ValueError(msg)
 
     def get_odds_types(self: Self) -> list[str]:
-        """Return the available odds types (providers) derived from the data."""
-        _, odds = self._snapshots()
+        """Return the available odds types (providers) derived from the data.
+
+        Returns:
+            The provider names the odds data carries, sorted.
+        """
+        _, odds = self._load_snapshots()
         return sorted(odds['provider'].dropna().unique().tolist())
 
     def _load(self: Self, odds_type: str | None) -> None:
         """Read and validate the snapshots, derive their metadata and build the inputs, reusing what is held."""
         if getattr(self, 'stats_', None) is not None and getattr(self, 'odds_type_', None) == odds_type:
             return
-        stats, odds = self._snapshots()
+        stats, odds = self._load_snapshots()
         stats = self._finalize(stats)
         if not [col for col in odds.columns if col not in EVENT_COLS + IDENTITY_COLS + ['provider']]:
             odds = self._build_empty_odds()
@@ -297,11 +319,11 @@ class BaseDataLoader(ABC):
         self.drop_na_thres_ = drop_na_thres
         return X
 
-    def _identity_cols(self: Self) -> list[str]:
-        """Snapshot columns that identify a match (all snapshot cols but the event ones)."""
+    def _list_identity_cols(self: Self) -> list[str]:
+        """Return the snapshot columns that identify a match, all snapshot columns but the event ones."""
         return [col for col in self.stats_schema_.list_snapshot_cols() if col not in EVENT_COLS]
 
-    def _feature_mask(
+    def _build_feature_mask(
         self: Self,
         data: pd.DataFrame,
         target_event_status: str,
@@ -322,7 +344,7 @@ class BaseDataLoader(ABC):
 
     def _pivot_features(self: Self, stats: pd.DataFrame) -> pd.DataFrame:
         """Pivot long snapshots into wide, moment-aware feature columns, keeping every match."""
-        index_cols = self._identity_cols()
+        index_cols = self._list_identity_cols()
         feature_cols = [col for col in stats.columns if col not in self.stats_schema_.list_snapshot_cols()]
         X = stats.pivot_table(values=feature_cols, index=index_cols, columns=EVENT_COLS, aggfunc='first')
         keep = [
@@ -339,7 +361,11 @@ class BaseDataLoader(ABC):
         )
         X = X[list(cols.itertuples(index=False, name=None))]
         X.columns = [
-            col if self.stats_schema_.get_col_metadata(col)['fixed'] else _feature_column(col, event_status, event_time)
+            (
+                col
+                if self.stats_schema_.get_col_metadata(col)['fixed']
+                else _build_feature_column(col, event_status, event_time)
+            )
             for col, event_status, event_time in X.columns
         ]
         matches = stats[index_cols].drop_duplicates().sort_values(index_cols).set_index(index_cols).index
@@ -347,7 +373,7 @@ class BaseDataLoader(ABC):
 
     def _pivot_odds(self: Self, odds: pd.DataFrame) -> pd.DataFrame:
         """Pivot long odds snapshots into wide, per-provider odds columns."""
-        index_cols = self._identity_cols()
+        index_cols = self._list_identity_cols()
         odds_cols = [
             col for col in odds.columns if col not in self.odds_schema_.list_snapshot_cols() and col != 'provider'
         ]
@@ -371,20 +397,20 @@ class BaseDataLoader(ABC):
             (
                 col
                 if self.odds_schema_.get_col_metadata(col)['fixed']
-                else _odds_column(provider, col, event_status, event_time)
+                else _build_odds_column(provider, col, event_status, event_time)
             )
             for col, event_status, event_time, provider in O.columns
         ]
         return O
 
-    def _bet_moment(
+    def _find_bet_moment(
         self: Self,
         odds: pd.DataFrame,
         target_event_status: str,
         target_event_time: pd.Timedelta,
     ) -> tuple[str, pd.Timedelta] | None:
         """Return the latest moment the odds price, which is the moment a bet is placed."""
-        priced = odds.loc[self._feature_mask(odds, target_event_status, target_event_time), list(EVENT_COLS)]
+        priced = odds.loc[self._build_feature_mask(odds, target_event_status, target_event_time), list(EVENT_COLS)]
         priced = priced.drop_duplicates()
         if priced.empty:
             return None
@@ -401,7 +427,7 @@ class BaseDataLoader(ABC):
         input_event_time: pd.Timedelta | None = None,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Build aligned, date-indexed `X` and `O`, taking features no later than the odds are quoted."""
-        bet = self._bet_moment(odds, target_event_status, target_event_time)
+        bet = self._find_bet_moment(odds, target_event_status, target_event_time)
         if input_event_status is None:
             if bet is not None:
                 input_event_status, input_event_time = bet
@@ -417,8 +443,8 @@ class BaseDataLoader(ABC):
                 )
                 raise ValueError(msg)
         horizon = (target_event_status, target_event_time, input_event_status, input_event_time)
-        X = self._pivot_features(stats[self._feature_mask(stats, *horizon)])
-        O = self._pivot_odds(odds[self._feature_mask(odds, *horizon)])
+        X = self._pivot_features(stats[self._build_feature_mask(stats, *horizon)])
+        O = self._pivot_odds(odds[self._build_feature_mask(odds, *horizon)])
         O = O.reindex(X.index)
         X = X.reset_index().set_index('date')
         O.index = X.index
@@ -433,10 +459,10 @@ class BaseDataLoader(ABC):
     ) -> pd.DataFrame:
         """Build the target table evaluated at the target moment, aligned to ``index``."""
         mask = (stats['event_status'] == target_event_status) & (stats['event_time'] == target_event_time)
-        targets = stats.loc[mask, self._identity_cols() + self.targets_].set_index(self._identity_cols())
+        targets = stats.loc[mask, self._list_identity_cols() + self.targets_].set_index(self._list_identity_cols())
         targets = targets.reindex(index)
         columns_mapping = {
-            target: _target_column(target, target_event_status, target_event_time) for target in self.targets_
+            target: _build_target_column(target, target_event_status, target_event_time) for target in self.targets_
         }
         return targets.rename(columns=columns_mapping)
 
@@ -449,9 +475,9 @@ class BaseDataLoader(ABC):
     ) -> tuple[str, pd.Timedelta]:
         """Validate and default the target moment and input horizon."""
         check_scalar(target_event_status, 'target_event_status', (NoneType, str))
-        if target_event_status is not None and target_event_status not in TARGET_EVENT_STATUSES:
+        if target_event_status is not None and target_event_status not in NON_PREPLAY_EVENT_STATUSES:
             msg = (
-                f'Invalid target event status. It should be one of {TARGET_EVENT_STATUSES}. '
+                f'Invalid target event status. It should be one of {NON_PREPLAY_EVENT_STATUSES}. '
                 f'Got {target_event_status} instead.'
             )
             raise ValueError(msg)
@@ -493,7 +519,7 @@ class BaseDataLoader(ABC):
         self.odds_schema_.validate(self.odds_)
         if self.stats_schema_.list_snapshot_cols() != self.odds_schema_.list_snapshot_cols():
             msg = 'Stats and odds snapshots columns do not match.'
-            raise AssertionError(msg)
+            raise ValueError(msg)
 
         event_statuses = [status for status in self.stats_['event_status'].unique() if status != 'preplay']
         if not event_statuses:
@@ -507,7 +533,7 @@ class BaseDataLoader(ABC):
             input_event_time,
         )
 
-        index_cols = self._identity_cols()
+        index_cols = self._list_identity_cols()
         target_mask = (self.stats_['event_status'] == target_event_status) & (
             self.stats_['event_time'] == target_event_time
         )
@@ -548,10 +574,9 @@ class BaseDataLoader(ABC):
         It downloads the selected seasons and returns the historical data a betting strategy is built and backtested on.
         Every snapshot before the target moment (`target_event_status`, `target_event_time`) becomes a feature in `X`,
         optionally capped at an input horizon, the target-moment outcomes become the labels `Y`, and the odds become
-        `O`. A dataloader that already downloaded reuses the snapshots it holds instead of fetching again, so a bare
-        call on a reloaded dataloader rebuilds the same data offline; keep one with `save`. When the odds
-        source carries no markets there is nothing to predict, so call `extract_exploration_data` for the features on
-        their own.
+        `O`. A dataloader that already downloaded reuses the snapshots it holds instead of fetching again. A bare
+        call on a reloaded dataloader rebuilds the same data offline. Keep one with `save`. When the odds source
+        carries no markets there is nothing to predict. Use `extract_exploration_data` for the features on their own.
 
         Args:
             drop_na_thres:
@@ -566,7 +591,7 @@ class BaseDataLoader(ABC):
             input_event_status:
                 Latest snapshot status to keep as a feature, one of `'preplay'`,
                 `'inplay'`, `'postplay'`. `None` (default) keeps every snapshot
-                before the target; e.g. `'preplay'` keeps only pre-match features.
+                before the target. For example, `'preplay'` keeps only pre-match features.
             input_event_time:
                 Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
                 together with `input_event_status`. Defaults to 0.
@@ -575,6 +600,12 @@ class BaseDataLoader(ABC):
             (X, Y, O):
                 Moment-aware features `X`, target outcomes `Y` and odds `O`. The
                 three components share the same date index and rows.
+
+        Raises:
+            ValueError:
+                If the selection yields no betting markets, so there is nothing
+                to predict. Pass an `odds` source, or call
+                `extract_exploration_data` for the features on their own.
         """
         arguments = (
             drop_na_thres,
@@ -606,7 +637,7 @@ class BaseDataLoader(ABC):
                 'own.'
             )
             raise ValueError(msg)
-        index_cols = self._identity_cols()
+        index_cols = self._list_identity_cols()
         train_mask = pd.MultiIndex.from_frame(self.stats_[index_cols]).isin(self._train_ids)
         Y = self._extract_targets(
             self.stats_[train_mask],
@@ -617,9 +648,6 @@ class BaseDataLoader(ABC):
         Y.index = X.index
         self.output_cols_ = Y.columns
 
-        # A supervised model cannot be fitted on a target it does not have. scikit-learn does not accept a missing
-        # value in `y`, and a match whose outcome the feed never recorded has no target to learn from, so it is dropped
-        # rather than imputed: an invented outcome is a match that never happened.
         labelled = Y.notna().all(axis=1)
         return X[labelled], Y[labelled], O[labelled]
 
@@ -651,7 +679,7 @@ class BaseDataLoader(ABC):
             input_event_status:
                 Latest snapshot status to keep as a feature, one of `'preplay'`,
                 `'inplay'`, `'postplay'`. `None` (default) keeps every snapshot
-                before the target; e.g. `'preplay'` keeps only pre-match features.
+                before the target. For example, `'preplay'` keeps only pre-match features.
             input_event_time:
                 Time of the input horizon (e.g. `pd.Timedelta('45min')`), used
                 together with `input_event_status`. Defaults to 0.
@@ -681,31 +709,35 @@ class BaseDataLoader(ABC):
         fixtures. The two share their columns, not their contents: `param_grid` chose the seasons to train on, and a
         match still to be played is in none of them.
 
-        `extract_train_data` fixes those columns, so it is called first. The multi-output targets `Y` are always `None`,
-        and are returned only for consistency.
+        `extract_train_data` fixes those columns, so it is called first. The multi-output targets `Y` are always `None`.
 
         Returns:
             (X, None, O):
                 The fixtures input data `X`, `Y` equal to `None`, and the
                 corresponding odds `O`, matching the training columns.
+
+        Raises:
+            ValueError:
+                If it is called before `extract_train_data`, which fixes the
+                columns the fixtures data must match.
         """
         if not hasattr(self, 'input_cols_'):
             msg = 'Call `extract_train_data` before `extract_fixtures_data`, since it fixes the columns to match.'
             raise ValueError(msg)
-        stats, odds = self._fixtures_snapshots()
+        stats, odds = self._load_fixtures_snapshots()
         stats = self._finalize(stats)
         odds = self._finalize(odds)
         odds = odds[odds['provider'] == self.odds_type_] if self.odds_type_ is not None else odds.iloc[0:0]
 
-        index_cols = self._identity_cols()
+        index_cols = self._list_identity_cols()
         played = pd.MultiIndex.from_frame(
             stats.loc[
                 (stats['event_status'] == self.target_event_status_) & (stats['event_time'] == self.target_event_time_),
                 index_cols,
             ],
         )
-        fixtures_mask = ~pd.MultiIndex.from_frame(stats[index_cols]).isin(played) & self._upcoming(stats)
-        fixtures_odds_mask = ~pd.MultiIndex.from_frame(odds[index_cols]).isin(played) & self._upcoming(odds)
+        fixtures_mask = ~pd.MultiIndex.from_frame(stats[index_cols]).isin(played) & self._is_upcoming(stats)
+        fixtures_odds_mask = ~pd.MultiIndex.from_frame(odds[index_cols]).isin(played) & self._is_upcoming(odds)
         if not fixtures_mask.any():
             X = pd.DataFrame(columns=self.input_cols_, index=pd.DatetimeIndex([], name='date'))
             O = pd.DataFrame(columns=self.odds_cols_, index=pd.DatetimeIndex([], name='date'))

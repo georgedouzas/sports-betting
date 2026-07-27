@@ -385,7 +385,7 @@ Set it to `inplay` at 45 minutes to use information up to half time. An in play 
 moment, so the horizon and the odds agree on when the bet is placed.
 
 The same horizon applies to the fixtures, so training and prediction share the feature set. See
-[The moment you bet](../../practice/betting_moment.md).
+[The moment you bet](../../practice/find_betting_moment.md).
 
 ## Exploration data
 
@@ -532,7 +532,7 @@ from sportsbet.dataloaders import BaseDataLoader
 class MyDataLoader(BaseDataLoader):
     """A dataloader of snapshots I already hold."""
 
-    def _snapshots(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _load_snapshots(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         return stats, odds
 
 

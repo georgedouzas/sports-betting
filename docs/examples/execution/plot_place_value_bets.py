@@ -25,9 +25,9 @@ from sportsbet.execution import (
     ExposureLimits,
     PlacementReceipt,
     PlacementStatus,
+    build_value_bet_intents,
     place,
     quote,
-    value_bet_intents,
 )
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
@@ -72,7 +72,7 @@ class DemoVenue(BaseVenue):
 
     async def place(self, intent):
         """Record a bet once for its identity, reporting the one already held on a repeat."""
-        ref = intent.identity.ref
+        ref = intent.identity.ref_
         if ref in self.orders:
             order = self.orders[ref]
             return PlacementReceipt(
@@ -95,12 +95,12 @@ class DemoVenue(BaseVenue):
 
     async def read_status(self, identities):
         """Return the bets the venue holds for these identities."""
-        records = [{'ref': i.ref, **self.orders[i.ref]} for i in identities if i.ref in self.orders]
+        records = [{'ref': i.ref_, **self.orders[i.ref_]} for i in identities if i.ref_ in self.orders]
         return pd.DataFrame.from_records(records)
 
     async def cancel(self, identity):
         """Cancel a bet."""
-        self.orders.pop(identity.ref, None)
+        self.orders.pop(identity.ref_, None)
         return PlacementReceipt(identity=identity, status=PlacementStatus.REJECTED, detail='Cancelled.')
 
 
@@ -108,14 +108,14 @@ class DemoVenue(BaseVenue):
 # The value bets to place
 # -----------------------
 #
-# A bettor finds the value bets the ordinary way, and `value_bet_intents` turns them into intents. Each intent carries
-# a minimum price, the price the value bet was computed at, since below it the bet is no longer a value bet.
+# A bettor finds the value bets the ordinary way, and `build_value_bet_intents` turns them into intents. Each intent
+# carries a minimum price, the price the value bet was computed at.
 
 dataloader = DataLoader(param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds())
 X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')
 bettor = OddsComparisonBettor(alpha=0.05, betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
 
-intents = value_bet_intents('demo', bettor, X.head(30), O.head(30), stake=10.0)[:8]
+intents = build_value_bet_intents('demo', bettor, X.head(30), O.head(30), stake=10.0)[:8]
 pd.DataFrame(
     {
         'match': [intent.identity.match for intent in intents],

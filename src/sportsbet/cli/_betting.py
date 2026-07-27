@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from pathlib import Path
 
@@ -16,12 +15,13 @@ from sklearn.model_selection import TimeSeriesSplit
 from ..dataloaders import load_dataloader
 from ..evaluation import backtest as run_backtest
 from ..evaluation import load_bettor, save_bettor
+from ._building import _build_modelled, _report_errors
 from ._options import BACKTEST, DATALOADER, MODEL, OUTPUT, options
-from ._utils import modelled, print_console, reported
+from ._utils import _print_console
 
 
-def _needs_model(selection: dict[str, object]) -> None:
-    """Say a model is needed, since backtesting and fitting cannot happen without one."""
+def _require_model(selection: dict[str, object]) -> None:
+    """Require a model, raising a usage error when none was named."""
     if not selection.get('model'):
         msg = 'A model is needed. Name a ready-made one or one of your own with `--model`.'
         raise click.UsageError(msg)
@@ -29,11 +29,7 @@ def _needs_model(selection: dict[str, object]) -> None:
 
 @click.group()
 def evaluation() -> None:
-    """Backtest, fit and bet with a model on a saved dataloader.
-
-    Each command reads the file `dataloader train extract` writes, so the data is downloaded once and, for `fit` and
-    `bet`, the model is trained once.
-    """
+    """Backtest, fit and bet with a model on a saved dataloader."""
     return
 
 
@@ -48,8 +44,8 @@ def backtest(
     **selection: object,
 ) -> None:
     """Backtest a model on a saved dataloader's training data."""
-    _needs_model(selection)
-    with reported(), modelled(selection) as bettor:
+    _require_model(selection)
+    with _report_errors(), _build_modelled(selection) as bettor:
         if bettor is None:
             return
         X_train, Y_train, O_train = load_dataloader(dataloader_path).extract_train_data()
@@ -65,7 +61,7 @@ def backtest(
             n_jobs=n_jobs,
             verbose=verbose,
         )
-        print_console([results], ['Backtesting results'])
+        _print_console([results], ['Backtesting results'])
         if data_path is not None:
             written = Path(data_path) / 'sports-betting-data'
             written.mkdir(parents=True, exist_ok=True)
@@ -77,8 +73,8 @@ def backtest(
 @click.option('--output', '-o', 'output', required=True, type=click.Path(), help='Where to save the fitted model.')
 def fit(dataloader_path: str, output: str, **selection: object) -> None:
     """Fit a model on a saved dataloader's training data and save it."""
-    _needs_model(selection)
-    with reported(), modelled(selection) as bettor:
+    _require_model(selection)
+    with _report_errors(), _build_modelled(selection) as bettor:
         if bettor is None:
             return
         X_train, Y_train, O_train = load_dataloader(dataloader_path).extract_train_data()
@@ -100,7 +96,7 @@ def fit(dataloader_path: str, output: str, **selection: object) -> None:
 @click.option('--output', '-o', 'data_path', type=click.Path(), help='A directory to write the bets to, as CSV.')
 def bet(dataloader_path: str, bettor_path: str, data_path: str | None) -> None:
     """Predict the value bets of the upcoming matches with a model saved by `fit`."""
-    with reported():
+    with _report_errors():
         loader = load_dataloader(dataloader_path)
         bettor = load_bettor(bettor_path)
         X_fix, _, O_fix = loader.extract_fixtures_data()
@@ -108,7 +104,7 @@ def bet(dataloader_path: str, bettor_path: str, data_path: str | None) -> None:
             Console().print(Panel.fit('[bold red]There are no upcoming matches to bet on.'))
             return
         value_bets = pd.DataFrame(bettor.bet(X_fix, O_fix), columns=list(bettor.betting_markets_), index=X_fix.index)
-        print_console([value_bets], ['Value bets'])
+        _print_console([value_bets], ['Value bets'])
         if data_path is not None:
             written = Path(data_path) / 'sports-betting-data'
             written.mkdir(parents=True, exist_ok=True)

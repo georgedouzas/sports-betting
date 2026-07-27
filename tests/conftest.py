@@ -37,7 +37,7 @@ class SnapshotsDataLoader(BaseDataLoader):
 
     The library ships no way of doing this on purpose: data comes from sources, so that a user always knows where theirs
     came from. A test is the one place a bespoke moment has to be arranged, and the way to arrange it is the way anyone
-    else would, by implementing `_snapshots`.
+    else would, by implementing `_load_snapshots`.
     """
 
     def __init__(
@@ -51,7 +51,7 @@ class SnapshotsDataLoader(BaseDataLoader):
         self.stats = stats
         self.odds = BaseDataLoader._build_empty_odds() if odds is None else odds
 
-    def _snapshots(self: 'SnapshotsDataLoader') -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _load_snapshots(self: 'SnapshotsDataLoader') -> tuple[pd.DataFrame, pd.DataFrame]:
         """Return the snapshots the test provided."""
         return self.stats, self.odds
 
@@ -115,7 +115,7 @@ class FakeVenue(BaseVenue):
 
     async def place(self: 'FakeVenue', intent: PlacementIntent) -> PlacementReceipt:
         """Record a bet, unless one is already recorded for its identity."""
-        ref = intent.identity.ref
+        ref = intent.identity.ref_
         self.attempts.append(ref)
         if self.blocked:
             msg = '`fake` blocked automated access.'
@@ -156,7 +156,9 @@ class FakeVenue(BaseVenue):
     async def read_status(self: 'FakeVenue', identities: list[BetIdentity]) -> pd.DataFrame:
         """Return what the fake holds for these identities."""
         records = [
-            {'ref': identity.ref, **self.orders[identity.ref]} for identity in identities if identity.ref in self.orders
+            {'ref': identity.ref_, **self.orders[identity.ref_]}
+            for identity in identities
+            if identity.ref_ in self.orders
         ]
         return pd.DataFrame.from_records(records)
 
@@ -165,7 +167,7 @@ class FakeVenue(BaseVenue):
         if not self.can_cancel:
             msg = '`fake` cannot cancel a bet.'
             raise CancellationUnsupportedError(msg)
-        self.orders.pop(identity.ref, None)
+        self.orders.pop(identity.ref_, None)
         return PlacementReceipt(identity=identity, status=PlacementStatus.REJECTED, detail='`fake` cancelled the bet.')
 
 
@@ -225,7 +227,7 @@ def offline_dataloader(monkeypatch: pytest.MonkeyPatch) -> None:
         dataloader.extract_train_data(odds_type='market_average')
         return dataloader
 
-    monkeypatch.setattr('sportsbet.cli._utils.build_dataloader', build)
+    monkeypatch.setattr('sportsbet.cli._building.build_dataloader', build)
     monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', build)
 
 
@@ -240,7 +242,7 @@ def offline_fixtures_dataloader(long_snapshots: tuple, monkeypatch: pytest.Monke
     def build(**rest: object) -> BaseDataLoader:
         return SnapshotsDataLoader(stats, odds)
 
-    monkeypatch.setattr('sportsbet.cli._utils.build_dataloader', build)
+    monkeypatch.setattr('sportsbet.cli._building.build_dataloader', build)
     monkeypatch.setattr('sportsbet.mcp._server.build_dataloader', build)
 
 

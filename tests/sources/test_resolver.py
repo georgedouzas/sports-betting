@@ -1,7 +1,7 @@
 """Tests for the reconciliation of two sources."""
 
+from sportsbet.core import MATCH_COLS
 from sportsbet.sources import (
-    MATCH_COLS,
     build_roster,
     count_common_prefix,
     measure_names_similarity,

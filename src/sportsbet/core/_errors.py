@@ -1,6 +1,7 @@
 """Define the error the builders raise when their arguments do not name a valid object."""
 
-from __future__ import annotations
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
 
 
 class BuildError(ValueError):

@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
@@ -16,7 +15,7 @@ from ._model_selection import BettorGridSearchCV
 from ._rules import OddsComparisonBettor
 
 
-def _bettor_namespace() -> dict[str, object]:
+def _build_bettor_namespace() -> dict[str, object]:
     """Return the estimators an inline model expression may name."""
     namespace: dict[str, object] = dict(all_estimators())
     namespace['make_pipeline'] = make_pipeline
@@ -33,7 +32,7 @@ def build_bettor(model: str) -> BaseBettor:
     Args:
         model:
             A scikit-learn estimator written as a Python expression, with the library's bettors and every
-            scikit-learn estimator already in scope, as in `ClassifierBettor(LogisticRegression(C=1.0))`; or a
+            scikit-learn estimator already in scope, as in `ClassifierBettor(LogisticRegression(C=1.0))`. Or a
             bettor you built in a file, named by where it lives, as in `models.py:BETTOR`.
 
     Returns:
@@ -48,7 +47,7 @@ def build_bettor(model: str) -> BaseBettor:
         built = load_object(model)
     else:
         try:
-            built = eval(model, _bettor_namespace())  # noqa: S307  # nosec B307
+            built = eval(model, _build_bettor_namespace())  # noqa: S307  # nosec B307  # a trusted model expression
         except Exception as error:
             msg = (
                 f'`{model}` is not a model. Write it as a scikit-learn expression, as in '

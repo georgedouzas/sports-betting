@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from collections.abc import Callable
 from copy import deepcopy
@@ -20,9 +19,16 @@ from sklearn.utils import check_consistent_length
 from sklearn.utils.validation import check_is_fitted
 
 from ..core import BoolData, Data, Indices
-from ._base import BaseBettor
+from ._base import BaseBettor, _check_is_dataframe
 
 TSCV = TimeSeriesSplit(n_splits=3)
+
+
+def _check_time_series_cv(cv: TimeSeriesSplit) -> None:
+    """Raise when the cross-validator is not a TimeSeriesSplit."""
+    if not isinstance(cv, TimeSeriesSplit):
+        error_msg = 'Parameter `cv` should be a TimeSeriesSplit cross-validator object.'
+        raise TypeError(error_msg)
 
 
 def _fit_bet(
@@ -34,13 +40,10 @@ def _fit_bet(
     O: pd.DataFrame,
 ) -> dict:
 
-    # Fit bettor
     bettor.fit(X.iloc[train_ind], Y.iloc[train_ind], O.iloc[train_ind])
 
-    # Predict value bets
     value_bets = bettor.bet(X.iloc[test_ind], O.iloc[test_ind])
 
-    # Calculate returns (test_ind are positional indices, so select with iloc first)
     Y_test = Y.iloc[test_ind]
     O_test = O.iloc[test_ind]
     returns = np.nan_to_num(
@@ -125,6 +128,11 @@ def backtest(
         results:
             The backtesting results.
 
+    Raises:
+        TypeError:
+            If `X`, `Y` or `O` are not pandas dataframes, `X` has no date index, or
+            `cv` is not a `TimeSeriesSplit` cross-validator object.
+
     Examples:
         >>> from sklearn.model_selection import TimeSeriesSplit
         >>> from sportsbet.dataloaders import DataLoader
@@ -142,30 +150,18 @@ def backtest(
         >>> 'Yield percentage per bet' in results.columns
         True
     """
-    # Check data
     check_consistent_length(X, Y, O)
-    if not isinstance(X, pd.DataFrame) or not isinstance(X.index, pd.DatetimeIndex):
-        error_msg = 'Input data `X` should be pandas dataframe with a date index.'
-        raise TypeError(error_msg)
-    if not isinstance(Y, pd.DataFrame):
-        error_msg = 'Output data `Y` should be pandas dataframe.'
-        raise TypeError(error_msg)
-    if not isinstance(O, pd.DataFrame):
-        error_msg = 'Odds data `O` should be pandas dataframe.'
-        raise TypeError(error_msg)
+    _check_is_dataframe(X, 'X', date_index=True)
+    _check_is_dataframe(Y, 'Y')
+    _check_is_dataframe(O, 'O')
 
-    # Sort data
     indices = np.argsort(X.index)
     X, Y, O = X.iloc[indices], Y.iloc[indices], O.iloc[indices]
 
-    # Check cross validator
     if cv is None:
         cv = TimeSeriesSplit()
-    if not isinstance(cv, TimeSeriesSplit):
-        error_msg = 'Parameter `cv` should be a TimeSeriesSplit cross-validator object.'
-        raise TypeError(error_msg)
+    _check_time_series_cv(cv)
 
-    # Calculate results
     results = Parallel(n_jobs=n_jobs, verbose=verbose)(
         delayed(_fit_bet)(train_ind, test_ind, bettor, X, Y, O) for train_ind, test_ind in cv.split(X)
     )
@@ -177,15 +173,11 @@ def backtest(
 class BettorGridSearchCV(GridSearchCV, BaseBettor):
     """Exhaustive search over specified parameter values for a bettor.
 
-    BettorGridSearchCV implements a `fit`, a`predict`, a `predict_proba',
-    a `bet` and a `score` method.
-
-    The parameters of the bettor used to apply these methods are optimized
-    by cross-validated grid-search over a parameter grid.
+    The parameters of the bettor are optimized by cross-validated grid search over a parameter grid.
 
     Read more in the [user guide][user-guide].
 
-    Parameters:
+    Args:
         estimator:
             This is assumed to implement the bettor interface.
 
@@ -414,7 +406,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
             error_msg = f"'{self.__class__.__name__}' object has no attribute '{attr_name}'"
             raise AttributeError(error_msg)
 
-    def modify_scorer(self: Self, scorer: Callable) -> Callable:
+    def _modify_scorer(self: Self, scorer: Callable) -> Callable:
         def _scorer(
             estimator: BaseBettor,
             X: pd.DataFrame,
@@ -431,9 +423,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         if not isinstance(self.estimator, BaseBettor):
             error_msg = f'`BettorGridSearchCV` requires a bettor as estimator. Instead {type(self.estimator)} is given.'
             raise TypeError(error_msg)
-        if not isinstance(self.cv, TimeSeriesSplit):
-            error_msg = 'Parameter `cv` should be a TimeSeriesSplit cross-validator object.'
-            raise TypeError(error_msg)
+        _check_time_series_cv(self.cv)
         initial_scoring = deepcopy(self.scoring)
         if O is not None and initial_scoring is None:
             enable_metadata_routing = get_config().get('enable_metadata_routing')
@@ -451,9 +441,9 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
                 raise TypeError(error_msg)
             scorers, _ = self._get_scorers()
             self.scoring: Callable | dict[str, Callable] = (
-                self.modify_scorer(scorers)
+                self._modify_scorer(scorers)
                 if not isinstance(scorers, dict)
-                else {name: self.modify_scorer(scorer) for name, scorer in scorers.items()}
+                else {name: self._modify_scorer(scorer) for name, scorer in scorers.items()}
             )
             GridSearchCV.fit(self, X, Y)
             self.scoring = initial_scoring

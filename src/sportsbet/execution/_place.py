@@ -1,13 +1,8 @@
-"""Quote a batch and place it, refusing until the quoted total is passed back.
-
-The bets go on one at a time with the exposure counted before each, which is what keeps the limit readable and stops a
-retry from staking twice.
-"""
+"""Quote a batch and place it, refusing until the quoted total is passed back."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
@@ -26,7 +21,8 @@ from ._base import (
     PlacementReceipt,
     PlacementStatus,
     VenueBlockedError,
-    receipts_frame,
+    _build_dry_run_receipts,
+    build_receipts_frame,
 )
 
 TOLERANCE = 0.005
@@ -36,17 +32,13 @@ Staking = float | Mapping[tuple[str, str, str], float]
 
 
 def _stake_of(stake: Staking, match: str, market: str, selection: str) -> float | None:
-    """Return what to stake on an event, or `None` to skip it.
-
-    A number stakes the same on every bet. A mapping keyed by the event stakes per event, and an event it omits is not
-    bet on.
-    """
+    """Return what to stake on an event, or `None` to skip it."""
     if isinstance(stake, Mapping):
         return stake.get((match, market, selection))
     return stake
 
 
-def value_bet_intents(
+def build_value_bet_intents(
     venue: str,
     bettor: BaseBettor,
     X_fix: pd.DataFrame,
@@ -54,9 +46,6 @@ def value_bet_intents(
     stake: Staking,
 ) -> list[PlacementIntent]:
     """Return an intent for each value bet a model found.
-
-    The minimum price of each one is the price the value bet was computed at, since below it the bet is no longer a
-    value bet.
 
     Args:
         venue:
@@ -69,7 +58,7 @@ def value_bet_intents(
             The odds of the upcoming matches.
         stake:
             A number to stake the same on every value bet, or a mapping keyed by `(match, market, selection)` to stake
-            per event. A mapping stakes only the events it holds, so sizing computed offline drops the rest.
+            per event. A mapping stakes only the events it holds.
 
     Returns:
         intents:
@@ -151,22 +140,6 @@ def _unconfirmed(quoted: PlacementQuote, confirm_stake: float | None, confirm_ex
     )
 
 
-def _dry_run(quoted: PlacementQuote, detail: str, status: PlacementStatus) -> pd.DataFrame:
-    """Return a receipt for every bet, none of them staked."""
-    return receipts_frame(
-        [
-            PlacementReceipt(
-                identity=intent.identity,
-                status=status,
-                price=intent.min_price,
-                value_bet=intent.value_bet,
-                detail=detail,
-            )
-            for intent in quoted.intents
-        ],
-    )
-
-
 def _over_limit(intent: PlacementIntent, limits: ExposureLimits, running: float) -> str | None:
     """Return which ceiling a bet would breach, if it would breach one."""
     if limits.max_stake_per_bet and intent.stake > limits.max_stake_per_bet:
@@ -179,7 +152,7 @@ def _over_limit(intent: PlacementIntent, limits: ExposureLimits, running: float)
     return None
 
 
-async def _price_of(venue: BaseVenue, intent: PlacementIntent) -> float | None:
+async def _read_price(venue: BaseVenue, intent: PlacementIntent) -> float | None:
     """Return what the venue is offering for a bet right now."""
     markets = await venue.list_markets([intent.identity.match])
     if markets.empty:
@@ -191,55 +164,6 @@ async def _price_of(venue: BaseVenue, intent: PlacementIntent) -> float | None:
         return None
     price = wanted.iloc[0]['price']
     return None if pd.isna(price) else float(price)
-
-
-async def place(
-    venue: BaseVenue,
-    quoted: PlacementQuote,
-    limits: ExposureLimits,
-    confirm_stake: float | None = None,
-    confirm_exposure: float | None = None,
-) -> pd.DataFrame:
-    """Place a quoted batch, staking nothing unless the quoted figures are passed back exactly.
-
-    Args:
-        venue:
-            Where the bets go.
-        quoted:
-            What `quote` returned.
-        limits:
-            The ceilings the batch answers to.
-        confirm_stake:
-            The quoted stake, passed back to place the bets.
-        confirm_exposure:
-            The quoted exposure, passed back to place the bets.
-
-    Returns:
-        receipts:
-            What happened to each bet.
-    """
-    if limits.killed:
-        return _dry_run(quoted, 'The kill switch is on, so nothing was staked.', PlacementStatus.REFUSED_KILLED)
-    if not _confirmed(quoted, confirm_stake, confirm_exposure):
-        detail = _unconfirmed(quoted, confirm_stake, confirm_exposure)
-        status = (
-            PlacementStatus.DRY_RUN
-            if confirm_stake is None and confirm_exposure is None
-            else PlacementStatus.REFUSED_UNCONFIRMED
-        )
-        return _dry_run(quoted, detail, status)
-    _, open_exposure = await venue.read_balance()
-    running = open_exposure
-    receipts: list[PlacementReceipt] = []
-    for intent in quoted.intents:
-        receipt = await _place_one(venue, intent, limits, running)
-        receipts.append(receipt)
-        if receipt.status is PlacementStatus.BLOCKED:
-            receipts.extend(_stopped(quoted, intent))
-            break
-        if receipt.status in STAKED:
-            running = round(running + receipt.stake, 2)
-    return receipts_frame(receipts)
 
 
 def _stopped(quoted: PlacementQuote, reached: PlacementIntent) -> list[PlacementReceipt]:
@@ -279,7 +203,7 @@ async def _place_one(
             detail=breached,
         )
     try:
-        price = await _price_of(venue, intent)
+        price = await _read_price(venue, intent)
         if price is not None and price < intent.min_price:
             return PlacementReceipt(
                 identity=intent.identity,
@@ -297,3 +221,56 @@ async def _place_one(
             value_bet=intent.value_bet,
             detail=str(blocked),
         )
+
+
+async def place(
+    venue: BaseVenue,
+    quoted: PlacementQuote,
+    limits: ExposureLimits,
+    confirm_stake: float | None = None,
+    confirm_exposure: float | None = None,
+) -> pd.DataFrame:
+    """Place a quoted batch, staking nothing unless the quoted figures are passed back exactly.
+
+    Args:
+        venue:
+            Where the bets go.
+        quoted:
+            What `quote` returned.
+        limits:
+            The ceilings the batch answers to.
+        confirm_stake:
+            The quoted stake, passed back to place the bets.
+        confirm_exposure:
+            The quoted exposure, passed back to place the bets.
+
+    Returns:
+        receipts:
+            What happened to each bet.
+    """
+    if limits.killed:
+        return _build_dry_run_receipts(
+            quoted.intents,
+            PlacementStatus.REFUSED_KILLED,
+            'The kill switch is on, so nothing was staked.',
+        )
+    if not _confirmed(quoted, confirm_stake, confirm_exposure):
+        detail = _unconfirmed(quoted, confirm_stake, confirm_exposure)
+        status = (
+            PlacementStatus.DRY_RUN
+            if confirm_stake is None and confirm_exposure is None
+            else PlacementStatus.REFUSED_UNCONFIRMED
+        )
+        return _build_dry_run_receipts(quoted.intents, status, detail)
+    _, open_exposure = await venue.read_balance()
+    running = open_exposure
+    receipts: list[PlacementReceipt] = []
+    for intent in quoted.intents:
+        receipt = await _place_one(venue, intent, limits, running)
+        receipts.append(receipt)
+        if receipt.status is PlacementStatus.BLOCKED:
+            receipts.extend(_stopped(quoted, intent))
+            break
+        if receipt.status in STAKED:
+            running = round(running + receipt.stake, 2)
+    return build_receipts_frame(receipts)

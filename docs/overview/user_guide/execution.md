@@ -64,7 +64,7 @@ class DemoVenue(BaseVenue):
 
     def __init__(self, prices):
         self.prices = prices          # {(match, market, selection): price}
-        self.orders = {}              # what has been placed, keyed by identity.ref
+        self.orders = {}              # what has been placed, keyed by identity.ref_
 
     async def authenticate(self):
         # A real venue reads its key here, e.g. resolve(CredentialRef('VENUE_API_KEY')).
@@ -82,7 +82,7 @@ class DemoVenue(BaseVenue):
         return 10000.0, sum(order['stake'] for order in self.orders.values())
 
     async def place(self, intent):
-        ref = intent.identity.ref
+        ref = intent.identity.ref_
         if ref in self.orders:
             order = self.orders[ref]
             return PlacementReceipt(
@@ -104,11 +104,11 @@ class DemoVenue(BaseVenue):
         )
 
     async def read_status(self, identities):
-        held = [{'ref': i.ref, **self.orders[i.ref]} for i in identities if i.ref in self.orders]
+        held = [{'ref': i.ref_, **self.orders[i.ref_]} for i in identities if i.ref_ in self.orders]
         return pd.DataFrame.from_records(held)
 
     async def cancel(self, identity):
-        self.orders.pop(identity.ref, None)
+        self.orders.pop(identity.ref_, None)
         return PlacementReceipt(identity=identity, status=PlacementStatus.REJECTED, detail='Cancelled.')
 ```
 
@@ -116,13 +116,13 @@ The [gallery example][execution-gallery] runs this venue end to end.
 
 ## From value bets to intents
 
-A bettor returns value bets. [`value_bet_intents`][sportsbet.execution.value_bet_intents] turns them into the intents a
+A bettor returns value bets. [`build_value_bet_intents`][sportsbet.execution.build_value_bet_intents] turns them into the intents a
 venue places.
 
 ```python
-from sportsbet.execution import value_bet_intents
+from sportsbet.execution import build_value_bet_intents
 
-intents = value_bet_intents('demo', bettor, X_fix, O_fix, stake=10.0)
+intents = build_value_bet_intents('demo', bettor, X_fix, O_fix, stake=10.0)
 ```
 
 Each item is a [`PlacementIntent`][sportsbet.execution.PlacementIntent] with four fields.
@@ -140,7 +140,7 @@ two intents that name the same selection are the same bet, whichever run produce
 intent = intents[0]
 assert intent.identity.venue == 'demo'
 assert intent.stake == 10.0
-assert len(intent.identity.ref) == 32
+assert len(intent.identity.ref_) == 32
 ```
 
 ## Quoting
@@ -247,8 +247,8 @@ receipts = asyncio.run(execute(venue, dataloader, bettor, stake=sizing, confirm_
 
 The dataloader fixes the moment the model bets at. A prematch model bets at the kickoff. A live model, fitted with
 `target_event_status='inplay'` and a `target_event_time`, bets at the kickoff plus that time.
-[`betting_moment`][sportsbet.execution.betting_moment] returns that moment for a kickoff, and
-[`feasible`][sportsbet.execution.feasible] returns which upcoming matches the bet can still go on for. Set `window` to
+[`find_betting_moment`][sportsbet.execution.find_betting_moment] returns that moment for a kickoff, and
+[`select_feasible`][sportsbet.execution.select_feasible] returns which upcoming matches the bet can still go on for. Set `window` to
 bound how long the run keeps placing, which matters for a live model, since watching one match at a time means a busy
 slot of simultaneous kickoffs cannot all be reached.
 
@@ -352,7 +352,7 @@ pin what you found, and act against the pinned session.
 
 ```python
 await venue.navigate('https://www.novibet.gr/stoixima')
-await venue.snapshot()                                   # read the layout
+await venue.read_snapshot()                                   # read the layout
 fixed = venue.fix('Arsenal vs Chelsea', {'stake': 'textbox[name="Stake"]', 'confirm': 'button[name="Place bet"]'})
 await venue.resolve('stake')                             # read a pinned locator now
 ```

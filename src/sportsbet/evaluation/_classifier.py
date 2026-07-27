@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from typing import Any, ClassVar, Self
 
@@ -11,7 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, MetaEstimatorMixin, clone, is_classifier
 
-from ..core import BoolData, Data
+from ..core import Data
 from ._base import BaseBettor
 
 
@@ -20,7 +19,7 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
 
     Read more in the [user guide][user-guide].
 
-    Parameters:
+    Args:
         classifier:
             A scikit-learn classifier object implementing `fit`, `score`
             and `predict_proba`.
@@ -35,16 +34,11 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
             The stake of each bet.
 
     Attributes:
-        tscv_ (TimeSeriesSplit):
-            The checked value of time series cross-validator object. If `tscv` is `None`,
-            it uses the default `TimeSeriesSplit` object.
+        classifier_ (BaseEstimator):
+            The fitted clone of `classifier`.
 
-        init_cash_:
-            The checked value of initial cash. If `init_cash` is `None`, it uses the value
-            of `1e3`.
-
-        backtesting_results_ (pd.DataFrame):
-            The backtesting results.
+        init_cash_ (float):
+            The checked initial cash.
 
     Examples:
         >>> from sklearn.tree import DecisionTreeClassifier
@@ -99,16 +93,7 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         return self
 
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
-        """Predict class probabilities for multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-        Returns:
-            Y:
-                The positive class probabilities.
-        """
+        """Return the positive-class probabilities of the fitted classifier."""
         proba = self.classifier_.predict_proba(X)
         if isinstance(proba, list):
             proba = np.concatenate(
@@ -118,64 +103,3 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         elif len(self.classes_) == 1:
             proba = proba[:, -1]
         return proba
-
-    def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
-        """Fit the bettor to the input data and multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-            Y:
-                The multi-output targets.
-
-            O:
-                The odds data.
-
-        Returns:
-            self:
-                The fitted bettor object.
-        """
-        return super().fit(X, Y, O)
-
-    def predict_proba(self: Self, X: pd.DataFrame) -> Data:
-        """Predict class probabilities for multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-        Returns:
-            Y:
-                The positive class probabilities.
-        """
-        return super().predict_proba(X)
-
-    def predict(self: Self, X: pd.DataFrame) -> BoolData:
-        """Predict class labels for multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-        Returns:
-            Y:
-                The positive class labels.
-        """
-        return super().predict(X)
-
-    def bet(self: Self, X: pd.DataFrame, O: pd.DataFrame) -> BoolData:
-        """Predict the value bets for the provided input data and odds.
-
-        Args:
-            X:
-                The input data.
-
-            O:
-                The odds data.
-
-        Returns:
-            B:
-                The value bets.
-        """
-        return super().bet(X, O)

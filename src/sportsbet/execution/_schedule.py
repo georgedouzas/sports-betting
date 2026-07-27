@@ -1,11 +1,4 @@
-"""Place the value bets of the upcoming matches, one match at a time.
-
-The library watches one match at a time, so `execute` takes the upcoming matches a bettor can still bet on, orders them
-by when the bet goes on, and handles them in turn. A prematch bet goes on now, a live bet goes on when the match reaches
-the moment the model was fitted for. Within a window it reaches as many as the window allows.
-
-The dataloader owns the input data. `execute` asks it for the fixtures rather than shaping features itself.
-"""
+"""Place the value bets of the upcoming matches, one match at a time."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -20,8 +13,16 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from ._base import BaseVenue, ExecutionError, PlacementIntent, PlacementReceipt, PlacementStatus, receipts_frame
-from ._place import TOLERANCE, Staking, value_bet_intents
+from ._base import (
+    BaseVenue,
+    ExecutionError,
+    PlacementIntent,
+    PlacementReceipt,
+    PlacementStatus,
+    _build_dry_run_receipts,
+    build_receipts_frame,
+)
+from ._place import TOLERANCE, Staking, build_value_bet_intents
 
 if TYPE_CHECKING:
     from sportsbet.dataloaders import BaseDataLoader
@@ -42,7 +43,7 @@ def _now() -> pd.Timestamp:
     return pd.Timestamp.now(tz='UTC')
 
 
-def betting_moment(dataloader: BaseDataLoader, kickoff: pd.Timestamp) -> pd.Timestamp:
+def find_betting_moment(dataloader: BaseDataLoader, kickoff: pd.Timestamp) -> pd.Timestamp:
     """Return when the bet goes on for a match.
 
     A live model bets at the kickoff plus the time into the match it was fitted for. Any other model bets at the
@@ -63,7 +64,7 @@ def betting_moment(dataloader: BaseDataLoader, kickoff: pd.Timestamp) -> pd.Time
     return kickoff
 
 
-def feasible(
+def select_feasible(
     dataloader: BaseDataLoader,
     fixtures: pd.DataFrame,
     now: pd.Timestamp,
@@ -108,7 +109,7 @@ def _scheduled(
     X_fix, _, O_fix = dataloader.extract_fixtures_data()
     if X_fix.empty or O_fix is None or O_fix.empty:
         return []
-    mask = feasible(dataloader, X_fix, now, window).to_numpy()
+    mask = select_feasible(dataloader, X_fix, now, window).to_numpy()
     if not mask.any():
         return []
     reachable_X, reachable_O = X_fix[mask], O_fix[mask]
@@ -116,7 +117,7 @@ def _scheduled(
         f'{row["home_team"]} vs {row["away_team"]}': kickoff
         for kickoff, row in zip(reachable_X.index, reachable_X.to_dict('records'), strict=True)
     }
-    intents = value_bet_intents(
+    intents = build_value_bet_intents(
         venue_key,
         bettor,
         reachable_X.reset_index(drop=True),
@@ -125,7 +126,7 @@ def _scheduled(
     )
     paired = [(intent, kickoff_of.get(intent.identity.match, now)) for intent in intents]
     shuffled = pd.Series(range(len(paired))).sample(frac=1.0, random_state=seed).tolist()
-    ordered = sorted(shuffled, key=lambda position: betting_moment(dataloader, paired[position][1]))
+    ordered = sorted(shuffled, key=lambda position: find_betting_moment(dataloader, paired[position][1]))
     return [paired[position] for position in ordered]
 
 
@@ -137,18 +138,7 @@ def _refused(intents: list[PlacementIntent], total: float, confirm_total: float 
     else:
         detail = f'Nothing was staked. The quoted total is {total}, but {confirm_total} was passed back.'
         status = PlacementStatus.REFUSED_UNCONFIRMED
-    return receipts_frame(
-        [
-            PlacementReceipt(
-                identity=intent.identity,
-                status=status,
-                price=intent.min_price,
-                value_bet=intent.value_bet,
-                detail=detail,
-            )
-            for intent in intents
-        ],
-    )
+    return _build_dry_run_receipts(intents, status, detail)
 
 
 async def execute(
@@ -173,7 +163,7 @@ async def execute(
     and stakes nothing until `confirm_total` matches the total.
 
     A venue with an API is placed at by the library. A browser session is placed at by `placer`, which drives the site
-    for one bet and returns its receipt, since the library cannot click a bet slip without knowing the site.
+    for one bet and returns its receipt.
 
     Args:
         venue:
@@ -205,6 +195,9 @@ async def execute(
     Returns:
         receipts:
             What happened to each bet.
+
+    Raises:
+        ExecutionError: If authentication fails or a browser session has no `placer`.
     """
     read_now = clock or _now
     hold = wait or asyncio.sleep
@@ -223,7 +216,7 @@ async def execute(
     scheduled = _scheduled(venue.key, dataloader, bettor, stake, read_now(), window, seed)
     if not scheduled:
         logger.info('No feasible value bets in the upcoming matches.')
-        return receipts_frame([])
+        return build_receipts_frame([])
 
     intents = [intent for intent, _ in scheduled]
     total = round(sum(intent.stake for intent in intents), 2)
@@ -234,7 +227,7 @@ async def execute(
 
     receipts: list[PlacementReceipt] = []
     for intent, kickoff in scheduled:
-        ahead = (betting_moment(dataloader, kickoff) - read_now()).total_seconds()
+        ahead = (find_betting_moment(dataloader, kickoff) - read_now()).total_seconds()
         if ahead > 0:
             logger.info('Waiting %.0fs for %s.', ahead, intent.identity.match)
             await hold(ahead)
@@ -252,4 +245,4 @@ async def execute(
         if receipt.status is PlacementStatus.BLOCKED:
             logger.info('The venue blocked automation, so placing stopped.')
             break
-    return receipts_frame(receipts)
+    return build_receipts_frame(receipts)

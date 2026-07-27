@@ -3,30 +3,29 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
-from typing import Self
+from typing import ClassVar, Self
 
 import numpy as np
 import pandas as pd
 from sklearn.utils import check_scalar
 
-from ..core import BoolData, Data
-from ._base import BaseBettor, derive_market_base, find_latest_odds_column, is_odds_column
+from ..core import Data
+from ._base import BaseBettor, _is_odds_column, derive_market_base, find_latest_odds_column
 
 
 class OddsComparisonBettor(BaseBettor):
     """Bettor based on comparison of odds.
 
-    It implements the betting strategy as described in the paper
+    It bets by comparing each market's odds to a consensus probability, the average of the selected odds types
+    adjusted by `alpha`. The method follows
     [Beating the bookies with their own numbers](https://arxiv.org/pdf/1710.02824.pdf).
-    Predicted probabilities of events are based on the average of selected odds
-    types for the corresponding events, adjusted by a constant value called alpha. You
-    can read more in the [user guide][user-guide].
 
-    Parameters:
+    Read more in the [user guide][user-guide].
+
+    Args:
         odds_types:
-            The odds types to use for the calculation of concensus probabilities. The
+            The odds types to use for the calculation of consensus probabilities. The
             default value corresponds to `'market_average'` if this odds type exists or the
             average of all the other odds columns if `'market_average'` is missing.
 
@@ -44,18 +43,14 @@ class OddsComparisonBettor(BaseBettor):
             The stake of each bet.
 
     Attributes:
-        odds_types_ (pd.Index):
+        odds_types_ (list[str]):
             The checked value of the odds types.
 
         alpha_ (float):
             The checked value of the alpha parameter.
 
         output_keys_ (list[str]):
-            The keys of the output columns. They are used to identify
-            the consensus columns.
-
-        backtesting_results_ (pd.DataFrame):
-            The backtesting resuts.
+            The market base names of the output columns.
 
     Examples:
         >>> from sportsbet.evaluation import OddsComparisonBettor, backtest
@@ -71,7 +66,7 @@ class OddsComparisonBettor(BaseBettor):
         True
     """
 
-    _append_odds = True
+    _APPEND_ODDS: ClassVar[bool] = True
 
     def __init__(
         self: Self,
@@ -86,7 +81,7 @@ class OddsComparisonBettor(BaseBettor):
         self.alpha = alpha
 
     def _check_odds_types(self: Self, X: pd.DataFrame) -> Self:
-        available_odds_types = {col.split('__', maxsplit=1)[0] for col in X.columns if is_odds_column(col)}
+        available_odds_types = {col.split('__', maxsplit=1)[0] for col in X.columns if _is_odds_column(col)}
         if not available_odds_types:
             error_msg = 'Input data do not include any odds columns.'
             raise ValueError(error_msg)
@@ -115,16 +110,7 @@ class OddsComparisonBettor(BaseBettor):
         return self
 
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
-        """Predict class probabilities for multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-        Returns:
-            Y:
-                The positive class probabilities.
-        """
+        """Return the consensus probability of each market, one column per market."""
         proba_cont = []
         columns = list(X.columns)
         for key in self.output_keys_:
@@ -136,64 +122,3 @@ class OddsComparisonBettor(BaseBettor):
             proba_cont.append(1 / X[odds_cols].mean(axis=1))
         proba = (pd.concat(proba_cont, axis=1) - self.alpha_).fillna(0.0).to_numpy()
         return np.clip(proba, 0.0, None)
-
-    def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
-        """Fit the bettor to the input data and multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-            Y:
-                The multi-output targets.
-
-            O:
-                The odds data.
-
-        Returns:
-            self:
-                The fitted bettor object.
-        """
-        return super().fit(X, Y, O)
-
-    def predict_proba(self: Self, X: pd.DataFrame) -> Data:
-        """Predict class probabilities for multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-        Returns:
-            Y:
-                The positive class probabilities.
-        """
-        return super().predict_proba(X)
-
-    def predict(self: Self, X: pd.DataFrame) -> BoolData:
-        """Predict class labels for multi-output targets.
-
-        Args:
-            X:
-                The input data.
-
-        Returns:
-            Y:
-                The positive class labels.
-        """
-        return super().predict(X)
-
-    def bet(self: Self, X: pd.DataFrame, O: pd.DataFrame) -> BoolData:
-        """Predict the value bets for the provided input data and odds.
-
-        Args:
-            X:
-                The input data.
-
-            O:
-                The odds data.
-
-        Returns:
-            B:
-                The value bets.
-        """
-        return super().bet(X, O)

@@ -38,7 +38,7 @@ def _parameters(callable_):
         (
             ['dataloader', 'train', 'extract'],
             OddsApi.__init__,
-            {name: f'odds_{name}' for name in ('markets', 'regions', 'moments')},
+            {name: f'odds_{name}' for name in ('key_env', 'markets', 'regions', 'moments')},
         ),
         (['dataloader', 'train', 'extract'], DataLoader.__init__, {}),
     ],

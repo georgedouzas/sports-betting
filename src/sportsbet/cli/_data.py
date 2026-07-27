@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from pathlib import Path
 
@@ -13,8 +12,9 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ..dataloaders import load_dataloader
+from ._building import _build_extraction, _build_selected, _report_errors
 from ._options import DATALOADER, EXTRACTION, HORIZON, OUTPUT, SELECTION, options
-from ._utils import extraction, print_console, reported, selected
+from ._utils import _print_console
 
 
 @click.group()
@@ -30,18 +30,15 @@ def dataloader() -> None:
 @dataloader.command()
 @options(SELECTION)
 def params(**selection: object) -> None:
-    """Show the leagues, divisions and seasons a source publishes.
-
-    It asks the source, which is where a `param_grid` starts.
-    """
-    with reported(), selected(selection) as loader:
+    """Show the leagues, divisions and seasons a source publishes."""
+    with _report_errors(), _build_selected(selection) as loader:
         if loader is None:
             return
         stats_source, *_ = loader.sources_
         available = stats_source.list_available_params()
         cols = list({param for params in available for param in params})
         frame = pd.DataFrame({col: [params.get(col, '-') for params in available] for col in cols})
-        print_console([frame], ['Available parameters'], index=False)
+        _print_console([frame], ['Available parameters'], index=False)
 
 
 @dataloader.command(name='odds-types')
@@ -51,11 +48,11 @@ def odds_types(**selection: object) -> None:
 
     Downloads the data to read them.
     """
-    with reported(), selected(selection) as loader:
+    with _report_errors(), _build_selected(selection) as loader:
         if loader is None:
             return
         frame = pd.DataFrame(loader.get_odds_types(), columns=['Type'])
-        print_console([frame], ['Available odds types'], index=False)
+        _print_console([frame], ['Available odds types'], index=False)
 
 
 @dataloader.group()
@@ -68,15 +65,11 @@ def train() -> None:
 @options(SELECTION, EXTRACTION)
 @click.option('--output', '-o', 'output', required=True, type=click.Path(), help='Where to save the dataloader.')
 def extract_train(output: str, **selection: object) -> None:
-    """Download the training data and save the dataloader to a file.
-
-    This is the only command that downloads the seasons. The evaluation commands read the file it writes, so the data is
-    downloaded once and reused.
-    """
-    with reported(), selected(selection) as loader:
+    """Download the training data and save the dataloader to a file."""
+    with _report_errors(), _build_selected(selection) as loader:
         if loader is None:
             return
-        X_train, Y_train, O_train = loader.extract_train_data(**extraction(selection))
+        X_train, Y_train, O_train = loader.extract_train_data(**_build_extraction(selection))
         loader.save(output)
         has_odds = O_train is not None and not O_train.empty
         frames = [X_train, *([Y_train] if Y_train is not None else []), *([O_train] if has_odds else [])]
@@ -85,29 +78,25 @@ def extract_train(output: str, **selection: object) -> None:
             *(['Training output data'] if Y_train is not None else []),
             *(['Training odds data'] if has_odds else []),
         ]
-        print_console(frames, titles)
+        _print_console(frames, titles)
         Console().print(f'Saved the dataloader to [bold]{output}[/bold].')
 
 
 @dataloader.group()
 def exploration() -> None:
-    """Work with the features on their own, for exploring a sport."""
+    """Work with the features on their own."""
     return
 
 
 @exploration.command(name='extract')
 @options(SELECTION, HORIZON, OUTPUT)
 def extract_exploration(data_path: str | None, **selection: object) -> None:
-    """Download the features of the selection, with no targets and no odds.
-
-    Use it to look at a sport before choosing what to select or model, or when the source carries no odds and so has
-    nothing to predict.
-    """
-    with reported(), selected(selection) as loader:
+    """Download the features of the selection."""
+    with _report_errors(), _build_selected(selection) as loader:
         if loader is None:
             return
-        X = loader.extract_exploration_data(**extraction(selection))
-        print_console([X], ['Exploration features'])
+        X = loader.extract_exploration_data(**_build_extraction(selection))
+        _print_console([X], ['Exploration features'])
         if data_path is not None:
             written = Path(data_path) / 'sports-betting-data'
             written.mkdir(parents=True, exist_ok=True)
@@ -124,14 +113,14 @@ def fixtures() -> None:
 @options(DATALOADER, OUTPUT)
 def extract_fixtures(dataloader_path: str, data_path: str | None) -> None:
     """Download the upcoming matches of a saved dataloader."""
-    with reported():
+    with _report_errors():
         loader = load_dataloader(dataloader_path)
         X_fix, _, O_fix = loader.extract_fixtures_data()
         if X_fix.empty:
             Console().print(Panel.fit('[bold red]There are no upcoming matches.'))
             return
         has_odds = O_fix is not None and not O_fix.empty
-        print_console(
+        _print_console(
             [X_fix, *([O_fix] if has_odds else [])],
             ['Fixtures input data', *(['Fixtures odds data'] if has_odds else [])],
         )
