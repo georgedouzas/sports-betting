@@ -1,6 +1,27 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.2.0 -> 2.3.0
+Rationale: The gate is the full sequence in order, formatting, then checks, then the documentation build, then tests.
+The documentation build executes the examples, so a broken example fails the gate and the build is never skipped. A
+reused build environment can carry a stale toolchain, so a clean run can find a lint rule a cached one missed. Also
+restructure the Code Conventions for clarity, splitting `Files & Module Structure` into `Module Structure` and `Package
+Layering`, and lifting the credential rule out of `Tests` into its own `Credentials` subsection. No rule text changed.
+MINOR: expanded guidance, nothing removed.
+
+Modified sections:
+  - Development Workflow: run the full gate in order, including the documentation build.
+  - Project Profile: the gate order and commands, the docs build executes the examples, cached environments can hide a
+    finding.
+  - Code Conventions: split `Files & Module Structure` into `Module Structure` and `Package Layering`, and gave the
+    credential rule its own `Credentials` subsection. Content unchanged.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 2.1.0 -> 2.2.0
 Rationale: Fold in the lessons of the whole-src conformance sweep. The `from __future__ import annotations` import is
 conditional, kept only where a forward reference or a `TYPE_CHECKING`-only name needs it, not carried by every module.
@@ -172,7 +193,7 @@ A constant is named for what it holds, not for a role it happens to play. When t
 name is `PREPLAY_EVENT_STATUSES`, not `INPUT_EVENT_STATUSES`. Read every constant name and check it still describes its
 value.
 
-### Files & Module Structure
+### Module Structure
 
 A module reads top to bottom in one order. First a one-line imperative module docstring, then the license header, then
 the imports grouped standard library, third party, first party. The linter sorts the imports, so do not sort them by
@@ -190,6 +211,8 @@ concern is the assorted helpers a package needs, and a helper earns its own modu
 worth a name, as `_base` or `_types` do, not for every function. A definition lives in the module that owns it. A base
 module is self-contained and imports no sibling. Its purpose is to be imported, not to import, so a base that needs a
 sibling's code absorbs it by merging rather than importing. A type-only alias under `TYPE_CHECKING` is not a sibling.
+
+### Package Layering
 
 The top level of a package holds subpackages and its `__init__`, not loose implementation modules. The shared leaves the
 whole tree imports, the type vocabulary, the shared constants, and the shared building primitives, live in a `core`
@@ -281,6 +304,8 @@ a private name from a private module. It uses the public API the way a user does
 internal wants to be public. No test reaches the network. Use a recorded payload, a fake, or a locally served page.
 Fixtures are typed, small, and live in the nearest `conftest.py`.
 
+### Credentials
+
 A credential is named, never passed. A function, command flag, or tool argument takes the name of the variable holding
 the secret, and reads it where it is used. A secret never becomes an argument value, a log line, or a pickle.
 
@@ -300,8 +325,9 @@ The concrete versions, tools, and dependency list are in the Project Profile.
 ## Development Workflow & Quality Gates
 
 - Work happens on feature branches. The release branch MUST stay green.
-- Before opening a PR, contributors MUST run the formatting, checks, and tests gates, resolve all findings, and conform
-  to the Code Conventions.
+- Before opening a PR, contributors MUST run the full gate in order, formatting, then checks, then the documentation
+  build, then tests, resolve all findings, and conform to the Code Conventions. The documentation build runs the
+  examples, so it is part of the gate and is never skipped.
 - CI re-runs the same gates. A red CI run blocks merge.
 - Every PR MUST state which principles it touches and confirm the gates pass. Reviewers verify compliance, not just
   correctness.
@@ -342,13 +368,16 @@ This section instantiates the body above for this repository. It is the only rep
 - Core dependencies: `scikit-learn`, `pandas`, `pandera`, `click`, `rich`, and `aiohttp`. The optional `mcp` extra ships
   the `sportsbet-mcp` server.
 - Build and tooling: PDM with SCM-derived versioning and a `src` layout. The `nox` sessions are `tests`, `checks`,
-  `formatting`, `docs`, `changelog`, and `release`, with `pdm run` shortcuts. The gate is `black`, `docformatter`,
-  `ruff` at line length 120, `interrogate`, `bandit`, `pip-audit`, `pytest` with `--doctest-modules`, and `mypy`.
+  `formatting`, `docs`, `changelog`, and `release`, with `pdm run` shortcuts. The gate runs in order, `pdm run
+  formatting`, `pdm run checks`, `pdm run docs build`, then `pdm run tests`, covering `black`, `docformatter`, `ruff`
+  at line length 120, `interrogate`, `bandit`, `pip-audit`, the executed documentation examples, `pytest` with
+  `--doctest-modules`, and `mypy`. The docs build executes every gallery example, so a broken example fails the gate.
 - Reading the gate: its verdict is the `nox` session summary line, such as `Session tests-3.13 was successful`. An exit
   code read from a piped command reports the last stage of the pipe, not the run, so it can read green over a red run.
+  A reused `nox` environment can carry a stale toolchain, so a clean run can find a lint rule a cached one missed.
 - Style: line length 120, Google docstrings, and `black` with skip-string-normalization.
 - Package layering: `core`, then the domain packages `sources`, `dataloaders`, `evaluation`, and `execution`, then the
   surfaces `cli` and `mcp`. Builders live with what they build: `build_dataloader`, `build_bettor`, and `build_venue`.
 - Named exceptions: `BuildError`, `SelectionError`, `ExecutionError`, and `CredentialError`.
 
-**Version**: 2.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-27
+**Version**: 2.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-27
