@@ -16,9 +16,9 @@ from ._base import (
 )
 from ._browser import BrowserSession, FixedSession, PageSnapshot
 from ._credentials import CredentialError, CredentialRef, resolve
+from ._event import Placer, execute_event
 from ._factory import build_venue
-from ._place import build_value_bet_intents, place, quote
-from ._schedule import execute, find_betting_moment, select_feasible
+from ._schedule import find_betting_moment
 
 __all__: list[str] = [
     'BaseVenue',
@@ -36,14 +36,11 @@ __all__: list[str] = [
     'PlacementReceipt',
     'PlacementReceiptSchema',
     'PlacementStatus',
+    'Placer',
     'VenueBlockedError',
     'build_receipts_frame',
-    'build_value_bet_intents',
     'build_venue',
-    'execute',
+    'execute_event',
     'find_betting_moment',
-    'place',
-    'quote',
     'resolve',
-    'select_feasible',
 ]

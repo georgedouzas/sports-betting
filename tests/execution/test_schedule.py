@@ -1,84 +1,22 @@
-"""Test placing the value bets of the upcoming matches one at a time."""
+"""Test finding the moment a bet goes on for a match."""
 
-import asyncio
-import logging
-
-import numpy as np
 import pandas as pd
-import pytest
 
-from sportsbet.evaluation import OddsComparisonBettor
-from sportsbet.execution import (
-    ExecutionError,
-    PlacementReceipt,
-    PlacementStatus,
-    execute,
-    find_betting_moment,
-    select_feasible,
-)
-from tests.conftest import FakeVenue
-
-NOW = pd.Timestamp('2026-07-17 12:00', tz='UTC')
-STAKE = 10.0
-EVENT_STAKE = 7.0
-BOTH = 2
-
-
-class KeenBettor(OddsComparisonBettor):
-    """A bettor that backs the home win of every match, so the schedule always has bets."""
-
-    def bet(self, X, O):
-        """Back the one market on every row."""
-        return np.ones((len(X), len(self.betting_markets_)), dtype=bool)
+from sportsbet.execution import find_betting_moment
 
 
 class FakeDataLoader:
-    """A dataloader that returns arranged fixtures and remembers the moment it was fitted for."""
+    """A dataloader that remembers the moment it was fitted for."""
 
-    def __init__(self, fixtures, status='preplay', minutes=0):
-        """Keep the fixtures and the moment."""
-        self.fixtures = fixtures
+    def __init__(self, status='preplay', minutes=0):
+        """Keep the status and the time into the match."""
         self.target_event_status_ = status
         self.target_event_time_ = pd.Timedelta(minutes=minutes)
-
-    def extract_fixtures_data(self):
-        """Return the arranged fixtures with home win odds."""
-        X = self.fixtures
-        O = pd.DataFrame({'home_win__odds': [2.5] * len(X)}, index=X.index)
-        return X, None, O
-
-
-def _fixtures(kickoffs, teams):
-    """Return upcoming matches indexed by kickoff."""
-    index = pd.DatetimeIndex([pd.Timestamp(k, tz='UTC') for k in kickoffs], name='date')
-    return pd.DataFrame({'home_team': [t[0] for t in teams], 'away_team': [t[1] for t in teams]}, index=index)
-
-
-def _bettor():
-    """Return a fitted bettor that backs the home win."""
-    bettor = KeenBettor(betting_markets=['home_win'])
-    bettor.betting_markets_ = ['home_win']
-    return bettor
-
-
-def run(coroutine):
-    """Run a coroutine."""
-    return asyncio.run(coroutine)
-
-
-def _clock():
-    """Return a clock stuck at NOW, so a test never waits."""
-    return NOW
-
-
-async def _no_wait(_seconds):
-    """Wait for nothing, so a test never sleeps."""
-    return
 
 
 def test_a_live_model_bets_at_the_kickoff_plus_the_time():
     """The moment of a live bet is the kickoff plus the minutes into the match."""
-    loader = FakeDataLoader(_fixtures(['2026-07-17 15:00'], [('A', 'B')]), status='inplay', minutes=60)
+    loader = FakeDataLoader(status='inplay', minutes=60)
     assert find_betting_moment(loader, pd.Timestamp('2026-07-17 15:00', tz='UTC')) == pd.Timestamp(
         '2026-07-17 16:00',
         tz='UTC',
@@ -87,221 +25,8 @@ def test_a_live_model_bets_at_the_kickoff_plus_the_time():
 
 def test_a_prematch_model_bets_at_the_kickoff():
     """The moment of a prematch bet is the kickoff."""
-    loader = FakeDataLoader(_fixtures(['2026-07-17 15:00'], [('A', 'B')]))
+    loader = FakeDataLoader()
     assert find_betting_moment(loader, pd.Timestamp('2026-07-17 15:00', tz='UTC')) == pd.Timestamp(
         '2026-07-17 15:00',
         tz='UTC',
     )
-
-
-def test_a_match_whose_moment_has_passed_is_not_feasible():
-    """A live match already past its moment cannot be bet on."""
-    fixtures = _fixtures(['2026-07-17 09:00', '2026-07-17 14:00'], [('Past', 'X'), ('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures, status='inplay', minutes=60)
-    mask = select_feasible(loader, fixtures, NOW)
-    assert list(mask) == [False, True]
-
-
-def test_a_window_keeps_only_the_matches_inside_it():
-    """A window drops the matches whose moment falls beyond it."""
-    fixtures = _fixtures(['2026-07-17 12:30', '2026-07-17 20:00'], [('Inside', 'X'), ('Beyond', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    mask = select_feasible(loader, fixtures, NOW, window=pd.Timedelta(hours=2))
-    assert list(mask) == [True, False]
-
-
-def test_only_the_feasible_value_bets_are_placed():
-    """The passed one is dropped and the reachable one goes on."""
-    fixtures = _fixtures(['2026-07-17 09:00', '2026-07-17 14:00'], [('Past', 'X'), ('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures, status='inplay', minutes=60)
-    venue = FakeVenue(prices={('Soon vs Y', 'home_win', 'Soon'): 2.5})
-    receipts = run(
-        execute(venue, loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=_no_wait),
-    )
-    assert list(receipts['match']) == ['Soon vs Y']
-    assert receipts['status'].iloc[0] == 'matched_full'
-
-
-def test_nothing_is_staked_without_the_confirmed_total():
-    """The default stakes nothing and states the total to pass back."""
-    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    venue = FakeVenue(prices={('Soon vs Y', 'home_win', 'Soon'): 2.5})
-    receipts = run(execute(venue, loader, _bettor(), stake=STAKE, clock=_clock, wait=_no_wait))
-    assert (receipts['status'] == 'dry_run').all()
-    assert receipts['stake'].sum() == 0.0
-    assert venue.orders == {}
-    assert str(STAKE) in receipts['detail'].iloc[0]
-
-
-def test_a_wrong_total_stakes_nothing_and_states_the_real_one():
-    """A total that does not match the quote refuses and names the real total."""
-    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    venue = FakeVenue(prices={('Soon vs Y', 'home_win', 'Soon'): 2.5})
-    receipts = run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=999.0, clock=_clock, wait=_no_wait))
-    assert (receipts['status'] == 'refused_unconfirmed').all()
-    assert venue.orders == {}
-    assert str(STAKE) in receipts['detail'].iloc[0]
-
-
-def test_the_matches_go_on_one_at_a_time():
-    """The venue is called once per match, in the schedule's order."""
-    fixtures = _fixtures(['2026-07-17 13:00', '2026-07-17 14:00'], [('First', 'X'), ('Second', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    venue = FakeVenue(
-        prices={('First vs X', 'home_win', 'First'): 2.5, ('Second vs Y', 'home_win', 'Second'): 2.5},
-    )
-    receipts = run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=2 * STAKE, clock=_clock, wait=_no_wait))
-    assert len(venue.placed_order) == BOTH
-    assert venue.placed_order == list(receipts['ref'])
-    assert set(receipts['match']) == {'First vs X', 'Second vs Y'}
-
-
-def test_watching_one_at_a_time_can_miss_a_simultaneous_match():
-    """Two live matches share a moment, so placing one makes the run late for the other and the window closes.
-
-    This is the cost of watching one match at a time. Time passes as the run waits and as it places, so the clock
-    advances by both.
-    """
-    fixtures = _fixtures(['2026-07-17 12:00', '2026-07-17 12:00'], [('First', 'X'), ('Second', 'Y')])
-    loader = FakeDataLoader(fixtures, status='inplay', minutes=60)
-    current = {'t': NOW}
-
-    class SlowVenue(FakeVenue):
-        async def place(self, intent):
-            current['t'] += pd.Timedelta(minutes=5)
-            return await super().place(intent)
-
-    venue = SlowVenue(
-        prices={('First vs X', 'home_win', 'First'): 2.5, ('Second vs Y', 'home_win', 'Second'): 2.5},
-    )
-
-    def clock():
-        return current['t']
-
-    async def wait(seconds):
-        current['t'] += pd.Timedelta(seconds=seconds)
-
-    run(
-        execute(
-            venue,
-            loader,
-            _bettor(),
-            stake=STAKE,
-            confirm_total=2 * STAKE,
-            window=pd.Timedelta(hours=1),
-            clock=clock,
-            wait=wait,
-        ),
-    )
-    assert len(venue.placed_order) == 1
-
-
-def test_the_run_logs_what_it_places(caplog):
-    """Each selection and placement is logged for the terminal to show."""
-    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    venue = FakeVenue(prices={('Soon vs Y', 'home_win', 'Soon'): 2.5})
-    with caplog.at_level(logging.INFO, logger='sportsbet.execution'):
-        run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=_no_wait))
-    messages = ' '.join(record.message for record in caplog.records)
-    assert 'feasible value bets' in messages
-    assert 'Placing Soon vs Y' in messages
-
-
-def test_no_upcoming_matches_places_nothing():
-    """An empty fixture set stakes nothing."""
-    loader = FakeDataLoader(_fixtures([], []))
-    venue = FakeVenue()
-    receipts = run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=_no_wait))
-    assert receipts.empty
-
-
-def test_a_future_live_match_waits_for_its_moment():
-    """A match whose moment is ahead waits, and the wait is the seconds to that moment."""
-    fixtures = _fixtures(['2026-07-17 12:30'], [('Later', 'Y')])
-    loader = FakeDataLoader(fixtures, status='inplay', minutes=60)
-    venue = FakeVenue(prices={('Later vs Y', 'home_win', 'Later'): 2.5})
-    waited = []
-
-    async def record_wait(seconds):
-        waited.append(seconds)
-
-    run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=record_wait))
-    assert waited == [pytest.approx(90 * 60)]
-
-
-def test_authentication_runs_first_and_stops_the_run():
-    """A venue that refuses the login stops the run before anything is scheduled or placed."""
-    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    venue = FakeVenue(prices={('Soon vs Y', 'home_win', 'Soon'): 2.5}, blocked=True)
-    with pytest.raises(Exception, match='refused the login'):
-        run(execute(venue, loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=_no_wait))
-    assert venue.orders == {}
-
-
-def test_a_per_event_stake_vector_sizes_each_bet():
-    """A mapping stakes each event by its own amount, and drops the events it omits."""
-    fixtures = _fixtures(['2026-07-17 13:00', '2026-07-17 14:00'], [('First', 'X'), ('Second', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    venue = FakeVenue(
-        prices={('First vs X', 'home_win', 'First'): 2.5, ('Second vs Y', 'home_win', 'Second'): 2.5},
-    )
-    sizing = {('First vs X', 'home_win', 'First'): EVENT_STAKE}
-    receipts = run(
-        execute(venue, loader, _bettor(), stake=sizing, confirm_total=EVENT_STAKE, clock=_clock, wait=_no_wait),
-    )
-    assert list(receipts['match']) == ['First vs X']
-    assert receipts['stake'].iloc[0] == EVENT_STAKE
-
-
-class FakeSession:
-    """A browser session stand-in: not a venue, so it has no place of its own."""
-
-    key = 'site'
-
-    def __init__(self):
-        """Start unauthenticated."""
-        self.authenticated = False
-
-    async def authenticate(self):
-        """Record the login."""
-        self.authenticated = True
-
-
-def test_a_browser_session_places_through_the_placer():
-    """The library hands each event to the placer, since it cannot click a bet slip itself."""
-    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    session = FakeSession()
-    handed = []
-
-    async def placer(intent, given):
-        handed.append((intent.identity.match, given))
-        return PlacementReceipt(identity=intent.identity, status=PlacementStatus.MATCHED_FULL, stake=intent.stake)
-
-    receipts = run(
-        execute(
-            session,
-            loader,
-            _bettor(),
-            stake=STAKE,
-            placer=placer,
-            confirm_total=STAKE,
-            clock=_clock,
-            wait=_no_wait,
-        ),
-    )
-    assert session.authenticated
-    assert handed == [('Soon vs Y', session)]
-    assert receipts['status'].iloc[0] == 'matched_full'
-
-
-def test_a_browser_session_without_a_placer_is_refused():
-    """A browser session needs a placer, and execute says so rather than failing obscurely."""
-    fixtures = _fixtures(['2026-07-17 14:00'], [('Soon', 'Y')])
-    loader = FakeDataLoader(fixtures)
-    with pytest.raises(ExecutionError, match='needs a `placer`'):
-        run(execute(FakeSession(), loader, _bettor(), stake=STAKE, confirm_total=STAKE, clock=_clock, wait=_no_wait))

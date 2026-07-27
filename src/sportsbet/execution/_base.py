@@ -45,7 +45,6 @@ class PlacementStatus(StrEnum):
 
 
 REF_BYTES = 16
-STAKED = frozenset({PlacementStatus.ACCEPTED, PlacementStatus.MATCHED_FULL, PlacementStatus.MATCHED_PARTIAL})
 
 
 @dataclass(frozen=True)
@@ -208,22 +207,6 @@ def build_receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
     frame['placed_at'] = pd.to_datetime(frame['placed_at'], utc=True)
     result: pd.DataFrame = PlacementReceiptSchema.validate(frame)
     return result
-
-
-def _build_dry_run_receipts(intents: list[PlacementIntent], status: PlacementStatus, detail: str) -> pd.DataFrame:
-    """Return a receipt for every intent, none of them staked."""
-    return build_receipts_frame(
-        [
-            PlacementReceipt(
-                identity=intent.identity,
-                status=status,
-                price=intent.min_price,
-                value_bet=intent.value_bet,
-                detail=detail,
-            )
-            for intent in intents
-        ],
-    )
 
 
 class BaseVenue(abc.ABC):

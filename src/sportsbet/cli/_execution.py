@@ -22,16 +22,12 @@ from ..execution import (
     BaseVenue,
     BetIdentity,
     BrowserSession,
-    ExposureLimits,
     FixedSession,
     PlacementIntent,
     PlacementQuote,
-    build_value_bet_intents,
     build_venue,
+    execute_event,
 )
-from ..execution import execute as run_execute
-from ..execution import place as run_place
-from ..execution import quote as run_quote
 from ._building import _report_errors
 from ._utils import _print_console
 
@@ -50,40 +46,25 @@ def _load_session(venue_ref: str) -> BrowserSession:
     """Return the browser session a reference names."""
     built = build_venue(venue_ref)
     if isinstance(built, BaseVenue):
-        msg = f'`{venue_ref}` is a venue with an API, so it is placed at with `execution place` rather than driven.'
+        msg = f'`{venue_ref}` is a venue with an API rather than a browser session, so `page` does not apply.'
         raise click.UsageError(msg)
     return built
 
 
-def _build_limits(max_stake: float, max_exposure: float, kill: bool) -> ExposureLimits:
-    """Return the ceilings a placement answers to."""
-    return ExposureLimits(max_stake_per_bet=max_stake, max_total_exposure=max_exposure, killed=kill)
-
-
-def _write_quote(quoted: PlacementQuote, path: str) -> None:
-    """Write a quote to a file."""
-    Path(path).write_text(
-        json.dumps(
-            {
-                'total_stake': quoted.total_stake,
-                'total_exposure': quoted.total_exposure,
-                'quoted_at': quoted.quoted_at.isoformat(),
-                'intents': [
-                    {
-                        'venue': intent.identity.venue,
-                        'match': intent.identity.match,
-                        'market': intent.identity.market,
-                        'selection': intent.identity.selection,
-                        'stake': intent.stake,
-                        'min_price': intent.min_price,
-                        'value_bet': intent.value_bet,
-                    }
-                    for intent in quoted.intents
-                ],
-            },
-            indent=2,
-        ),
-    )
+@contextmanager
+def _logging_to_terminal() -> Iterator[None]:
+    """Show the run's log on the terminal while a command runs."""
+    logger = logging.getLogger('sportsbet.execution')
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    logger.addHandler(handler)
+    level = logger.level
+    logger.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(level)
 
 
 def _read_quote(path: str) -> PlacementQuote:
@@ -105,28 +86,11 @@ def _read_quote(path: str) -> PlacementQuote:
     )
 
 
-def _render_quote(quoted: PlacementQuote) -> pd.DataFrame:
-    """Return a quote as a table."""
-    return pd.DataFrame.from_records(
-        [
-            {
-                'match': intent.identity.match,
-                'market': intent.identity.market,
-                'selection': intent.identity.selection,
-                'stake': intent.stake,
-                'min_price': intent.min_price,
-            }
-            for intent in quoted.intents
-        ],
-    )
-
-
 @click.group()
 def execution() -> None:
     """Place the value bets a model found, at a venue where you hold an account.
 
-    Nothing is staked until the figures `quote` returns are passed back to `place` exactly. Read the execution page of
-    the user guide before using any of this: it spends real money.
+    Read the execution page of the user guide before using any of this: it spends real money.
     """
     return
 
@@ -141,6 +105,70 @@ def venue(venue_ref: str) -> None:
         Console().print(
             Panel.fit(f'[bold]{built.key}[/bold]\ncancels: {cancels}\n\n{getattr(built, "notes", "") or ""}'),
         )
+
+
+@execution.command()
+@click.option('--venue', 'venue_ref', required=True, help='Your browser session, as `venue.py:VENUE`.')
+@click.option(
+    '--dataloader',
+    '-d',
+    'dataloader_path',
+    required=True,
+    type=click.Path(exists=True),
+    help='A saved dataloader configured for the event.',
+)
+@click.option(
+    '--bettor',
+    '-b',
+    'bettor_path',
+    required=True,
+    type=click.Path(exists=True),
+    help='A model saved by `fit`.',
+)
+@click.option('--event', required=True, help='The one event to act on, as `Home vs Away`.')
+@click.option('--stake', type=float, required=True, help='The fixed stake to place.')
+@click.option('--url', 'urls', multiple=True, help='A candidate bookmaker URL. Repeatable.')
+@click.option('--live', is_flag=True, help='Arm the run. Off by default, which is a dry run.')
+@click.option('--poll', default='30s', help='The source poll interval, as `30s` or `2min`.')
+@click.option('--output', '-o', 'output', type=click.Path(), help='A directory to write the receipt CSV to.')
+def run(
+    venue_ref: str,
+    dataloader_path: str,
+    bettor_path: str,
+    event: str,
+    stake: float,
+    urls: tuple[str, ...],
+    live: bool,
+    poll: str,
+    output: str | None,
+) -> None:
+    """Watch one event and place the model's bet at its moment.
+
+    It explores the URLs to match the event, prompts the login, logs the event to the terminal, and at the fitted moment
+    places the stake on the model's selection. Without `--live` it stakes nothing and logs the bet it would have made.
+    """
+    with _report_errors(), _logging_to_terminal():
+        session = _load_session(venue_ref)
+        loader = load_dataloader(dataloader_path)
+        bettor = load_bettor(bettor_path)
+        receipts = asyncio.run(
+            execute_event(
+                event,
+                bettor,
+                loader,
+                session,
+                stake=stake,
+                urls=list(urls),
+                live=live,
+                poll=pd.Timedelta(poll),
+            ),
+        )
+        if not receipts.empty:
+            _print_console([receipts], ['Receipts'])
+            if output is not None:
+                written = Path(output) / 'sports-betting-data'
+                written.mkdir(parents=True, exist_ok=True)
+                receipts.to_csv(written / 'receipts.csv', index=False)
 
 
 @execution.command()
@@ -176,98 +204,12 @@ def balance(venue_ref: str) -> None:
 @execution.command()
 @click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 @click.option(
-    '--dataloader',
-    '-d',
-    'dataloader_path',
-    required=True,
-    type=click.Path(exists=True),
-    help='A saved dataloader.',
-)
-@click.option(
-    '--bettor',
-    '-b',
-    'bettor_path',
-    required=True,
-    type=click.Path(exists=True),
-    help='A model saved by `fit`.',
-)
-@click.option('--stake', type=float, required=True, help='What to stake on each value bet.')
-@click.option('--output', '-o', 'output', required=True, type=click.Path(), help='Where to write the quote.')
-def quote(venue_ref: str, dataloader_path: str, bettor_path: str, stake: float, output: str) -> None:
-    """Show what would be staked on the upcoming matches, and write it for `place`."""
-    with _report_errors():
-        built = _load_venue(venue_ref)
-        loader = load_dataloader(dataloader_path)
-        bettor = load_bettor(bettor_path)
-        X_fix, _, O_fix = loader.extract_fixtures_data()
-        if X_fix.empty or O_fix is None or O_fix.empty:
-            Console().print(Panel.fit('[bold red]There are no upcoming matches to bet on.'))
-            return
-        intents = build_value_bet_intents(built.key, bettor, X_fix, O_fix, stake)
-        if not intents:
-            Console().print(Panel.fit('[bold red]The model found no value bets.'))
-            return
-        quoted = asyncio.run(run_quote(built, intents, ExposureLimits()))
-        _print_console([_render_quote(quoted)], ['What would be staked'])
-        Console().print(
-            f'\nTotal stake [bold]{quoted.total_stake}[/bold], total exposure [bold]{quoted.total_exposure}[/bold].'
-            f'\nTo place these bets, pass both back:'
-            f'\n  --confirm-stake {quoted.total_stake} --confirm-exposure {quoted.total_exposure}',
-        )
-        _write_quote(quoted, output)
-
-
-@execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option(
     '--quote',
     '-q',
     'quote_path',
     required=True,
     type=click.Path(exists=True),
-    help='A quote written by `quote`.',
-)
-@click.option('--confirm-stake', type=float, help='The quoted stake, passed back to place the bets.')
-@click.option('--confirm-exposure', type=float, help='The quoted exposure, passed back to place the bets.')
-@click.option('--max-stake', type=float, default=0.0, help='The most to stake on one bet. Zero leaves it open.')
-@click.option('--max-exposure', type=float, default=0.0, help='The most to have at stake at once. Zero leaves it open.')
-@click.option('--kill', is_flag=True, help='Stop placing.')
-@click.option('--output', '-o', 'data_path', type=click.Path(), help='A directory to write the receipts to, as CSV.')
-def place(
-    venue_ref: str,
-    quote_path: str,
-    confirm_stake: float | None,
-    confirm_exposure: float | None,
-    max_stake: float,
-    max_exposure: float,
-    kill: bool,
-    data_path: str | None,
-) -> None:
-    """Place a quoted batch, staking nothing unless the quoted figures are passed back."""
-    with _report_errors():
-        built = _load_venue(venue_ref)
-        quoted = _read_quote(quote_path)
-        receipts = asyncio.run(
-            run_place(built, quoted, _build_limits(max_stake, max_exposure, kill), confirm_stake, confirm_exposure),
-        )
-        _print_console([receipts], ['Receipts'])
-        if data_path is not None:
-            written = Path(data_path) / 'sports-betting-data'
-            written.mkdir(parents=True, exist_ok=True)
-            receipts.to_csv(written / 'receipts.csv', index=False)
-        if not (receipts['stake'] > 0).any():
-            raise SystemExit(1)
-
-
-@execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option(
-    '--quote',
-    '-q',
-    'quote_path',
-    required=True,
-    type=click.Path(exists=True),
-    help='A quote written by `quote`.',
+    help='A quote written for the bets.',
 )
 def status(venue_ref: str, quote_path: str) -> None:
     """Show what the venue holds for the bets of a quote."""
@@ -412,80 +354,3 @@ def page_fix(venue_ref: str, url: str, match: str, locators: tuple[str, ...]) ->
         session = _load_session(venue_ref)
         pinned = asyncio.run(_fix(session, url, match, _parse_locators(locators)))
         Console().print(Panel.fit(f'[bold]{pinned.match}[/bold]\n{pinned.url}\n\n{pinned.locators}'))
-
-
-@contextmanager
-def _logging_to_terminal() -> Iterator[None]:
-    """Show the run's log on the terminal while a command runs."""
-    logger = logging.getLogger('sportsbet.execution')
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(message)s'))
-    logger.addHandler(handler)
-    level = logger.level
-    logger.setLevel(logging.INFO)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
-        logger.setLevel(level)
-
-
-@execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option(
-    '--dataloader',
-    '-d',
-    'dataloader_path',
-    required=True,
-    type=click.Path(exists=True),
-    help='A saved dataloader.',
-)
-@click.option(
-    '--bettor',
-    '-b',
-    'bettor_path',
-    required=True,
-    type=click.Path(exists=True),
-    help='A model saved by `fit`.',
-)
-@click.option('--stake', type=float, required=True, help='What to stake on each value bet.')
-@click.option('--confirm-total', type=float, help='The quoted total, passed back to place the bets.')
-@click.option('--max-stake', type=float, default=0.0, help='The most to stake on one bet. Zero leaves it open.')
-@click.option('--max-exposure', type=float, default=0.0, help='The most to have at stake at once. Zero leaves it open.')
-@click.option('--window', help='How long to keep placing, as `2h` or `90min`. Without it, every upcoming match.')
-@click.option('--seed', type=int, default=0, help='The seed for the random order.')
-def run(
-    venue_ref: str,
-    dataloader_path: str,
-    bettor_path: str,
-    stake: float,
-    confirm_total: float | None,
-    max_stake: float,
-    max_exposure: float,
-    window: str | None,
-    seed: int,
-) -> None:
-    """Place the value bets of the upcoming matches, one match at a time.
-
-    Nothing stakes until `--confirm-total` matches the quoted total. The run logs each selection and placement to the
-    terminal as it goes.
-    """
-    with _report_errors(), _logging_to_terminal():
-        built = _load_venue(venue_ref)
-        loader = load_dataloader(dataloader_path)
-        bettor = load_bettor(bettor_path)
-        receipts = asyncio.run(
-            run_execute(
-                built,
-                loader,
-                bettor,
-                stake=stake,
-                max_stake=max_stake,
-                max_exposure=max_exposure,
-                confirm_total=confirm_total,
-                window=pd.Timedelta(window) if window else None,
-                seed=seed,
-            ),
-        )
-        if not receipts.empty:
-            _print_console([receipts], ['Receipts'])
