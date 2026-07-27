@@ -21,7 +21,6 @@ from ..execution import (
     BetIdentity,
     BrowserSession,
     ExecutionError,
-    PlacementIntent,
     build_venue,
     execute_event,
 )
@@ -365,19 +364,6 @@ def _load_venue(reference: str) -> BaseVenue:
     return built
 
 
-def _build_intents(key: str, records: list[dict[str, Any]]) -> list[PlacementIntent]:
-    """Return the bets a caller means to place."""
-    return [
-        PlacementIntent(
-            identity=BetIdentity(key, record['match'], record['market'], record['selection']),
-            stake=float(record['stake']),
-            min_price=float(record['min_price']),
-            value_bet=str(record.get('value_bet', '')),
-        )
-        for record in records
-    ]
-
-
 def _run_event(
     venue: str,
     dataloader: str,
@@ -444,12 +430,12 @@ async def execution_list_markets(venue: str, matches: list[str]) -> list[dict[st
 
 
 @server.tool()
-async def execution_read_status(venue: str, intents: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Return what the venue holds for these bets."""
+async def execution_read_status(venue: str, match: str, market: str, selection: str) -> list[dict[str, Any]]:
+    """Return what the venue holds for one bet."""
     built = _load_venue(venue)
     await built.authenticate()
-    identities = [intent.identity for intent in _build_intents(built.key, intents)]
-    return _to_records(await built.read_status(identities))
+    identity = BetIdentity(built.key, match, market, selection)
+    return _to_records(await built.read_status([identity]))
 
 
 @server.tool()

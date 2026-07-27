@@ -16,13 +16,10 @@ RENAMED = {
     'dataloader_path': 'dataloader',
     'bettor_path': 'bettor',
     'data_path': 'output',
-    'quote_path': 'quote',
     'venue_ref': 'venue',
 }
 UNREACHABLE = {'output'}
-SPELLED = {
-    'execution_read_status': {'quote'},
-}
+SPELLED: dict[str, set[str]] = {}
 PAIRS = [
     (['dataloader', 'params'], 'available_params'),
     (['dataloader', 'odds-types'], 'odds_types'),
