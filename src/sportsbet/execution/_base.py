@@ -1,8 +1,4 @@
-"""Types shared by the venues and the placing.
-
-A bet is the same bet when it names the same venue, match, market and selection. Its reference is derived from those
-four rather than stored, so a restarted run recomputes it and finds its own bet at the venue.
-"""
+"""Define the venue base class and the types a bet placement produces."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -10,7 +6,7 @@ four rather than stored, so a restarted run recomputes it and finds its own bet 
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from hashlib import blake2s
@@ -18,9 +14,6 @@ from typing import Annotated
 
 import pandas as pd
 import pandera.pandas as pa
-
-REF_BYTES = 16
-REF_CHARS = 32
 
 
 class ExecutionError(Exception):
@@ -51,6 +44,7 @@ class PlacementStatus(StrEnum):
     REJECTED = 'rejected'
 
 
+REF_BYTES = 16
 STAKED = frozenset({PlacementStatus.ACCEPTED, PlacementStatus.MATCHED_FULL, PlacementStatus.MATCHED_PARTIAL})
 
 
@@ -58,15 +52,20 @@ STAKED = frozenset({PlacementStatus.ACCEPTED, PlacementStatus.MATCHED_FULL, Plac
 class BetIdentity:
     """What makes two bets the same bet.
 
-    A venue, a match, a market and a selection, and nothing else. Two intents that share those four are the same bet,
-    whichever run produced them, so one selection at one venue carries at most one stake.
+    Two bets with the same venue, match, market and selection are the same bet.
+
+    Args:
+        venue: The venue the bet is placed at.
+        match: The match it is on.
+        market: The market within the match.
+        selection: The side backed.
 
     Examples:
         >>> from sportsbet.execution import BetIdentity
         >>> identity = BetIdentity('exchange', 'Arsenal vs Chelsea', 'home_win', 'Arsenal')
-        >>> identity.ref
+        >>> identity.ref_
         '2f3152b1a4f9f6333904f3624320d921'
-        >>> BetIdentity('exchange', 'Arsenal vs Chelsea', 'home_win', 'Arsenal').ref == identity.ref
+        >>> BetIdentity('exchange', 'Arsenal vs Chelsea', 'home_win', 'Arsenal').ref_ == identity.ref_
         True
     """
 
@@ -76,8 +75,8 @@ class BetIdentity:
     selection: str
 
     @property
-    def ref(self: BetIdentity) -> str:
-        """Return the reference a venue carries for this bet."""
+    def ref_(self: BetIdentity) -> str:
+        """The reference a venue carries for this bet."""
         seed = f'{self.venue}|{self.match}|{self.market}|{self.selection}'
         return blake2s(seed.encode(), digest_size=REF_BYTES).hexdigest()
 
@@ -86,8 +85,11 @@ class BetIdentity:
 class PlacementIntent:
     """What the caller means to do.
 
-    The stake is an input. The minimum price defaults to the price the value bet was computed at, since a bet below it
-    is no longer a value bet.
+    Args:
+        identity: The bet to place.
+        stake: The amount to stake.
+        min_price: The lowest price to accept.
+        value_bet: The value bet the intent came from.
     """
 
     identity: BetIdentity
@@ -100,8 +102,11 @@ class PlacementIntent:
 class PlacementQuote:
     """What is about to be staked, before anything is.
 
-    A quote is a promise rather than a reservation. Prices move, and the minimum price of each intent is what protects
-    the caller between quoting and landing.
+    Args:
+        intents: The bets the quote covers.
+        total_stake: The total to be staked.
+        total_exposure: The total exposure after staking.
+        quoted_at: When the quote was taken.
     """
 
     intents: list[PlacementIntent]
@@ -112,7 +117,18 @@ class PlacementQuote:
 
 @dataclass(frozen=True)
 class PlacementReceipt:
-    """What happened to an intended bet."""
+    """What happened to an intended bet.
+
+    Args:
+        identity: The bet.
+        status: What became of it.
+        stake: The amount staked.
+        price: The price it was matched at.
+        venue_bet_id: The venue's identifier for the bet.
+        value_bet: The value bet it came from.
+        placed_at: When it was placed.
+        detail: A human-readable note.
+    """
 
     identity: BetIdentity
     status: PlacementStatus
@@ -126,7 +142,13 @@ class PlacementReceipt:
 
 @dataclass
 class ExposureLimits:
-    """The ceilings a placement answers to, and the switch that stops it."""
+    """The ceilings a placement answers to, and the switch that stops it.
+
+    Args:
+        max_stake_per_bet: The most to stake on one bet.
+        max_total_exposure: The most to have staked at once.
+        killed: Whether the kill switch is on.
+    """
 
     max_stake_per_bet: float = 0.0
     max_total_exposure: float = 0.0
@@ -156,11 +178,18 @@ class PlacementReceiptSchema(pa.DataFrameModel):
         coerce = True
 
 
-def receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
-    """Return receipts as a validated frame."""
+def build_receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
+    """Return receipts as a validated frame.
+
+    Args:
+        receipts: The receipts to frame.
+
+    Returns:
+        frame: The receipts as a validated frame.
+    """
     records = [
         {
-            'ref': receipt.identity.ref,
+            'ref': receipt.identity.ref_,
             'venue': receipt.identity.venue,
             'match': receipt.identity.match,
             'market': receipt.identity.market,
@@ -181,12 +210,26 @@ def receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
     return result
 
 
+def _build_dry_run_receipts(intents: list[PlacementIntent], status: PlacementStatus, detail: str) -> pd.DataFrame:
+    """Return a receipt for every intent, none of them staked."""
+    return build_receipts_frame(
+        [
+            PlacementReceipt(
+                identity=intent.identity,
+                status=status,
+                price=intent.min_price,
+                value_bet=intent.value_bet,
+                detail=detail,
+            )
+            for intent in intents
+        ],
+    )
+
+
 class BaseVenue(abc.ABC):
     """A place where a user holds an account and can back a selection.
 
-    A venue implementing this contract places once and only once for an identity. A venue that cannot promise that does
-    not implement it, which is why a bookmaker's website does not: recognising an already placed bet there means reading
-    its bet history, and reading its bet history means knowing how that site is built.
+    A venue implementing this contract places once and only once for an identity.
     """
 
     key: str = ''
@@ -215,15 +258,3 @@ class BaseVenue(abc.ABC):
     @abc.abstractmethod
     async def cancel(self: BaseVenue, identity: BetIdentity) -> PlacementReceipt:
         """Cancel a bet, raising `CancellationUnsupportedError` where the venue cannot."""
-
-
-@dataclass
-class Placed:
-    """What a fake or a venue recorded, used to answer whether a bet is already there."""
-
-    ref: str
-    stake: float
-    price: float
-    venue_bet_id: str
-    status: PlacementStatus = PlacementStatus.ACCEPTED
-    calls: int = field(default=0)

@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from .._base import BaseStatsSource
 from .._common._football_data import _FootballDataSource

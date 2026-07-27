@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from typing import ClassVar, Self
 
@@ -447,6 +446,7 @@ FEED_TIMEZONE = 'Europe/London'
 KEY_PARTS = 3
 DRAW_MARGIN = 0.25
 FIXTURES_KEY = 'fixtures'
+ROLLING_GAMES = 3
 
 
 def _preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
@@ -591,7 +591,7 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
     features_data[features_avg_cols] = features_data.groupby('team')[features_cols].expanding().mean().to_numpy()
     features_data[features_avg_cols] = features_data.groupby('team')[features_avg_cols].shift(1)
     features_data[features_latest_avg_cols] = (
-        features_data.groupby('team')[features_cols].rolling(window=3, min_periods=1).mean().to_numpy()
+        features_data.groupby('team')[features_cols].rolling(window=ROLLING_GAMES, min_periods=1).mean().to_numpy()
     )
     features_data[features_latest_avg_cols] = features_data.groupby('team')[features_latest_avg_cols].shift(1)
     features_data = features_data.drop(columns=features_cols).reset_index()

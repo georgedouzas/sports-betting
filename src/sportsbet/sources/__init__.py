@@ -1,7 +1,5 @@
 """Read match statistics and odds from the feeds that publish them."""
 
-from __future__ import annotations
-
 from ._base import (
     BaseOddsSource,
     BaseSource,

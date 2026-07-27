@@ -21,19 +21,22 @@ def build_venue(venue: str) -> BaseVenue | BrowserSession:
 
     Args:
         venue:
-            Where the venue lives, as in `venue.py:VENUE`. The library ships no bookmaker: a venue with an API
-            is a `BaseVenue` you write, and a bookmaker's website is a `BrowserSession` you configure.
+            Where the venue lives, as in `venue.py:VENUE`. A venue with an API is a `BaseVenue` you write, and a
+            bookmaker's website is a `BrowserSession` you configure.
 
     Returns:
         built:
             The venue, or the browser session.
+
+    Raises:
+        BuildError: If the reference is malformed, the execution extra is missing, or it names no venue.
     """
     if ':' not in venue:
         msg = f'`{venue}` should name a venue in a Python file, as in `venue.py:VENUE`. The library ships none.'
         raise BuildError(msg)
     built = load_object(venue)
     try:
-        from ._browser import BrowserSession  # noqa: PLC0415
+        from ._browser import BrowserSession  # noqa: PLC0415  # defer the optional execution extra
     except ImportError as missing:
         raise BuildError(EXECUTION_EXTRA) from missing
     if not isinstance(built, BaseVenue | BrowserSession):

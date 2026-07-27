@@ -1,6 +1,25 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.0.0 -> 2.1.0
+Rationale: Sharpen the Code Conventions. An `__init__` holds only its docstring and the re-exports, with no logic, no
+function, and no `__getattr__`. A module constant is `UPPER_CASE` and lives in the constants block near the top of the
+module, never mid-file. A constant is named for what it holds, not a role it plays. A constant two modules define the
+same way is one fact and is lifted to the shared-leaves subpackage, while two that share a value but not a meaning stay
+apart. MINOR: expanded guidance, nothing removed or redefined.
+
+Modified sections:
+  - Naming: added the constant-named-for-what-it-holds rule.
+  - Files & Module Structure: added the UPPER_CASE-constants-at-the-top rule.
+  - Public Surface: added the no-logic-in-__init__ rule.
+  - Don't Repeat Yourself: added the lift-a-shared-constant rule.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 1.10.0 -> 2.0.0
 Rationale: Structural rewrite. The document is reorganized into a repo-agnostic body (Core Principles, Code
 Conventions, Toolchain, Workflow, Governance) plus a single Project Profile that instantiates it for this repository,
@@ -134,13 +153,19 @@ A module is named for the concern it owns. Use a descriptive noun for what it do
 call it. It MUST NOT reuse a name that collides with a dependency's concept. Names come from the domain, used
 consistently.
 
+A constant is named for what it holds, not for a role it happens to play. When the values are the preplay statuses the
+name is `PREPLAY_EVENT_STATUSES`, not `INPUT_EVENT_STATUSES`. Read every constant name and check it still describes its
+value.
+
 ### Files & Module Structure
 
 A module reads top to bottom in one order. First a one-line imperative module docstring, then the license header, then
 `from __future__ import annotations`, then imports grouped standard library, third party, first party. The linter sorts
-the imports, so do not sort them by hand. Then module constants in `UPPER_CASE` and type aliases. Then functions in
-dependency order, so a name is defined before it is used, the small helpers first and the function the module exists for
-last.
+the imports, so do not sort them by hand. Then module constants and type aliases. Then functions in dependency order, so
+a name is defined before it is used, the small helpers first and the function the module exists for last.
+
+A module constant is `UPPER_CASE`, and it lives in the constants block near the top of the module, never mid-file among
+the functions.
 
 One module is one concern. When a file grows two, split it. A definition lives in the module that owns it. A base module
 is self-contained and imports no sibling. Its purpose is to be imported, not to import, so a base that needs a sibling's
@@ -162,6 +187,9 @@ owning package's `__init__` and imported from that surface, never from the priva
 re-exported once, where it lives, and a parent package does not re-export a subpackage's surface a second time. This
 holds for all code, production and tests alike. Reaching into another package's private module for a public name is the
 smell the re-export removes.
+
+An `__init__` holds only its docstring and the re-exports. It carries no logic, no function, and no `__getattr__`. A
+name that has to be computed to be exposed lives in a module, not the `__init__`.
 
 ### Docstrings
 
@@ -215,6 +243,10 @@ A fact, a definition, or a derivation lives in exactly one place. When the same 
 to one. Do not store what can be derived from what you already keep. Persist the source and derive the projection on
 demand, not both. Do not reimplement a capability the codebase already has. Reuse it rather than writing a second copy
 in another module.
+
+A constant that two modules define the same way is one fact, whatever each names it. Lift it to the subpackage that
+holds the shared leaves and import it from there. Two constants that share a value but not a meaning, such as a
+column-name separator and an item-key separator that are both `'__'`, are two facts and stay apart.
 
 ### Tests
 
@@ -292,4 +324,4 @@ This section instantiates the body above for this repository. It is the only rep
   surfaces `cli` and `mcp`. Builders live with what they build: `build_dataloader`, `build_bettor`, and `build_venue`.
 - Named exceptions: `BuildError`, `SelectionError`, `ExecutionError`, and `CredentialError`.
 
-**Version**: 2.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26
+**Version**: 2.1.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26

@@ -14,10 +14,10 @@ from sportsbet.execution import (
     ExposureLimits,
     PlacementIntent,
     PlacementStatus,
+    build_value_bet_intents,
     place,
     quote,
     resolve,
-    value_bet_intents,
 )
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 from tests.conftest import FakeVenue
@@ -70,15 +70,15 @@ def quoted(venue, intents):
 
 def test_ref_is_thirty_two_hex_characters():
     """The reference fits the field a venue carries it in."""
-    ref = identity().ref
+    ref = identity().ref_
     assert len(ref) == REF_CHARS
     assert all(character in '0123456789abcdef' for character in ref)
 
 
 def test_ref_is_derived_rather_than_remembered():
     """The same four fields give the same reference, so a fresh run recomputes it."""
-    assert identity().ref == identity().ref
-    assert BetIdentity('fake', MATCH, 'home_win', 'Arsenal').ref == identity().ref
+    assert identity().ref_ == identity().ref_
+    assert BetIdentity('fake', MATCH, 'home_win', 'Arsenal').ref_ == identity().ref_
 
 
 @pytest.mark.parametrize(
@@ -87,14 +87,14 @@ def test_ref_is_derived_rather_than_remembered():
 )
 def test_ref_changes_with_every_field(field, value):
     """Each of the four fields is part of what makes a bet that bet."""
-    assert identity(**{field: value}).ref != identity().ref
+    assert identity(**{field: value}).ref_ != identity().ref_
 
 
 def test_same_four_fields_are_the_same_bet():
     """Two intents from different runs that share the four are one bet."""
     first = PlacementIntent(identity=identity(), stake=10.0, min_price=2.0, value_bet='run-1')
     second = PlacementIntent(identity=identity(), stake=25.0, min_price=1.5, value_bet='run-2')
-    assert first.identity.ref == second.identity.ref
+    assert first.identity.ref_ == second.identity.ref_
 
 
 def test_credential_is_read_from_the_named_variable(monkeypatch):
@@ -302,7 +302,7 @@ def test_two_selections_on_one_market_are_two_bets():
 
 def test_the_same_selection_at_two_venues_are_two_bets():
     """One selection at two venues is two bets, since the venue is part of what makes a bet that bet."""
-    assert identity(venue='fake').ref != identity(venue='other').ref
+    assert identity(venue='fake').ref_ != identity(venue='other').ref_
 
 
 def test_placing_keeps_no_state_of_its_own(tmp_path, monkeypatch):
@@ -371,7 +371,7 @@ def test_the_venue_reports_what_it_holds():
     batch = quoted(venue, [intent(stake=STAKE)])
     run(place(venue, batch, limits(), batch.total_stake, batch.total_exposure))
     held = run(venue.read_status([identity()]))
-    assert list(held['ref']) == [identity().ref]
+    assert list(held['ref']) == [identity().ref_]
     assert list(held['stake']) == [STAKE]
 
 
@@ -429,9 +429,9 @@ def test_value_bet_intents_handles_a_shared_kickoff_and_real_odds():
     assert X.index.duplicated().any()
     bettor = OddsComparisonBettor(alpha=0.03, betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
 
-    intents = value_bet_intents('demo', bettor, X.head(40), O.head(40), stake=10.0)
+    intents = build_value_bet_intents('demo', bettor, X.head(40), O.head(40), stake=10.0)
     assert intents
     assert all('\n' not in intent.identity.match for intent in intents)
     assert all(' vs ' in intent.identity.match for intent in intents)
     assert any(intent.min_price != FALLBACK_PRICE for intent in intents)
-    assert len({intent.identity.ref for intent in intents}) == len(intents)
+    assert len({intent.identity.ref_ for intent in intents}) == len(intents)

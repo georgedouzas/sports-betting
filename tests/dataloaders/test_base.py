@@ -11,7 +11,7 @@ from sportsbet.sources import required_col
 class _TestDataLoader(BaseDataLoader):
     """A concrete test dataloader whose snapshots and schemas are supplied directly."""
 
-    def _snapshots(self):
+    def _load_snapshots(self):
         return self.stats_, self.odds_
 
     def _load(self, odds_type):
@@ -71,7 +71,7 @@ def test_extract_train_data_fails_on_mismatched_snapshot_cols(stats, odds, stats
 
     odds = odds.assign(extra_col='value')
     dataloader = _from_components(stats, odds, stats_schema, MismatchedOddsSchema, targets)
-    with pytest.raises(AssertionError, match="Stats and odds snapshots columns do not match"):
+    with pytest.raises(ValueError, match="Stats and odds snapshots columns do not match"):
         dataloader.extract_train_data()
 
 

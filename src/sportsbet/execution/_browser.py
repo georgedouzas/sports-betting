@@ -1,9 +1,4 @@
-"""Drive a bookmaker's website for a venue with no API.
-
-This is not a venue and has no `place`: the agent places, so once-only placement and the stake limits are the agent's
-here rather than the library's. A page is read as an accessibility snapshot the agent can act on. Nothing hides that it
-is automation, and a blocked site is reported.
-"""
+"""Drive a bookmaker's website for a venue with no API."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -22,7 +17,7 @@ if TYPE_CHECKING:
     from playwright.async_api import BrowserContext, Page
 
 BLOCKED_STATUS = frozenset({403, 429})
-REF = re.compile(r'^e\d+$')
+REF_PATTERN = re.compile(r'^e\d+$')
 BROWSER_EXTRA = "Driving a site needs playwright's browser. Install it with `python -m playwright install chromium`."
 
 
@@ -30,7 +25,9 @@ BROWSER_EXTRA = "Driving a site needs playwright's browser. Install it with `pyt
 class PageSnapshot:
     """A page in a form an agent can reason about and act on.
 
-    The refs in the snapshot are what `click`, `type` and `select` take.
+    Args:
+        yaml: The page as an accessibility tree.
+        url: The page URL.
     """
 
     yaml: str
@@ -39,10 +36,12 @@ class PageSnapshot:
 
 @dataclass(frozen=True)
 class FixedSession:
-    """What exploring found, pinned so that placing does not have to find it again.
+    """The locators exploring found, pinned to a match.
 
-    Roles and accessible names rather than refs, since a ref belongs to one state of the page and an odds widget re-
-    renders constantly. No price, since the price is read when the bet is placed.
+    Args:
+        match: The match the session is pinned to.
+        url: The page URL it was pinned at.
+        locators: The pinned locators, by name.
     """
 
     match: str
@@ -53,27 +52,25 @@ class FixedSession:
 class BrowserSession:
     """A bookmaker's website, driven in a real browser on your own account.
 
-    Everything about the site comes from the user. The library holds no table of sites, no selectors, and no claim that
-    any given site works.
+    Everything about the site comes from the user.
 
     Args:
         key:
             What to call this venue.
         url:
-            The bookmaker's site. This is how a venue is chosen.
+            The bookmaker's site.
         notes:
-            What you know about the site, written for the agent. It is stored and handed back exactly as written, and
-            the library never reads it.
+            What you know about the site.
         credential_env:
             The names of the variables holding the username and the password.
         user_data_dir:
-            Where the browser keeps its profile, so a login survives a restart.
+            Where the browser keeps its profile.
         min_interval:
             The seconds to leave between actions.
         timeout:
             The milliseconds to wait for an element before giving up on it.
         headless:
-            Whether to hide the browser window. `False` opens it, so you can watch the agent work.
+            Whether to hide the browser window. `False` opens it.
 
     Examples:
         >>> from sportsbet.execution import BrowserSession
@@ -116,16 +113,12 @@ class BrowserSession:
         self._playwright: object | None = None
 
     async def authenticate(self: BrowserSession) -> None:
-        """Open the browser at the site, so the session starts logged in from its saved profile.
-
-        This is the connect step. It does not fill a login form, since that is site knowledge the agent holds. A profile
-        in `user_data_dir` that already holds a login lands logged in. Otherwise the agent logs in through the page.
-        """
+        """Open the browser at the site, starting from the saved profile."""
         await self.navigate(self.url)
 
     async def start(self: BrowserSession) -> None:
-        """Open the browser and keep it open, so a login lasts across calls."""
-        from playwright.async_api import async_playwright  # noqa: PLC0415
+        """Open the browser and keep it open."""
+        from playwright.async_api import async_playwright  # noqa: PLC0415  # defer the optional browser extra
 
         if self.context_ is not None:
             return
@@ -144,10 +137,10 @@ class BrowserSession:
             await self.context_.close()
             self.context_ = None
         if self._playwright is not None:
-            await self._playwright.stop()  # type: ignore[attr-defined]
+            await self._playwright.stop()  # type: ignore[attr-defined]  # driver untyped to keep the extra optional
             self._playwright = None
 
-    def _page(self: BrowserSession) -> Page:
+    def _read_page(self: BrowserSession) -> Page:
         """Return the page being driven."""
         if self.context_ is None:
             msg = 'The browser is not open. Call `start` first.'
@@ -161,9 +154,9 @@ class BrowserSession:
         """Leave the configured interval between actions."""
         await asyncio.sleep(self.min_interval)
 
-    async def _shot(self: BrowserSession, selector: str | None = None, depth: int | None = None) -> PageSnapshot:
+    async def _capture(self: BrowserSession, selector: str | None = None, depth: int | None = None) -> PageSnapshot:
         """Return the page as it is now."""
-        page = self._page()
+        page = self._read_page()
         target = page.locator(selector) if selector else page.locator('body')
         return PageSnapshot(yaml=await target.aria_snapshot(mode='ai', depth=depth), url=page.url)
 
@@ -177,6 +170,9 @@ class BrowserSession:
         Returns:
             snapshot:
                 The page, with a ref for every element that can be acted on.
+
+        Raises:
+            VenueBlockedError: If the site blocks automated access.
         """
         if self.context_ is None:
             await self.start()
@@ -185,16 +181,20 @@ class BrowserSession:
         await self._paced()
         response = await page.goto(url)
         if response is not None and response.status in BLOCKED_STATUS:
-            msg = f'`{self.key}` refused automated access with status {response.status}, so nothing further was tried.'
+            msg = f'`{self.key}` refused automated access with status {response.status}.'
             raise VenueBlockedError(msg)
-        return await self._shot()
+        return await self._capture()
 
-    async def snapshot(self: BrowserSession, selector: str | None = None, depth: int | None = None) -> PageSnapshot:
+    async def read_snapshot(
+        self: BrowserSession,
+        selector: str | None = None,
+        depth: int | None = None,
+    ) -> PageSnapshot:
         """Return the page, or a part of it.
 
         Args:
             selector:
-                The part to read. Reading a part rather than the whole page is what keeps a turn cheap.
+                The part to read.
             depth:
                 How far down to read.
 
@@ -202,13 +202,10 @@ class BrowserSession:
             snapshot:
                 The page, with a ref for every element that can be acted on.
         """
-        return await self._shot(selector, depth)
+        return await self._capture(selector, depth)
 
     async def click(self: BrowserSession, ref: str) -> PageSnapshot:
         """Click an element and return the page it produced.
-
-        An element the site has disabled or hidden is not clicked and this says so, rather than reporting a click that
-        did not happen.
 
         Args:
             ref:
@@ -219,8 +216,8 @@ class BrowserSession:
                 The page after the click.
         """
         await self._paced()
-        await self._page().locator(f'aria-ref={ref}').click(timeout=self.timeout)
-        return await self._shot()
+        await self._read_page().locator(f'aria-ref={ref}').click(timeout=self.timeout)
+        return await self._capture()
 
     async def type(self: BrowserSession, ref: str, text: str) -> PageSnapshot:
         """Fill an element and return the page it produced.
@@ -236,8 +233,8 @@ class BrowserSession:
                 The page after the text went in.
         """
         await self._paced()
-        await self._page().locator(f'aria-ref={ref}').fill(text, timeout=self.timeout)
-        return await self._shot()
+        await self._read_page().locator(f'aria-ref={ref}').fill(text, timeout=self.timeout)
+        return await self._capture()
 
     async def select(self: BrowserSession, ref: str, value: str) -> PageSnapshot:
         """Choose an option and return the page it produced.
@@ -253,18 +250,11 @@ class BrowserSession:
                 The page after the option was chosen.
         """
         await self._paced()
-        await self._page().locator(f'aria-ref={ref}').select_option(value, timeout=self.timeout)
-        return await self._shot()
+        await self._read_page().locator(f'aria-ref={ref}').select_option(value, timeout=self.timeout)
+        return await self._capture()
 
     def fix(self: BrowserSession, match: str, locators: dict[str, str]) -> FixedSession:
-        """Pin what exploring found, so that placing does not have to find it again.
-
-        Exploring is a model reading whole pages, which is slow and costs a lot, and it happens once. Placing runs
-        against a price that is moving and cannot stop to work out the layout of a page again for every bet.
-
-        A locator is a role and an accessible name, which survive the page re-rendering. A ref does not, so a ref is
-        refused here. A price is not pinned at all: it is read when the bet is placed and checked against the minimum
-        the caller allowed.
+        """Pin the locators exploring found for a match.
 
         Args:
             match:
@@ -275,9 +265,12 @@ class BrowserSession:
         Returns:
             fixed:
                 The pinned session.
+
+        Raises:
+            ExecutionError: If a locator is a ref or looks like a price.
         """
         for name, locator in locators.items():
-            if REF.match(locator) or locator.startswith('aria-ref='):
+            if REF_PATTERN.match(locator) or locator.startswith('aria-ref='):
                 msg = (
                     f'`{name}` is pinned to the ref `{locator}`, which belongs to one state of the page. '
                     f'Pin a role and an accessible name instead, as in `textbox[name="Stake"]`.'
@@ -286,7 +279,7 @@ class BrowserSession:
             if 'price' in name or 'odds' in name:
                 msg = f'`{name}` looks like a price. A price is read when the bet is placed rather than pinned.'
                 raise ExecutionError(msg)
-        self.fixed_ = FixedSession(match=match, url=self._page().url, locators=dict(locators))
+        self.fixed_ = FixedSession(match=match, url=self._read_page().url, locators=dict(locators))
         return self.fixed_
 
     async def resolve(self: BrowserSession, name: str) -> PageSnapshot:
@@ -299,6 +292,9 @@ class BrowserSession:
         Returns:
             snapshot:
                 What is there now.
+
+        Raises:
+            ExecutionError: If nothing is pinned or the name is not pinned.
         """
         if self.fixed_ is None:
             msg = 'Nothing is pinned. Call `fix` with what exploring found.'
@@ -306,4 +302,4 @@ class BrowserSession:
         if name not in self.fixed_.locators:
             msg = f'`{name}` is not pinned. Pinned: {", ".join(sorted(self.fixed_.locators))}.'
             raise ExecutionError(msg)
-        return await self._shot(self.fixed_.locators[name])
+        return await self._capture(self.fixed_.locators[name])

@@ -8,7 +8,14 @@ import pandas as pd
 import pytest
 
 from sportsbet.evaluation import OddsComparisonBettor
-from sportsbet.execution import ExecutionError, PlacementReceipt, PlacementStatus, betting_moment, execute, feasible
+from sportsbet.execution import (
+    ExecutionError,
+    PlacementReceipt,
+    PlacementStatus,
+    execute,
+    find_betting_moment,
+    select_feasible,
+)
 from tests.conftest import FakeVenue
 
 NOW = pd.Timestamp('2026-07-17 12:00', tz='UTC')
@@ -72,7 +79,7 @@ async def _no_wait(_seconds):
 def test_a_live_model_bets_at_the_kickoff_plus_the_time():
     """The moment of a live bet is the kickoff plus the minutes into the match."""
     loader = FakeDataLoader(_fixtures(['2026-07-17 15:00'], [('A', 'B')]), status='inplay', minutes=60)
-    assert betting_moment(loader, pd.Timestamp('2026-07-17 15:00', tz='UTC')) == pd.Timestamp(
+    assert find_betting_moment(loader, pd.Timestamp('2026-07-17 15:00', tz='UTC')) == pd.Timestamp(
         '2026-07-17 16:00',
         tz='UTC',
     )
@@ -81,7 +88,7 @@ def test_a_live_model_bets_at_the_kickoff_plus_the_time():
 def test_a_prematch_model_bets_at_the_kickoff():
     """The moment of a prematch bet is the kickoff."""
     loader = FakeDataLoader(_fixtures(['2026-07-17 15:00'], [('A', 'B')]))
-    assert betting_moment(loader, pd.Timestamp('2026-07-17 15:00', tz='UTC')) == pd.Timestamp(
+    assert find_betting_moment(loader, pd.Timestamp('2026-07-17 15:00', tz='UTC')) == pd.Timestamp(
         '2026-07-17 15:00',
         tz='UTC',
     )
@@ -91,7 +98,7 @@ def test_a_match_whose_moment_has_passed_is_not_feasible():
     """A live match already past its moment cannot be bet on."""
     fixtures = _fixtures(['2026-07-17 09:00', '2026-07-17 14:00'], [('Past', 'X'), ('Soon', 'Y')])
     loader = FakeDataLoader(fixtures, status='inplay', minutes=60)
-    mask = feasible(loader, fixtures, NOW)
+    mask = select_feasible(loader, fixtures, NOW)
     assert list(mask) == [False, True]
 
 
@@ -99,7 +106,7 @@ def test_a_window_keeps_only_the_matches_inside_it():
     """A window drops the matches whose moment falls beyond it."""
     fixtures = _fixtures(['2026-07-17 12:30', '2026-07-17 20:00'], [('Inside', 'X'), ('Beyond', 'Y')])
     loader = FakeDataLoader(fixtures)
-    mask = feasible(loader, fixtures, NOW, window=pd.Timedelta(hours=2))
+    mask = select_feasible(loader, fixtures, NOW, window=pd.Timedelta(hours=2))
     assert list(mask) == [True, False]
 
 

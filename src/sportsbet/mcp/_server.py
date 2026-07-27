@@ -1,9 +1,8 @@
-"""Serve the library's tools so an agent can drive it."""
+"""Serve the library's capabilities as MCP tools."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
@@ -13,19 +12,19 @@ import pandas as pd
 from mcp.server.fastmcp import FastMCP
 from sklearn.model_selection import TimeSeriesSplit
 
-from ..dataloaders import build_dataloader, load_dataloader
-from ..dataloaders._factory import DEFAULT_KEY_ENV
+from ..dataloaders import DEFAULT_KEY_ENV, build_dataloader, build_extraction_settings, load_dataloader
 from ..evaluation import backtest as run_backtest
 from ..evaluation import build_bettor, load_bettor, save_bettor
 from ..execution import (
     BaseVenue,
     BetIdentity,
     BrowserSession,
+    ExecutionError,
     ExposureLimits,
     PlacementIntent,
     PlacementQuote,
+    build_value_bet_intents,
     build_venue,
-    value_bet_intents,
 )
 from ..execution import execute as run_execute
 from ..execution import place as run_place
@@ -35,19 +34,16 @@ server: FastMCP = FastMCP('sportsbet')
 
 Answer = TypeVar('Answer')
 Selection = dict[str, Any]
+_SESSIONS: dict[str, BrowserSession] = {}
 
 
 async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
-    """Run the library in a thread, since it fetches with an event loop of its own.
-
-    A tool is answered inside an event loop, and the library opens one to fetch. A loop cannot be opened inside a loop,
-    so anything that might fetch is handed to a thread that has none.
-    """
+    """Run the work in a thread, off the tool's event loop."""
     return await asyncio.to_thread(work, *args)
 
 
-def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
-    """Return a frame as records, which an agent can read."""
+def _to_records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
+    """Return a frame as records."""
     if frame is None or frame.empty:
         return []
     return [
@@ -56,7 +52,7 @@ def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
     ]
 
 
-def _selection(
+def _build_selection(
     stats: str,
     odds: str | None,
     leagues: list[str] | None,
@@ -83,7 +79,7 @@ def _selection(
     }
 
 
-def _extraction(
+def _build_extraction(
     odds_type: str | None,
     drop_na_thres: float | None,
     target_event_status: str | None,
@@ -91,66 +87,60 @@ def _extraction(
     input_event_status: str | None,
     input_event_time: str | None,
 ) -> dict[str, Any]:
-    """Return how a tool was told to extract, which is what decides the moment a model bets at."""
-    settings: dict[str, Any] = {
-        'odds_type': odds_type,
-        'drop_na_thres': drop_na_thres,
-        'target_event_status': target_event_status,
-        'input_event_status': input_event_status,
-    }
-    for name, value in (('target_event_time', target_event_time), ('input_event_time', input_event_time)):
-        if value is not None:
-            settings[name] = pd.Timedelta(value)
-    return {name: value for name, value in settings.items() if value is not None}
+    """Return how a tool was told to extract."""
+    return build_extraction_settings(
+        odds_type=odds_type,
+        drop_na_thres=drop_na_thres,
+        target_event_status=target_event_status,
+        target_event_time=target_event_time,
+        input_event_status=input_event_status,
+        input_event_time=input_event_time,
+    )
 
 
-def _available_params(selection: Selection) -> list[dict]:
+def _read_available_params(selection: Selection) -> list[dict]:
     """Return what can be selected."""
     stats_source, *_ = build_dataloader(**selection).sources_
     return stats_source.list_available_params()
 
 
-def _odds_types(selection: Selection) -> list[str]:
+def _read_odds_types(selection: Selection) -> list[str]:
     """Return the odds types a selection carries."""
     return list(build_dataloader(**selection).get_odds_types())
 
 
 def _extract_train_data(selection: Selection, extraction: dict[str, Any], output: str | None) -> dict[str, Any]:
-    """Download the training data, and write the dataloader where the other tools can read it.
-
-    This is the only tool that downloads the seasons. Everything after it reads what this wrote, so a metered feed is
-    bought once rather than once per call.
-    """
+    """Download the training data, and write the dataloader where the other tools can read it."""
     dataloader = build_dataloader(**selection)
     X, Y, O = dataloader.extract_train_data(**extraction)
     if output is not None:
         dataloader.save(output)
-    return {'X': _records(X), 'Y': _records(Y), 'O': _records(O), 'output': output}
+    return {'X': _to_records(X), 'Y': _to_records(Y), 'O': _to_records(O), 'output': output}
 
 
 def _extract_exploration_data(selection: Selection, extraction: dict[str, Any]) -> dict[str, Any]:
     """Return the features on their own, with no targets and no odds."""
     settings = {name: value for name, value in extraction.items() if name != 'odds_type'}
     X = build_dataloader(**selection).extract_exploration_data(**settings)
-    return {'X': _records(X)}
+    return {'X': _to_records(X)}
 
 
 def _extract_fixtures_data(dataloader: str) -> dict[str, Any]:
     """Return the games that have not been played yet, from a saved dataloader."""
     loader = load_dataloader(dataloader)
     X, _, O = loader.extract_fixtures_data()
-    return {'X': _records(X), 'O': _records(O)}
+    return {'X': _to_records(X), 'O': _to_records(O)}
 
 
 def _backtest(dataloader: str, model: str, cv: int, n_jobs: int, verbose: int) -> list[dict[str, Any]]:
     """Return the backtesting results of a model on a saved dataloader."""
     X, Y, O = load_dataloader(dataloader).extract_train_data()
     bettor = build_bettor(model)
-    return _records(run_backtest(bettor, X, Y, O, cv=TimeSeriesSplit(cv), n_jobs=n_jobs, verbose=verbose))
+    return _to_records(run_backtest(bettor, X, Y, O, cv=TimeSeriesSplit(cv), n_jobs=n_jobs, verbose=verbose))
 
 
 def _fit(dataloader: str, model: str, output: str) -> dict[str, Any]:
-    """Fit a model on a saved dataloader and save it, so it is fitted once and reused."""
+    """Fit a model on a saved dataloader and save it."""
     X, Y, O = load_dataloader(dataloader).extract_train_data()
     bettor = build_bettor(model)
     bettor.fit(X, Y, O)
@@ -167,7 +157,7 @@ def _bet(dataloader: str, bettor: str) -> list[dict[str, Any]]:
         return []
     value_bets = pd.DataFrame(fitted.bet(X_fix, O_fix), columns=list(fitted.betting_markets_))
     games = X_fix[['home_team', 'away_team']].reset_index()
-    return _records(pd.concat([games, value_bets], axis=1))
+    return _to_records(pd.concat([games, value_bets], axis=1))
 
 
 @server.tool()
@@ -184,7 +174,7 @@ async def available_params(
     aliases: list[str] | None = None,
 ) -> list[dict]:
     """Return the leagues, divisions and seasons that can be selected."""
-    selection = _selection(
+    selection = _build_selection(
         stats,
         odds,
         leagues,
@@ -196,7 +186,7 @@ async def available_params(
         odds_moments,
         aliases,
     )
-    result: list[dict] = await _offload(_available_params, selection)
+    result: list[dict] = await _offload(_read_available_params, selection)
     return result
 
 
@@ -214,7 +204,7 @@ async def odds_types(
     aliases: list[str] | None = None,
 ) -> list[str]:
     """Return the odds types a selection carries."""
-    selection = _selection(
+    selection = _build_selection(
         stats,
         odds,
         leagues,
@@ -226,7 +216,7 @@ async def odds_types(
         odds_moments,
         aliases,
     )
-    result: list[str] = await _offload(_odds_types, selection)
+    result: list[str] = await _offload(_read_odds_types, selection)
     return result
 
 
@@ -252,14 +242,9 @@ async def extract_train_data(
 ) -> dict[str, Any]:
     """Download the training data and save the dataloader to a file.
 
-    This is the only tool that downloads the seasons, and `output` is where it writes what it got. Every other tool
-    reads that file, so a metered odds feed is bought once rather than once per call. What such a feed charges is
-    between whoever is asking and the vendor they buy from.
-
-    The event arguments decide the moment a model bets at. Leave them alone for the usual case, which is betting before
-    the match with the price that was on offer then.
+    The event arguments decide the moment a model bets at, and the default is before the match.
     """
-    selection = _selection(
+    selection = _build_selection(
         stats,
         odds,
         leagues,
@@ -271,7 +256,7 @@ async def extract_train_data(
         odds_moments,
         aliases,
     )
-    extraction = _extraction(
+    extraction = _build_extraction(
         odds_type,
         drop_na_thres,
         target_event_status,
@@ -302,12 +287,8 @@ async def extract_exploration_data(
     input_event_status: str | None = None,
     input_event_time: str | None = None,
 ) -> dict[str, Any]:
-    """Return the features on their own, with no targets and no odds.
-
-    Use it to look at a sport before choosing what to select or model, or when the source carries no odds and so has
-    nothing to predict.
-    """
-    selection = _selection(
+    """Return the features on their own."""
+    selection = _build_selection(
         stats,
         odds,
         leagues,
@@ -319,7 +300,7 @@ async def extract_exploration_data(
         odds_moments,
         aliases,
     )
-    extraction = _extraction(
+    extraction = _build_extraction(
         odds_type,
         drop_na_thres,
         target_event_status,
@@ -335,7 +316,7 @@ async def extract_exploration_data(
 async def extract_fixtures_data(dataloader: str) -> dict[str, Any]:
     """Return the games that have not been played yet, from a dataloader `extract_train_data` saved.
 
-    They take the shape the training data took, since the dataloader remembers what it was told.
+    They take the shape the training data took.
     """
     result: dict[str, Any] = await _offload(_extract_fixtures_data, dataloader)
     return result
@@ -360,10 +341,10 @@ async def backtest(
 
 @server.tool()
 async def fit(dataloader: str, output: str, model: str) -> dict[str, Any]:
-    """Fit a model on a saved dataloader and save it, so it is fitted once and reused.
+    """Fit a model on a saved dataloader and save it.
 
     The model is a scikit-learn estimator written as a Python expression, as in `OddsComparisonBettor(alpha=0.05)`, or
-    one built in a file, named by where it lives, as in `models.py:BETTOR`. `bet` reads what this writes.
+    one built in a file, named by where it lives, as in `models.py:BETTOR`.
     """
     result: dict[str, Any] = await _offload(_fit, dataloader, model, output)
     return result
@@ -373,23 +354,22 @@ async def fit(dataloader: str, output: str, model: str) -> dict[str, Any]:
 async def bet(dataloader: str, bettor: str) -> list[dict[str, Any]]:
     """Return the value bets of the games that have not been played yet.
 
-    It reads the dataloader `extract_train_data` saved and the model `fit` saved, so it downloads nothing and fits
-    nothing.
+    It reads the dataloader `extract_train_data` saved and the model `fit` saved.
     """
     result: list[dict[str, Any]] = await _offload(_bet, dataloader, bettor)
     return result
 
 
-def _venue(reference: str) -> BaseVenue:
+def _load_venue(reference: str) -> BaseVenue:
     """Return the venue a reference names."""
     built = build_venue(reference)
     if not isinstance(built, BaseVenue):
         msg = f'`{reference}` is a browser session, which has no bets of its own to place. Use the browser tools.'
-        raise TypeError(msg)
+        raise ExecutionError(msg)
     return built
 
 
-def _intents(key: str, records: list[dict[str, Any]]) -> list[PlacementIntent]:
+def _build_intents(key: str, records: list[dict[str, Any]]) -> list[PlacementIntent]:
     """Return the bets a caller means to place."""
     return [
         PlacementIntent(
@@ -402,7 +382,7 @@ def _intents(key: str, records: list[dict[str, Any]]) -> list[PlacementIntent]:
     ]
 
 
-def _quote_records(quoted: PlacementQuote) -> dict[str, Any]:
+def _to_quote_records(quoted: PlacementQuote) -> dict[str, Any]:
     """Return a quote an agent can read and pass back."""
     return {
         'total_stake': quoted.total_stake,
@@ -416,17 +396,17 @@ def _quote_records(quoted: PlacementQuote) -> dict[str, Any]:
                 'stake': intent.stake,
                 'min_price': intent.min_price,
                 'value_bet': intent.value_bet,
-                'ref': intent.identity.ref,
+                'ref': intent.identity.ref_,
             }
             for intent in quoted.intents
         ],
     }
 
 
-def _quote_of(key: str, held: dict[str, Any]) -> PlacementQuote:
+def _build_quote(key: str, held: dict[str, Any]) -> PlacementQuote:
     """Return the quote a caller passed back."""
     return PlacementQuote(
-        intents=_intents(key, held['intents']),
+        intents=_build_intents(key, held['intents']),
         total_stake=float(held['total_stake']),
         total_exposure=float(held['total_exposure']),
         quoted_at=pd.Timestamp(held['quoted_at']).to_pydatetime(),
@@ -435,12 +415,7 @@ def _quote_of(key: str, held: dict[str, Any]) -> PlacementQuote:
 
 @server.tool()
 async def execution_venue_info(venue: str) -> dict[str, Any]:
-    """Return what a venue is and what its owner wrote down about the site.
-
-    It answers for a venue with an API and for a bookmaker's website alike, since it is the tool that hands a website's
-    notes to the agent. The notes come back exactly as they were written. The library does not read them: they are for
-    you.
-    """
+    """Return what a venue is and what its owner wrote down about the site."""
     built = build_venue(venue)
     return {
         'key': built.key,
@@ -453,7 +428,7 @@ async def execution_venue_info(venue: str) -> dict[str, Any]:
 @server.tool()
 async def execution_authenticate(venue: str) -> dict[str, Any]:
     """Authenticate at a venue, reading each secret from the variable the venue names."""
-    built = _venue(venue)
+    built = _load_venue(venue)
     await built.authenticate()
     return {'venue': built.key, 'authenticated': True}
 
@@ -461,7 +436,7 @@ async def execution_authenticate(venue: str) -> dict[str, Any]:
 @server.tool()
 async def execution_read_balance(venue: str) -> dict[str, Any]:
     """Return the balance and what is currently at stake."""
-    built = _venue(venue)
+    built = _load_venue(venue)
     await built.authenticate()
     balance, exposure = await built.read_balance()
     return {'balance': balance, 'exposure': exposure}
@@ -470,12 +445,12 @@ async def execution_read_balance(venue: str) -> dict[str, Any]:
 @server.tool()
 async def execution_list_markets(venue: str, matches: list[str]) -> list[dict[str, Any]]:
     """Return the markets a venue offers on the given matches, with their prices."""
-    built = _venue(venue)
+    built = _load_venue(venue)
     await built.authenticate()
-    return _records(await built.list_markets(matches))
+    return _to_records(await built.list_markets(matches))
 
 
-def _fixtures(dataloader: str, bettor: str) -> tuple[Any, Any, Any]:
+def _load_fixtures(dataloader: str, bettor: str) -> tuple[Any, Any, Any]:
     """Return the fitted model and the upcoming matches it bets on."""
     loader = load_dataloader(dataloader)
     fitted = load_bettor(bettor)
@@ -489,17 +464,16 @@ async def execution_quote(venue: str, dataloader: str, bettor: str, stake: float
 
     Pass `total_stake` and `total_exposure` back to `execution_place` to place the bets. Nothing is staked until you do.
 
-    It reads the dataloader `extract_train_data` saved and the model `fit` saved, so it downloads nothing and fits
-    nothing.
+    It reads the dataloader `extract_train_data` saved and the model `fit` saved.
     """
-    built = _venue(venue)
+    built = _load_venue(venue)
     await built.authenticate()
-    fitted, X_fix, O_fix = await _offload(_fixtures, dataloader, bettor)
+    fitted, X_fix, O_fix = await _offload(_load_fixtures, dataloader, bettor)
     if X_fix.empty or O_fix is None or O_fix.empty:
         return {'total_stake': 0.0, 'total_exposure': 0.0, 'quoted_at': None, 'intents': []}
-    intents = value_bet_intents(built.key, fitted, X_fix, O_fix, stake)
+    intents = build_value_bet_intents(built.key, fitted, X_fix, O_fix, stake)
     quoted = await run_quote(built, intents, ExposureLimits())
-    return _quote_records(quoted)
+    return _to_quote_records(quoted)
 
 
 @server.tool()
@@ -517,45 +491,38 @@ async def execution_place(
     `confirm_stake` and `confirm_exposure` are the figures `execution_quote` returned. Anything else stakes nothing and
     says what the figures really are.
     """
-    built = _venue(venue)
+    built = _load_venue(venue)
     await built.authenticate()
     limits = ExposureLimits(max_stake_per_bet=max_stake, max_total_exposure=max_exposure, killed=kill)
-    receipts = await run_place(built, _quote_of(built.key, quote), limits, confirm_stake, confirm_exposure)
-    return _records(receipts)
+    receipts = await run_place(built, _build_quote(built.key, quote), limits, confirm_stake, confirm_exposure)
+    return _to_records(receipts)
 
 
 @server.tool()
 async def execution_read_status(venue: str, intents: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return what the venue holds for these bets."""
-    built = _venue(venue)
+    built = _load_venue(venue)
     await built.authenticate()
-    identities = [intent.identity for intent in _intents(built.key, intents)]
-    return _records(await built.read_status(identities))
+    identities = [intent.identity for intent in _build_intents(built.key, intents)]
+    return _to_records(await built.read_status(identities))
 
 
 @server.tool()
 async def execution_cancel(venue: str, match: str, market: str, selection: str) -> dict[str, Any]:
     """Cancel a bet, where the venue cancels."""
-    built = _venue(venue)
+    built = _load_venue(venue)
     await built.authenticate()
     receipt = await built.cancel(BetIdentity(built.key, match, market, selection))
     return {'status': receipt.status.value, 'detail': receipt.detail}
 
 
-_SESSIONS: dict[str, BrowserSession] = {}
-
-
-async def _session(venue: str) -> BrowserSession:
-    """Return the browser session a reference names, opening it once and keeping it open.
-
-    A login has to last across calls, and the browser is what holds it, so the session is kept here for as long as the
-    server runs rather than opened and closed around each call.
-    """
+async def _open_session(venue: str) -> BrowserSession:
+    """Return the browser session a reference names, opening it once and keeping it open."""
     if venue not in _SESSIONS:
         built = build_venue(venue)
         if isinstance(built, BaseVenue):
             msg = f'`{venue}` is a venue with an API, so it is placed at with `execution_place` rather than driven.'
-            raise TypeError(msg)
+            raise ExecutionError(msg)
         await built.start()
         _SESSIONS[venue] = built
     return _SESSIONS[venue]
@@ -569,30 +536,23 @@ async def browser_navigate(venue: str, url: str) -> dict[str, Any]:
     `browser_type` and `browser_select` take. Driving a bookmaker's website breaches essentially every bookmaker's
     terms of service and risks the account being closed and the balance lost.
     """
-    session = await _session(venue)
+    session = await _open_session(venue)
     shot = await session.navigate(url)
     return {'yaml': shot.yaml, 'url': shot.url}
 
 
 @server.tool()
 async def browser_snapshot(venue: str, selector: str | None = None, depth: int | None = None) -> dict[str, Any]:
-    """Return the page, or a part of it.
-
-    Read a part rather than the whole page where you can, since the whole page is the cost of every turn.
-    """
-    session = await _session(venue)
-    shot = await session.snapshot(selector, depth)
+    """Return the page, or a part of it."""
+    session = await _open_session(venue)
+    shot = await session.read_snapshot(selector, depth)
     return {'yaml': shot.yaml, 'url': shot.url}
 
 
 @server.tool()
 async def browser_click(venue: str, ref: str) -> dict[str, Any]:
-    """Click an element and return the page it produced.
-
-    An element the site has disabled or hidden is not clicked and this says so, rather than reporting a click that did
-    not happen.
-    """
-    session = await _session(venue)
+    """Click an element and return the page it produced."""
+    session = await _open_session(venue)
     shot = await session.click(ref)
     return {'yaml': shot.yaml, 'url': shot.url}
 
@@ -600,7 +560,7 @@ async def browser_click(venue: str, ref: str) -> dict[str, Any]:
 @server.tool()
 async def browser_type(venue: str, ref: str, text: str) -> dict[str, Any]:
     """Fill an element and return the page it produced."""
-    session = await _session(venue)
+    session = await _open_session(venue)
     shot = await session.type(ref, text)
     return {'yaml': shot.yaml, 'url': shot.url}
 
@@ -608,24 +568,20 @@ async def browser_type(venue: str, ref: str, text: str) -> dict[str, Any]:
 @server.tool()
 async def browser_select(venue: str, ref: str, value: str) -> dict[str, Any]:
     """Choose an option and return the page it produced."""
-    session = await _session(venue)
+    session = await _open_session(venue)
     shot = await session.select(ref, value)
     return {'yaml': shot.yaml, 'url': shot.url}
 
 
 @server.tool()
 async def browser_fix(venue: str, match: str, locators: dict[str, str]) -> dict[str, Any]:
-    """Pin what exploring found, so that placing does not have to find it again.
-
-    Pin a role and an accessible name rather than a ref, since a ref belongs to one state of the page and is refused
-    here. A price is not pinned at all: read it when the bet is placed.
-    """
-    session = await _session(venue)
+    """Pin the locators exploring found."""
+    session = await _open_session(venue)
     pinned = session.fix(match, locators)
     return {'match': pinned.match, 'url': pinned.url, 'locators': pinned.locators}
 
 
-def _run(
+def _place_run(
     venue: BaseVenue,
     dataloader: str,
     bettor: str,
@@ -672,9 +628,9 @@ async def execution_run(
     and can still reach, and places them in turn, waiting until each match's moment. Nothing stakes until
     `confirm_total` matches the total it quotes. Set `window` as `2h` for a live model, to bound how long it runs.
     """
-    built = _venue(venue)
+    built = _load_venue(venue)
     receipts = await _offload(
-        _run,
+        _place_run,
         built,
         dataloader,
         bettor,
@@ -685,7 +641,7 @@ async def execution_run(
         window,
         seed,
     )
-    return _records(receipts)
+    return _to_records(receipts)
 
 
 def run() -> None:

@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from typing import ClassVar
 
@@ -15,7 +14,7 @@ class SampleSoccerStats(_SampleSource, BaseStatsSource):
     """A frozen real season of the English and Spanish soccer first divisions, bundled with the library.
 
     It carries the identity of every match, each team's form before it, the half-time score and the result. The season
-    is finished, so it holds training data but no fixtures.
+    is finished.
 
     Examples:
         >>> from sportsbet.dataloaders import DataLoader

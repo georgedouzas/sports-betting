@@ -3,44 +3,40 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 from typing import Self
 
 import pandas as pd
 
 from ..core import EVENT_COLS, IDENTITY_COLS, ParamGrid
-from ..sources._base import BaseOddsSource, BaseStatsSource, RawItem, fetch_payloads
-from ..sources._resolver import ALIASES, resolve_odds
+from ..sources import BaseOddsSource, BaseStatsSource, RawItem, fetch_payloads, resolve_odds
 from ._base import BaseDataLoader
 
 
 class DataLoader(BaseDataLoader):
-    """The dataloader of data that comes from sources.
+    """Download source data and shape it into moment-aware modelling data.
 
-    There is one dataloader for every sport, because the sport is a property of the sources rather than of the loader. A
-    feed of soccer matches stays a feed of soccer matches whatever it is paired with, so the loader reads the sport off
-    the statistics source and pairs it only with odds about the same sport.
+    There is one dataloader for every sport. The loader reads the sport off the statistics source and pairs it only with
+    odds about the same sport.
 
     It downloads the data into memory when you extract, and holds it on the object. Extract again and it downloads
-    again, so the object always carries the latest data; keep what you have with `save`, and read it back with
-    `load_dataloader`.
+    again. Keep what you have with `save`, and read it back with `load_dataloader`.
 
     Args:
         param_grid:
             Selects the seasons to train on. Keys are `'league'`, `'division'`
-            and `'year'`; values are the allowed values, mirroring scikit-learn's
-            `ParameterGrid`. The default `None` selects everything the sources
-            publish. It bounds only the training data — the fixtures are whatever
-            is upcoming in the selected leagues.
+            and `'year'`, and values are the allowed values, mirroring
+            scikit-learn's `ParameterGrid`. The default `None` selects everything
+            the sources publish. It bounds only the training data. The fixtures
+            are whatever is upcoming in the selected leagues.
 
         stats:
             The source of the statistics.
 
         odds:
-            The source of the odds. It may differ from the statistics source,
-            since free statistics and paid odds are complementary. The default
-            `None` gives a dataloader with no markets, for `extract_exploration_data`.
+            The source of the odds, which may differ from the statistics source.
+            The default `None` gives a dataloader with no markets, for
+            `extract_exploration_data`.
 
         aliases:
             The team names of the odds source, mapped to the names of the
@@ -50,7 +46,7 @@ class DataLoader(BaseDataLoader):
     Attributes:
         stats_ (pd.DataFrame):
             The downloaded statistics snapshots: the selected seasons, plus each
-            selected league's season in progress, from which the fixtures come.
+            selected league's season in progress.
 
         odds_ (pd.DataFrame):
             The downloaded odds snapshots of the selected provider.
@@ -63,7 +59,7 @@ class DataLoader(BaseDataLoader):
         ...     stats=FootballDataStats(),
         ...     odds=FootballDataOdds(),
         ... )
-        >>> # The sources say what sport it is; the loader never chose.
+        >>> # The sources say what sport it is.
         >>> dataloader.sport_
         'soccer'
         >>> # X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')
@@ -81,12 +77,8 @@ class DataLoader(BaseDataLoader):
         self.odds = odds
         self.aliases = aliases
 
-    def _resolved(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
-        """Return the statistics and odds sources, checked to be about the same sport.
-
-        You choose where the data comes from. A missing statistics source raises here, and a pairing of soccer
-        statistics with basketball odds is caught here.
-        """
+    def _resolve_sources(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
+        """Return the statistics and odds sources, checked to be about the same sport."""
         if self.stats is None:
             msg = 'No `stats` source. A dataloader does not choose where its data comes from; you do.'
             raise ValueError(msg)
@@ -101,91 +93,70 @@ class DataLoader(BaseDataLoader):
     @property
     def sport_(self: Self) -> str | None:
         """The sport the sources carry."""
-        stats_source, _ = self._resolved()
+        stats_source, _ = self._resolve_sources()
         return stats_source.sport
 
     @property
     def sources_(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
         """The statistics and odds sources."""
-        return self._resolved()
+        return self._resolve_sources()
 
-    def _catalogue(self: Self, source: BaseStatsSource | BaseOddsSource) -> list[dict]:
-        """Return the combinations a source publishes for the selection.
-
-        The source is told what was selected, so a feed whose catalogue is as large as its data reads only the part of
-        it that could hold the selection. A selection of three leagues reads the index of those three.
-        """
+    def _read_catalogue(self: Self, source: BaseStatsSource | BaseOddsSource) -> list[dict]:
+        """Return the combinations a source publishes for the selection."""
         payloads = fetch_payloads(source.list_index_items(self.param_grid), source.request_url)
         return source.read_catalogue(payloads)
 
-    def _all_params(self: Self) -> list[dict]:
-        """Return the combinations both sources publish for the selection.
-
-        With odds it is the intersection: a season is kept when both the statistics and the odds carry it, so every
-        kept season can be bet on. With no odds the statistics are the whole of it.
-        """
-        stats_source, odds_source = self._resolved()
-        stats_params = self._catalogue(stats_source)
+    def _list_all_params(self: Self) -> list[dict]:
+        """Return the combinations both sources publish for the selection."""
+        stats_source, odds_source = self._resolve_sources()
+        stats_params = self._read_catalogue(stats_source)
         if odds_source is None:
             return stats_params
-        priced = {tuple(sorted(params.items())) for params in self._catalogue(odds_source)}
+        priced = {tuple(sorted(params.items())) for params in self._read_catalogue(odds_source)}
         return [params for params in stats_params if tuple(sorted(params.items())) in priced]
 
-    def _paired(
+    def _fetch_paired_odds(
         self: Self,
         stats: pd.DataFrame,
         odds_items: list[RawItem],
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Return the statistics and the odds fetched for them, paired when the two feeds differ.
-
-        The statistics are already finalized; the odds are fetched, finalized and, when they come from a source that
-        names its clubs differently, paired to the statistics.
-        """
-        stats_source, odds_source = self._resolved()
+        """Return the statistics and the odds fetched for them, paired when the two feeds differ."""
+        stats_source, odds_source = self._resolve_sources()
         if odds_source is None:
             return stats, self._build_empty_odds()
         odds = self._finalize(odds_source.to_snapshots(fetch_payloads(odds_items, odds_source.request_url)))
         if stats_source.name != odds_source.name and not odds.empty:
-            aliases = {**ALIASES, **(self.aliases or {})}
-            odds = resolve_odds(stats, odds, aliases)
+            odds = resolve_odds(stats, odds, self.aliases)
         return stats, odds
 
     @staticmethod
-    def _moments(matches: pd.DataFrame) -> pd.DataFrame:
+    def _select_moments(matches: pd.DataFrame) -> pd.DataFrame:
         """Return the matches an odds source has to price, as identity and moment rows."""
         return matches[[*IDENTITY_COLS, *EVENT_COLS]].drop_duplicates()
 
-    def _snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Download the training statistics and odds of the selection and return their long snapshots.
-
-        It fetches every time it is called, so the object always carries the latest data. The statistics are the seasons
-        the selection names, and the odds price those same matches.
-        """
-        stats_source, odds_source = self._resolved()
-        params = self._filter_params(self._all_params())
+    def _load_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Download the training statistics and odds of the selection and return their long snapshots."""
+        stats_source, odds_source = self._resolve_sources()
+        params = self._filter_params(self._list_all_params())
         stats = self._finalize(
             stats_source.to_snapshots(
                 fetch_payloads(stats_source.list_required_items(params), stats_source.request_url),
             ),
         )
-        schedule = self._moments(stats) if odds_source is not None and odds_source.needs_schedule() else None
+        schedule = self._select_moments(stats) if odds_source is not None and odds_source.needs_schedule() else None
         odds_items = odds_source.list_required_items(params, schedule) if odds_source is not None else []
-        return self._paired(stats, odds_items)
+        return self._fetch_paired_odds(stats, odds_items)
 
-    def _fixtures_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Download the upcoming matches of the selection and return their long snapshots.
-
-        The upcoming matches come from the season each selected league is in the middle of, whatever season was chosen
-        to train on. The odds price the matches still to be played.
-        """
-        stats_source, odds_source = self._resolved()
-        params = self._filter_params(self._all_params())
+    def _load_fixtures_snapshots(self: Self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Download the upcoming matches of the selection and return their long snapshots."""
+        stats_source, odds_source = self._resolve_sources()
+        params = self._filter_params(self._list_all_params())
         stats = self._finalize(
             stats_source.to_snapshots(
                 fetch_payloads(stats_source.list_fixtures_items(params), stats_source.request_url),
             ),
         )
-        upcoming = stats.loc[self._upcoming(stats)] if not stats.empty else stats
-        schedule = self._moments(upcoming) if odds_source is not None and odds_source.needs_schedule() else None
+        upcoming = stats.loc[self._is_upcoming(stats)] if not stats.empty else stats
+        schedule = self._select_moments(upcoming) if odds_source is not None and odds_source.needs_schedule() else None
         odds_items = odds_source.list_fixtures_items(params, schedule) if odds_source is not None else []
-        return self._paired(stats, odds_items)
+        return self._fetch_paired_odds(stats, odds_items)

@@ -296,7 +296,7 @@ moment, like `home_goals__inplay__45min`.
 ## The abstract classes
 
 [`BaseDataLoader`][sportsbet.dataloaders.BaseDataLoader] is the extraction engine. Its one abstract method is
-`_snapshots()`, which returns the long `stats` and `odds` tables. Everything else, the column grammar, the input
+`_load_snapshots()`, which returns the long `stats` and `odds` tables. Everything else, the column grammar, the input
 horizon, the moment aware pivot, is done for you.
 
 ```python
@@ -306,7 +306,7 @@ from sportsbet.dataloaders import BaseDataLoader
 class MyDataLoader(BaseDataLoader):
     """A dataloader whose data comes from wherever you like."""
 
-    def _snapshots(self):
+    def _load_snapshots(self):
         return my_stats_table, my_odds_table
 ```
 

@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 import asyncio
 import json
@@ -27,16 +26,17 @@ from ..execution import (
     FixedSession,
     PlacementIntent,
     PlacementQuote,
+    build_value_bet_intents,
     build_venue,
-    value_bet_intents,
 )
 from ..execution import execute as run_execute
 from ..execution import place as run_place
 from ..execution import quote as run_quote
-from ._utils import print_console, reported
+from ._building import _report_errors
+from ._utils import _print_console
 
 
-def _venue(venue_ref: str) -> BaseVenue:
+def _load_venue(venue_ref: str) -> BaseVenue:
     """Return the venue a reference names, authenticated."""
     built = build_venue(venue_ref)
     if not isinstance(built, BaseVenue):
@@ -46,7 +46,7 @@ def _venue(venue_ref: str) -> BaseVenue:
     return built
 
 
-def _session(venue_ref: str) -> BrowserSession:
+def _load_session(venue_ref: str) -> BrowserSession:
     """Return the browser session a reference names."""
     built = build_venue(venue_ref)
     if isinstance(built, BaseVenue):
@@ -55,13 +55,13 @@ def _session(venue_ref: str) -> BrowserSession:
     return built
 
 
-def _limits(max_stake: float, max_exposure: float, kill: bool) -> ExposureLimits:
+def _build_limits(max_stake: float, max_exposure: float, kill: bool) -> ExposureLimits:
     """Return the ceilings a placement answers to."""
     return ExposureLimits(max_stake_per_bet=max_stake, max_total_exposure=max_exposure, killed=kill)
 
 
 def _write_quote(quoted: PlacementQuote, path: str) -> None:
-    """Write a quote where `place` can read it."""
+    """Write a quote to a file."""
     Path(path).write_text(
         json.dumps(
             {
@@ -105,7 +105,7 @@ def _read_quote(path: str) -> PlacementQuote:
     )
 
 
-def _shown(quoted: PlacementQuote) -> pd.DataFrame:
+def _render_quote(quoted: PlacementQuote) -> pd.DataFrame:
     """Return a quote as a table."""
     return pd.DataFrame.from_records(
         [
@@ -135,7 +135,7 @@ def execution() -> None:
 @click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 def venue(venue_ref: str) -> None:
     """Show what a venue is and what it was told about the site."""
-    with reported():
+    with _report_errors():
         built = build_venue(venue_ref)
         cancels = getattr(built, 'can_cancel', False)
         Console().print(
@@ -155,20 +155,20 @@ def venue(venue_ref: str) -> None:
 )
 def markets(venue_ref: str, dataloader_path: str) -> None:
     """Show the markets a venue offers on the upcoming matches, with their prices."""
-    with reported():
-        built = _venue(venue_ref)
+    with _report_errors():
+        built = _load_venue(venue_ref)
         loader = load_dataloader(dataloader_path)
         X_fix, _, _ = loader.extract_fixtures_data()
         matches = [f'{row.home_team} vs {row.away_team}' for row in X_fix.itertuples()]
-        print_console([asyncio.run(built.list_markets(matches))], ['Markets'])
+        _print_console([asyncio.run(built.list_markets(matches))], ['Markets'])
 
 
 @execution.command()
 @click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
 def balance(venue_ref: str) -> None:
     """Show the balance and what is currently at stake."""
-    with reported():
-        built = _venue(venue_ref)
+    with _report_errors():
+        built = _load_venue(venue_ref)
         held, exposure = asyncio.run(built.read_balance())
         Console().print(Panel.fit(f'balance: [bold]{held}[/bold]\nexposure: [bold]{exposure}[/bold]'))
 
@@ -195,20 +195,20 @@ def balance(venue_ref: str) -> None:
 @click.option('--output', '-o', 'output', required=True, type=click.Path(), help='Where to write the quote.')
 def quote(venue_ref: str, dataloader_path: str, bettor_path: str, stake: float, output: str) -> None:
     """Show what would be staked on the upcoming matches, and write it for `place`."""
-    with reported():
-        built = _venue(venue_ref)
+    with _report_errors():
+        built = _load_venue(venue_ref)
         loader = load_dataloader(dataloader_path)
         bettor = load_bettor(bettor_path)
         X_fix, _, O_fix = loader.extract_fixtures_data()
         if X_fix.empty or O_fix is None or O_fix.empty:
             Console().print(Panel.fit('[bold red]There are no upcoming matches to bet on.'))
             return
-        intents = value_bet_intents(built.key, bettor, X_fix, O_fix, stake)
+        intents = build_value_bet_intents(built.key, bettor, X_fix, O_fix, stake)
         if not intents:
             Console().print(Panel.fit('[bold red]The model found no value bets.'))
             return
         quoted = asyncio.run(run_quote(built, intents, ExposureLimits()))
-        print_console([_shown(quoted)], ['What would be staked'])
+        _print_console([_render_quote(quoted)], ['What would be staked'])
         Console().print(
             f'\nTotal stake [bold]{quoted.total_stake}[/bold], total exposure [bold]{quoted.total_exposure}[/bold].'
             f'\nTo place these bets, pass both back:'
@@ -244,13 +244,13 @@ def place(
     data_path: str | None,
 ) -> None:
     """Place a quoted batch, staking nothing unless the quoted figures are passed back."""
-    with reported():
-        built = _venue(venue_ref)
+    with _report_errors():
+        built = _load_venue(venue_ref)
         quoted = _read_quote(quote_path)
         receipts = asyncio.run(
-            run_place(built, quoted, _limits(max_stake, max_exposure, kill), confirm_stake, confirm_exposure),
+            run_place(built, quoted, _build_limits(max_stake, max_exposure, kill), confirm_stake, confirm_exposure),
         )
-        print_console([receipts], ['Receipts'])
+        _print_console([receipts], ['Receipts'])
         if data_path is not None:
             written = Path(data_path) / 'sports-betting-data'
             written.mkdir(parents=True, exist_ok=True)
@@ -271,11 +271,11 @@ def place(
 )
 def status(venue_ref: str, quote_path: str) -> None:
     """Show what the venue holds for the bets of a quote."""
-    with reported():
-        built = _venue(venue_ref)
+    with _report_errors():
+        built = _load_venue(venue_ref)
         quoted = _read_quote(quote_path)
         identities = [intent.identity for intent in quoted.intents]
-        print_console([asyncio.run(built.read_status(identities))], ['What the venue holds'])
+        _print_console([asyncio.run(built.read_status(identities))], ['What the venue holds'])
 
 
 @execution.command()
@@ -285,8 +285,8 @@ def status(venue_ref: str, quote_path: str) -> None:
 @click.option('--selection', required=True, help='The selection the bet backs.')
 def cancel(venue_ref: str, match: str, market: str, selection: str) -> None:
     """Cancel a bet, where the venue cancels."""
-    with reported():
-        built = _venue(venue_ref)
+    with _report_errors():
+        built = _load_venue(venue_ref)
         receipt = asyncio.run(built.cancel(BetIdentity(built.key, match, market, selection)))
         Console().print(Panel.fit(receipt.detail))
 
@@ -304,60 +304,7 @@ def page() -> None:
     return
 
 
-@page.command('read')
-@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option('--url', help='The page to read. Without it the venue\'s own url is read.')
-@click.option('--selector', help='The part of the page to read. Reading a part keeps a turn cheap.')
-@click.option('--depth', type=int, help='How far down to read.')
-def page_read(venue_ref: str, url: str | None, selector: str | None, depth: int | None) -> None:
-    """Show a page in a form an agent can reason about and act on."""
-    with reported():
-        session = _session(venue_ref)
-        Console().print(asyncio.run(_read(session, url, selector, depth)))
-
-
-@page.command('act')
-@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option('--url', required=True, help='The page the ref was read on.')
-@click.option('--click', 'click_ref', help='The ref of an element to click.')
-@click.option('--type', 'type_ref', help='The ref of an element to fill.')
-@click.option('--text', help='What to fill it with.')
-@click.option('--select', 'select_ref', help='The ref of an element to choose an option in.')
-@click.option('--value', help='The option to choose.')
-def page_act(
-    venue_ref: str,
-    url: str,
-    click_ref: str | None,
-    type_ref: str | None,
-    text: str | None,
-    select_ref: str | None,
-    value: str | None,
-) -> None:
-    """Act on a page and show what the action produced."""
-    with reported():
-        session = _session(venue_ref)
-        Console().print(asyncio.run(_act(session, url, click_ref, type_ref, text, select_ref, value)))
-
-
-@page.command('fix')
-@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option('--url', required=True, help='The page that was explored.')
-@click.option('--match', required=True, help='The match to pin the session to.')
-@click.option(
-    '--locator',
-    'locators',
-    multiple=True,
-    help='Something found, as `name=locator`, e.g. `stake=textbox[name="Stake"]`. Repeatable.',
-)
-def page_fix(venue_ref: str, url: str, match: str, locators: tuple[str, ...]) -> None:
-    """Pin what exploring found, so that placing does not have to find it again."""
-    with reported():
-        session = _session(venue_ref)
-        pinned = asyncio.run(_fix(session, url, match, _locators(locators)))
-        Console().print(Panel.fit(f'[bold]{pinned.match}[/bold]\n{pinned.url}\n\n{pinned.locators}'))
-
-
-def _locators(given: tuple[str, ...]) -> dict[str, str]:
+def _parse_locators(given: tuple[str, ...]) -> dict[str, str]:
     """Return what was found, each of them a name and a locator."""
     found = {}
     for pair in given:
@@ -373,7 +320,7 @@ async def _read(session: BrowserSession, url: str | None, selector: str | None, 
     """Open the browser, read the page and close it."""
     try:
         await session.navigate(url or session.url)
-        shot = await session.snapshot(selector, depth)
+        shot = await session.read_snapshot(selector, depth)
         return shot.yaml
     finally:
         await session.stop()
@@ -412,6 +359,75 @@ async def _fix(session: BrowserSession, url: str, match: str, locators: dict[str
         return session.fix(match, locators)
     finally:
         await session.stop()
+
+
+@page.command('read')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
+@click.option('--url', help='The page to read. Without it the venue\'s own url is read.')
+@click.option('--selector', help='The part of the page to read. Reading a part keeps a turn cheap.')
+@click.option('--depth', type=int, help='How far down to read.')
+def page_read(venue_ref: str, url: str | None, selector: str | None, depth: int | None) -> None:
+    """Show a page an agent can act on."""
+    with _report_errors():
+        session = _load_session(venue_ref)
+        Console().print(asyncio.run(_read(session, url, selector, depth)))
+
+
+@page.command('act')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
+@click.option('--url', required=True, help='The page the ref was read on.')
+@click.option('--click', 'click_ref', help='The ref of an element to click.')
+@click.option('--type', 'type_ref', help='The ref of an element to fill.')
+@click.option('--text', help='What to fill it with.')
+@click.option('--select', 'select_ref', help='The ref of an element to choose an option in.')
+@click.option('--value', help='The option to choose.')
+def page_act(
+    venue_ref: str,
+    url: str,
+    click_ref: str | None,
+    type_ref: str | None,
+    text: str | None,
+    select_ref: str | None,
+    value: str | None,
+) -> None:
+    """Act on a page and show what the action produced."""
+    with _report_errors():
+        session = _load_session(venue_ref)
+        Console().print(asyncio.run(_act(session, url, click_ref, type_ref, text, select_ref, value)))
+
+
+@page.command('fix')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
+@click.option('--url', required=True, help='The page that was explored.')
+@click.option('--match', required=True, help='The match to pin the session to.')
+@click.option(
+    '--locator',
+    'locators',
+    multiple=True,
+    help='Something found, as `name=locator`, e.g. `stake=textbox[name="Stake"]`. Repeatable.',
+)
+def page_fix(venue_ref: str, url: str, match: str, locators: tuple[str, ...]) -> None:
+    """Pin what exploring found."""
+    with _report_errors():
+        session = _load_session(venue_ref)
+        pinned = asyncio.run(_fix(session, url, match, _parse_locators(locators)))
+        Console().print(Panel.fit(f'[bold]{pinned.match}[/bold]\n{pinned.url}\n\n{pinned.locators}'))
+
+
+@contextmanager
+def _logging_to_terminal() -> Iterator[None]:
+    """Show the run's log on the terminal while a command runs."""
+    logger = logging.getLogger('sportsbet.execution')
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    logger.addHandler(handler)
+    level = logger.level
+    logger.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(level)
 
 
 @execution.command()
@@ -454,8 +470,8 @@ def run(
     Nothing stakes until `--confirm-total` matches the quoted total. The run logs each selection and placement to the
     terminal as it goes.
     """
-    with reported(), _logging_to_terminal():
-        built = _venue(venue_ref)
+    with _report_errors(), _logging_to_terminal():
+        built = _load_venue(venue_ref)
         loader = load_dataloader(dataloader_path)
         bettor = load_bettor(bettor_path)
         receipts = asyncio.run(
@@ -472,20 +488,4 @@ def run(
             ),
         )
         if not receipts.empty:
-            print_console([receipts], ['Receipts'])
-
-
-@contextmanager
-def _logging_to_terminal() -> Iterator[None]:
-    """Show the run's log on the terminal while a command runs."""
-    logger = logging.getLogger('sportsbet.execution')
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(message)s'))
-    logger.addHandler(handler)
-    level = logger.level
-    logger.setLevel(logging.INFO)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
-        logger.setLevel(level)
+            _print_console([receipts], ['Receipts'])

@@ -20,7 +20,7 @@ from sportsbet.sources import derive_market_outcomes
 # -----------------------
 #
 # A dataloader reads long snapshots and shapes them. Where they come from is the only thing it does not know, so that is
-# the only thing you have to tell it: implement `_snapshots` and everything else follows.
+# the only thing you have to tell it: implement `_load_snapshots` and everything else follows.
 
 MATCHES = [('2024-08-16', 'Arsenal', 'Chelsea', 2, 0), ('2024-08-23', 'Everton', 'Spurs', 1, 2)]
 MARKETS = ['home_win', 'draw', 'away_win']
@@ -29,7 +29,7 @@ MARKETS = ['home_win', 'draw', 'away_win']
 class MyDataLoader(BaseDataLoader):
     """A dataloader of snapshots I already hold."""
 
-    def _snapshots(self):
+    def _load_snapshots(self):
         stats, odds = [], []
         for date, home, away, home_goals, away_goals in MATCHES:
             identity = {

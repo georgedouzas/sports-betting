@@ -3,7 +3,6 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from __future__ import annotations
 
 import os
 
@@ -32,7 +31,7 @@ KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
 
 
-def _moments(moments: list[str] | None) -> list[tuple[str, int]] | None:
+def _parse_moments(moments: list[str] | None) -> list[tuple[str, int]] | None:
     """Return the moments to price, each of them a status and how many minutes into the match it is."""
     if not moments:
         return None
@@ -46,7 +45,7 @@ def _moments(moments: list[str] | None) -> list[tuple[str, int]] | None:
     return parsed
 
 
-def _aliases(aliases: list[str] | None) -> dict[str, str] | None:
+def _parse_aliases(aliases: list[str] | None) -> dict[str, str] | None:
     """Return the teams the two sources spell differently, each of them a name and the other name."""
     if not aliases:
         return None
@@ -60,7 +59,7 @@ def _aliases(aliases: list[str] | None) -> dict[str, str] | None:
     return paired
 
 
-def _odds_source(
+def _build_odds_source(
     odds: str,
     key_env: str,
     markets: list[str] | None,
@@ -76,7 +75,7 @@ def _odds_source(
     if not os.environ.get(key_env):
         msg = f'`{odds}` needs a key. Set `{key_env}`, or name another variable with `--odds-key-env`.'
         raise BuildError(msg)
-    return OddsApi(key_env=key_env, markets=markets or None, regions=regions or None, moments=_moments(moments))
+    return OddsApi(key_env=key_env, markets=markets or None, regions=regions or None, moments=_parse_moments(moments))
 
 
 def build_dataloader(
@@ -118,6 +117,10 @@ def build_dataloader(
     Returns:
         dataloader:
             The dataloader that downloads and shapes the selected data.
+
+    Raises:
+        BuildError:
+            If a source name is unknown, or an argument is malformed.
     """
     if stats not in STATS_SOURCES:
         msg = f'`{stats}` is not a statistics source. Available: {", ".join(sorted(STATS_SOURCES))}.'
@@ -128,6 +131,6 @@ def build_dataloader(
     return DataLoader(
         param_grid=selected or None,
         stats=STATS_SOURCES[stats](),
-        odds=_odds_source(odds, odds_key_env, odds_markets, odds_regions, odds_moments) if odds else None,
-        aliases=_aliases(aliases),
+        odds=_build_odds_source(odds, odds_key_env, odds_markets, odds_regions, odds_moments) if odds else None,
+        aliases=_parse_aliases(aliases),
     )

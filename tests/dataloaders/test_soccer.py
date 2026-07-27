@@ -17,8 +17,8 @@ def loader(monkeypatch, long_snapshots):
     The sample carries both the played matches and the upcoming one, so it stands in for both the training download and
     the fixtures download.
     """
-    monkeypatch.setattr(DataLoader, '_snapshots', lambda self: long_snapshots)
-    monkeypatch.setattr(DataLoader, '_fixtures_snapshots', lambda self: long_snapshots)
+    monkeypatch.setattr(DataLoader, '_load_snapshots', lambda self: long_snapshots)
+    monkeypatch.setattr(DataLoader, '_load_fixtures_snapshots', lambda self: long_snapshots)
     return DataLoader(param_grid={'league': ['England']}, stats=FootballDataStats(), odds=FootballDataOdds())
 
 
@@ -112,7 +112,7 @@ def test_validate_snapshots_rejects_missing_columns(monkeypatch, long_snapshots)
     """Test the loader rejects snapshots missing required identity columns."""
     stats, odds = long_snapshots
     bad = (stats.drop(columns=['home_team']), odds)
-    monkeypatch.setattr(DataLoader, '_snapshots', lambda self: bad)
+    monkeypatch.setattr(DataLoader, '_load_snapshots', lambda self: bad)
     with pytest.raises(ValueError, match='missing the required columns'):
         DataLoader(stats=FootballDataStats(), odds=FootballDataOdds()).extract_train_data(odds_type='market_average')
 
