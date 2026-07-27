@@ -2,8 +2,8 @@
 Searching over betting markets
 ==============================
 
-This example illustrates BettorGridSearchCV, and the point that is easy to
-miss: the markets to bet on are a hyperparameter, so they can be searched over like any other.
+This example shows BettorGridSearchCV. The markets to bet on are a hyperparameter, so you can search over them like any
+other.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -51,8 +51,8 @@ classifier = make_pipeline(
 # The markets are a hyperparameter
 # --------------------------------
 #
-# Which market to bet is a choice, exactly as the regularisation of the classifier is a choice, and there is no
-# reason to make one by hand and search the other. Put both in the grid and let the search decide.
+# Which market to bet is a choice, just as the regularisation of the classifier is a choice. There is no reason to set
+# one by hand and search the other. Put both in the grid and let the search decide.
 
 bettor = BettorGridSearchCV(
     estimator=ClassifierBettor(classifier, init_cash=10000.0, stake=50.0),
@@ -73,8 +73,8 @@ bettor.best_params_
 # Backtesting the search
 # ----------------------
 #
-# The search is re-run inside every fold, so the markets are chosen on the training part of the fold and judged on the
-# part it has not seen. Choosing them once, on everything, would be choosing them on the answers.
+# The search re-runs inside every fold. So it chooses the markets on the training part of the fold and judges them on
+# the part it has not seen. Choosing them once, on everything, would choose them on the answers.
 
 results = backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(3))
 results
@@ -83,9 +83,9 @@ results
 # What the search saw
 # -------------------
 #
-# The search scored every market on the same footing as the regularisation. Here is the score it gave each set of
-# markets, the best value of `C` for each, which is how it came to prefer one over the others. The bar it picked is
-# the choice you would otherwise have made by hand, or worse, by peeking at the answers.
+# The search scored every set of markets on the same footing as the regularisation. The chart below shows the best
+# score for each set of markets. That score is how the search came to prefer one set over the others. The bar it picked
+# is the choice you would otherwise have made by hand, or worse, by peeking at the answers.
 
 scores = pd.DataFrame(bettor.cv_results_)
 scores['markets'] = scores['param_betting_markets'].apply(' + '.join)

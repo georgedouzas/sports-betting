@@ -99,7 +99,7 @@ class PlacementIntent:
 
 @dataclass(frozen=True)
 class PlacementQuote:
-    """What is about to be staked, before anything is.
+    """What is about to be staked, before any bet is placed.
 
     Args:
         intents: The bets the quote covers.
@@ -141,7 +141,7 @@ class PlacementReceipt:
 
 @dataclass
 class ExposureLimits:
-    """The ceilings a placement answers to, and the switch that stops it.
+    """The limits a placement must stay within, and the kill switch that stops it.
 
     Args:
         max_stake_per_bet: The most to stake on one bet.
@@ -212,7 +212,7 @@ def build_receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
 class BaseVenue(abc.ABC):
     """A place where a user holds an account and can back a selection.
 
-    A venue implementing this contract places once and only once for an identity.
+    A venue that implements this contract places a bet once and only once for each identity.
     """
 
     key: str = ''

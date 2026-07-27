@@ -168,9 +168,10 @@ async def execute_event(
 ) -> pd.DataFrame:
     """Watch one event and place the model's bet at its moment, once.
 
-    A fixed sequence, in order. It explores the URLs to match the event, ensures the session is logged in, monitors the
-    event to its betting moment while logging it, applies the fitted bettor at the moment, and places one bet when the
-    model finds value and the run is armed. A run is a no-stakes dry run unless `live` is set.
+    The function runs a fixed sequence of steps. It explores the URLs to find the event. It makes sure the session is
+    logged in. It monitors the event until its betting moment and logs it. It applies the fitted bettor at that
+    moment. It places one bet when the model finds value and the run is armed. A run stakes nothing unless you set
+    `live`.
 
     Args:
         event:

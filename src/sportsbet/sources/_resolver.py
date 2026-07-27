@@ -18,7 +18,7 @@ MIN_MARGIN = 0.15
 
 
 def normalize_team_name(name: str) -> str:
-    """Return a team name with the differences that carry no meaning taken out.
+    """Return a team name with the parts that carry no meaning removed.
 
     Args:
         name:

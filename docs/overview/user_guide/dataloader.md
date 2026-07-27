@@ -32,16 +32,17 @@ dataloader and a basketball source a basketball one. To add a sport, write a sou
 ## Code, not data
 
 The library ships the code that fetches the data and runs it on your machine. Bookmakers own their odds, so `DataLoader`
-downloads [football-data.co.uk](https://www.football-data.co.uk) locally and transforms it there.
+downloads [football-data.co.uk](https://www.football-data.co.uk) to your machine and transforms it there.
 
-Two things follow.
+This has two consequences.
 
 * Extracting the data downloads it. See [downloading the data](#downloading-the-data).
 * You choose the sources. Statistics and odds are separate parameters, so free statistics pair with paid odds.
 
 ## The event-snapshot data model
 
-The data is stored in long format as event snapshots. Each row is one match at one moment, marked by two columns.
+The library stores the data in long format as event snapshots. Each row is one match at one moment, marked by two
+columns.
 
 * `event_status`: the phase of the match, `'preplay'`, `'inplay'` or `'postplay'`.
 * `event_time`: a [pandas Timedelta] since kick off, for example `pd.Timedelta('30min')`. It is `0min` at `preplay` and
@@ -49,21 +50,22 @@ The data is stored in long format as event snapshots. Each row is one match at o
 
 ### Time is always UTC, and `date` is the kick-off
 
-`date` is the kick off instant in UTC. Every source converts its own local time at its boundary, so you always get UTC.
-football-data.co.uk, for example, publishes every league in UK time, and that is resolved before you see it.
+`date` is the kick-off instant in UTC. Every source converts its own local time at its boundary, so you always get UTC.
+football-data.co.uk, for example, publishes every league in UK time, and the library resolves that before you see it.
 
-This gives the model its central rule.
+This gives the data model its central rule.
 
 ```text
 date + event_time  =  the wall-clock instant of the snapshot
 ```
 
-So a moment is addressable. "The odds at minute 45 of Arsenal vs Chelsea" is a real timestamp you can ask a provider
-for. Older seasons that carry no kick off time fall back to midnight UTC, and pair with the free feeds.
+So a moment has an address. "The odds at minute 45 of Arsenal vs Chelsea" is a real timestamp you can ask a provider
+for. Older seasons carry no kick-off time. They fall back to midnight UTC and pair with the free feeds.
 
-The snapshots live in two long tables, `stats` and `odds`, sharing their identity and event columns, with one `odds` row
-per `provider`. This moment aware model produces both pre match and in play predictions from one interface: you pick a
-target moment, and every earlier snapshot becomes a feature and the target outcome the labels.
+The snapshots live in two long tables, `stats` and `odds`. The two tables share their identity and event columns, and
+`odds` has one row per `provider`. This moment-aware model produces both pre-match and in-play predictions from one
+interface. You pick a target moment. Every earlier snapshot becomes a feature, and the target outcome becomes the
+labels.
 
 ### Everything is derived from the data
 
@@ -75,17 +77,18 @@ A dataloader reads its snapshots and works out the layout from them.
 * and for each value column, whether it is fixed within a match, so it keeps a bare name, or time varying, so it is
   expanded per moment, and where it carries values.
 
-[pandera] schemas built from the data validate it. So a source may publish any columns in this long format and the
-dataloader adapts. See [data of your own](#data-of-your-own).
+The library builds [pandera] schemas from the data and validates the data against them. So a source may publish any
+columns in this long format, and the dataloader adapts. See [data of your own](#data-of-your-own).
 
 ## Initialization
 
-You initialise a dataloader with `param_grid`, which selects the training data. It fixes the fixtures data too, since
-the two keep the same columns.
+You initialise a dataloader with `param_grid`. This selects the training data. It fixes the fixtures data too, since the
+two keep the same columns.
 
 ### Available parameters
 
-Ask the source what exists before writing a `param_grid`. Discovery lives on the source, which decides availability.
+Ask the source what exists before you write a `param_grid`. The source holds the catalogue and decides what is
+available.
 
 ```python
 from sportsbet.sources import FootballDataStats
@@ -97,11 +100,12 @@ assert {'division': 1, 'league': 'England', 'year': 2024} in params
 assert all({'league', 'division', 'year'} == set(combination) for combination in params)
 ```
 
-`list_available_params` is an instance method, since what a source publishes depends on its configuration: a credential may
-cover part of it. The catalogue is read fresh each call, so a new season appears as soon as the feed publishes it.
+`list_available_params` is an instance method, because what a source publishes depends on its configuration. A
+credential may cover part of it. The source reads the catalogue fresh on each call, so a new season appears as soon as
+the feed publishes it.
 
-The dataloader offers the seasons both your statistics and odds sources publish, their intersection, so every selected
-season has both.
+The dataloader offers the seasons that both your statistics and odds sources publish. It takes their intersection, so
+every selected season has both.
 
 ### Selection of parameters
 
@@ -147,8 +151,8 @@ Once initialised, extract the data, which downloads it.
 
 ## Sources
 
-A source is where the data comes from. `DataLoader` takes two, each carrying its own settings, so a source's
-configuration stays with the source.
+A source is where the data comes from. `DataLoader` takes two sources. Each source carries its own settings, so a
+source's configuration stays with the source.
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -162,16 +166,17 @@ dataloader = DataLoader(
 ```
 
 You choose both sources, so you always know what you are modelling. Pass `stats` to say where the statistics come from.
-Pass `odds` for markets to bet on, or omit it and use `extract_exploration_data` for the features alone.
+Pass `odds` for markets to bet on. Omit `odds` and use `extract_exploration_data` for the features alone.
 
-Statistics and odds are separate on purpose. The free feed carries pre match closing odds, enough to backtest a pre
-match bet. A source with time stamped prices backtests an in play bet too. So free statistics with your own paid odds is
-the realistic setup.
+Statistics and odds are separate on purpose. The free feed carries pre-match closing odds, which are enough to backtest
+a pre-match bet. A source with time-stamped prices backtests an in-play bet too. So free statistics with your own paid
+odds is the realistic setup.
 
 ### Bringing your own odds
 
-[`OddsApi`][sportsbet.sources.OddsApi] buys time stamped prices from [The Odds API](https://the-odds-api.com) with your
-key, so an in play bet is backtestable: the odds are the ones on offer at the minute the bet would have been placed.
+[`OddsApi`][sportsbet.sources.OddsApi] buys time-stamped prices from [The Odds API](https://the-odds-api.com) with your
+key. This makes an in-play bet backtestable, because the odds are the ones on offer at the minute the bet would have
+been placed.
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -184,44 +189,44 @@ dataloader = DataLoader(
 )
 ```
 
-This feed is metered, so extract deliberately. Extracting downloads the seasons and buys their odds, so extract once and
-[keep the result](#keeping-the-data) with `save`. The free statistics say when each match kicks off, so a snapshot is
-bought per kick off and moment, and matches kicking off together are bought once. What a request costs is between you and
-the vendor.
+This feed is metered, so extract deliberately. Extracting downloads the seasons and buys their odds. Extract once and
+[keep the result](#keeping-the-data) with `save`. The free statistics say when each match kicks off, so the feed buys
+one snapshot per kick-off and moment, and it buys matches that kick off together once. What a request costs is between
+you and the vendor.
 
-Your key joins a request at the moment it is made, so it stays on your machine and out of the data you save.
+Your key joins a request at the moment the request is made, so it stays on your machine and out of the data you save.
 
-Two limits are worth knowing: the vendor's history begins in June 2020, and historical prices are a paid tier. The
+Two limits are worth knowing. The vendor's history begins in June 2020, and historical prices are a paid tier. The
 dataloader offers the seasons both sources publish, so an `OddsApi` selection stays within what it can price.
 
 ### When two sources name a club differently
 
-This is the most dangerous thing in the library, so it is worth being blunt about.
+This is the most dangerous thing in the library, so read it carefully.
 
-Two sources rarely spell a club the same way. The free feed says `Man United`, `Nott'm Forest`, `Wolves`; the odds
-vendor says `Manchester United`, `Nottingham Forest`, `Wolverhampton Wanderers`. A name that fails to match leaves that
-game without odds, and a missing odd reads as a slightly smaller dataset, which gives a backtest that is clean, plausible
-and wrong.
+Two sources rarely spell a club the same way. The free feed says `Man United`, `Nott'm Forest`, `Wolves`. The odds
+vendor says `Manchester United`, `Nottingham Forest`, `Wolverhampton Wanderers`. When a name fails to match, that game
+has no odds. A missing odd does not look like an error. It looks like a slightly smaller dataset. The result is a
+backtest that is clean, plausible and wrong.
 
-So statistics and odds from different sources are reconciled. The dataloader reads through the spelling and pairs the
-two feeds, and a name it cannot place is dropped rather than guessed at.
+So the dataloader reconciles statistics and odds from different sources. It compares the spellings and pairs the two
+feeds. A name it cannot place is dropped, not guessed at.
 
-Most of the time you do nothing. Names are paired within a league and season, where both sources hold the same twenty
-clubs, so every name that could be confused is present on both sides and matches itself first. `Manchester City` pairs
-with `Man City` because `Manchester United` and `Man United` are there too, claiming each other.
+Most of the time you do nothing. The dataloader pairs names within a league and season, where both sources hold the same
+twenty clubs. Every name that could be confused is present on both sides and matches itself first. `Manchester City`
+pairs with `Man City` because `Manchester United` and `Man United` are there too, and they claim each other.
 
-Clubs are abbreviated by shortening their words, so names are compared by the prefixes their words share. `Wolves`
-matches `Wolverhampton Wanderers`, and `Everton` stays apart from `Liverpool`. A name is paired when it is clearly the
-best on the roster and clearly better than the next best, and the library leaves anything ambiguous out.
+Clubs are abbreviated by shortening their words, so the dataloader compares names by the prefixes their words share.
+`Wolves` matches `Wolverhampton Wanderers`. `Everton` stays apart from `Liverpool`. The dataloader pairs a name when it
+is clearly the best on the roster and clearly better than the next best. It leaves anything ambiguous out.
 
-A name it cannot place is dropped, quietly. That is the danger a small alias fixes: when you know the club a leftover
-name means, you pass it, and the match keeps its odds.
+The dataloader drops a name it cannot place, and it does so quietly. A small alias fixes this. When you know the club a
+leftover name means, you pass it, and the match keeps its odds.
 
 ```python
 DataLoader(..., aliases={'Athletic Bilbao': 'Ath Bilbao'})
 ```
 
-The reconciled odds take the statistics' identity, their kick off and spelling, so the two tables line up. The free path
+The reconciled odds take the statistics' identity, their kick-off and spelling, so the two tables line up. The free path
 skips all of this, since statistics and odds come from the same row.
 
 ## Downloading the data
@@ -233,15 +238,16 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maxi
 X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
-`extract_train_data` downloads the selected seasons; `extract_fixtures_data` downloads the current data the upcoming
+`extract_train_data` downloads the selected seasons. `extract_fixtures_data` downloads the current data the upcoming
 matches need. Each call downloads afresh, so the object carries the latest data, held as `stats_` and `odds_`.
 
-The catalogue is read scoped to the selection, so three selected leagues read three indexes, and a paid feed prices only
-the matches you selected and those still to be played.
+The dataloader reads the catalogue scoped to the selection. So three selected leagues read three indexes, and a paid
+feed prices only the matches you selected and those still to be played.
 
 ## Keeping the data
 
-The dataloader is the store. After an extraction it holds the snapshots, so keeping them is keeping the object.
+The dataloader is the store. After an extraction it holds the snapshots. So you keep the snapshots by keeping the
+object.
 
 ```python
 dataloader.save('england.pkl')
@@ -250,8 +256,8 @@ from sportsbet.dataloaders import load_dataloader
 dataloader = load_dataloader('england.pkl')      # the data comes back with it
 ```
 
-Extract once, save, and load to reuse the data, and for a paid feed to reuse what you paid for. You own the file, so
-where it lives and how long it lasts is your call. For fresh data, extract again.
+Extract once, save, and load to reuse the data. For a paid feed, this reuses what you paid for. You own the file. Where
+it lives and how long it lasts is up to you. For fresh data, extract again.
 
 ## Column-naming grammar
 
@@ -289,9 +295,9 @@ dataloader = DataLoader(
 
 ### A target that does not exist
 
-A feed loses a result now and then. scikit-learn needs a value in `y`, so a match whose outcome the feed never recorded
-is dropped, with its `X`, `Y` and `O` rows together, so the three stay aligned. This concerns the targets; missing
-features are handled by `drop_na_thres`.
+A feed loses a result now and then. scikit-learn needs a value in `y`, so the dataloader drops a match whose outcome the
+feed never recorded. It drops the match's `X`, `Y` and `O` rows together, so the three stay aligned. This concerns the
+targets. `drop_na_thres` handles missing features.
 
 ### The `drop_na_thres` parameter
 
@@ -305,8 +311,8 @@ X_train, *_ = dataloader.extract_train_data(drop_na_thres=0.0, odds_type='market
 assert len(X_train.columns) == 7
 ```
 
-At `1.0` any column with a missing value is dropped. The two points averages are empty for a team's first match of the
-season, so they go, leaving 5.
+At `1.0` the dataloader drops any column with a missing value. The two points averages are empty for a team's first
+match of the season, so the dataloader drops them, leaving 5.
 
 ```python
 X_train, *_ = dataloader.extract_train_data(drop_na_thres=1.0, odds_type='market_average')
@@ -363,7 +369,7 @@ X_inplay, Y_inplay, O_inplay = dataloader.extract_train_data(
 )
 ```
 
-There, `Y_inplay` holds the outcome at 60 minutes, `home_win__inplay__60min` and the rest, and `X_inplay` the snapshots
+Here `Y_inplay` holds the outcome at 60 minutes, `home_win__inplay__60min` and the rest. `X_inplay` holds the snapshots
 before it.
 
 ### The input horizon
@@ -398,8 +404,8 @@ X = dataloader.extract_exploration_data()
 assert 'home_points_avg' in X.columns
 ```
 
-It keeps every match, and with no odds to cap the horizon it carries every snapshot as a feature, the in play ones
-included.
+It keeps every match. With no odds to cap the horizon, it carries every snapshot as a feature, including the in-play
+ones.
 
 ## Fixtures data
 
@@ -437,10 +443,11 @@ assert O_train.columns.tolist() == O_fix.columns.tolist()
 ```
 
 The fixtures follow the leagues you selected, so to bet on Italy, select Italy. A fixture is described by its two teams'
-current form, so `extract_fixtures_data` downloads the season they are in the middle of.
+current form, so `extract_fixtures_data` downloads the season they are currently playing.
 
 A finished season yields no fixtures, so the frozen [`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] has none.
-A past match still awaiting a result is a hole in the feed, an abandoned or unrecorded game, and it is left out.
+A past match still awaiting a result is a gap in the feed, an abandoned or unrecorded game, and the dataloader leaves it
+out.
 
 A fixture has no target matrix.
 
@@ -504,9 +511,9 @@ is a lot of time stamped odds, so extract once and [keep the result](#keeping-th
 
 ## Data of your own
 
-The extraction, grammar and moment aware model apply to any data in the long format, not only the shipped feeds. Because
-the layout is [derived from the data](#everything-is-derived-from-the-data), your columns follow that format and the
-providers, markets, features and their roles are worked out for you.
+The extraction, the grammar and the moment-aware model apply to any data in the long format, not only the shipped feeds.
+The dataloader [derives the layout from the data](#everything-is-derived-from-the-data). So your columns follow the long
+format, and the dataloader works out the providers, markets, features and their roles for you.
 
 Bring data in by writing a source: four small methods, covered in
 [the sources guide](sources.md#writing-your-own-source). Then give it to `DataLoader` beside any odds source.
@@ -518,8 +525,8 @@ dataloader = DataLoader(stats=MyStats(), odds=MyOdds())
 X, Y, O = dataloader.extract_train_data(odds_type='acme')
 ```
 
-A source whose data is already on disk is still a source, which is what
-[`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] is: its items are files, read straight off the disk.
+A source whose data is already on disk is still a source. [`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] is
+one. Its items are files, and it reads them straight off the disk.
 
 For a table already in memory, implement [`BaseDataLoader`][sportsbet.dataloaders.BaseDataLoader] directly. It has one
 abstract method, the seam every dataloader sits on.
@@ -649,9 +656,9 @@ assert O_train.columns.tolist() == O_fix.columns.tolist()
 
 ## Saving and loading
 
-Save a dataloader with `save` and reload it with `load_dataloader`. It comes back with the snapshots it downloaded, so
-`extract_train_data` gives you the training data again without touching the network: the data is downloaded once and
-kept, not downloaded again and stored twice.
+Save a dataloader with `save` and reload it with `load_dataloader`. It comes back with the snapshots it downloaded. So
+`extract_train_data` gives you the training data again without touching the network. The dataloader downloads the data
+once and keeps it. It does not download the data again.
 
 ```python
 import tempfile

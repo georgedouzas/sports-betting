@@ -2,8 +2,7 @@
 Classifier bettor
 =================
 
-This example illustrates ClassifierBettor, which wraps any scikit-learn
-classifier and turns its probabilities into bets.
+This example shows ClassifierBettor. It wraps any scikit-learn classifier and turns its probabilities into bets.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -23,8 +22,8 @@ from sportsbet.sources import FootballDataOdds, FootballDataStats
 # The data
 # --------
 #
-# Three seasons of the Spanish league. Dropping the columns that are more than half empty keeps the classifier simple,
-# and the market maximum odds are the most generous price on offer for each outcome.
+# This is three seasons of the Spanish league. Dropping the columns that are more than half empty keeps the classifier
+# simple. The market maximum odds are the most generous price on offer for each outcome.
 
 dataloader = DataLoader(
     param_grid={'league': ['Spain'], 'year': [2020, 2021, 2022]},
@@ -38,7 +37,7 @@ X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=0.5, odd
 Y_train
 
 # %%
-# A KNN classifier only understands numbers, so keep the numerical columns and let an imputer fill the gaps.
+# A KNN classifier understands only numbers. Keep the numerical columns and let an imputer fill the gaps.
 
 num_cols = X_train.columns[['float' in col_type.name for col_type in X_train.dtypes]]
 X_train = X_train[num_cols]
@@ -47,8 +46,8 @@ X_train = X_train[num_cols]
 # The bettor
 # ----------
 #
-# A bettor is a classifier. It has `fit`, `predict` and `predict_proba`, so the pipeline goes straight in, and the
-# usual scikit-learn tooling works on it. Its cross-validated accuracy, for instance:
+# A bettor is a classifier. It has `fit`, `predict` and `predict_proba`. So the pipeline goes straight in, and the
+# usual scikit-learn tooling works on it. Here is its cross-validated accuracy:
 
 bettor = ClassifierBettor(make_pipeline(SimpleImputer(), KNeighborsClassifier()))
 cross_val_score(bettor, X_train, Y_train, cv=TimeSeriesSplit(), scoring='accuracy').mean()
@@ -57,8 +56,8 @@ cross_val_score(bettor, X_train, Y_train, cv=TimeSeriesSplit(), scoring='accurac
 # Backtesting
 # -----------
 #
-# Accuracy is not money. The backtest walks the seasons in order, bets only where the model sees value, and reports
-# what the bankroll actually did.
+# Accuracy is not money. The backtest walks the seasons in order. It bets only where the model sees value. It reports
+# what the bankroll did.
 
 bettor.fit(X_train, Y_train)
 backtesting_results = backtest(bettor, X_train, Y_train, O_train)
@@ -76,10 +75,10 @@ _ = bettor.bet(X_fix, Odds_fix)
 # Where the bets come from
 # ------------------------
 #
-# A bet is placed when the model thinks an outcome is likelier than its price implies. Below, each match's home-win
-# probability from the model is set against the probability the odds imply. Everything above the diagonal is where the
-# model disagrees with the market in your favour, those are the bets, and whether they were wisdom or noise is exactly
-# what the backtest above is there to tell you.
+# The bettor places a bet when the model thinks an outcome is likelier than its price implies. The chart below sets each
+# match's home-win probability from the model against the probability the odds imply. Everything above the diagonal is
+# where the model disagrees with the market in your favour. Those points are the bets. The backtest above tells you
+# whether they were wisdom or noise.
 
 home_win_col = next(col for col in O_train.columns if '__home_win__' in col)
 markets = bettor.betting_markets_.tolist()

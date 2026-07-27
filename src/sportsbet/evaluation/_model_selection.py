@@ -171,9 +171,9 @@ def backtest(
 
 
 class BettorGridSearchCV(GridSearchCV, BaseBettor):
-    """Exhaustive search over specified parameter values for a bettor.
+    """Search a bettor's parameter grid with cross-validation.
 
-    The parameters of the bettor are optimized by cross-validated grid search over a parameter grid.
+    It optimizes the bettor's parameters by cross-validated grid search over the parameter grid.
 
     Read more in the [user guide][user-guide].
 

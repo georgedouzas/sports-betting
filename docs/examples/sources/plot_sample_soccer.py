@@ -2,8 +2,7 @@
 Sample soccer data
 ==================
 
-This example illustrates SampleSoccerStats and
-SampleSoccerOdds, the sample data that ships with the library.
+This example shows SampleSoccerStats and SampleSoccerOdds, the sample data that ships with the library.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -19,7 +18,7 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 # -----------------------
 #
 # It is a real season of the English and Spanish first divisions, taken from football-data.co.uk and frozen. It needs
-# no key and it reaches no network, which is what makes it the data of the examples and the tests.
+# no key and reaches no network. That is why the examples and the tests use it.
 
 stats = SampleSoccerStats()
 stats.name, stats.kind, stats.sport
@@ -33,8 +32,8 @@ stats.list_available_params()
 # Extracting the data
 # -------------------
 #
-# It is an ordinary source, so it is used like any other: give it to a dataloader beside an odds source. The
-# Extracting reads the bundled files off your disk, which costs nothing and touches no network.
+# It is an ordinary source, so you use it like any other. Give it to a dataloader beside an odds source. Extracting
+# reads the bundled files off your disk. That costs nothing and touches no network.
 
 dataloader = DataLoader(param_grid={'league': ['England']}, stats=stats, odds=SampleSoccerOdds())
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
@@ -55,11 +54,11 @@ O_train
 # It has no fixtures
 # ------------------
 #
-# The season is finished, so every match in it has been played. A fixture is a match that has not been played, so
-# the sample has none, and `extract_fixtures_data` returns an empty frame with the training columns.
+# The season is finished, so every match in it has been played. A fixture is a match that has not been played. The
+# sample has none, so `extract_fixtures_data` returns an empty frame with the training columns.
 #
-# To bet on something you need a source that is still publishing matches. See
-# [Football-Data](plot_football_data.md). The sample is for learning the interface, not for betting.
+# To bet on something, you need a source that is still publishing matches. See [Football-Data](plot_football_data.md).
+# The sample is for learning the interface, not for betting.
 
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 len(X_fix)
@@ -68,7 +67,7 @@ len(X_fix)
 # A picture of it
 # ---------------
 #
-# How the season actually fell out: home wins lead, which is the home advantage the odds are always pricing in.
+# This shows how the season ended. Home wins lead. That lead is the home advantage the odds always price in.
 
 outcomes = Y_train.sum()
 outcomes.index = outcomes.index.str.split('__').str[0]

@@ -142,9 +142,10 @@ def read_csv_content(content: bytes) -> pd.DataFrame:
 class BaseSource(ABC):
     """The abstract base class for data sources.
 
-    A source declares the raw items a selection of parameters needs and turns the returned payloads into long snapshots.
-    `sport` names the one sport it carries, or is `None` for a vendor that carries several and takes the sport of the
-    source it is paired with. It also answers what it publishes through `list_available_params`.
+    A source declares the raw items a selection of parameters needs. It turns the returned payloads into long
+    snapshots. `sport` names the one sport it carries. `sport` is `None` for a vendor that carries several sports and
+    takes the sport of the source it is paired with. The `list_available_params` method returns what the source
+    publishes.
 
     Examples:
         >>> from sportsbet.sources import FootballDataStats, OddsApi
@@ -221,9 +222,10 @@ class BaseSource(ABC):
     def list_fixtures_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the raw items the upcoming matches need.
 
-        The default is the same items training needs, which suits a source whose season file already carries the matches
-        still to be played, or an odds source that prices whatever the schedule lists. A source whose upcoming matches
-        live somewhere else, in a separate fixtures file or the season in progress, overrides it.
+        By default it returns the same items training needs. That suits a source whose season file already carries the
+        matches still to be played. It also suits an odds source that prices whatever the schedule lists. A source
+        whose upcoming matches live elsewhere, in a separate fixtures file or the season in progress, overrides this
+        method.
 
         Args:
             params:

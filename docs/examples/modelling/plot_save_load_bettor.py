@@ -2,8 +2,7 @@
 Saving and loading a bettor
 ===========================
 
-This example illustrates save_bettor and
-load_bettor.
+This example shows save_bettor and load_bettor.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -23,8 +22,8 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 # A fitted bettor comes back fitted
 # ---------------------------------
 #
-# The model you backtested is the model that should place the bets. Saving it is what makes those the same object rather
-# than two that were fitted separately and are hopefully the same.
+# The model you backtested is the model that should place the bets. Saving it makes them the same object. Otherwise you
+# have two models that were fitted separately and are only hopefully the same.
 
 dataloader = DataLoader(
     param_grid={'league': ['England']},

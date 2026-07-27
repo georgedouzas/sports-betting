@@ -17,8 +17,8 @@ from ._base import BaseBettor, _is_odds_column, derive_market_base, find_latest_
 class OddsComparisonBettor(BaseBettor):
     """Bettor based on comparison of odds.
 
-    It bets by comparing each market's odds to a consensus probability, the average of the selected odds types
-    adjusted by `alpha`. The method follows
+    It compares each market's odds to a consensus probability. The consensus probability is the average of the
+    selected odds types, adjusted by `alpha`. The method follows
     [Beating the bookies with their own numbers](https://arxiv.org/pdf/1710.02824.pdf).
 
     Read more in the [user guide][user-guide].

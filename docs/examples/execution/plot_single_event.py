@@ -2,13 +2,13 @@
 Watching one event
 ===================
 
-This example runs the single-event execution unit end to end, offline. It watches one upcoming match, applies a fitted
-model at the match's betting moment, and places the model's bet, once. Nothing here reaches a real bookmaker, opens a
-real browser or moves real money: the data is made up, the browser is a stand-in, and time is an injected clock.
+This example runs the single-event execution unit end to end, offline. It watches one upcoming match. It applies a
+fitted model at the match's betting moment. It places the model's bet, once. Nothing here reaches a real bookmaker,
+opens a real browser or moves real money. The data is made up, the browser is a stand-in, and time is an injected clock.
 
-The unit runs a fixed sequence. It explores the candidate URLs to find the page for the event, logs in, monitors the
-event to its moment while logging it, and at the moment applies the fitted bettor and places the configured stake on the
-model's selection. A run is a no-stakes dry run unless it is armed with `live=True`.
+The unit runs a fixed sequence. It explores the candidate URLs to find the page for the event. It logs in. It monitors
+the event to its moment and logs it. At the moment it applies the fitted bettor and places the configured stake on the
+model's selection. A run is a no-stakes dry run unless you arm it with `live=True`.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -39,9 +39,9 @@ URL = 'https://book.demo/arsenal-chelsea'
 # ----------------------
 #
 # The unit gets the event's evolving data from a dataloader, the same component the rest of the library uses. A
-# dataloader normally pulls from a source, but a test or an example can carry its own snapshots by implementing
+# dataloader normally pulls from a source. A test or an example can carry its own snapshots by implementing
 # `_load_snapshots`. The snapshots below are a handful of finished matches to train on and one upcoming
-# `Arsenal vs Chelsea` with a kick-off a week away and generous preplay odds, so the model finds value on it.
+# `Arsenal vs Chelsea`. Its kick-off is a week away and its preplay odds are generous, so the model finds value on it.
 
 MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
 FEATURES = ['home_points_avg', 'away_points_avg']
@@ -136,9 +136,9 @@ X[['home_points_avg', 'away_points_avg']].tail()
 # A fitted bettor
 # ---------------
 #
-# The bettor decides whether to bet and which selection to back, never the stake. An
-# `OddsComparisonBettor` backs a market when the price on offer beats its consensus probability. Fitted on the training
-# data, it finds value on the home win of the upcoming match, at the generous price the fixture carries.
+# The bettor decides whether to bet and which selection to back. It never decides the stake. An `OddsComparisonBettor`
+# backs a market when the price on offer beats its consensus probability. Fitted on the training data, it finds value on
+# the home win of the upcoming match, at the generous price the fixture carries.
 
 bettor = OddsComparisonBettor(alpha=0.02, betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
 
@@ -151,10 +151,10 @@ value_bets
 # A stand-in browser session
 # --------------------------
 #
-# For a bookmaker with no API the venue is a headless browser session driving the site. The unit only needs a small set
-# of methods from it: to navigate, log in, pin and read the site's controls, type, click and stop. The stand-in below
-# duck-types those methods so the example drives no real browser. Its pages carry the event name and a ref for the
-# control to act on, which is all the unit reads.
+# For a bookmaker with no API, the venue is a headless browser session that drives the site. The unit needs only a small
+# set of methods from it. It navigates, logs in, pins and reads the site's controls, types, clicks and stops. The
+# stand-in below provides those methods, so the example drives no real browser. Its pages carry the event name and a ref
+# for the control to act on. That is all the unit reads.
 
 
 def first_ref(snapshot):
@@ -209,7 +209,7 @@ class StubSession:
 
 
 # %%
-# The placer drives the pinned controls to put one bet on. The default placer does exactly this; the one here also
+# The placer drives the pinned controls to put one bet on. The default placer does exactly this. The one here also
 # records the stake it put on, so the example can chart it.
 
 
@@ -241,9 +241,9 @@ class RecordingPlacer:
 # Time, so the moment is now
 # --------------------------
 #
-# The unit waits until the event's betting moment and only then acts. Waiting is real by default and driven by an
-# injected clock in tests and examples. A preplay model's moment is the kick-off, so a clock pinned to the kick-off puts
-# the moment at now: the monitor returns at once and the bet is decided immediately. The wait does nothing.
+# The unit waits until the event's betting moment and only then acts. The wait is real by default. Tests and examples
+# drive it with an injected clock. A preplay model's moment is the kick-off. A clock pinned to the kick-off puts the
+# moment at now, so the monitor returns at once and the unit decides the bet immediately. The wait does nothing.
 
 kick_off = X_fix.index[0]
 
@@ -262,8 +262,8 @@ async def wait(seconds):
 # A dry run
 # ---------
 #
-# A run is a no-stakes dry run unless it is armed. The unit explores the URL, logs in, monitors to the moment, applies
-# the bettor and logs the exact bet it would place, but stakes nothing. The receipt records the decision, and the money
+# A run is a no-stakes dry run unless you arm it. The unit explores the URL, logs in, monitors to the moment, applies
+# the bettor and logs the exact bet it would place. It stakes nothing. The receipt records the decision, and the money
 # staked is nothing.
 
 session = StubSession()

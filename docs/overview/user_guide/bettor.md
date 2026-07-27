@@ -7,14 +7,14 @@
 
 A bettor turns probabilities into bets. The library ships three.
 
-* [`OddsComparisonBettor`][sportsbet.evaluation.OddsComparisonBettor]: bets by comparing the odds of different providers.
-* [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor]: bets with a [scikit-learn] classifier.
-* [`BettorGridSearchCV`][sportsbet.evaluation.BettorGridSearchCV]: tunes a bettor's parameters by cross validated search.
+* [`OddsComparisonBettor`][sportsbet.evaluation.OddsComparisonBettor] bets by comparing the odds of different providers.
+* [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor] bets with a [scikit-learn] classifier.
+* [`BettorGridSearchCV`][sportsbet.evaluation.BettorGridSearchCV] tunes a bettor's parameters by cross-validated search.
 
 ## Betting strategy
 
-A betting strategy looks for value bets, the events where the bookmaker underestimates the probability of the outcome.
-The true probability is unknown, so the comparison is between the bettor's estimate and the bookmaker's. A bet is a
+A betting strategy looks for value bets. A value bet is an event where the bookmaker underestimates the probability of
+the outcome. The true probability is unknown, so the bettor compares its own estimate with the bookmaker's. A bet is a
 value bet when the bettor gives the outcome a higher probability than the odds imply.
 
 ## Initialization
@@ -36,8 +36,8 @@ Each bettor adds its own parameters on top of these.
 
 * [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor] adds `classifier`, any [scikit-learn] classifier with
   `fit` and `predict_proba`.
-* [`OddsComparisonBettor`][sportsbet.evaluation.OddsComparisonBettor] adds `odds_types`, the odds providers averaged into
-  the consensus probability, defaulting to `'market_average'`, and `alpha`, an adjustment subtracted from that
+* [`OddsComparisonBettor`][sportsbet.evaluation.OddsComparisonBettor] adds `odds_types`, the odds providers it averages
+  into the consensus probability, defaulting to `'market_average'`, and `alpha`, an adjustment it subtracts from that
   probability, where larger values bet less often.
 
 The example below uses a classifier bettor built around a [decision tree classifier]. The features include categorical
@@ -76,7 +76,7 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_aver
 ```
 
 It is a real Premier League season, frozen, read from the bundled files on your disk. The season is finished, so it has
-no fixtures, and everything below runs on the training data. To bet on upcoming matches, point the same bettor at
+no fixtures, and everything below runs on the training data. To bet on upcoming matches, apply the same bettor to the
 `extract_fixtures_data()` of a live source such as [`FootballDataStats`][sportsbet.sources.FootballDataStats].
 
 ## Implementation
@@ -89,8 +89,8 @@ Bettors implement these public methods.
 * `bet` returns the value bets.
 * `score` returns the annual Sharpe ratio of the predicted value bets.
 
-The `backtest` function computes backtesting statistics for a bettor over historical data. All of the above rest on two
-private methods, `_fit` and `_predict_proba`, so a new betting model is easy to write. `_fit` learns from historical
+The `backtest` function computes backtesting statistics for a bettor over historical data. All of the methods above use
+two private methods, `_fit` and `_predict_proba`, so a new betting model is easy to write. `_fit` learns from historical
 data, and `_predict_proba` returns the class probabilities.
 
 ### Writing your own bettor
@@ -124,20 +124,20 @@ class HomeAdvantageBettor(BaseBettor):
         return probabilities
 ```
 
-`complementary_events_` comes from the data, so the same bettor renormalises over three outcomes in soccer and two in
+`complementary_events_` comes from the data. So the same bettor renormalises over three outcomes in soccer and two in
 basketball, and over each totals line, from the columns alone. See
 [complementary events](#which-markets-are-mutually-exclusive-is-derived-from-the-data).
 
 ## Model fit
 
-You fit the bettor to `(X_train, Y_train)` with `fit`. Fitting means the bettor takes from `(X_train, Y_train)` whatever
+You fit the bettor to `(X_train, Y_train)` with `fit`. When it fits, the bettor takes from `(X_train, Y_train)` whatever
 it uses at prediction time, whether or not that is a machine learning model.
 
 ```python
 bettor.fit(X_train, Y_train)
 ```
 
-The selected markets are stored as their base names.
+The bettor stores the selected markets as their base names.
 
 ```python
 assert bettor.betting_markets_.tolist() == ['home_win', 'draw', 'away_win']
@@ -145,7 +145,7 @@ assert bettor.betting_markets_.tolist() == ['home_win', 'draw', 'away_win']
 
 ## Class labels prediction
 
-Once fitted, predicting class labels is straightforward.
+Once the bettor is fitted, you predict class labels with `predict`.
 
 ```python
 predictions = bettor.predict(X_train)
@@ -165,13 +165,14 @@ assert Y_train.columns.tolist() == [
 ]
 ```
 
-Value bets come from comparing the predicted probabilities to the odds matrix `O`, so the probabilities carry the
-signal, more than the labels.
+Value bets come from comparing the predicted probabilities to the odds matrix `O`. So the probabilities matter more than
+the labels.
 
 ## Class probabilities predictions
 
-Predicting positive class probabilities is also simple. There is one probability per selected market, and for mutually
-exclusive markets like `home_win`, `draw` and `away_win` the probabilities are normalised to sum to one.
+You predict positive class probabilities with `predict_proba`. There is one probability per selected market. For
+mutually exclusive markets like `home_win`, `draw` and `away_win`, the bettor normalises the probabilities to sum to
+one.
 
 ```python
 probabilities = bettor.predict_proba(X_train)
@@ -181,15 +182,16 @@ assert abs(probabilities.sum(axis=1)[0] - 1.0) < 1e-6
 
 ### Which markets are mutually exclusive is derived from the data
 
-Nothing is named in advance. [`derive_complementary_events`][sportsbet.evaluation.derive_complementary_events] reads the markets your
-data carries and works out which of them are exhaustive.
+Nothing is named in advance.
+[`derive_complementary_events`][sportsbet.evaluation.derive_complementary_events] reads the markets your data carries.
+It works out which of them are exhaustive.
 
-* `over` and `under` are complementary at whatever the line is, 2.5 goals, 1.5 goals, 220.5 points. A line the library
-  has never seen is grouped like any other.
+* `over` and `under` are complementary at whatever the line is, 2.5 goals, 1.5 goals, 220.5 points. The function groups
+  a new line like any other.
 * The outcome of a match is whichever of `home_win`, `draw` and `away_win` the data has.
 
-That second rule comes from the data: `home_win` and `away_win` are complementary in a sport without a draw, and joined
-by `draw` in one with it. The columns say which sport this is.
+That second rule comes from the data. `home_win` and `away_win` are complementary in a sport without a draw, and `draw`
+joins them in a sport with one. The columns tell the function which sport this is.
 
 ```python
 from sportsbet.evaluation import derive_complementary_events
@@ -247,8 +249,8 @@ from sklearn.model_selection import TimeSeriesSplit
 backtesting_results = backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(2), n_jobs=1)
 ```
 
-The results are indexed by the training and testing periods and carry overall and per market metrics, the latter
-labelled by the market base names.
+The results are indexed by the training and testing periods. They carry overall metrics and per-market metrics. The
+per-market metrics are labelled by the market base names.
 
 ```python
 assert backtesting_results.index.names == [
@@ -296,11 +298,11 @@ assert value_bets.shape == (380, 3)
 
 ## Hyperparameter search
 
-[`BettorGridSearchCV`][sportsbet.evaluation.BettorGridSearchCV] tunes a bettor's parameters by cross validated grid
-search, like [scikit-learn]'s [GridSearchCV]. It wraps a bettor as `estimator`, searches the values in `param_grid`,
-whose keys are the bettor's parameter names, and like the underlying bettor exposes `fit`, `predict`, `predict_proba`,
+[`BettorGridSearchCV`][sportsbet.evaluation.BettorGridSearchCV] tunes a bettor's parameters by cross-validated grid
+search, like [scikit-learn]'s [GridSearchCV]. It wraps a bettor as `estimator` and searches the values in `param_grid`,
+whose keys are the bettor's parameter names. Like the underlying bettor, it exposes `fit`, `predict`, `predict_proba`,
 `bet` and `score`. It also takes the usual scikit-learn search parameters, `scoring`, `n_jobs`, `refit`, `cv` and
-`verbose`, with `cv` defaulting to a [TimeSeriesSplit]. Once wrapped it is used like any other bettor, for example
+`verbose`, with `cv` defaulting to a [TimeSeriesSplit]. You use the wrapped bettor like any other bettor, for example
 inside `backtest`.
 
 ```python

@@ -2,7 +2,7 @@
 Saving and loading a dataloader
 ===============================
 
-This example illustrates save and load_dataloader.
+This example shows save and load_dataloader.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -20,9 +20,9 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 # A dataloader remembers what it was told
 # ---------------------------------------
 #
-# The columns of the fixtures data are the columns of the training data, so a dataloader that has extracted once carries
-# the shape with it. Saving it keeps that, which is what lets you extract the training data on one machine and predict
-# on another.
+# The columns of the fixtures data are the columns of the training data. A dataloader that has extracted once carries
+# that shape with it. Saving it keeps the shape. So you can extract the training data on one machine and predict on
+# another.
 
 dataloader = DataLoader(
     param_grid={'league': ['England']},
@@ -48,8 +48,8 @@ X_fix, _, O_fix = loaded.extract_fixtures_data()
 # A picture of it
 # ---------------
 #
-# The saved file is the whole season: every match the loader extracted, ready to travel to another machine. Here it is
-# by month.
+# The saved file holds the whole season. It has every match the loader extracted, ready to travel to another machine.
+# Here it is by month.
 
 per_month = X_train.index.to_period('M').value_counts().sort_index()
 
