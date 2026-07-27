@@ -1,6 +1,26 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.1.0 -> 2.2.0
+Rationale: Fold in the lessons of the whole-src conformance sweep. The `from __future__ import annotations` import is
+conditional, kept only where a forward reference or a `TYPE_CHECKING`-only name needs it, not carried by every module.
+A general `_utils` module is allowed for assorted small helpers, and a helper earns its own module only for a distinct
+role. An `__init__` carries no license header. DRY extends from constants to behavior, so two surface serializations
+that are distinct contracts stay apart. The gate's verdict is the nox session summary, not a piped exit code. The
+`__future__` change redefines a stated rule, the rest is expanded guidance, so MINOR.
+
+Modified sections:
+  - Files & Module Structure: made `from __future__ import annotations` conditional, and allowed a general `_utils`.
+  - Public Surface: an `__init__` carries no license header.
+  - Don't Repeat Yourself: extended the one-fact rule to behavior and distinct surface contracts.
+  - Project Profile: added how to read the gate's verdict from the nox session summary.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 2.0.0 -> 2.1.0
 Rationale: Sharpen the Code Conventions. An `__init__` holds only its docstring and the re-exports, with no logic, no
 function, and no `__getattr__`. A module constant is `UPPER_CASE` and lives in the constants block near the top of the
@@ -13,11 +33,6 @@ Modified sections:
   - Files & Module Structure: added the UPPER_CASE-constants-at-the-top rule.
   - Public Surface: added the no-logic-in-__init__ rule.
   - Don't Repeat Yourself: added the lift-a-shared-constant rule.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 1.10.0 -> 2.0.0
@@ -160,16 +175,21 @@ value.
 ### Files & Module Structure
 
 A module reads top to bottom in one order. First a one-line imperative module docstring, then the license header, then
-`from __future__ import annotations`, then imports grouped standard library, third party, first party. The linter sorts
-the imports, so do not sort them by hand. Then module constants and type aliases. Then functions in dependency order, so
-a name is defined before it is used, the small helpers first and the function the module exists for last.
+the imports grouped standard library, third party, first party. The linter sorts the imports, so do not sort them by
+hand. A module adds `from __future__ import annotations` above the imports only when it needs it, for a forward
+reference or a name that exists only under `TYPE_CHECKING`. The supported language floor decides, and a version that
+resolves the annotations without it does not carry it. Then module constants and type aliases. Then functions in
+dependency order, so a name is defined before it is used, the small helpers first and the function the module exists
+for last.
 
 A module constant is `UPPER_CASE`, and it lives in the constants block near the top of the module, never mid-file among
 the functions.
 
-One module is one concern. When a file grows two, split it. A definition lives in the module that owns it. A base module
-is self-contained and imports no sibling. Its purpose is to be imported, not to import, so a base that needs a sibling's
-code absorbs it by merging rather than importing. A type-only alias under `TYPE_CHECKING` is not a sibling.
+One module is one concern. When a file grows two, split it. Small general helpers may share a `_utils` module, whose one
+concern is the assorted helpers a package needs, and a helper earns its own module only when it takes on a distinct role
+worth a name, as `_base` or `_types` do, not for every function. A definition lives in the module that owns it. A base
+module is self-contained and imports no sibling. Its purpose is to be imported, not to import, so a base that needs a
+sibling's code absorbs it by merging rather than importing. A type-only alias under `TYPE_CHECKING` is not a sibling.
 
 The top level of a package holds subpackages and its `__init__`, not loose implementation modules. The shared leaves the
 whole tree imports, the type vocabulary, the shared constants, and the shared building primitives, live in a `core`
@@ -182,7 +202,8 @@ paper over an out-of-order import.
 ### Public Surface
 
 Implementation modules, classes, and helpers are private, named `_name`. The package `__init__` re-exports the public
-surface with an explicit `__all__`. A public name used outside the module that defines it is re-exported through its
+surface with an explicit `__all__`, and carries only its docstring and those re-exports, with no license header, since
+it holds no implementation of its own. A public name used outside the module that defines it is re-exported through its
 owning package's `__init__` and imported from that surface, never from the private module that defines it. It is
 re-exported once, where it lives, and a parent package does not re-export a subpackage's surface a second time. This
 holds for all code, production and tests alike. Reaching into another package's private module for a public name is the
@@ -247,6 +268,10 @@ in another module.
 A constant that two modules define the same way is one fact, whatever each names it. Lift it to the subpackage that
 holds the shared leaves and import it from there. Two constants that share a value but not a meaning, such as a
 column-name separator and an item-key separator that are both `'__'`, are two facts and stay apart.
+
+The same holds for behavior. Two surfaces that serialize an object into different shapes, each a contract its callers
+depend on, are two facts, not one duplication. Collapse only the fragment that is identical at every call site. When
+call sites differ in what they check or emit, a helper that unifies them changes behavior, so leave them apart.
 
 ### Tests
 
@@ -319,9 +344,11 @@ This section instantiates the body above for this repository. It is the only rep
 - Build and tooling: PDM with SCM-derived versioning and a `src` layout. The `nox` sessions are `tests`, `checks`,
   `formatting`, `docs`, `changelog`, and `release`, with `pdm run` shortcuts. The gate is `black`, `docformatter`,
   `ruff` at line length 120, `interrogate`, `bandit`, `pip-audit`, `pytest` with `--doctest-modules`, and `mypy`.
+- Reading the gate: its verdict is the `nox` session summary line, such as `Session tests-3.13 was successful`. An exit
+  code read from a piped command reports the last stage of the pipe, not the run, so it can read green over a red run.
 - Style: line length 120, Google docstrings, and `black` with skip-string-normalization.
 - Package layering: `core`, then the domain packages `sources`, `dataloaders`, `evaluation`, and `execution`, then the
   surfaces `cli` and `mcp`. Builders live with what they build: `build_dataloader`, `build_bettor`, and `build_venue`.
 - Named exceptions: `BuildError`, `SelectionError`, `ExecutionError`, and `CredentialError`.
 
-**Version**: 2.1.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-26
+**Version**: 2.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-27
