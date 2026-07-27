@@ -6,56 +6,128 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [0.15.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.15.0) - 2026-07-27
+
+<small>[Compare with 0.14.0](https://github.com/georgedouzas/sports-betting/compare/0.14.0...0.15.0)</small>
+
+### Features
+
+- execution as one pipeline, four steps, both modes ([4d06918](https://github.com/georgedouzas/sports-betting/commit/4d0691832210bb9726ca09a64da6be2b767ced33) by georgedouzas).
+- execute the value bets one match at a time ([3e494d1](https://github.com/georgedouzas/sports-betting/commit/3e494d1d2ff77c0d6e9aead8a7ba45cd521ae65e) by georgedouzas).
+- the tools reach what the commands reach ([8123f95](https://github.com/georgedouzas/sports-betting/commit/8123f951183745f07b6282840b91ebb8d531d25e) by georgedouzas).
+- follow the money, and drive a site an agent can place at ([5a2ac17](https://github.com/georgedouzas/sports-betting/commit/5a2ac17f56ed512b48d8202570b294ed0cd44a0b) by georgedouzas).
+- place the bets a model found, at a venue with a betting API ([1d9942a](https://github.com/georgedouzas/sports-betting/commit/1d9942a303872cef4bc81fc62841544c318ac15d) by georgedouzas).
+
+### Bug Fixes
+
+- make `execution status` work on a single bet's identity ([c0d5094](https://github.com/georgedouzas/sports-betting/commit/c0d509466c7ff8075bbb1e1adb02203f5e1168df) by georgedouzas).
+- read the football-data index against beautifulsoup 4.13 ([83c8803](https://github.com/georgedouzas/sports-betting/commit/83c88039f46bdfe745c6a03b1c65187fb80ec035) by georgedouzas).
+
+### Docs
+
+- give the odds-api example a placeholder key ([016b6ef](https://github.com/georgedouzas/sports-betting/commit/016b6ef00b7f781b4b5b0ad60d41f4b6af24323a) by georgedouzas).
+- amend the constitution to 2.3.0 and restructure for clarity ([41ab8a6](https://github.com/georgedouzas/sports-betting/commit/41ab8a6b66c1b7b72bf25baea0eee0f2b86bdac1) by georgedouzas).
+- show the single-event unit in the execution example and guide ([05d1d18](https://github.com/georgedouzas/sports-betting/commit/05d1d18a209f6e44f7d747c9971480bb2c19b57d) by georgedouzas).
+- amend the constitution to 2.2.0 with the sweep's lessons ([3d23b81](https://github.com/georgedouzas/sports-betting/commit/3d23b81c5d03631eb579d8e35b7b1a3ac0767585) by georgedouzas).
+- restructure the constitution into a repo-agnostic body and a project profile ([a65ebc3](https://github.com/georgedouzas/sports-betting/commit/a65ebc34f8af8ddfb8de4b4bc192aac45dd985d4) by georgedouzas).
+- tighten source docstrings and extend the docstring rules ([ec281f6](https://github.com/georgedouzas/sports-betting/commit/ec281f65fbe03502a880b5b686bbc0f29717bf21) by georgedouzas).
+- describe source content in docstrings and amend the constitution ([b758801](https://github.com/georgedouzas/sports-betting/commit/b758801c902e2687bd2c7c23e2f767334b9c81ca) by georgedouzas).
+- conform core docstrings to Principle VI ([3bf7349](https://github.com/georgedouzas/sports-betting/commit/3bf73493c68fd2b22e095d14aeab7f44dca9aab6) by georgedouzas).
+- single-line docstrings for the snapshot hooks ([0606ca1](https://github.com/georgedouzas/sports-betting/commit/0606ca1e5fb58a1535110869e4e2fdecfcfb1541) by georgedouzas).
+- name what dataloaders/_base is, not what its class does ([d52d5bd](https://github.com/georgedouzas/sports-betting/commit/d52d5bda7f40b4db76397d11ca9f62fd5340d842) by georgedouzas).
+- plainer package docstrings for dataloaders and sources ([f3e82c3](https://github.com/georgedouzas/sports-betting/commit/f3e82c359cac01269edc144fe5be6b1393bf5d3a) by georgedouzas).
+- fold the conventions into the constitution, drop CONVENTIONS.md ([3790be0](https://github.com/georgedouzas/sports-betting/commit/3790be046654936cf1117abe8fa52e05895788c7) by georgedouzas).
+- complete the rename ledger for the conformance sweep ([1fcfa28](https://github.com/georgedouzas/sports-betting/commit/1fcfa28b6a5a764ea1b1f40537f6428ed1b52e1d) by georgedouzas).
+- rewrite the reconciliation docs to the current resolve_odds API ([3c997d3](https://github.com/georgedouzas/sports-betting/commit/3c997d3748c9f6874e980d9f023e0b5d53170c3f) by georgedouzas).
+- require plain English in docstrings, and apply it ([5dd793a](https://github.com/georgedouzas/sports-betting/commit/5dd793a34cf381c015dbcd7831792fe208cdf146) by georgedouzas).
+- specify the conventions-conformance refactor (speckit 007) ([cf71737](https://github.com/georgedouzas/sports-betting/commit/cf71737e05e32d1486606551367524c6c1185a90) by georgedouzas).
+- adopt the code conventions as constitution Principle VI ([3c207b1](https://github.com/georgedouzas/sports-betting/commit/3c207b1a30f3c2e1d881933865d2e7eb62d26b03) by georgedouzas).
+- a runnable execution example, and two bugs it found ([c62d74b](https://github.com/georgedouzas/sports-betting/commit/c62d74b9009887d5ba995f987fdf0c8fc4248030) by georgedouzas).
+- show placement in the README, with real tool output ([8da498d](https://github.com/georgedouzas/sports-betting/commit/8da498dfb7528e5b9b189dc4a2384c56448ad98a) by georgedouzas).
+- the execution page, leading with what it costs ([3a31ad5](https://github.com/georgedouzas/sports-betting/commit/3a31ad5a215312be459223423c2bb678f29d3f13) by georgedouzas).
+- break bet execution into tasks ([4c3422a](https://github.com/georgedouzas/sports-betting/commit/4c3422a5bb7b38475dce008f682bab2f497c1307) by georgedouzas).
+- specify and plan bet execution ([197276f](https://github.com/georgedouzas/sports-betting/commit/197276f2112435c072c906d92b2db13dd952933c) by georgedouzas).
+- sync the constitution to the surfaces that exist ([e9c5fe5](https://github.com/georgedouzas/sports-betting/commit/e9c5fe54519093c0532f350485e5f5e0ab0e6d83) by georgedouzas).
+
+### Code Refactoring
+
+- keep the core helpers in one _utils module ([e26fa48](https://github.com/georgedouzas/sports-betting/commit/e26fa48a191c62be1f64e093aaadb0ec86539d74) by georgedouzas).
+- conform all of src to the constitution's code conventions ([fb36f83](https://github.com/georgedouzas/sports-betting/commit/fb36f83d3e37c10358fbd9ca61ce0852fe5b4e9f) by georgedouzas).
+- conform sources to Principle VI ([40e4263](https://github.com/georgedouzas/sports-betting/commit/40e4263fb5c5d5ccfe664dbb7cfe456cea2a60cd) by georgedouzas). BREAKING CHANGE: source methods index_items/catalogue/available_params/required_items/fixtures_items are now list_index_items/read_catalogue/list_available_params/list_required_items/list_fixtures_items; schema methods snapshot_cols/col_metadata/odds_cols are now list_snapshot_cols/get_col_metadata/list_odds_cols; and OddsApi(key=...) is now OddsApi(key_env=...).
+- conform dataloaders to Principle VI and sharpen the naming rule ([62a9e36](https://github.com/georgedouzas/sports-betting/commit/62a9e36344f8f307a5566f30d96f424324c41a6c) by georgedouzas). BREAKING CHANGE: the dataloader properties `sources` and `sport` are now `sources_` and `sport_`.
+- privatize dataloaders/_base helpers, move event-time grammar to core ([f7b796f](https://github.com/georgedouzas/sports-betting/commit/f7b796f7ff8b084332a28018af579d8d3ca936f6) by georgedouzas).
+- make load_object a public core utility ([9e09a66](https://github.com/georgedouzas/sports-betting/commit/9e09a66f3d9858f720985134c40457ad47fa7168) by georgedouzas).
+- a core subpackage of shared leaves, builders with what they build ([94faa82](https://github.com/georgedouzas/sports-betting/commit/94faa82931346c214dc3097519740b4fb1a34540) by georgedouzas).
+- rework the factory, dataloader persistence and model selection ([d509c9b](https://github.com/georgedouzas/sports-betting/commit/d509c9b9db29b3edf5678b1c91069408808a2ec9) by georgedouzas).
+- drop the dead max_unmatched_rate parameter ([5a5e1cf](https://github.com/georgedouzas/sports-betting/commit/5a5e1cf0ff02b1f01db1e1c7b03020cb92b776cf) by georgedouzas).
+- conform the mcp package to Principle VI ([341764b](https://github.com/georgedouzas/sports-betting/commit/341764bfc2ad38985b66f2608aa673d6c6cbeeea) by georgedouzas).
+- conform the cli package to Principle VI ([ab2a826](https://github.com/georgedouzas/sports-betting/commit/ab2a826546813490538e90ecd544eff3c7c2aaaf) by georgedouzas).
+- conform the selection and artifacts glue to Principle VI ([bc6de62](https://github.com/georgedouzas/sports-betting/commit/bc6de6278571423d0ec3b600f729253beb136b69) by georgedouzas).
+- conform the execution package to Principle VI ([76d627f](https://github.com/georgedouzas/sports-betting/commit/76d627feaf3b4fd39a9206fff112e5be22214f53) by georgedouzas).
+- conform the evaluation package to Principle VI ([e1fc992](https://github.com/georgedouzas/sports-betting/commit/e1fc9925f6d17101f877c594326d07792b033c4c) by georgedouzas).
+- conform the dataloaders package to Principle VI ([56434e7](https://github.com/georgedouzas/sports-betting/commit/56434e7dae61e31f2d7cd3a570d067dd8e10eb45) by georgedouzas).
+- conform the sources package to Principle VI ([9e584aa](https://github.com/georgedouzas/sports-betting/commit/9e584aaaff9747c2ac4bd116c5b2af37b37713e3) by georgedouzas).
+- restore the source reorganization to green ([fdd3e2d](https://github.com/georgedouzas/sports-betting/commit/fdd3e2dec7b217bcced2d3c863f1a8a6664acbfc) by georgedouzas). Full gate green: formatting, checks and tests on 3.11, 3.12 and 3.13.
+- ship no bookmaker, the venue is the user's ([294dc70](https://github.com/georgedouzas/sports-betting/commit/294dc707feabf2fe5bcf642b5941e19e11ccb8a4) by georgedouzas).
+
+### Chore
+
+- point speckit at the conventions-conformance feature ([bbe0172](https://github.com/georgedouzas/sports-betting/commit/bbe0172dd2c11d205de9e890b2d1637f827eddc4) by georgedouzas).
+
 ## [0.14.0](https://github.com/georgedouzas/sports-betting/releases/tag/0.14.0) - 2026-07-16
 
 <small>[Compare with 0.13.1](https://github.com/georgedouzas/sports-betting/compare/0.13.1...0.14.0)</small>
 
 ### Features
 
-- Show the results of a command as a table ([389641b](https://github.com/georgedouzas/sports-betting/commit/389641bddbfe3fd49c4074b008e0ffe70b896b21) by georgedouzas).
-- Add an MCP server, so an assistant can drive the library ([f8c6c1e](https://github.com/georgedouzas/sports-betting/commit/f8c6c1eef4b7598b11b46fd18d86374dc36e3424) by georgedouzas).
-- Add the NBA as a second basketball league ([923f516](https://github.com/georgedouzas/sports-betting/commit/923f516b5ae8f69d048e024cf8610d0ee6926ded) by georgedouzas).
-- Add basketball, starting with the EuroLeague ([ee34e9e](https://github.com/georgedouzas/sports-betting/commit/ee34e9e5bddbbbeefb6582930fcb690b3d8c26dc) by georgedouzas).
-- Reconcile two sources, and refuse a dataset with holes in it ([290bb38](https://github.com/georgedouzas/sports-betting/commit/290bb38dea97cb4f5366c798ba0e223ccb5a18e9) by georgedouzas).
-- Add the odds source backed by The Odds API ([7017429](https://github.com/georgedouzas/sports-betting/commit/7017429c8656fcba7c5a92fbde838054ead038e2) by georgedouzas).
-- Make `date` the kick-off instant in UTC ([bf1cd8a](https://github.com/georgedouzas/sports-betting/commit/bf1cd8aa742cd444d3032296d40e904f1221de03) by georgedouzas).
-- Replace the mirrored dataset with pluggable data sources ([76b858a](https://github.com/georgedouzas/sports-betting/commit/76b858a7e66e08a51c06831b8acdcb95b1250625) by georgedouzas).
+- Show the results of a command as a table ([03c870c](https://github.com/georgedouzas/sports-betting/commit/03c870c9f62fe56e5cecdcfdc75139e3f1b19fa4) by georgedouzas).
+- Add an MCP server, so an assistant can drive the library ([2230389](https://github.com/georgedouzas/sports-betting/commit/22303898f526406e948590aebe1be7170694bd78) by georgedouzas).
+- Add the NBA as a second basketball league ([fd6997d](https://github.com/georgedouzas/sports-betting/commit/fd6997db74603efec1ab76e944f9663e156edca7) by georgedouzas).
+- Add basketball, starting with the EuroLeague ([71381d1](https://github.com/georgedouzas/sports-betting/commit/71381d1856005f7ac6703877d798818649aa7a79) by georgedouzas).
+- Reconcile two sources, and refuse a dataset with holes in it ([c35e3b6](https://github.com/georgedouzas/sports-betting/commit/c35e3b656c13dc9a15c285e94f8e0f9e5a093223) by georgedouzas).
+- Add the odds source backed by The Odds API ([a10fc83](https://github.com/georgedouzas/sports-betting/commit/a10fc833fda914b72c89a2b3843b06142a313d91) by georgedouzas).
+- Make `date` the kick-off instant in UTC ([d6c7e6a](https://github.com/georgedouzas/sports-betting/commit/d6c7e6a07221b2295d621435f3ffc5fa163ce6bd) by georgedouzas).
+- Replace the mirrored dataset with pluggable data sources ([b4e8ae0](https://github.com/georgedouzas/sports-betting/commit/b4e8ae0de4048f37aad096481126c6f3447f57d2) by georgedouzas).
 
 ### Bug Fixes
 
-- pass the test suite on Windows ([103d48c](https://github.com/georgedouzas/sports-betting/commit/103d48ce76e26a68f423eddc03a80a35c9bfc708) by georgedouzas).
-- Do not let the features run past the odds they are bet against ([5b753b6](https://github.com/georgedouzas/sports-betting/commit/5b753b67c07ec50c1293daed80db55e8f10a19be) by georgedouzas).
-- Read the catalogue once, and stop the manifest growing forever ([5a82598](https://github.com/georgedouzas/sports-betting/commit/5a82598e46f87d052aa0276beb381c6872746a2a) by georgedouzas).
-- Drop the fake sport from the CLI, and stop the messages lecturing ([91abece](https://github.com/georgedouzas/sports-betting/commit/91abece9f511a970a7492862947151be243144a3) by georgedouzas).
-- Make the CLI reach the whole API, and fix four bugs it exposed ([9de6390](https://github.com/georgedouzas/sports-betting/commit/9de639040519854d5343a79cb536e788bfd12680) by georgedouzas).
-- Do not report a club that belongs to another competition ([dbacd29](https://github.com/georgedouzas/sports-betting/commit/dbacd2933a87134689d6cbb46f9b704ec97b5469) by georgedouzas).
-- Derive the complementary markets from the data ([81666f9](https://github.com/georgedouzas/sports-betting/commit/81666f944e85605ff8abbcdcb1aa0a955c550351) by georgedouzas).
-- Rebuild the derived data when the transform or the upstream changes ([259eb56](https://github.com/georgedouzas/sports-betting/commit/259eb5612f6b9c7bd70ce0f975b35830e5b8952f) by georgedouzas).
+- pass the test suite on Windows ([bbff2a9](https://github.com/georgedouzas/sports-betting/commit/bbff2a96373fd527907ae0cc02173b1a85175521) by georgedouzas).
+- Do not let the features run past the odds they are bet against ([6f07100](https://github.com/georgedouzas/sports-betting/commit/6f071008289af6379a717ed6e712060a1260975e) by georgedouzas).
+- Read the catalogue once, and stop the manifest growing forever ([affe495](https://github.com/georgedouzas/sports-betting/commit/affe495ec65be02b204accef3551427933a4c47e) by georgedouzas).
+- Drop the fake sport from the CLI, and stop the messages lecturing ([774eb33](https://github.com/georgedouzas/sports-betting/commit/774eb332bfc67ff8da91ada1501964c972325cc7) by georgedouzas).
+- Make the CLI reach the whole API, and fix four bugs it exposed ([5fd6afa](https://github.com/georgedouzas/sports-betting/commit/5fd6afa3324e53ce481870c6883dee5f985aad36) by georgedouzas).
+- Do not report a club that belongs to another competition ([96d93ca](https://github.com/georgedouzas/sports-betting/commit/96d93ca1997585e49208d8cbfbfd94b5eba918ae) by georgedouzas).
+- Derive the complementary markets from the data ([e817c5d](https://github.com/georgedouzas/sports-betting/commit/e817c5d94db36fee78c1fa676520ab683c83f8e7) by georgedouzas).
+- Rebuild the derived data when the transform or the upstream changes ([118988f](https://github.com/georgedouzas/sports-betting/commit/118988f2e7546690befa2a29225b45bc80158cc6) by georgedouzas).
 
 ### Docs
 
-- rewrite the user guide and README, concise and positive ([bdd19da](https://github.com/georgedouzas/sports-betting/commit/bdd19da5ce4f2e36c87ae9649a4e7916efefaa46) by georgedouzas).
-- rework the example gallery ([b3a9007](https://github.com/georgedouzas/sports-betting/commit/b3a9007f8fd05b4a72d15019eece1843ff379ca6) by georgedouzas).
-- give Interfaces its own landing page ([b56cd86](https://github.com/georgedouzas/sports-betting/commit/b56cd869b5ea0236f052017cc59b0be099715cd2) by georgedouzas).
-- rerun and expand the README chat; docstrings say what things do ([aa1a5f8](https://github.com/georgedouzas/sports-betting/commit/aa1a5f8f4705d65cc614b676ffb1f29f6e84e22d) by georgedouzas).
-- simpler README example, and docstrings that say what things do ([a8af420](https://github.com/georgedouzas/sports-betting/commit/a8af420e2f4e9314b765b1219380a146fd0a72ba) by georgedouzas).
-- consolidate the practice guides into one section ([1338b85](https://github.com/georgedouzas/sports-betting/commit/1338b85982d58c6a0051094f7adc35bc2c3aa905) by georgedouzas).
-- an interfaces menu, a betting guide, and a lighter README ([5a86487](https://github.com/georgedouzas/sports-betting/commit/5a86487f856e5ffcfd2d6767823e3f60dfdd562e) by georgedouzas).
-- write the README the way it reads best ([7cdca92](https://github.com/georgedouzas/sports-betting/commit/7cdca921326172c4320b5bb2281e9cf3fa7c12fe) by georgedouzas).
-- fix the warnings the documentation build emits ([a75ed44](https://github.com/georgedouzas/sports-betting/commit/a75ed4473947dcd7c98a56d7759e5382fb5186d8) by georgedouzas).
-- Make the assistant a first-class way into the library ([2d9a823](https://github.com/georgedouzas/sports-betting/commit/2d9a823cb91d13aa11cc5314e2c87fa9b45778f0) by georgedouzas).
-- Show what the examples print ([2704818](https://github.com/georgedouzas/sports-betting/commit/27048186232d3b27516b7270b36cf468b2523897) by georgedouzas).
-- Give the CLI the same example as the Python API ([e53ed13](https://github.com/georgedouzas/sports-betting/commit/e53ed1323fd37a2f36820ec4e7ce559589b71019) by georgedouzas).
-- Say what the CLI does, not what it is not ([8359290](https://github.com/georgedouzas/sports-betting/commit/835929052c4277060b53fdf62ede4b2b4754e2fe) by georgedouzas).
-- Rewrite the betting theory, with the mathematics written out ([8145738](https://github.com/georgedouzas/sports-betting/commit/814573801c54c5b5c705d2b5bcba0028911b4070) by georgedouzas).
-- Document the surfaces, and the two breaking changes ([bede713](https://github.com/georgedouzas/sports-betting/commit/bede7131b609b2d5087d3c45461eb6f315f077da) by georgedouzas).
-- Document the extension surface with runnable examples ([8cf5202](https://github.com/georgedouzas/sports-betting/commit/8cf52025fe1e91d4a9f4f8a69ae8b616c68446be) by georgedouzas).
+- rewrite the user guide and README, concise and positive ([e67d049](https://github.com/georgedouzas/sports-betting/commit/e67d0490e947438a7780e860f69610637eeb3e15) by georgedouzas).
+- rework the example gallery ([cf2303c](https://github.com/georgedouzas/sports-betting/commit/cf2303c3d0f62b5dadd44321927646bec2a3adf1) by georgedouzas).
+- give Interfaces its own landing page ([66bba2b](https://github.com/georgedouzas/sports-betting/commit/66bba2b6e7312b7861cb94ee88c10422da52eccc) by georgedouzas).
+- rerun and expand the README chat; docstrings say what things do ([116ec98](https://github.com/georgedouzas/sports-betting/commit/116ec9873bbe88082f529888e19874927aa95aff) by georgedouzas).
+- simpler README example, and docstrings that say what things do ([d3e244d](https://github.com/georgedouzas/sports-betting/commit/d3e244d6b9ae2d5f8dc050a90d4df65cb8c72543) by georgedouzas).
+- consolidate the practice guides into one section ([2c0adf1](https://github.com/georgedouzas/sports-betting/commit/2c0adf11c371fba6b020ad6f388ef944d9fe507e) by georgedouzas).
+- an interfaces menu, a betting guide, and a lighter README ([f6c9b4e](https://github.com/georgedouzas/sports-betting/commit/f6c9b4eb980b8a9558be882bce08fb0a648cc7e9) by georgedouzas).
+- write the README the way it reads best ([e9277a0](https://github.com/georgedouzas/sports-betting/commit/e9277a04ed58be623d3c7de15a67cf815cbbebdc) by georgedouzas).
+- fix the warnings the documentation build emits ([16c5b3b](https://github.com/georgedouzas/sports-betting/commit/16c5b3b901c48d140efbfab39b60eafc22733e3f) by georgedouzas).
+- Make the assistant a first-class way into the library ([4908b4a](https://github.com/georgedouzas/sports-betting/commit/4908b4a17be6f06511aae4928a2056d9482903ba) by georgedouzas).
+- Show what the examples print ([7b3b3b8](https://github.com/georgedouzas/sports-betting/commit/7b3b3b89c5f3f17c75e4cef415074e9847d48cd5) by georgedouzas).
+- Give the CLI the same example as the Python API ([1f77b06](https://github.com/georgedouzas/sports-betting/commit/1f77b0679b88ea005677015c62b4924a6bfa3e27) by georgedouzas).
+- Say what the CLI does, not what it is not ([9b9d97d](https://github.com/georgedouzas/sports-betting/commit/9b9d97d6d79f60e4432001c1f30a5987b9e85772) by georgedouzas).
+- Rewrite the betting theory, with the mathematics written out ([397a86d](https://github.com/georgedouzas/sports-betting/commit/397a86d018b9ef257988cf2827f0f1a1419e12cf) by georgedouzas).
+- Document the surfaces, and the two breaking changes ([7a3c6df](https://github.com/georgedouzas/sports-betting/commit/7a3c6df7664ab5346ba75246dfb8810ef289b2db) by georgedouzas).
+- Document the extension surface with runnable examples ([2c27189](https://github.com/georgedouzas/sports-betting/commit/2c2718908eda9293d7e8af0fdc03966761b4e299) by georgedouzas).
 
 ### Code Refactoring
 
-- scikit-learn __init__ style, and remove dead code ([b7d4856](https://github.com/georgedouzas/sports-betting/commit/b7d485620221ed6e7fd1558680b09c648d66354b) by georgedouzas).
-- Pair the rosters of a league, rather than a name against every club ([41fb6f0](https://github.com/georgedouzas/sports-betting/commit/41fb6f0d61b2d33391bc9a5720e494ec0be43d53) by georgedouzas).
-- Move parameter discovery from the dataloader to the source ([05e00f8](https://github.com/georgedouzas/sports-betting/commit/05e00f856a1cf2653e8c2ffd97a41be79e1f8b58) by georgedouzas).
+- scikit-learn __init__ style, and remove dead code ([2d4d879](https://github.com/georgedouzas/sports-betting/commit/2d4d8797ad46d98722f928238f4b35f0e65a585a) by georgedouzas).
+- Pair the rosters of a league, rather than a name against every club ([3d05d04](https://github.com/georgedouzas/sports-betting/commit/3d05d0494e931abc1a844a7a55ea9342866bb655) by georgedouzas).
+- Move parameter discovery from the dataloader to the source ([9b78e1f](https://github.com/georgedouzas/sports-betting/commit/9b78e1f301a43011e8359efb7fbc87e5df6ff5a9) by georgedouzas).
+
+### Chore
+
+- Release 0.14.0 ([3ffbd6c](https://github.com/georgedouzas/sports-betting/commit/3ffbd6c32f7c029ae24e39efba9bc34e0a1c033d) by georgedouzas).
 
 ## [0.13.1](https://github.com/georgedouzas/sports-betting/releases/tag/0.13.1) - 2026-07-10
 
