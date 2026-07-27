@@ -11,10 +11,16 @@ handled, which is what you want to understand before spending anything.
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # Licence: MIT
 
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from sportsbet.sources import NBAStats, OddsApi, RawItem
+
+# The source reads the key from the named variable. Set a placeholder, so the example runs without a real key and never
+# writes yours into the docs.
+os.environ['ODDS_API_KEY'] = 'your-key'
 
 # %%
 # Configuring it
