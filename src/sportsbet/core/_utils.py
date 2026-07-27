@@ -1,9 +1,36 @@
-"""Load a Python object from a file-and-name reference."""
+"""Load objects by reference and convert event times to and from column tokens."""
 
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+import pandas as pd
+
 from ._errors import BuildError
+
+
+def format_event_time(event_time: pd.Timedelta) -> str:
+    """Render an event time as the whole-minute token used in column names.
+
+    Args:
+        event_time: A time delta, e.g. `pd.Timedelta('60min')`.
+
+    Returns:
+        The token, e.g. `60min`.
+    """
+    total_minutes = int(event_time.total_seconds() / 60)
+    return f'{total_minutes}min'
+
+
+def parse_event_time(token: str) -> pd.Timedelta:
+    """Read the whole-minute token used in column names back into a time delta.
+
+    Args:
+        token: A whole-minute token, e.g. `60min`.
+
+    Returns:
+        The time delta the token names.
+    """
+    return pd.Timedelta(minutes=int(token[: -len('min')]))
 
 
 def load_object(reference: str) -> object:
