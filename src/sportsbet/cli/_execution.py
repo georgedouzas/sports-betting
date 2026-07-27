@@ -5,7 +5,6 @@
 
 
 import asyncio
-import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -23,8 +22,6 @@ from ..execution import (
     BetIdentity,
     BrowserSession,
     FixedSession,
-    PlacementIntent,
-    PlacementQuote,
     build_venue,
     execute_event,
 )
@@ -65,25 +62,6 @@ def _logging_to_terminal() -> Iterator[None]:
     finally:
         logger.removeHandler(handler)
         logger.setLevel(level)
-
-
-def _read_quote(path: str) -> PlacementQuote:
-    """Return the quote a file holds."""
-    held = json.loads(Path(path).read_text())
-    return PlacementQuote(
-        intents=[
-            PlacementIntent(
-                identity=BetIdentity(intent['venue'], intent['match'], intent['market'], intent['selection']),
-                stake=intent['stake'],
-                min_price=intent['min_price'],
-                value_bet=intent['value_bet'],
-            )
-            for intent in held['intents']
-        ],
-        total_stake=held['total_stake'],
-        total_exposure=held['total_exposure'],
-        quoted_at=pd.Timestamp(held['quoted_at']).to_pydatetime(),
-    )
 
 
 @click.group()
@@ -203,21 +181,15 @@ def balance(venue_ref: str) -> None:
 
 @execution.command()
 @click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option(
-    '--quote',
-    '-q',
-    'quote_path',
-    required=True,
-    type=click.Path(exists=True),
-    help='A quote written for the bets.',
-)
-def status(venue_ref: str, quote_path: str) -> None:
-    """Show what the venue holds for the bets of a quote."""
+@click.option('--match', required=True, help='The match the bet is on.')
+@click.option('--market', required=True, help='The market the bet is on.')
+@click.option('--selection', required=True, help='The selection the bet backs.')
+def status(venue_ref: str, match: str, market: str, selection: str) -> None:
+    """Show what the venue holds for one bet."""
     with _report_errors():
         built = _load_venue(venue_ref)
-        quoted = _read_quote(quote_path)
-        identities = [intent.identity for intent in quoted.intents]
-        _print_console([asyncio.run(built.read_status(identities))], ['What the venue holds'])
+        identity = BetIdentity(built.key, match, market, selection)
+        _print_console([asyncio.run(built.read_status([identity]))], ['What the venue holds'])
 
 
 @execution.command()

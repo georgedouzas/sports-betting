@@ -8,10 +8,12 @@ import asyncio
 import pandas as pd
 import pytest
 
-from sportsbet.execution import BetIdentity, PlacementReceipt, PlacementStatus, build_receipts_frame
+from sportsbet.execution import BetIdentity, PlacementIntent, PlacementReceipt, PlacementStatus, build_receipts_frame
 from sportsbet.mcp import server
+from tests.conftest import FakeVenue
 
 SELECTION = {'stats': 'football-data', 'odds': 'football-data', 'leagues': ['England']}
+STAKE = 10.0
 TOOLS = [
     'available_params',
     'odds_types',
@@ -221,3 +223,28 @@ def test_execution_run_dry_run_returns_the_bet_it_would_make(monkeypatch):
     assert len(records) == 1
     assert records[0]['selection'] == 'Arsenal'
     assert records[0]['status'] == 'dry_run'
+
+
+def test_execution_read_status_returns_what_the_venue_holds_for_one_bet(monkeypatch):
+    """Reading status names one bet by its identity and returns what the venue holds for it."""
+    venue = FakeVenue(prices={('Arsenal vs Chelsea', 'home_win', 'Arsenal'): 2.0})
+    asyncio.run(
+        venue.place(
+            PlacementIntent(
+                identity=BetIdentity('fake', 'Arsenal vs Chelsea', 'home_win', 'Arsenal'),
+                stake=STAKE,
+                min_price=2.0,
+                value_bet='Arsenal vs Chelsea|home_win',
+            ),
+        ),
+    )
+    monkeypatch.setattr('sportsbet.mcp._server.build_venue', lambda ref: venue)
+    records = _call(
+        'execution_read_status',
+        venue='venue.py:VENUE',
+        match='Arsenal vs Chelsea',
+        market='home_win',
+        selection='Arsenal',
+    )
+    assert len(records) == 1
+    assert records[0]['stake'] == STAKE
