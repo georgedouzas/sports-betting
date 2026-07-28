@@ -22,8 +22,8 @@ nav:
     - index.md
     - User guide:
       - overview/user_guide/index.md
-      - Dataloader: overview/user_guide/dataloader.md
       - Data sources: overview/user_guide/sources.md
+      - Dataloader: overview/user_guide/dataloader.md
       - Bettor: overview/user_guide/bettor.md
       - Execution: overview/user_guide/execution.md
     - Changelog: overview/changelog.md
