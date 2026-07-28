@@ -52,15 +52,22 @@
 `sports-betting` is a toolbox for building, testing, and running sports betting models. You can use it from Python, from
 the command line, or from an AI agent.
 
-The library supports three main functionalities:
+The library supports three main functionalities.
 
-- A dataloader downloads the data and shapes it for modelling. You build it from a statistics source and an optional
-  odds source. It provides the training data to fit a model on, the features on their own for exploring the data, and
-  the upcoming matches to bet on.
-- A bettor is a scikit-learn estimator. It backtests a betting strategy on the training data and then predicts the
-  value bets in the upcoming matches.
-- Execution is how you place those bets for real. It takes a value bet the bettor found and places it at a bookmaker
-  where you hold an account.
+### Downloading
+
+Sports betting data is fetched and shaped for modelling. This is done by the dataloader object, built from a statistics
+source and an optional odds source.
+
+### Prediction
+
+A bettor object defines a betting strategy on the training data and predicts the value bets in the upcoming matches. A
+bettor is a scikit-learn estimator that does this by estimating the betting event probabilities.
+
+### Execution
+
+This is how you place those bets for real. It takes a value bet the bettor found and places it at a bookmaker where you
+hold an account.
 
 ## Installation
 
@@ -70,7 +77,7 @@ Install the library from PyPI with `pip`.
 pip install sports-betting
 ```
 
-### Optional: MCP server
+### MCP server dependencies
 
 An AI agent uses the library through the MCP server. Install it with the `mcp` extra.
 
@@ -78,7 +85,7 @@ An AI agent uses the library through the MCP server. Install it with the `mcp` e
 pip install 'sports-betting[mcp]'
 ```
 
-### Optional: execution
+### Execution dependencies
 
 Execution places bets. For a bookmaker with no API, it uses the bookmaker's website, which needs a browser. Install the
 extra, then install the browser.
@@ -103,9 +110,9 @@ pdm install
 
 ### AI agent
 
-An AI agent can use the library on its own. It reaches everything the Python API and the command line reach. Working
-autonomously, it explores the data, builds tables, plots results, and writes a model. A model is a scikit-learn
-estimator, so the agent can write one, backtest it, and report how well it did.
+An AI agent can use the library, reaching everything the Python API and the command line reach. Working autonomously, it
+explores the data, builds tables, plots results, and writes a model. A model is a scikit-learn estimator, so the agent
+can write one, backtest it, and report its performance.
 
 Install the MCP server and register it with your agent.
 
@@ -119,7 +126,7 @@ You can then ask the agent to work through a full task. A typical session runs i
 - Ask what data is available. The agent reads the catalogue, which is free.
 - Ask for a strategy on some leagues and seasons. The agent downloads the seasons and backtests models.
 - Ask which league holds the edge. The agent breaks the result down.
-- Ask for the value bets in the upcoming fixtures. The agent extracts the fixtures and applies the model.
+- Ask for the value bets in the upcoming fixtures. The agent extracts the fixtures and predicts the value bets.
 - Ask it to place a bet. The agent places the bet for you.
 
 ### Python API
@@ -176,8 +183,8 @@ Training start Training end Testing start Testing end
 Fit it with `bettor.fit(X_train, Y_train, O_train)`, then `bettor.bet(X_fix, O_fix)` returns the value bets of the
 upcoming matches.
 
-`extract_fixtures_data` downloads the fixtures separately and returns the upcoming betting events. The training data and
-the fixtures data share their columns, so the model trained on the history can bet on the fixtures.
+The method `extract_fixtures_data` downloads the fixtures separately and returns the upcoming betting events. The
+training data and the fixtures data share their columns, so the trained model can bet on the fixtures.
 
 ### CLI
 
