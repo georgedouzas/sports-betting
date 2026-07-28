@@ -137,5 +137,5 @@ moments = snapshots.groupby('event_status').size()
 
 fig, ax = plt.subplots()
 ax.bar(moments.index, moments.to_numpy())
-ax.set_title('Snapshots of my own feed, by moment')
+ax.set_title('Snapshots per moment')
 ax.set_ylabel('snapshots')

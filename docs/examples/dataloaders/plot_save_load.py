@@ -55,6 +55,6 @@ per_month = X_train.index.to_period('M').value_counts().sort_index()
 
 fig, ax = plt.subplots(figsize=(8, 4))
 ax.bar([str(period) for period in per_month.index], per_month.to_numpy())
-ax.set_title('The season the saved dataloader carries, by month')
+ax.set_title('Matches per month')
 ax.set_ylabel('matches')
 fig.autofmt_xdate(rotation=45)

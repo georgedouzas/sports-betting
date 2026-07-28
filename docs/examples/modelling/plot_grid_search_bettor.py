@@ -96,5 +96,5 @@ colours = ['tab:orange' if markets == chosen else 'tab:blue' for markets in best
 fig, ax = plt.subplots()
 ax.barh(best_per_markets.index, best_per_markets.to_numpy(), color=colours)
 ax.axvline(0, color='black', linewidth=0.8)
-ax.set_title('The markets are scored, not assumed (orange is the choice)')
+ax.set_title('Best cross-validated return by market')
 ax.set_xlabel('best cross-validated return')

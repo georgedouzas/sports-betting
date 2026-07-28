@@ -70,6 +70,6 @@ for alpha in alphas:
 
 fig, ax = plt.subplots()
 ax.plot(alphas, placed, marker='o')
-ax.set_title('The bettor gets pickier as alpha rises')
+ax.set_title('Value bets found by alpha')
 ax.set_xlabel('alpha (how far above average a price must be)')
 ax.set_ylabel('value bets found')

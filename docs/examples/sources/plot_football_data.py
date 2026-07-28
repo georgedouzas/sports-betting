@@ -67,6 +67,6 @@ coverage = pd.DataFrame(params).groupby('league').size().sort_values(ascending=F
 
 fig, ax = plt.subplots(figsize=(9, 4))
 ax.bar(coverage.index, coverage.to_numpy())
-ax.set_title('Seasons published by football-data.co.uk, per league')
+ax.set_title('Seasons per league')
 ax.set_ylabel('seasons')
 fig.autofmt_xdate(rotation=75)

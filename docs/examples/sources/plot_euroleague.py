@@ -59,7 +59,7 @@ X
 fig, ax = plt.subplots()
 ax.hist(X['home_points_for_avg'].dropna(), bins=25, alpha=0.6, label='home team')
 ax.hist(X['away_points_for_avg'].dropna(), bins=25, alpha=0.6, label='away team')
-ax.set_title('EuroLeague: scoring form the two sides bring, before tip-off')
+ax.set_title('EuroLeague scoring form before tip-off')
 ax.set_xlabel('points per game')
 ax.set_ylabel('games')
 ax.legend()

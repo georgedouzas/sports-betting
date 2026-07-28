@@ -54,6 +54,6 @@ X
 
 fig, ax = plt.subplots()
 ax.scatter(X['home_points_for_avg'], X['away_points_for_avg'], s=8, alpha=0.4)
-ax.set_title('NBA: the form of the two teams, before tip-off')
+ax.set_title('NBA team form before tip-off')
 ax.set_xlabel('home points per game')
 ax.set_ylabel('away points per game')

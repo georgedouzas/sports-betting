@@ -1,6 +1,11 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.4.0 -> 2.4.1
+Rationale: Clarify the example rule. A capability that cannot run offline, such as placing a real bet, is shown as
+reference code in the guide, not as a runnable gallery example. PATCH: a clarification, nothing removed.
+
+---- history ----
 Version change: 2.3.0 -> 2.4.0
 Rationale: Rewrite the Writing Style rules for plain, human, structured prose, and forbid the clever, inverted,
 passive-for-effect, idiomatic, and defensive style the old rules allowed. Require that every documentation and docstring
@@ -174,7 +179,8 @@ change MUST update the affected documentation, and MUST add or amend a changelog
 Every code example in the documentation and the docstrings MUST run, and the build proves it: the documentation build
 runs the gallery examples and the doctest run runs the docstring examples. No example is a fragment, pseudo-code, or a
 demo that cannot run. No example depends on a secret or the network. An example that would uses sample data, a
-placeholder, or a fake, or it is removed.
+placeholder, or a fake, or it is removed. A capability that cannot run offline, such as placing a real bet, is shown as
+reference code in the guide, not as a runnable gallery example, so no example pretends to run.
 
 Rationale: a library is adopted through its documentation. An undocumented capability does not exist for users, and it
 rots without executable coverage.
@@ -413,4 +419,4 @@ This section instantiates the body above for this repository. It is the only rep
   surfaces `cli` and `mcp`. Builders live with what they build: `build_dataloader`, `build_bettor`, and `build_venue`.
 - Named exceptions: `BuildError`, `SelectionError`, `ExecutionError`, and `CredentialError`.
 
-**Version**: 2.4.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-28
+**Version**: 2.4.1 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-28

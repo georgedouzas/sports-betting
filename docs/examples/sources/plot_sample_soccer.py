@@ -74,5 +74,5 @@ outcomes.index = outcomes.index.str.split('__').str[0]
 
 fig, ax = plt.subplots()
 ax.bar(outcomes.index, outcomes.to_numpy(), color=['tab:green', 'tab:grey', 'tab:red'])
-ax.set_title('How the sample season ended, by outcome')
+ax.set_title('Match outcomes in the sample season')
 ax.set_ylabel('matches')

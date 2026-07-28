@@ -81,5 +81,5 @@ markets = bettor.betting_markets_.tolist()
 
 fig, ax = plt.subplots()
 ax.bar(markets, bettor.predict_proba(X_train)[0])
-ax.set_title('The base rates of the Premier League season')
+ax.set_title('Base rates by market')
 ax.set_ylabel('probability')

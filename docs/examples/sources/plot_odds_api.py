@@ -13,9 +13,6 @@ your key. You want to understand both before you spend anything.
 
 import os
 
-import matplotlib.pyplot as plt
-import numpy as np
-
 from sportsbet.sources import NBAStats, OddsApi, RawItem
 
 # The source reads the key from the named variable. Set a placeholder, so the example runs without a real key and never
@@ -77,15 +74,3 @@ odds.request_url(item)
 # requests cost. Ask the source what it would fetch first, and price it before you commit.
 
 NBAStats().sport, OddsApi(key_env='ODDS_API_KEY').sport
-
-# %%
-# What a price implies
-# --------------------
-
-odds_range = np.linspace(1.05, 10, 200)
-
-fig, ax = plt.subplots()
-ax.plot(odds_range, 1 / odds_range)
-ax.set_title('The probability a price implies')
-ax.set_xlabel('decimal odds')
-ax.set_ylabel('implied probability')

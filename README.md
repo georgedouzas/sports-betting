@@ -49,46 +49,45 @@
 
 ## Introduction
 
-`sports-betting` is a set of tools for building, testing, and using sports betting models. You can use it from an AI
-agent, from Python, or from the command line.
+`sports-betting` builds, tests, and runs sports betting models. You use it from Python, from the command line, or from
+an AI agent.
 
-The library has two main parts, dataloaders and bettors.
+It has two parts, dataloaders and bettors.
 
-- A dataloader downloads the data and shapes it for modelling. You build it from a statistics source and an odds source.
-  You choose both, so you always know where your data came from.
-- A bettor backtests a betting strategy and predicts the value bets of upcoming events. It wraps any scikit-learn
-  estimator.
+A dataloader downloads the data and shapes it for modelling. You build it from a statistics source and an optional odds
+source. It gives you three frames: the training data to fit a model on, the features on their own to explore the data
+without a model, and the upcoming matches to bet on.
 
-A bettor finds value bets. The execution part places one of them. It takes a fitted bettor, one match, and a stake. It
-watches the match. At the moment the model was fitted for, it places the bet once. Some bookmakers have a betting API,
-and the library places the bet through the API. Other bookmakers have no API, so your agent drives their website on your
-own account. You place the bet at a bookmaker where you hold an account. This spends real money.
+A bettor is a scikit-learn estimator. It backtests a betting strategy on the training data, then predicts the value
+bets of the upcoming matches. `ClassifierBettor` turns any scikit-learn classifier into a bettor. `OddsComparisonBettor`
+finds value by comparing the odds and needs no classifier.
+
+Execution places a bet the bettor found. It takes a fitted bettor, one upcoming match, and a stake, and places the bet
+on that match at a bookmaker where you have an account. This spends real money.
 
 ## Installation
 
-### Install
-
-`sports-betting` is on PyPI. Install it with `pip`.
+Install the library from PyPI with `pip`.
 
 ```bash
 pip install sports-betting
 ```
 
-### MCP server
+### Optional: MCP server
 
-The MCP server lets you drive the library from an AI agent. Install it with the `mcp` extra.
+An AI agent uses the library through the MCP server. Install it with the `mcp` extra.
 
 ```bash
 pip install 'sports-betting[mcp]'
 ```
 
-### Execution
+### Optional: execution
 
-Execution places bets. It also drives a bookmaker's website, which needs a browser. Install the extras, then install the
-browser.
+Execution places bets. For a bookmaker with no API, it uses the bookmaker's website, which needs a browser. Install the
+extra, then install the browser.
 
 ```bash
-pip install 'sports-betting[mcp,execution]'
+pip install 'sports-betting[execution]'
 python -m playwright install chromium
 ```
 
@@ -107,9 +106,9 @@ pdm install
 
 ### AI agent
 
-The agent is a first-class way to use the library. It reaches everything that Python and the command line reach. It
-also does more. It explores the data, builds tables, plots results, and writes the model. A betting model is a
-scikit-learn estimator. An agent can write one, run it, and tell you how well it did.
+An AI agent can use the library on its own. It reaches everything the Python API and the command line reach. Working on
+its own, it explores the data, builds tables, plots results, and writes a model. A model is a scikit-learn estimator,
+so the agent can write one, backtest it, and report how well it did.
 
 Install the MCP server and register it with your agent.
 
@@ -126,14 +125,13 @@ You can then ask the agent to work through a full task. A typical session runs i
 - Ask for the value bets in the upcoming fixtures. The agent extracts the fixtures and applies the model.
 - Ask it to place a bet. The agent runs the single-event execution.
 
-The agent names the environment variable that holds your API key. It never prints the key. Extracting the data
-downloads it, so a paid odds feed spends money only when you extract. Extract once and save the dataloader instead of
-extracting again. Driving a bookmaker's website on your account breaches most bookmakers' terms of service and risks the
-account and its balance.
+You give the agent the name of the environment variable that holds your odds API key. Extracting the data downloads it,
+and a paid odds feed costs money each time, so extract once and save the dataloader. If a bookmaker has no API, the
+agent uses its website on your account, which can break the bookmaker's terms of service.
 
 ### Python API
 
-You can do the same work in code. You build a dataloader from a statistics source and an odds source.
+Build a dataloader from a statistics source and an odds source, then extract the training data and the fixtures.
 
 ```python
 from sportsbet.dataloaders import DataLoader
@@ -148,8 +146,8 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maxi
 X_fix, _, O_fix = dataloader.extract_fixtures_data()
 ```
 
-A betting model is any scikit-learn estimator wrapped in a bettor. The next example backtests a bettor that wraps a
-logistic regression classifier.
+`ClassifierBettor` turns a scikit-learn classifier into a bettor. This example backtests a bettor built on a logistic
+regression classifier.
 
 ```python
 from sklearn.compose import make_column_transformer

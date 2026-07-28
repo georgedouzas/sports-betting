@@ -91,5 +91,5 @@ counts = {'exact name join': len(exact), 'resolved automatically': 3, 'with one 
 
 fig, ax = plt.subplots()
 ax.bar(list(counts), list(counts.values()), color=['tab:red', 'tab:blue', 'tab:green'])
-ax.set_title('Matches that keep their odds, four in all')
+ax.set_title('Matches with odds after reconciliation')
 ax.set_ylabel('matches with odds')
