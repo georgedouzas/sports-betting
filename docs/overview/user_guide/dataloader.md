@@ -29,7 +29,7 @@ One `DataLoader` serves every sport. The sport comes from the statistics source,
 dataloader and a basketball source a basketball one. To add a sport, write a source. See
 [other sports and paid odds](#other-sports-and-paid-odds).
 
-## Code, not data
+## The library downloads the data
 
 The library ships the code that fetches the data and runs it on your machine. Bookmakers own their odds, so `DataLoader`
 downloads [football-data.co.uk](https://www.football-data.co.uk) to your machine and transforms it there.

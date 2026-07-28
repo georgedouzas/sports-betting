@@ -1,12 +1,12 @@
 # Execution
 
-A bettor finds value bets. The single-event unit places one of them. It takes a fitted bettor, one match, and a stake.
-It watches the match. At the moment the model was fitted for, it places the bet, once. You place the bet at a bookmaker
-where you hold an account. This spends real money. Read the risks first.
+A bettor finds value bets. The single-event unit places one of them at your bookmaker. It takes a fitted bettor, one
+upcoming match, and a stake. It watches the match, and at the moment the model was fitted for it places the bet, once.
+This spends real money, so read the risks first.
 
 ## Risks
 
-* You drive a bookmaker's website. This breaks the terms of service of almost every bookmaker. It puts the account and
+* The unit uses a bookmaker's website. This breaks the terms of service of almost every bookmaker. It puts the account and
   its balance at risk.
 * The unit watches one event. Running many units across many events is your own work. A bookmaker may block or close an
   account for that.
@@ -18,11 +18,11 @@ where you hold an account. This spends real money. Read the risks first.
 ## Installation
 
 ```bash
-pip install 'sports_betting[execution]'
+pip install 'sports-betting[execution]'
 python -m playwright install chromium
 ```
 
-The browser drives the bookmaker's website to log in and to place the bet. Monitoring does not use the browser. The
+The browser uses the bookmaker's website to log in and to place the bet. Monitoring does not use the browser. The
 unit reads the event from the configured source and logs it to the terminal.
 
 ## One event only
@@ -87,7 +87,7 @@ The stake is a parameter of the run, not of the bettor. The unit places exactly 
 
 ## The Python API
 
-The command line drives [`execute_event`][sportsbet.execution.execute_event]. Call it directly to run the unit from
+The command line calls [`execute_event`][sportsbet.execution.execute_event]. Call it directly to run the unit from
 Python.
 
 ```python
@@ -121,28 +121,25 @@ The call returns a receipts frame. It holds one row when the unit placed a bet a
 * `urls` are the candidate pages.
 * `live` arms the run.
 * `poll` is the interval between source polls.
-* `clock` and `wait` are injection points for time, so a test can drive the whole watch with no real waiting.
+* `clock` and `wait` are injection points for time, so a test can run the whole watch with no real waiting.
 
 ### A custom placer
 
 By default the unit places the bet by entering the stake into the pinned `stake` control and clicking the pinned
-`confirm` control of the matched site. A `placer` replaces that for a site the default cannot drive. A placer is a
-coroutine. It takes the [`PlacementIntent`][sportsbet.execution.PlacementIntent] and the session, drives the site for
+`confirm` control of the matched site. A `placer` replaces that for a site the default cannot operate. A placer is a
+coroutine. It takes the [`PlacementIntent`][sportsbet.execution.PlacementIntent] and the session, operates the site for
 the one bet, and returns a [`PlacementReceipt`][sportsbet.execution.PlacementReceipt]. A custom placer is Python only.
 The command line and the MCP tool place through the default placer over the pinned controls.
 
 ```python
 async def placer(intent, session):
     stake_control = await session.resolve('stake')
-    # drive the site for `intent`, then confirm the wager
+    # operate the site for `intent`, then confirm the wager
     return PlacementReceipt(identity=intent.identity, status=PlacementStatus.MATCHED_FULL, stake=intent.stake)
 
 
 receipts = asyncio.run(execute_event(event, bettor, dataloader, session, stake=10.0, urls=urls, placer=placer, live=True))
 ```
-
-The [gallery example][execution-gallery] runs the whole unit end to end, offline, with a stand-in session and an
-injected clock.
 
 ## Credentials
 
@@ -158,7 +155,7 @@ secret = resolve(CredentialRef('VENUE_API_KEY'))
 [`resolve`][sportsbet.execution.resolve] reads the variable where it is used. A missing variable names itself and stops.
 A fitted bettor holds no credential, so a saved and reloaded bettor cannot spend money.
 
-## Driving a website
+## Using a bookmaker's website
 
 The library supplies the browser. You supply the knowledge of the site.
 [`BrowserSession`][sportsbet.execution.BrowserSession] takes the venue and how to reach it.
@@ -188,7 +185,7 @@ session = BrowserSession(
 
 ### Explore, fix, then run
 
-The session drives the page through a small set of methods. `navigate(url)` goes to a page and returns it.
+The session controls the page through a small set of methods. `navigate(url)` goes to a page and returns it.
 `read_snapshot()` reads the page without acting. `click(ref)`, `type(ref, text)` and `select(ref, value)` act on the
 page. Each method returns the page it produced, as an accessibility snapshot. The snapshot is compact YAML with a ref
 for every element you can act on.
@@ -227,4 +224,3 @@ The MCP server exposes the same run as the `execution_run` tool, with the same p
 `venue`, `markets`, `balance`, `status` and `cancel`, and the `page` group for exploring and pinning a site, map one to
 one to the `execution_*` and `browser_*` tools.
 
-[execution-gallery]: ../../generated/gallery/execution/plot_single_event.md
