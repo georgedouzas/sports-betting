@@ -51,10 +51,10 @@ class BaseSource:
         """Given those, which league/division/year combinations do I publish?"""
 
     def list_required_items(self, params, schedule=None) -> list[RawItem]:
-        """Given a selection, what do I need read?"""
+        """Given a selection, what do I need to read?"""
 
     def list_fixtures_items(self, params, schedule=None) -> list[RawItem]:
-        """And what do I need read for the upcoming matches? (defaults to required_items)"""
+        """And what do I need to read for the upcoming matches? (defaults to required_items)"""
 
     def to_snapshots(self, payloads) -> pd.DataFrame:
         """Given those, what are the long snapshots?"""
@@ -84,8 +84,8 @@ RawItem(
 )
 ```
 
-An item carries no price. Each vendor sets its own prices, changes them, and prices its endpoints differently. The
-library reports the number of requests, which is a fact. What they cost is between you and the vendor you buy them from.
+An item carries no price. Each vendor sets its own prices, changes them, and prices its endpoints differently. What a
+request costs is between you and the vendor you buy it from.
 
 Two sources that declare the same `source` and `key` declare the same item, so the dataloader fetches it once.
 `FootballDataStats` and `FootballDataOdds` read the same upstream CSV, so they avoid downloading it twice.
@@ -195,18 +195,18 @@ Y   ['home_win__postplay__0min', 'draw__postplay__0min', 'away_win__postplay__0m
 O   ['acme__home_win__preplay__0min', 'acme__draw__preplay__0min', 'acme__away_win__preplay__0min']
 ```
 
-You configured nothing. The markets came from the odds columns. The providers came from the odds `provider` column. The
-features came from the statistics columns. The moments came from `event_status` and `event_time`. Drop `draw` from
-`MARKETS` and you have a sport that cannot draw, and the bettor works out the two-way market on its own.
+You configured nothing. The markets came from the odds columns, the providers from the odds `provider` column, the
+features from the statistics columns, and the moments from `event_status` and `event_time`. Drop `draw` from `MARKETS`
+and you have a sport that cannot draw, and the bettor works out the two-way market on its own.
 
 ### Four rules to follow
 
 1. Keep the four methods pure. `list_index_items`, `read_catalogue`, `list_required_items` and `to_snapshots` declare
    and transform. The dataloader does the reading, so a source stays testable offline.
 2. `date` is the kick-off instant, in UTC. Resolve your feed's time zone at your boundary, so `date + event_time` is the
-   wall-clock instant of a snapshot. That instant is the address an odds vendor is asked for. Both feeds the library
-   ships hide their local time. football-data publishes every league in UK time. The EuroLeague publishes every game in
-   Central European time. Check your feed's time zone before you trust it.
+   wall-clock instant of a snapshot. That instant is the address an odds vendor is asked for. The feeds the library
+   ships show how this varies: football-data publishes every league in UK time, which the library converts to UTC, while
+   the EuroLeague API already reports UTC. Check your feed's time zone before you trust it.
 3. The upcoming matches come from `list_fixtures_items`. The default reads the same items as training. That suits a feed
    whose season file already lists the matches still to be played. Override it when they live elsewhere.
 4. Credentials go in `request_url`. The `RawItem` is what the transform sees and what you might save, so a key stays out
@@ -228,17 +228,17 @@ Where it lives and how long it lasts is up to you.
 
 ## When two sources name a club differently
 
-This is the most dangerous thing in the library, so read it carefully.
+This is easy to get wrong, and the mistake is silent, so read it carefully.
 
 Two sources rarely spell a club the same way. One calls a club `Man United` and the other calls it `Manchester United`.
-When a name fails to match, that game has no odds. A missing odd does not look like an error. It looks like a slightly
-smaller dataset. The result is a backtest that is clean, plausible and wrong.
+When a name fails to match, that game has no odds. A missing odd does not look like an error, it looks like a slightly
+smaller dataset, and the result is a backtest that looks fine but is wrong.
 
-So the dataloader reconciles the two sources. It compares the spellings and pairs the two feeds for you. A name it
-cannot place is dropped, not guessed at.
+The dataloader reconciles the two sources. It compares the spellings and pairs the two feeds for you. A name it cannot
+place is dropped, not guessed at.
 
-Sometimes the pairing leaves a club unmatched. You name that club yourself by passing `aliases`. A resemblance is not a
-fact, and attaching one club's odds to another is worse than a missing row.
+Sometimes the pairing leaves a club unmatched. You name that club yourself by passing `aliases`. A close spelling is not
+a match, and attaching one club's odds to another is worse than dropping the row.
 
 See [the dataloader guide](dataloader.md#when-two-sources-name-a-club-differently) for how a dataloader takes aliases.
 
@@ -272,7 +272,7 @@ class MySchema(BaseStatsSchema):
     league: str = required_col()
     home_team: str = required_col()
     away_team: str = required_col()
-    home_goals: int = optional_col(['inplay', 'postplay'], fixed=False)   # varies by moment
+    home_goals: float = optional_col(['inplay', 'postplay'], fixed=False)   # varies by moment
     home_form: float = optional_col(['preplay'], fixed=True)              # one value per match
 ```
 
@@ -289,7 +289,7 @@ class MyOddsSchema(BaseOddsSchema):
     league: str = required_col()
     home_team: str = required_col()
     away_team: str = required_col()
-    provider: str = optional_col(['preplay'], fixed=True)
+    provider: str = required_col()
     home_win: float = optional_col(['preplay', 'inplay'], fixed=False)
 ```
 
@@ -313,8 +313,8 @@ class MyDataLoader(BaseDataLoader):
         return my_stats_table, my_odds_table
 ```
 
-That method is the seam. There is one `DataLoader` behind it, whatever the sport, because the sport belongs to the
-source. So you add a sport, a league or a feed of your own by adding a source.
+That one method is all you implement. There is one `DataLoader` for every sport, because the sport belongs to the
+source, so you add a sport, a league, or a feed of your own by adding a source.
 
 [`BaseBettor`][sportsbet.evaluation.BaseBettor] is the betting strategy. Implement `_fit` and `_predict_proba` and you
 get value bets, backtesting and hyperparameter search. See [the bettor guide](bettor.md#implementation).

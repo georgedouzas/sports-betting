@@ -73,7 +73,7 @@ bettor.best_params_
 # Backtesting the search
 # ----------------------
 #
-# The search re-runs inside every fold. So it chooses the markets on the training part of the fold and judges them on
+# The search re-runs inside every fold, so it chooses the markets on the training part of the fold and judges them on
 # the part it has not seen. Choosing them once, on everything, would choose them on the answers.
 
 results = backtest(bettor, X_train, Y_train, O_train, cv=TimeSeriesSplit(3))
@@ -84,8 +84,8 @@ results
 # -------------------
 #
 # The search scored every set of markets on the same footing as the regularisation. The chart below shows the best
-# score for each set of markets. That score is how the search came to prefer one set over the others. The bar it picked
-# is the choice you would otherwise have made by hand, or worse, by peeking at the answers.
+# cross-validated score, the annual Sharpe ratio, for each set of markets. That score is how the search came to prefer
+# one set over the others. The bar it picked is the choice you would otherwise have made by hand.
 
 scores = pd.DataFrame(bettor.cv_results_)
 scores['markets'] = scores['param_betting_markets'].apply(' + '.join)
@@ -96,5 +96,5 @@ colours = ['tab:orange' if markets == chosen else 'tab:blue' for markets in best
 fig, ax = plt.subplots()
 ax.barh(best_per_markets.index, best_per_markets.to_numpy(), color=colours)
 ax.axvline(0, color='black', linewidth=0.8)
-ax.set_title('Best cross-validated return by market')
-ax.set_xlabel('best cross-validated return')
+ax.set_title('Best cross-validated Sharpe ratio by market')
+ax.set_xlabel('annual Sharpe ratio')

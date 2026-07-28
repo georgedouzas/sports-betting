@@ -14,12 +14,11 @@ around the question that matters most once you bet for real. Which data can I ac
 
 The target moment you pass to `extract_train_data` fixes two things at once. What you predict, the outcome at that
 moment, and which snapshots become features, every snapshot strictly before it. A feature such as
-`home_goals__inplay__45min` is only known once the match has reached the 45 minute mark. So a model may only use
+`home_goals__inplay__45min` is only known once the match has reached the 45 minute mark, so a model may only use
 features that will be available at the moment you place the bet.
 
 `extract_fixtures_data` reproduces the exact training columns for upcoming matches, and any snapshot a match has not
-reached yet is simply missing (`NaN`). So the practical question is always how far the match has progressed when you
-bet.
+reached yet is simply missing (`NaN`). The practical question is always how far the match has progressed when you bet.
 
 * Betting before kick off. Only pre match information exists, so the model uses pre match features only.
 * Betting in play. The snapshots up to the current minute exist too, so the model may use in play features up to that
@@ -114,7 +113,7 @@ MATCHES = [('2024-08-16', 'Arsenal', 'Chelsea', 2, 0), ('2024-08-23', 'Everton',
 class LiveDataLoader(BaseDataLoader):
     """Two matches, each priced before kick-off and again at half time."""
 
-    def _snapshots(self):
+    def _load_snapshots(self):
         stats, odds = [], []
         for date, home, away, home_goals, away_goals in MATCHES:
             identity = dict(date=date, league='England', division=1, year=2025, home_team=home, away_team=away)

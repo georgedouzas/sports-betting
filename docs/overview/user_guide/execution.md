@@ -1,19 +1,16 @@
 # Execution
 
-A bettor finds value bets, and the single-event unit places one of them at a bookmaker where you hold an account. You
-give it a fitted bettor, one upcoming match, and a stake. The unit watches the match, and at the moment the model was
-fitted for it places the bet, once. Because this spends real money, read the risks first.
+A bettor finds value bets. Execution places one of them, at a bookmaker where you have an account. You give it a fitted
+bettor, one upcoming match, and a stake. It watches the match and, at the moment the model bets, places the bet once.
+This spends real money, so read the risks first.
 
 ## Risks
 
-* The unit uses a bookmaker's website. This breaks the terms of service of almost every bookmaker. It puts the account and
-  its balance at risk.
-* The unit watches one event. Running many units across many events is your own work. A bookmaker may block or close an
-  account for that.
-* The unit places the bet at the price on offer when it lands. It will not place below the minimum price the value bet
-  was computed at.
-* The unit does not evade a website's automation controls. If a website blocks automation, the unit reports it and
-  stops.
+* It uses a bookmaker's website. This breaks the terms of service of almost every bookmaker and puts the account and its
+  balance at risk.
+* It watches one match. Running many matches is your own work, and a bookmaker may block or close an account for that.
+* It places the bet at the price on offer when it lands.
+* It does not evade a website's automation controls. If a website blocks automation, it reports that and stops.
 
 ## Installation
 
@@ -22,34 +19,32 @@ pip install 'sports-betting[execution]'
 python -m playwright install chromium
 ```
 
-The browser uses the bookmaker's website to log in and to place the bet. Monitoring does not use the browser. The
-unit reads the event from the configured source and logs it to the terminal.
+The browser is used to log in and to place the bet. Watching the match does not use the browser: it reads the event
+from the source and logs it to the terminal.
 
-## One event only
+## One match only
 
-The unit handles exactly one betting event. It binds one match, one fitted bettor, and one browser session. It places at
-most one bet over its whole run. You extend it to many events yourself. A bookmaker that detects automation across many
+It handles exactly one match. It binds one match, one fitted bettor, and one browser session, and places at most one bet
+over its whole run. Extending it to many matches is your own work, and a bookmaker that detects automation across many
 matches may close the account.
 
 ## What a run does
 
 A run is a fixed, ordered sequence. Once it starts, it is not interactive.
 
-1. Explore the URLs. You give the unit one or more candidate bookmaker URLs. It opens each one headless and keeps the
-   page that carries the event. It pins that page's controls. If no URL carries the event, it stops and stakes nothing.
-2. Log in. The unit checks that the browser session is authenticated before it monitors or places. A browser profile
-   that already holds a login lands logged in. Otherwise you log in during setup. If login is not in place, the unit
+1. Explore the URLs. You give it one or more candidate bookmaker URLs. It opens each one headless and keeps the page
+   that carries the event, then pins that page's controls. If no URL carries the event, it stops and stakes nothing.
+2. Open the site. It opens the bookmaker's site from the saved browser profile. A profile that already holds a login
+   lands logged in, so you log in once during setup and the headless run reuses it. If the site blocks the request, it
    stops and stakes nothing.
-3. Monitor and log. The unit polls the configured source on a schedule and logs the event to the terminal. It logs the
-   event's identity, its status as it moves through preplay, inplay and postplay, the current price where it is
-   available, and its decision at each step. The browser runs headless with no preview window, so the terminal log is
-   the whole view.
-4. Place at the moment. When the event reaches the moment the model was fitted for, the unit applies the bettor to the
-   event's data as of that moment. If the model finds a value bet, the unit logs the selection, stake and price it is
-   about to stake, then places the configured stake on that selection, once. If the model finds no value, the unit logs
-   that and stakes nothing.
+3. Watch and log. On a schedule it logs the event to the terminal: its identity, its status as it moves through
+   preplay, inplay and postplay, and the current price where it is available. The browser runs headless with no preview
+   window, so the terminal log is the whole view.
+4. Place at the moment. When the event reaches the moment the model bets at, it applies the bettor to the event's data.
+   If the model finds a value bet, it logs the market, stake and price, then places the stake on that market once. If
+   the model finds no value, it logs that and stakes nothing.
 
-The bettor decides whether to bet and which selection to back. It never decides the stake.
+The bettor decides whether to bet and which market to back. It never decides the stake.
 
 ## The betting moment
 
@@ -57,19 +52,20 @@ The dataloader fixes the moment the model bets at. A preplay model bets at the k
 `target_event_status='inplay'` and a `target_event_time`, bets at the kick-off plus that time.
 [`find_betting_moment`][sportsbet.execution.find_betting_moment] returns that moment for a kick-off.
 
-The moment can already be past when the unit starts. This happens when the event is in-play past the fitted moment or
-already finished. The unit then logs that the moment is unreachable, places nothing, and returns an empty frame.
+The moment can already be past when it starts, when the event is in-play past the fitted moment or already finished. It
+then logs that the moment is unreachable, places nothing, and returns an empty frame.
 
 ## Dry run and live
 
-A run is a no-stakes dry run unless you arm it. A dry run does everything else. It explores, logs in, monitors, decides,
-and logs the exact bet it would place. It never calls the placer, so no money moves and the receipts frame is empty.
+A run is a no-stakes dry run unless you arm it. A dry run does everything else. It explores, opens the site, watches,
+decides, and logs the exact bet it would place. It never calls the placer, so no money moves. If the model finds a value
+bet, the receipts frame holds one dry-run row describing the bet it would have placed; otherwise it is empty.
 
-You arm a run with `--live`. This is a single up-front opt-in. Once armed, the unit places automatically at the moment
-with no second confirmation. Its pre-place log line shows the action before it happens.
+You arm a run with `--live`. This is a single up-front opt-in. Once armed, it places automatically at the moment with no
+second confirmation. Its pre-place log line shows the action before it happens.
 
 ```bash
-# Pin the site's controls once, so the unit knows where the stake and confirm buttons are.
+# Pin the site's controls once, so it knows where the stake and confirm buttons are.
 sportsbet execution page fix --venue venue.py:VENUE --url "$URL" \
   --match "Arsenal vs Chelsea" \
   --locator stake='textbox[name="Stake"]' --locator confirm='button[name="Place bet"]'
@@ -83,12 +79,11 @@ sportsbet execution run --venue venue.py:VENUE -d loader.pkl -b model.pkl \
   --event "Arsenal vs Chelsea" --stake 10 --url "$URL" --live
 ```
 
-The stake is a parameter of the run, not of the bettor. The unit places exactly that amount when it bets.
+The stake is a parameter of the run, not of the bettor. It places exactly that amount when it bets.
 
 ## The Python API
 
-The command line calls [`execute_event`][sportsbet.execution.execute_event]. Call it directly to run the unit from
-Python.
+The command line calls [`execute_event`][sportsbet.execution.execute_event]. Call it directly to run it from Python.
 
 ```python
 import asyncio
@@ -112,7 +107,8 @@ receipts = asyncio.run(
 )
 ```
 
-The call returns a receipts frame. It holds one row when the unit placed a bet and no rows otherwise. The arguments are:
+The call returns a receipts frame. It holds one row when the model backs a bet, whether the run placed it or only logged
+it as a dry run, and no rows otherwise. The arguments are:
 
 * `event` names the one match. It must be among the dataloader's fixtures.
 * `bettor` is a model fitted and saved by `evaluation fit`.
@@ -120,12 +116,12 @@ The call returns a receipts frame. It holds one row when the unit placed a bet a
 * `stake` is the fixed amount to place.
 * `urls` are the candidate pages.
 * `live` arms the run.
-* `poll` is the interval between source polls.
+* `poll` is how often it logs the event while it waits for the moment.
 * `clock` and `wait` are injection points for time, so a test can run the whole watch with no real waiting.
 
 ### A custom placer
 
-By default the unit places the bet by entering the stake into the pinned `stake` control and clicking the pinned
+By default it places the bet by entering the stake into the pinned `stake` control and clicking the pinned
 `confirm` control of the matched site. A `placer` replaces that for a site the default cannot operate. A placer is a
 coroutine. It takes the [`PlacementIntent`][sportsbet.execution.PlacementIntent] and the session, operates the site for
 the one bet, and returns a [`PlacementReceipt`][sportsbet.execution.PlacementReceipt]. A custom placer is Python only.
@@ -181,7 +177,7 @@ session = BrowserSession(
 * `user_data_dir` is where the browser keeps its profile. A login survives a restart, so the headless run lands already
   authenticated.
 * `min_interval` is the seconds to leave between actions.
-* `headless` hides the browser window. It is `True` by default, since the unit needs no window to watch.
+* `headless` hides the browser window. It is `True` by default, since it needs no window to watch.
 
 ### Explore, fix, then run
 
@@ -196,8 +192,8 @@ for every element you can act on.
   - button "Place bet" [ref=e4]
 ```
 
-Exploring a page is slow. The unit reads whole snapshots and reasons over them. Placing is fast. So you explore once,
-pin what you found, and let the unit act against the pinned session.
+Exploring a page is slow, since it reads whole snapshots and reasons over them, while placing is fast. You explore once,
+pin what you found, and let it act against the pinned session.
 
 ```python
 await session.navigate('https://www.novibet.gr/stoixima')
@@ -206,14 +202,13 @@ session.fix('Arsenal vs Chelsea', {'stake': 'textbox[name="Stake"]', 'confirm': 
 ```
 
 [`fix`][sportsbet.execution.BrowserSession.fix] pins roles and accessible names. These survive the page re-rendering. It
-refuses a ref, which belongs to one state of the page. It stores no price, since the unit reads the price when it places
-the bet and checks it against the minimum. The `execution page` commands `read`, `act` and `fix` do this exploring from
+refuses a ref, which belongs to one state of the page. It stores no price, since the price is only read at the moment
+the bet is placed. The `execution page` commands `read`, `act` and `fix` do this exploring from
 the command line. The `browser_*` tools do it from the MCP server.
 
 ## The three surfaces
 
-You reach the single-event unit from the command line and from the MCP server. An agent reaches it through the MCP
-server too.
+You reach execution from the command line and from the MCP server. An agent reaches it through the MCP server too.
 
 ```bash
 sportsbet execution run --venue venue.py:VENUE --dataloader loader.pkl --bettor model.pkl \

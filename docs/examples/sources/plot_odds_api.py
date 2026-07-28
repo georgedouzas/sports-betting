@@ -23,7 +23,7 @@ os.environ['ODDS_API_KEY'] = 'your-key'
 # Configuring it
 # --------------
 #
-# It carries prices with a timestamp. So you can backtest an in-play bet against the odds that were on offer at the
+# It carries prices with a timestamp, so you can backtest an in-play bet against the odds that were on offer at the
 # minute you would have placed it. The free feeds cannot do that, because they publish the closing price only.
 #
 # Every market, region and moment is a separate request. Each one adds to the work.
@@ -32,7 +32,7 @@ odds = OddsApi(key_env='ODDS_API_KEY', markets=['h2h'], regions=['eu'])
 odds.name, odds.kind
 
 # %%
-# It sells every sport. So it carries no sport of its own and takes the sport of the statistics you pair it with.
+# It sells every sport, so it carries no sport of its own and takes the sport of the statistics you pair it with.
 
 {'carries no sport of its own': odds.sport is None}
 

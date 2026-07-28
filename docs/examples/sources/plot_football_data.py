@@ -18,7 +18,7 @@ from sportsbet.sources import FootballDataOdds, FootballDataStats
 # Asking the source what exists
 # -----------------------------
 #
-# You cannot write a parameter grid before you know what exists. So you ask the source, not a dataloader.
+# You cannot write a parameter grid before you know what exists, so you ask the source, not a dataloader.
 
 stats = FootballDataStats()
 params = stats.list_available_params()
@@ -63,7 +63,7 @@ dataloader.get_odds_types()
 # A picture of it
 # ---------------
 
-coverage = pd.DataFrame(params).groupby('league').size().sort_values(ascending=False)
+coverage = pd.DataFrame(params).groupby('league')['year'].nunique().sort_values(ascending=False)
 
 fig, ax = plt.subplots(figsize=(9, 4))
 ax.bar(coverage.index, coverage.to_numpy())

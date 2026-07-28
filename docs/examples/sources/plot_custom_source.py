@@ -24,7 +24,7 @@ MARKETS = ['home_win', 'draw', 'away_win']
 # -------------------------
 #
 # A source says what to read and how to turn it into snapshots. It never fetches. The dataloader reads the items the
-# source declares. So a source stays a plain description of a feed. It is easy to write and to test.
+# source declares, so a source stays a plain description of a feed. It is easy to write and to test.
 
 
 class MyStats(BaseStatsSource):
@@ -77,8 +77,8 @@ snapshots
 # The odds are a source too
 # -------------------------
 #
-# The markets are its columns. The bookmaker is its `provider` column. So nothing has to be registered anywhere. Drop
-# `draw` and you have a sport that cannot be drawn. The bettor works out the two-way market on its own.
+# The markets are its columns. The bookmaker is its `provider` column, so nothing has to be registered anywhere. Drop
+# `draw` and you have a sport with no draw. The bettor works out the two-way market on its own.
 
 
 class MyOdds(BaseOddsSource):

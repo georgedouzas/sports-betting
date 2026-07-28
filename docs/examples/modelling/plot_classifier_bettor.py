@@ -33,7 +33,7 @@ dataloader = DataLoader(
 X_train, Y_train, O_train = dataloader.extract_train_data(drop_na_thres=0.5, odds_type='market_maximum')
 
 # %%
-# The targets are the three outcomes, one boolean column each:
+# The targets are the five markets, one boolean column each:
 Y_train
 
 # %%
@@ -46,7 +46,7 @@ X_train = X_train[num_cols]
 # The bettor
 # ----------
 #
-# A bettor is a classifier. It has `fit`, `predict` and `predict_proba`. So the pipeline goes straight in, and the
+# A bettor is a classifier. It has `fit`, `predict` and `predict_proba`, so the pipeline goes straight in and the
 # usual scikit-learn tooling works on it. Here is its cross-validated accuracy:
 
 bettor = ClassifierBettor(make_pipeline(SimpleImputer(), KNeighborsClassifier()))

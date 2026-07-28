@@ -18,7 +18,7 @@ from sportsbet.sources import derive_market_outcomes
 # One method to implement
 # -----------------------
 #
-# A dataloader reads long snapshots and shapes them. The only thing it does not know is where they come from. So that is
+# A dataloader reads long snapshots and shapes them. The only thing it does not know is where they come from, so that is
 # the only thing you tell it. Implement `_load_snapshots` and everything else follows.
 
 MATCHES = [('2024-08-16', 'Arsenal', 'Chelsea', 2, 0), ('2024-08-23', 'Everton', 'Spurs', 1, 2)]
@@ -82,7 +82,7 @@ O
 # ---------------
 #
 # The odds my feed carries imply a probability for each outcome. The probabilities sum to more than one. That surplus is
-# the bookmaker's margin. It is built into every price, and it is why a naive bet loses slowly.
+# the bookmaker's margin, built into every price.
 
 prices = {market: O.filter(like=f'__{market}__').iloc[0, 0] for market in MARKETS}
 implied = {market: 1 / price for market, price in prices.items()}

@@ -7,7 +7,7 @@ and a source that needs a key reads it from the environment, so the key never en
 Python, so you build it and name it: `--model models.py:BETTOR`.
 
 `dataloader train extract` downloads the seasons once and saves the dataloader to a file. The evaluation commands read
-that file with `--dataloader`, so the data is downloaded once and the model is trained once.
+that file with `--dataloader`, so the data is downloaded once and reused.
 
 ```bash
 # Download once and save the dataloader
@@ -15,10 +15,10 @@ sportsbet dataloader train extract --stats football-data --odds football-data \
   --league Italy --division 1 --year 2024 --odds-type market_maximum -o italy.pkl
 
 # Backtest a model on the saved data
-sportsbet evaluation backtest --dataloader italy.pkl --model logistic --betting-market draw --cv 4
+sportsbet evaluation backtest --dataloader italy.pkl --model "OddsComparisonBettor(alpha=0.05)" --cv 4
 
 # Fit the model once and save it
-sportsbet evaluation fit --dataloader italy.pkl --model logistic --betting-market draw -o model.pkl
+sportsbet evaluation fit --dataloader italy.pkl --model "OddsComparisonBettor(alpha=0.05)" -o model.pkl
 
 # Value bets for the upcoming matches, through the fitted model
 sportsbet evaluation bet --dataloader italy.pkl --bettor model.pkl

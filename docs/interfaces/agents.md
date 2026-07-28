@@ -14,10 +14,9 @@ Then point your agent at the `sportsbet-mcp` command.
 Nothing in this package calls a model, holds a model's key, or chooses one. That is deliberate.
 
 A model is a nondeterministic dependency, and this library exists to produce estimators that behave the same way every
-time they are cross validated. Putting one inside would make the core untestable, and a betting library that generates
-advice with a language model is not something anyone should install.
+time they are cross validated. Putting one inside would make the core untestable.
 
-So the library is made legible to an agent rather than given one. You bring your own. Every model concern, the key, the
+The library is built for an agent to use, not to contain one. You bring your own. Every model concern, the key, the
 choice, the cost, the nondeterminism, stays on your side of the line.
 
 ## Every tool takes what the commands take
@@ -26,7 +25,7 @@ A tool is told what to do in its arguments, exactly as a command is. What to sel
 There is no configuration file, and nothing has to be written down before anything runs.
 
 * The two surfaces cannot drift. One vocabulary, one builder. A second, differently shaped way to describe a dataloader
-  would be a second set of capabilities to keep in step, which is the disease that killed the GUI.
+  would be a second set of capabilities to keep in step.
 * Your key is never an argument. What the agent names is the environment variable holding it, `odds_key_env`, never the
   key. A key passed as a tool argument is a key written into a transcript.
 * Nothing is left behind to fall out of date. A file the agent wrote three sessions ago, still pointing at last season,
@@ -48,18 +47,21 @@ An agent that knows this asks before pointing a paid key at a large selection, r
 | Tool | Does |
 | --- | --- |
 | `available_params` | What leagues, divisions and seasons exist. Downloads nothing. |
+| `odds_types` | The odds types a selection carries. Downloads nothing. |
 | `extract_exploration_data` | Downloads and returns the features on their own, with no targets or odds. |
 | `extract_train_data` | Downloads and returns the training data. |
 | `extract_fixtures_data` | Downloads and returns the games not yet played. |
 | `backtest` | Backtests a betting model. |
-| `bet` | The value bets for the fixtures. |
+| `fit` | Fits a model and saves it. |
+| `bet` | The value bets for the fixtures, from a fitted model. |
 
 Every one of them takes `stats` and, optionally, `odds`, because a dataloader does not choose where its data comes from,
 you do.
 
-A model is named. `odds-comparison` or `logistic`, or one of your own as `models.py:BETTOR`, since no set of arguments
-can describe a scikit-learn estimator. That is the thing an agent can do which no flag can. It writes the estimator,
-runs it, and tells you whether it was any good.
+A model is named as a Python expression, such as `OddsComparisonBettor(alpha=0.05)` or
+`ClassifierBettor(LogisticRegression())`, or one of your own as `models.py:BETTOR`, since no set of arguments can
+describe a scikit-learn estimator. That is the thing an agent can do which no flag can. It writes the estimator, runs
+it, and tells you whether it was any good.
 
 Everything the command line can do, an agent can do, because they are told the same things in the same way. Since the
 command line reaches every sport and every source, that means all of it.

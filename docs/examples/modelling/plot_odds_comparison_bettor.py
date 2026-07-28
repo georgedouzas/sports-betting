@@ -32,10 +32,11 @@ X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_maxi
 # A model that needs no features
 # ------------------------------
 #
-# It compares what one provider offers with what another offers. When the best price in the market is far enough above
-# the average, the outcome is priced more generously than the market as a whole believes. That is the bet.
+# It bets from the odds alone, with no classifier. For each market it turns the odds into a probability, one over the
+# average of the odds types, and subtracts `alpha` as a margin. It backs the market when that probability times the
+# offered price is above one.
 #
-# `alpha` sets how far above the average is far enough.
+# `alpha` sets the margin. A larger `alpha` demands a bigger edge before it bets.
 
 bettor = OddsComparisonBettor(alpha=0.03, betting_markets=['home_win', 'draw', 'away_win'])
 _ = bettor.fit(X_train, Y_train, O_train)

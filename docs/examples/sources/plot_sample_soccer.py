@@ -67,10 +67,12 @@ len(X_fix)
 # A picture of it
 # ---------------
 #
-# This shows how the season ended. Home wins lead. That lead is the home advantage the odds always price in.
+# This shows how the season ended, counting the three match outcomes. Home wins lead, the home advantage the odds price
+# in.
 
 outcomes = Y_train.sum()
 outcomes.index = outcomes.index.str.split('__').str[0]
+outcomes = outcomes[['home_win', 'draw', 'away_win']]
 
 fig, ax = plt.subplots()
 ax.bar(outcomes.index, outcomes.to_numpy(), color=['tab:green', 'tab:grey', 'tab:red'])

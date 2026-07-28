@@ -17,7 +17,7 @@ from sportsbet.sources import EuroLeagueStats, NBAStats
 # A league is a source, not a dataloader
 # --------------------------------------
 #
-# The NBA is the same sport as the EuroLeague. So it uses the same dataloader with different statistics.
+# The NBA is the same sport as the EuroLeague, so it uses the same dataloader with different statistics.
 
 stats = NBAStats()
 stats.name, stats.kind, stats.sport

@@ -37,8 +37,9 @@ Each bettor adds its own parameters on top of these.
 * [`ClassifierBettor`][sportsbet.evaluation.ClassifierBettor] adds `classifier`, any [scikit-learn] classifier with
   `fit` and `predict_proba`.
 * [`OddsComparisonBettor`][sportsbet.evaluation.OddsComparisonBettor] adds `odds_types`, the odds providers it averages
-  into the consensus probability, defaulting to `'market_average'`, and `alpha`, an adjustment it subtracts from that
-  probability, where larger values bet less often.
+  into the consensus probability, and `alpha`, a margin it subtracts from that probability, where larger values bet less
+  often. `odds_types` defaults to `None`, which uses `market_average` when the data has it and the average of the other
+  odds types otherwise.
 
 The example below uses a classifier bettor built around a [decision tree classifier]. The features include categorical
 columns (`league`, `home_team`, `away_team`) and columns with missing values, so the classifier goes in a pipeline that
@@ -117,18 +118,21 @@ class HomeAdvantageBettor(BaseBettor):
     def _predict_proba(self, X):
         markets = list(self.betting_markets_)
         probabilities = np.tile(self.rates_, (len(X), 1))
-        probabilities[:, markets.index('home_win')] += self.edge
+        if 'home_win' in markets:
+            probabilities[:, markets.index('home_win')] += self.edge
         for event in self.complementary_events_:
+            if not set(markets).issuperset(event):
+                continue
             outcomes = [markets.index(market) for market in event]
             probabilities[:, outcomes] /= probabilities[:, outcomes].sum(axis=1, keepdims=True)
         return probabilities
 ```
 
-`complementary_events_` comes from the data. So the same bettor renormalises over three outcomes in soccer and two in
+`complementary_events_` comes from the data, so the same bettor renormalises over three outcomes in soccer and two in
 basketball, and over each totals line, from the columns alone. See
 [complementary events](#which-markets-are-mutually-exclusive-is-derived-from-the-data).
 
-## Model fit
+## Fitting the model
 
 You fit the bettor to `(X_train, Y_train)` with `fit`. When it fits, the bettor takes from `(X_train, Y_train)` whatever
 it uses at prediction time, whether or not that is a machine learning model.
@@ -143,7 +147,7 @@ The bettor stores the selected markets as their base names.
 assert bettor.betting_markets_.tolist() == ['home_win', 'draw', 'away_win']
 ```
 
-## Class labels prediction
+## Predicting class labels
 
 Once the bettor is fitted, you predict class labels with `predict`.
 
@@ -165,10 +169,10 @@ assert Y_train.columns.tolist() == [
 ]
 ```
 
-Value bets come from comparing the predicted probabilities to the odds matrix `O`. So the probabilities matter more than
+Value bets come from comparing the predicted probabilities to the odds matrix `O`, so the probabilities matter more than
 the labels.
 
-## Class probabilities predictions
+## Predicting class probabilities
 
 You predict positive class probabilities with `predict_proba`. There is one probability per selected market. For
 mutually exclusive markets like `home_win`, `draw` and `away_win`, the bettor normalises the probabilities to sum to
@@ -209,7 +213,7 @@ assert derive_complementary_events(['home_win', 'away_win', 'over_220.5', 'under
 
 A bettor can override it with `COMPLEMENTARY_EVENTS` on its class.
 
-## Value bets prediction
+## Predicting value bets
 
 The fitted bettor predicts the value bets with `bet`, which returns one boolean column per selected market. You can join
 these with the identity columns of `X_train`.
@@ -286,7 +290,7 @@ sharpe_ratio = bettor.score(X_train, Y_train, O_train)
 ## Odds comparison bettor
 
 The [`OddsComparisonBettor`][sportsbet.evaluation.OddsComparisonBettor] takes its probabilities straight from the odds,
-averaging the `odds_types` providers and subtracting `alpha`. So it needs the odds matrix `O` at fit time too.
+averaging the `odds_types` providers and subtracting `alpha`, so it needs the odds matrix `O` at fit time too.
 
 ```python
 from sportsbet.evaluation import OddsComparisonBettor

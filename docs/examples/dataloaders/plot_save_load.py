@@ -21,7 +21,7 @@ from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 # ---------------------------------------
 #
 # The columns of the fixtures data are the columns of the training data. A dataloader that has extracted once carries
-# that shape with it. Saving it keeps the shape. So you can extract the training data on one machine and predict on
+# that shape with it. Saving it keeps the shape, so you can extract the training data on one machine and predict on
 # another.
 
 dataloader = DataLoader(
@@ -48,8 +48,7 @@ X_fix, _, O_fix = loaded.extract_fixtures_data()
 # A picture of it
 # ---------------
 #
-# The saved file holds the whole season. It has every match the loader extracted, ready to travel to another machine.
-# Here it is by month.
+# The saved file holds the whole season. It has every match the loader extracted. Here it is by month.
 
 per_month = X_train.index.to_period('M').value_counts().sort_index()
 

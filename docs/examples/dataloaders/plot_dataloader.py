@@ -2,7 +2,8 @@
 Dataloader
 ==========
 
-This example shows DataLoader. It turns the data of your sources into training and fixtures data.
+A DataLoader turns the data from your sources into training and fixtures data. This example builds one, extracts the
+training data and the fixtures, and plots the odds.
 """
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
@@ -14,11 +15,11 @@ from sportsbet.dataloaders import DataLoader
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
 # %%
-# There is one dataloader
-# -----------------------
+# One dataloader for every sport
+# -------------------------------
 #
-# There is not one dataloader per sport. The sport is a property of the sources, so you never tell the dataloader what
-# it is looking at. You choose the sources, so you always know where your data came from.
+# The same `DataLoader` works for every sport. The sport comes from the sources you give it, not from anything you
+# configure, and `sport_` reports what it found.
 
 dataloader = DataLoader(
     param_grid={'league': ['England'], 'division': [1], 'year': [2024]},
@@ -47,7 +48,7 @@ dataloader.get_odds_types()
 # ----------------------------
 #
 # This is where the download happens. It pulls the selected seasons and returns three frames. The dataloader keeps
-# them. So once you have extracted, `save` carries the data with it and nothing has to be fetched twice.
+# them, so once you have extracted, `save` carries the data with it and nothing has to be fetched twice.
 
 X_train, Y_train, O_train = dataloader.extract_train_data(odds_type='market_average')
 
@@ -67,9 +68,9 @@ O_train
 # Extracting the fixtures data
 # ----------------------------
 #
-# A fixture is a match that has not been played. `param_grid` selects what to train on, and it does not restrict the
-# fixtures. A match you could have trained on has already been played. So you may train on England and bet on Italy. The
-# two frames share their columns, not their contents.
+# A fixture is a match that has not been played. `param_grid` picks the leagues and seasons you train on. The fixtures
+# are the upcoming matches in those leagues, so they never overlap the seasons you trained on. The two frames share
+# their columns, not their contents.
 #
 # The sample is a finished season, so it has no fixtures. Use a live source to get some.
 

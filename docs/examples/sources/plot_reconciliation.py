@@ -18,10 +18,10 @@ from sportsbet.sources import resolve_odds
 # The problem
 # -----------
 #
-# This is the most dangerous step in the library. One feed says `Man United`. Another says `Manchester United`. If a
-# name fails to match, that match has no odds. A missing odd does not look like an error. It looks like a slightly
-# smaller dataset. That gives you a backtest that is clean, plausible and wrong. A dataloader reconciles the two feeds
-# for you. This is the machinery underneath.
+# This step is easy to get wrong, and the mistake is silent. One feed says `Man United` and another says
+# `Manchester United`. If a name fails to match, that match has no odds. A missing odd does not look like an error, it
+# looks like a slightly smaller dataset, and the result is a backtest that looks fine but is wrong. A dataloader
+# reconciles the two feeds for you. This is the machinery underneath.
 
 identity = {'league': 'England', 'division': 1, 'year': 2025}
 moment = {'event_status': 'preplay', 'event_time': pd.Timedelta(0)}
@@ -69,8 +69,8 @@ paired = resolve_odds(stats, odds)
 sorted(paired['home_team'])
 
 # %%
-# That silent drop is the danger. Three of the four matches keep their odds and the fourth does not, and nothing says
-# so. When you know which club a leftover name means, pass it as an alias. Now every match has its odds:
+# Three of the four matches keep their odds and the fourth does not, and nothing says so. When you know which club a
+# leftover name means, pass it as an alias. Now every match has its odds:
 
 paired = resolve_odds(stats, odds, aliases={'Spurs': 'Tottenham'})
 sorted(paired['home_team'])
@@ -84,8 +84,8 @@ paired[['home_team', 'away_team', 'home_win']]
 # A picture of it
 # ---------------
 #
-# The gap between the first bar and the last is the danger. An exact join throws away three quarters of the odds and
-# calls the result a dataset.
+# The chart shows the gap. An exact join keeps only the one match whose name matches exactly and drops the odds of the
+# other three.
 
 counts = {'exact name join': len(exact), 'resolved automatically': 3, 'with one alias': 4}
 

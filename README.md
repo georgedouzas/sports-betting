@@ -52,15 +52,15 @@
 `sports-betting` is a toolbox for building, testing, and running sports betting models. You can use it from Python, from
 the command line, or from an AI agent.
 
-The library is built around two objects, a dataloader and a bettor. A dataloader downloads the data and shapes it for
-modelling. You build it from a statistics source and an optional odds source, and it gives you three things: the
-training data to fit a model on, the features on their own for exploring the data without a model, and the upcoming
-matches to bet on. A bettor is a scikit-learn estimator that backtests a betting strategy on the training data and then
-predicts the value bets in the upcoming matches. `ClassifierBettor` turns any scikit-learn classifier into a bettor,
-while `OddsComparisonBettor` finds value by comparing the odds and needs no classifier.
+The library supports three main functionalities:
 
-Execution takes the value bets a bettor found and places one of them at a bookmaker where you hold an account. You give
-it a fitted bettor, one upcoming match, and a stake, and it places that single bet. This spends real money.
+- A dataloader downloads the data and shapes it for modelling. You build it from a statistics source and an optional
+  odds source. It provides the training data to fit a model on, the features on their own for exploring the data, and
+  the upcoming matches to bet on.
+- A bettor is a scikit-learn estimator. It backtests a betting strategy on the training data and then predicts the
+  value bets in the upcoming matches.
+- Execution is how you place those bets for real. It takes a value bet the bettor found and places it at a bookmaker
+  where you hold an account.
 
 ## Installation
 
@@ -103,9 +103,9 @@ pdm install
 
 ### AI agent
 
-An AI agent can use the library on its own. It reaches everything the Python API and the command line reach. Working on
-its own, it explores the data, builds tables, plots results, and writes a model. A model is a scikit-learn estimator,
-so the agent can write one, backtest it, and report how well it did.
+An AI agent can use the library on its own. It reaches everything the Python API and the command line reach. Working
+autonomously, it explores the data, builds tables, plots results, and writes a model. A model is a scikit-learn
+estimator, so the agent can write one, backtest it, and report how well it did.
 
 Install the MCP server and register it with your agent.
 
@@ -120,11 +120,7 @@ You can then ask the agent to work through a full task. A typical session runs i
 - Ask for a strategy on some leagues and seasons. The agent downloads the seasons and backtests models.
 - Ask which league holds the edge. The agent breaks the result down.
 - Ask for the value bets in the upcoming fixtures. The agent extracts the fixtures and applies the model.
-- Ask it to place a bet. The agent runs the single-event execution.
-
-You give the agent the name of the environment variable that holds your odds API key. Extracting the data downloads it,
-and a paid odds feed costs money each time, so extract once and save the dataloader. If a bookmaker has no API, the
-agent uses its website on your account, which can break the bookmaker's terms of service.
+- Ask it to place a bet. The agent places the bet for you.
 
 ### Python API
 
@@ -185,9 +181,8 @@ the fixtures data share their columns, so the model trained on the history can b
 
 ### CLI
 
-The command line mirrors the API. The `dataloader` command extracts the data. The `evaluation` command works a model on
-it. `dataloader train extract` downloads the seasons once and saves the dataloader. The evaluation commands read that
-file, so the download runs once and the training runs once.
+The command line mirrors the API. The `dataloader` command extracts and saves the data. The `evaluation` command
+backtests a model, fits it, and bets with it.
 
 ```bash
 # Download the seasons once and save the dataloader
@@ -197,22 +192,19 @@ sportsbet dataloader train extract --stats football-data --odds football-data \
   --odds-type market_maximum -o dataloader.pkl
 
 # Backtest a model on the saved data
-sportsbet evaluation backtest --dataloader dataloader.pkl --model logistic \
-  --betting-market home_win --betting-market draw --betting-market away_win \
-  --init-cash 10000 --stake 50 --cv 5
+sportsbet evaluation backtest --dataloader dataloader.pkl --model "OddsComparisonBettor(alpha=0.05)" --cv 5
 
 # Fit the model once and save it
-sportsbet evaluation fit --dataloader dataloader.pkl --model logistic \
-  --betting-market home_win --betting-market draw --betting-market away_win \
-  -o model.pkl
+sportsbet evaluation fit --dataloader dataloader.pkl --model "OddsComparisonBettor(alpha=0.05)" -o model.pkl
 
 # Value bets for the upcoming matches, through the fitted model
 sportsbet evaluation bet --dataloader dataloader.pkl --bettor model.pkl
 ```
 
-The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from.
-`dataloader train extract` downloads it. The ready-made models cover the common cases. You can also write your own model
-in a Python file and name it, as in `--model models.py:bettor`, where `bettor` is the object below.
+The last command prints the value bets of the upcoming matches. `--stats` and `--odds` say where the data comes from,
+and `dataloader train extract` downloads it. `--model` takes any scikit-learn estimator as a Python expression, with the
+library's bettors and every scikit-learn estimator already in scope. You can also write your own model in a Python file
+and name it, as in `--model models.py:bettor`, where `bettor` is the object below.
 
 ```python
 # models.py
