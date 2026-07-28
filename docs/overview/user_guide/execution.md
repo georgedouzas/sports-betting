@@ -1,8 +1,8 @@
 # Execution
 
-A bettor finds value bets. The single-event unit places one of them at your bookmaker. It takes a fitted bettor, one
-upcoming match, and a stake. It watches the match, and at the moment the model was fitted for it places the bet, once.
-This spends real money, so read the risks first.
+A bettor finds value bets, and the single-event unit places one of them at a bookmaker where you hold an account. You
+give it a fitted bettor, one upcoming match, and a stake. The unit watches the match, and at the moment the model was
+fitted for it places the bet, once. Because this spends real money, read the risks first.
 
 ## Risks
 
@@ -223,4 +223,3 @@ sportsbet execution run --venue venue.py:VENUE --dataloader loader.pkl --bettor 
 The MCP server exposes the same run as the `execution_run` tool, with the same parameters. The other execution commands
 `venue`, `markets`, `balance`, `status` and `cancel`, and the `page` group for exploring and pinning a site, map one to
 one to the `execution_*` and `browser_*` tools.
-

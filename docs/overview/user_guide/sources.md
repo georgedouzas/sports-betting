@@ -2,8 +2,9 @@
 
 # Data sources
 
-A dataloader gets its data from a source. This has three consequences. You add a sport by adding a source. You buy odds
-and statistics separately, from separate sources. You can plug in a feed of your own without changing the library.
+A dataloader gets its data from a source, and that has three consequences: you add a sport by adding a source, you buy
+odds and statistics separately from separate sources, and you can plug in a feed of your own without changing the
+library.
 
 The sources that ship with the library:
 
@@ -33,9 +34,8 @@ dataloader = DataLoader(
 
 ## The contract
 
-A source declares what to read. It answers four questions. The dataloader reads the items the source declares into
-memory and hands the payloads back. So a source stays a plain description of a feed. It is easy to write and easy to
-test.
+A source declares what to read, and the dataloader reads the items it declares into memory and hands the payloads
+back. A source is therefore just a plain description of a feed, which makes it easy to write and to test.
 
 ```python
 class BaseSource:

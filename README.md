@@ -49,21 +49,18 @@
 
 ## Introduction
 
-`sports-betting` builds, tests, and runs sports betting models. You use it from Python, from the command line, or from
-an AI agent.
+`sports-betting` is a toolbox for building, testing, and running sports betting models. You can use it from Python, from
+the command line, or from an AI agent.
 
-It has two parts, dataloaders and bettors.
+The library is built around two objects, a dataloader and a bettor. A dataloader downloads the data and shapes it for
+modelling. You build it from a statistics source and an optional odds source, and it gives you three things: the
+training data to fit a model on, the features on their own for exploring the data without a model, and the upcoming
+matches to bet on. A bettor is a scikit-learn estimator that backtests a betting strategy on the training data and then
+predicts the value bets in the upcoming matches. `ClassifierBettor` turns any scikit-learn classifier into a bettor,
+while `OddsComparisonBettor` finds value by comparing the odds and needs no classifier.
 
-A dataloader downloads the data and shapes it for modelling. You build it from a statistics source and an optional odds
-source. It gives you three frames: the training data to fit a model on, the features on their own to explore the data
-without a model, and the upcoming matches to bet on.
-
-A bettor is a scikit-learn estimator. It backtests a betting strategy on the training data, then predicts the value
-bets of the upcoming matches. `ClassifierBettor` turns any scikit-learn classifier into a bettor. `OddsComparisonBettor`
-finds value by comparing the odds and needs no classifier.
-
-Execution places a bet the bettor found. It takes a fitted bettor, one upcoming match, and a stake, and places the bet
-on that match at a bookmaker where you have an account. This spends real money.
+Execution takes the value bets a bettor found and places one of them at a bookmaker where you hold an account. You give
+it a fitted bettor, one upcoming match, and a stake, and it places that single bet. This spends real money.
 
 ## Installation
 

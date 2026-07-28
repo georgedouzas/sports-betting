@@ -1,6 +1,10 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 2.4.1 -> 2.4.2
+Rationale: Refine the Writing Style. Sentences are a natural length, not chopped into short choppy ones. PATCH.
+
+---- history ----
 Version change: 2.4.0 -> 2.4.1
 Rationale: Clarify the example rule. A capability that cannot run offline, such as placing a real bet, is shown as
 reference code in the guide, not as a runnable gallery example. PATCH: a clarification, nothing removed.
@@ -120,7 +124,9 @@ gate cannot check. Both are binding.
 This constitution, the prose documents, the docstrings, and the examples follow one style. Write for a reader who wants
 to understand, not to be impressed.
 
-- Write short, direct sentences. Put one idea in each.
+- Write clear sentences of a natural length. Do not chop the prose into short choppy sentences, and do not pad it into
+  long winding ones. Let the length vary the way it does when a person writes well, and let sentences join with commas
+  and conjunctions where that reads better.
 - Say who does what in the normal order, subject then verb then object. Write "The library places the bet at the
   venue", not "A venue is placed at by the library".
 - Do not invert word order for effect. Do not use the passive voice unless the doer is unknown or does not matter.
@@ -419,4 +425,4 @@ This section instantiates the body above for this repository. It is the only rep
   surfaces `cli` and `mcp`. Builders live with what they build: `build_dataloader`, `build_bettor`, and `build_venue`.
 - Named exceptions: `BuildError`, `SelectionError`, `ExecutionError`, and `CredentialError`.
 
-**Version**: 2.4.1 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-28
+**Version**: 2.4.2 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-28

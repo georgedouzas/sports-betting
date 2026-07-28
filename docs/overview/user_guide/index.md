@@ -3,9 +3,10 @@
 
 # User guide
 
-`sports-betting` downloads sports betting data and trains models on it. It has two objects. A dataloader downloads the
-data from a statistics source and an optional odds source, and shapes it for modelling. A bettor is a scikit-learn
-estimator that backtests a strategy on that data and predicts the value bets of the upcoming matches.
+`sports-betting` downloads sports betting data and trains models on it. It is built around two objects, a dataloader
+and a bettor. The dataloader downloads the data from a statistics source and an optional odds source and shapes it for
+modelling. The bettor is a scikit-learn estimator that backtests a strategy on that data and predicts the value bets of
+the upcoming matches.
 
 ## Dataloader
 
