@@ -78,21 +78,25 @@ class RawPayload:
     content: bytes
 
 
-async def _fetch_url(client: aiohttp.ClientSession, url: str) -> str:
+async def _fetch_url(
+    client: aiohttp.ClientSession,
+    url: str,
+    headers: dict[str, str] | None = None,
+) -> str:
     """Return the text of a URL, read over the network."""
 
-    async with client.get(url) as response:
+    async with client.get(url, headers=headers or {}) as response:
         return await response.text(encoding=ENCODING)
 
 
-async def _fetch_urls(urls: list[str]) -> list[str]:
+async def _fetch_urls(requests: list[tuple[str, dict[str, str]]]) -> list[str]:
     """Return the text of several URLs, read over the network at once."""
 
     async with aiohttp.ClientSession(
         raise_for_status=True,
         connector=aiohttp.TCPConnector(limit=CONNECTIONS_LIMIT),
     ) as client:
-        return await asyncio.gather(*[_fetch_url(client, url) for url in urls])
+        return await asyncio.gather(*[_fetch_url(client, url, headers) for url, headers in requests])
 
 
 def _read_local_file(url: str) -> bytes:
@@ -100,14 +104,21 @@ def _read_local_file(url: str) -> bytes:
     return Path(url2pathname(urlparse(url).path)).read_bytes()
 
 
-def _read_urls_content(urls: list[str]) -> list[bytes]:
+def _read_urls_content(requests: list[tuple[str, dict[str, str]]]) -> list[bytes]:
     """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest."""
-    remote = [url for url in urls if not url.startswith(FILE_SCHEME)]
+    remote = [(url, headers) for url, headers in requests if not url.startswith(FILE_SCHEME)]
     fetched = iter(asyncio.run(_fetch_urls(remote)) if remote else [])
-    return [_read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING) for url in urls]
+    return [
+        _read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING)
+        for url, _headers in requests
+    ]
 
 
-def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
+def fetch_payloads(
+    items: list[RawItem],
+    authorize: Callable[[RawItem], str],
+    headers: Callable[[RawItem], dict[str, str]] | None = None,
+) -> list[RawPayload]:
     """Read each item at the URL `authorize` gives it and pair the bytes back with the item, in order.
 
     Args:
@@ -117,10 +128,15 @@ def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) ->
         authorize:
             A callable turning an item into the URL to fetch it from, adding any credential.
 
+        headers:
+            An optional callable turning an item into request headers, for credentials that travel as
+            headers rather than query parameters.
+
     Returns:
         The payloads, each pairing an item with its bytes, in the order given.
     """
-    contents = _read_urls_content([authorize(item) for item in items])
+    header_for = headers if headers is not None else (lambda _item: {})
+    contents = _read_urls_content([(authorize(item), header_for(item)) for item in items])
     return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
 
 
@@ -200,7 +216,7 @@ class BaseSource(ABC):
             params:
                 The available `league`, `division` and `year` combinations.
         """
-        return self.read_catalogue(fetch_payloads(self.list_index_items(), self.request_url))
+        return self.read_catalogue(self.fetch_items(self.list_index_items()))
 
     @abstractmethod
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
@@ -263,6 +279,36 @@ class BaseSource(ABC):
                 Where to fetch it from.
         """
         return item.url
+
+    def request_headers(self: Self, item: RawItem) -> dict[str, str]:
+        """Return the headers to send when fetching an item, with credentials added at request time.
+
+        Args:
+            item:
+                The item to fetch.
+
+        Returns:
+            headers:
+                The headers to send. The default is none.
+        """
+        return {}
+
+    def fetch_items(self: Self, items: list[RawItem]) -> list[RawPayload]:
+        """Fetch each item and return its payload.
+
+        The default reads each item with a GET at `request_url`, sending `request_headers`. A source whose vendor needs
+        more than one request per item, or a method other than GET, overrides this method and keeps the planning methods
+        pure.
+
+        Args:
+            items:
+                The items to read.
+
+        Returns:
+            payloads:
+                The payloads, each pairing an item with its bytes, in the order given.
+        """
+        return fetch_payloads(items, self.request_url, self.request_headers)
 
     @abstractmethod
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
