@@ -2,110 +2,161 @@
 
 # Data sources
 
-A dataloader gets its data from a source, and that has three consequences: you add a sport by adding a source, you buy
-odds and statistics separately from separate sources, and you can plug in a feed of your own without changing the
-library.
+Sources define where the data comes from. There are two types, statistics sources and odds sources. A statistics source
+is always about one sport. An odds source can cover multiple sports.
 
-The sources that ship with the library:
+Every source knows its `name`, `kind` and `sport` as class attributes. `list_available_params` lists the leagues,
+divisions and seasons it publishes. It is a method on the source object, not the class, because a source can need
+configuration, such as a key, before it knows what it publishes.
 
-| Source | Sport | Cost | Carries |
-| --- | --- | --- | --- |
-| [`FootballDataStats`][sportsbet.sources.FootballDataStats] | soccer | free | statistics, 1993 onward |
-| [`FootballDataOdds`][sportsbet.sources.FootballDataOdds] | soccer | free | pre match closing odds |
-| [`EuroLeagueStats`][sportsbet.sources.EuroLeagueStats] | basketball | free | statistics, from the competition's own API |
-| [`NBAStats`][sportsbet.sources.NBAStats] | basketball | free | statistics, the NBA, live through a season |
-| [`OddsApi`][sportsbet.sources.OddsApi] | any | your key | time stamped odds, live and historical |
-| [`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] | soccer | free | one frozen season, shipped for offline examples |
-| [`SampleSoccerOdds`][sportsbet.sources.SampleSoccerOdds] | soccer | free | the odds for that frozen season |
+The code blocks below run when the documentation is built, so their output is the real thing.
 
-Mix them however you like. Free statistics with paid odds is the realistic setup. It is the only way to backtest an
-in-play bet.
+## Statistics sources
 
-```python
-from sportsbet.dataloaders import DataLoader
-from sportsbet.sources import FootballDataStats, OddsApi
+A statistics source provides the match statistics for one sport. Three ship with the library.
 
-dataloader = DataLoader(
-    param_grid={'league': ['England'], 'division': [1], 'year': [2025]},
-    stats=FootballDataStats(),                                   # free
-    odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h', 'totals']),          # yours
-)
+### FootballDataStats
+
+Soccer statistics from [football-data.co.uk](https://www.football-data.co.uk), free, with seasons from 1993 onward.
+
+```python exec="1" source="block" result="text"
+from sportsbet.sources import FootballDataStats
+
+print((FootballDataStats.name, FootballDataStats.kind, FootballDataStats.sport))
+params = FootballDataStats().list_available_params()
+print([p for p in params if p['league'] == 'England' and p['division'] == 1 and p['year'] >= 2024])
 ```
 
-## The contract
+### EuroLeagueStats
 
-A source declares what to read, and the dataloader reads the items it declares into memory and hands the payloads
-back. A source is therefore just a plain description of a feed, which makes it easy to write and to test.
+Basketball statistics from the EuroLeague's own API, free.
 
-```python
-class BaseSource:
+```python exec="1" source="block" result="text"
+from sportsbet.sources import EuroLeagueStats
 
-    name: ClassVar[str]              # who declared an item
-    kind: ClassVar[str]              # 'stats' or 'odds'
-    sport: ClassVar[str | None]      # what the data is about, or None if the source serves any sport
-
-    def list_index_items(self, selection=None) -> list[RawItem]:
-        """What do I need to read to know what I publish?"""
-
-    def read_catalogue(self, payloads) -> list[dict]:
-        """Given those, which league/division/year combinations do I publish?"""
-
-    def list_required_items(self, params, schedule=None) -> list[RawItem]:
-        """Given a selection, what do I need to read?"""
-
-    def list_fixtures_items(self, params, schedule=None) -> list[RawItem]:
-        """And what do I need to read for the upcoming matches? (defaults to required_items)"""
-
-    def to_snapshots(self, payloads) -> pd.DataFrame:
-        """Given those, what are the long snapshots?"""
+print((EuroLeagueStats.name, EuroLeagueStats.kind, EuroLeagueStats.sport))
+print([p for p in EuroLeagueStats().list_available_params() if p['year'] >= 2025])
 ```
 
-The `sport` lives on the source. The dataloader takes its sport from the statistics source you pass, for example soccer
-from `FootballDataStats`. A source that serves any sport, as `OddsApi` does, leaves `sport` as `None`. It takes the
-sport of the statistics source it is paired with.
+### NBAStats
 
-Two optional hooks:
+Basketball statistics for the NBA, free, updated live through a season.
 
-* `request_url(item)` adds a credential at the moment of the request. The credential never reaches a `RawItem` and never
-  enters the data you save.
-* `needs_schedule()` returns `True` when you address your data by instant rather than by season. `OddsApi` does. "The
-  price at minute 45" is a timestamp. The source can build it only once it knows the kick off.
+```python exec="1" source="block" result="text"
+from sportsbet.sources import NBAStats
 
-### `RawItem` and `RawPayload`
-
-A [`RawItem`][sportsbet.sources.RawItem] is one thing to read. It is a URL, or a `file://` path for a feed that ships
-with the library.
-
-```python
-RawItem(
-    source='my_stats',                    # who declared it
-    key='England_1_2025',                 # its identity within the source
-    url='https://example.com/2025.csv',
-)
+print((NBAStats.name, NBAStats.kind, NBAStats.sport))
+print([p for p in NBAStats().list_available_params() if p['year'] >= 2025])
 ```
 
-An item carries no price. Each vendor sets its own prices, changes them, and prices its endpoints differently. What a
-request costs is between you and the vendor you buy it from.
+## Odds sources
 
-Two sources that declare the same `source` and `key` declare the same item, so the dataloader fetches it once.
-`FootballDataStats` and `FootballDataOdds` read the same upstream CSV, so they avoid downloading it twice.
+An odds source provides the betting odds. Two ship with the library.
 
-A [`RawPayload`][sportsbet.sources.RawPayload] is what came back, kept verbatim. The dataloader hands it to your
-`read_catalogue` and `to_snapshots`.
+### FootballDataOdds
 
-```python
-from sportsbet.sources import RawPayload
+Soccer odds from football-data.co.uk, free, the pre-match closing prices.
 
-payload = RawPayload(item=item, content=b'date,home_team,away_team\n...')
-payload.item.key      # 'England_1_2025'
-payload.content       # exactly what the feed returned, unparsed
+```python exec="1" source="block" result="text"
+from sportsbet.sources import FootballDataOdds
+
+print((FootballDataOdds.name, FootballDataOdds.kind, FootballDataOdds.sport))
+params = FootballDataOdds().list_available_params()
+print([p for p in params if p['league'] == 'England' and p['division'] == 1 and p['year'] >= 2024])
+```
+
+### OddsApi
+
+Time-stamped odds for any sport, live and historical, from [The Odds API](https://the-odds-api.com) with your key. It
+has no sport of its own until you pair it with a statistics source, so its `sport` is `None`. It takes its settings at
+construction and carries them as attributes: the markets and regions to price, the moments to fetch, and the environment
+variable that holds the key. `list_available_params` then reports only what your key and settings cover.
+
+```python exec="1" source="block" result="text"
+from sportsbet.sources import OddsApi
+
+odds = OddsApi(key_env='ODDS_API_KEY', markets=['h2h'], regions=['eu'])
+print((odds.name, odds.kind, odds.sport))
+print((odds.key_env, odds.markets, odds.regions, odds.moments))
+```
+
+`key_env` names the environment variable, so the key stays out of your code.
+
+## Sample sources for offline use
+
+[`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] and [`SampleSoccerOdds`][sportsbet.sources.SampleSoccerOdds]
+carry one frozen soccer season, shipped with the library so the examples run offline. They read from a bundled file,
+with no network, and have the same interface as the other sources.
+
+```python exec="1" source="block" result="text"
+from sportsbet.sources import SampleSoccerStats
+
+print(SampleSoccerStats().list_available_params())
+```
+
+A source turns its feed into snapshots, one row per match and moment, in the long format the library models. Here are
+the first odds snapshots of the sample season.
+
+```python exec="1" source="block" result="text"
+from sportsbet.sources import SampleSoccerOdds, fetch_payloads
+
+source = SampleSoccerOdds()
+payloads = fetch_payloads(source.list_required_items(source.list_available_params()), source.request_url)
+snapshots = source.to_snapshots(payloads)
+print(snapshots[['home_team', 'away_team', 'provider', 'home_win', 'draw', 'away_win']].head(3))
 ```
 
 ## Writing your own source
 
-Here are two feeds for a league the library does not ship, one for statistics and one for odds.
+A source declares what to read, and the library reads the items it declares and hands the payloads back. A source is
+therefore a plain description of a feed, which makes it easy to write and to test. Sources do not talk to each other.
+The library collects the items each source declares, reads them, and hands the payloads back. When a statistics and an
+odds source share a name, like the free football-data pair, the odds already carry the statistics' identity.
 
-```python
+### The methods to implement
+
+A source subclasses [`BaseStatsSource`][sportsbet.sources.BaseStatsSource] or
+[`BaseOddsSource`][sportsbet.sources.BaseOddsSource] and implements four methods.
+
+- `list_index_items(selection=None)` returns the items to read to discover what the source publishes.
+- `read_catalogue(payloads)` turns those index payloads into the available `league`, `division` and `year` combinations.
+- `list_required_items(params, schedule=None)` returns the items to read for a selected set of parameters.
+- `to_snapshots(payloads)` turns those payloads into the long snapshots table.
+
+The rest have defaults you rarely change. `list_fixtures_items` reads the same items as training, `needs_schedule` says
+the source carries its own schedule, and `request_url` fetches an item from its URL. Override them for a source whose
+upcoming matches live elsewhere, whose odds are addressed by timestamp, or whose requests carry a credential.
+
+### The items a source declares
+
+A [`RawItem`][sportsbet.sources.RawItem] is one thing to read: a URL, or a `file://` path for a feed that ships with the
+library. Two items with the same `source` and `key` are equal, so the library can tell when two declarations point at
+the same thing.
+
+```python exec="1" source="block" result="text"
+from sportsbet.sources import RawItem
+
+item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
+print(item.key)
+```
+
+A [`RawPayload`][sportsbet.sources.RawPayload] is what came back, kept verbatim. The library hands it to your
+`read_catalogue` and `to_snapshots`.
+
+```python exec="1" source="block" result="text"
+from sportsbet.sources import RawItem, RawPayload
+
+item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
+payload = RawPayload(item=item, content=b'date,home_team,away_team\n2025-08-16,Arsenal,Chelsea\n')
+print((payload.item.key, payload.content))
+```
+
+### A statistics and an odds feed
+
+Here are two feeds for a league the library does not ship, one for statistics and one for odds. Each declares its items
+and turns the payloads into snapshots.
+
+```python exec="1" source="block"
 import io
 import json
 
@@ -180,29 +231,15 @@ class MyOdds(BaseOddsSource):
         return odds.assign(event_status='preplay', event_time=0)
 ```
 
-Then hand them to any dataloader.
+That is the whole source. You declare no grammar: the library derives it from the snapshots `to_snapshots` returns. The
+markets come from the odds columns, the providers from the odds `provider` column, the features from the statistics
+columns, and the moments from `event_status` and `event_time`. Drop `draw` from `MARKETS` and you have a sport with no
+draw, and the bettor works out the two-way market on its own.
 
-```python
-from sportsbet.dataloaders import DataLoader
-
-dataloader = DataLoader(stats=MyStats(), odds=MyOdds())
-X, Y, O = dataloader.extract_train_data(odds_type='acme')
-```
-
-```text
-X   ['league', 'division', 'year', 'home_team', 'away_team', 'home_form', 'away_form']
-Y   ['home_win__postplay__0min', 'draw__postplay__0min', 'away_win__postplay__0min']
-O   ['acme__home_win__preplay__0min', 'acme__draw__preplay__0min', 'acme__away_win__preplay__0min']
-```
-
-You configured nothing. The markets came from the odds columns, the providers from the odds `provider` column, the
-features from the statistics columns, and the moments from `event_status` and `event_time`. Drop `draw` from `MARKETS`
-and you have a sport that cannot draw, and the bettor works out the two-way market on its own.
-
-### Four rules to follow
+Follow four rules.
 
 1. Keep the four methods pure. `list_index_items`, `read_catalogue`, `list_required_items` and `to_snapshots` declare
-   and transform. The dataloader does the reading, so a source stays testable offline.
+   and transform. The library does the reading, so a source stays testable offline.
 2. `date` is the kick-off instant, in UTC. Resolve your feed's time zone at your boundary, so `date + event_time` is the
    wall-clock instant of a snapshot. That instant is the address an odds vendor is asked for. The feeds the library
    ships show how this varies: football-data publishes every league in UK time, which the library converts to UTC, while
@@ -212,46 +249,7 @@ and you have a sport that cannot draw, and the bettor works out the two-way mark
 4. Credentials go in `request_url`. The `RawItem` is what the transform sees and what you might save, so a key stays out
    of it.
 
-## Keeping the data
-
-The dataloader is the store. Extracting downloads the data into it. `save` writes the object out.
-
-```python
-dataloader.save('italy.pkl')
-
-from sportsbet.dataloaders import load_dataloader
-dataloader = load_dataloader('italy.pkl')      # the data comes back with it
-```
-
-Extract once, save, and load to reuse the data. For a paid odds feed, this reuses what you paid for. You own the file.
-Where it lives and how long it lasts is up to you.
-
-## When two sources name a club differently
-
-This is easy to get wrong, and the mistake is silent, so read it carefully.
-
-Two sources rarely spell a club the same way. One calls a club `Man United` and the other calls it `Manchester United`.
-When a name fails to match, that game has no odds. A missing odd does not look like an error, it looks like a slightly
-smaller dataset, and the result is a backtest that looks fine but is wrong.
-
-The dataloader reconciles the two sources. It compares the spellings and pairs the two feeds for you. A name it cannot
-place is dropped, not guessed at.
-
-Sometimes the pairing leaves a club unmatched. You name that club yourself by passing `aliases`. A close spelling is not
-a match, and attaching one club's odds to another is worse than dropping the row.
-
-See [the dataloader guide](dataloader.md#when-two-sources-name-a-club-differently) for how a dataloader takes aliases.
-
-You can reconcile two tables yourself with [`resolve_odds`][sportsbet.sources.resolve_odds]. It returns the odds
-carrying the identity of the statistics, so the two tables line up.
-
-```python
-from sportsbet.sources import resolve_odds
-
-odds = resolve_odds(stats, odds, aliases={'Olimpia Milano': 'EA7 Emporio Armani Milan'})
-```
-
-## Describing your own columns
+### Describing your own columns
 
 The library validates snapshots against [pandera] schemas that it builds from the data. You rarely need to write one.
 Write one when you want to require a column or to say at which moments it carries values. Subclass
@@ -259,8 +257,9 @@ Write one when you want to require a column or to say at which moments it carrie
 describe the columns with [`required_col`][sportsbet.sources.required_col] and
 [`optional_col`][sportsbet.sources.optional_col].
 
-```python
+```python exec="1" source="block"
 from typing import Annotated
+
 import pandas as pd
 from sportsbet.sources import BaseStatsSchema, optional_col, required_col
 
@@ -278,8 +277,10 @@ class MySchema(BaseStatsSchema):
 
 An odds schema is the same, with a `provider`.
 
-```python
-from sportsbet.sources import BaseOddsSchema
+```python exec="1" source="block"
+import pandas as pd
+from typing import Annotated
+from sportsbet.sources import BaseOddsSchema, optional_col, required_col
 
 
 class MyOddsSchema(BaseOddsSchema):
@@ -296,25 +297,24 @@ class MyOddsSchema(BaseOddsSchema):
 `fixed` sets whether a column keeps a bare name or is expanded per moment. A fixed column like `home_form` keeps its
 bare name. A column that is not fixed like `home_goals` becomes `home_goals__inplay__45min`.
 
-## The abstract classes
+### Name resolution
 
-[`BaseDataLoader`][sportsbet.dataloaders.BaseDataLoader] is the extraction engine. It has one abstract method,
-`_load_snapshots()`, which returns the long `stats` and `odds` tables. The library does everything else for you: the
-column grammar, the input horizon, and the moment-aware pivot.
+Two sources rarely spell a club the same way. One calls a club `Man United` and the other `Manchester United`, and a
+name that fails to match silently loses its odds. The library reconciles them: it compares the spellings, pairs the two
+feeds, and drops a name it cannot place rather than guess. When the pairing leaves a club unmatched, you pass an alias.
+You can reconcile two tables yourself with [`resolve_odds`][sportsbet.sources.resolve_odds], which returns the odds
+carrying the identity of the statistics.
 
-```python
-from sportsbet.dataloaders import BaseDataLoader
+```python exec="1" source="block" result="text"
+from sportsbet.sources import SampleSoccerStats, SampleSoccerOdds, fetch_payloads, resolve_odds
 
 
-class MyDataLoader(BaseDataLoader):
-    """A dataloader whose data comes from wherever you like."""
+def snapshots(source):
+    items = source.list_required_items(source.list_available_params())
+    return source.to_snapshots(fetch_payloads(items, source.request_url))
 
-    def _load_snapshots(self):
-        return my_stats_table, my_odds_table
+
+stats, odds = snapshots(SampleSoccerStats()), snapshots(SampleSoccerOdds())
+paired = resolve_odds(stats, odds)
+print(paired[['home_team', 'away_team', 'provider', 'home_win']].head(3))
 ```
-
-That one method is all you implement. There is one `DataLoader` for every sport, because the sport belongs to the
-source, so you add a sport, a league, or a feed of your own by adding a source.
-
-[`BaseBettor`][sportsbet.evaluation.BaseBettor] is the betting strategy. Implement `_fit` and `_predict_proba` and you
-get value bets, backtesting and hyperparameter search. See [the bettor guide](bettor.md#implementation).
