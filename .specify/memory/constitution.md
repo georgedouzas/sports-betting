@@ -1,6 +1,31 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 8.0.3 -> 9.0.0
+Rationale: Say what the import rule was reaching for. Privacy is about reaching past a surface, not about consuming
+one, so a module may import a public name from another package's surface whatever its own privacy, and what it MUST
+NOT do is reach past that surface for a private name. A name its own package never re-exports MUST be private, which
+is what the old matching rule actually caught. The two call rules go with it, since a rule about what a private
+function may call says the same thing one level down and contradicted the new import rule. A `TYPE_CHECKING` guard is
+forbidden, since an import only a type checker sees papers over a cycle the way an import in a function body does.
+MAJOR: the import rule is redefined and the call rules are removed.
+
+Modified sections:
+  - Surface: the privacy-matching rule becomes two rules, no reaching past a surface for a private name, and a name a
+    package never re-exports is private. A package and its subpackages count as one package, so a subpackage reaching
+    its parent's private module is not reaching past a surface. The two call rules are gone, since the import rules
+    already decide it.
+  - Surface: the example shows a private module consuming another package through its surface, and the
+    counter-example shows a name reached past a surface beside an internal name left public.
+  - Structure: `from __future__ import annotations` is for a forward reference, a `TYPE_CHECKING` guard is forbidden,
+    the base-module rule drops its type-only-alias clause, and the example imports plainly.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 8.0.2 -> 8.0.3
 Rationale: Strip the Project Profile of what the body already says. A profile instantiates a rule, it does not repeat
 it, so the clauses that restated Contract, Naming, Library, Schema, Gates, Documentation, and Structure are gone and
@@ -841,9 +866,10 @@ A name that tells the truth saves a comment, a docstring line, and a reading of 
 - A module MUST read top to bottom in one order, a one-line imperative module docstring, the license header, the imports
   grouped standard library, third party, first party, the module constants and type aliases, and then the functions.
 - The linter sorts the imports, so they MUST NOT be sorted by hand.
-- A module MUST add `from __future__ import annotations` above the imports only where it needs it, for a forward
-  reference or a name that exists only under `TYPE_CHECKING`. The supported language floor decides, and a version that
-  resolves the annotations without it MUST NOT carry it.
+- A module MUST add `from __future__ import annotations` above the imports only where a forward reference needs it.
+  The supported language floor decides, and a version that resolves the annotations without it MUST NOT carry it.
+- A module MUST NOT guard an import with `if TYPE_CHECKING:`. An import only a type checker sees papers over a cycle
+  the way an import inside a function body does, and the cycle MUST be fixed instead.
 - Functions MUST come in dependency order, so a name is defined before it is used, the small helpers first and the
   function the module exists for last.
 - A module constant MUST be `UPPER_CASE`, and MUST live in the constants block near the top of the module, never
@@ -853,8 +879,7 @@ A name that tells the truth saves a comment, a docstring line, and a reading of 
   helper MUST earn its own module only where it takes on a distinct role worth a name, as `_base` or `_types` do.
 - A definition MUST live in the module that owns it.
 - A base module MUST be self-contained and MUST import no sibling. Its purpose is to be imported, not to import, so a
-  base that needs a sibling's code MUST absorb it by merging rather than importing. A type-only alias under
-  `TYPE_CHECKING` is not a sibling.
+  base that needs a sibling's code MUST absorb it by merging rather than importing.
 - The top level of a package MUST hold subpackages and its `__init__`, and MUST NOT hold loose implementation modules.
 - The shared leaves the whole tree imports, the type vocabulary, the shared constants, and the shared building
   primitives, MUST live in a `core` subpackage, and the rest of the tree MUST import them from there.
@@ -875,7 +900,6 @@ A module in the one order, its constants at the top and its imports running down
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
 
 import pandas as pd
 
@@ -932,26 +956,23 @@ cycles.
   name is the smell the re-export removes.
 - An `__init__` MUST hold only its docstring and the re-exports. It MUST carry no logic, no function, and no
   `__getattr__`, and a name that has to be computed to be exposed MUST live in a module instead.
-- An import MUST match the privacy of the module it sits in, so a private module MUST import private names from private
-  modules, and a public module MUST import public names from public modules.
-- The package `__init__` MUST be the one exception, and the only place a public name leaves a private module. That is
-  the re-export, and everywhere else the name MUST be imported from the surface that re-exports it.
-- A private function or class MUST call only private names, and a public function or class carries no such limit.
+- A module MUST NOT import another package's private name, whatever its own privacy. A name reached past its package
+  surface is a name that package never promised. A package and its subpackages are one package for this rule, so a
+  subpackage reaching its parent's private module is not reaching past a surface.
+- A name its own package never re-exports MUST be private, so what a package exports and what its surface offers are
+  the same list.
+- The package `__init__` MUST be the only place a public name leaves a private module. That is the re-export, and
+  everywhere else the name MUST be imported from the surface that re-exports it.
 
 Example:
 
-Each module importing at its own privacy, and the package `__init__` re-exporting the public names.
+A module consuming another package through its surface, and the package `__init__` re-exporting its own names.
 
 ```python
 """Private module."""
 
-from _a._b import _c
-from _a import _b
-
-"""Public module."""
-
-from a.b import c
 from a import b
+from ._sibling import _helper
 
 """Package __init__, the one place a public name leaves a private module."""
 
@@ -963,22 +984,14 @@ __all__ = ['Source', 'build_source']
 
 Counter-example:
 
-Names crossing the privacy line in both directions.
+A name reached past its surface, and a name a package keeps to itself but never made private.
 
 ```python
 """Private module."""
 
-from _a._b import c
-from _a import b
+from a._b import c
 from a import _c
-from a import b
-
-"""Public module."""
-
-from _a._b import c
-from _a import b
-from a.b import _c
-from a import _c
+from ._sibling import HELPER
 ```
 
 Rationale:
@@ -1471,4 +1484,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 8.0.3 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-20
+**Version**: 9.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-21
