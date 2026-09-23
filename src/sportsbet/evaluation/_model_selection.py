@@ -459,7 +459,22 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         return self.best_estimator_._predict_proba(X)
 
     def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
-        """Fit the bettor to the input data and multi-output targets."""
+        """Fit the bettor to the input data and multi-output targets.
+
+        Args:
+            X:
+                The input data.
+
+            Y:
+                The multi-output targets.
+
+            O:
+                The odds data.
+
+        Returns:
+            self:
+                The fitted bettor object.
+        """
         self._fit(X, Y, O)
         if hasattr(self, 'best_estimator_'):
             self.init_cash_ = self.best_estimator_.init_cash_
@@ -471,17 +486,47 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         return self
 
     def predict_proba(self: Self, X: pd.DataFrame) -> Data:
-        """Predict class probabilities for multi-output targets."""
+        """Predict class probabilities for multi-output targets.
+
+        Args:
+            X:
+                The input data.
+
+        Returns:
+            Y:
+                The positive class probabilities.
+        """
         self._check_attr('predict_proba', False, True)
         return self.best_estimator_.predict_proba(X)
 
     def predict(self: Self, X: pd.DataFrame) -> BoolData:
-        """Predict class labels for multi-output targets."""
+        """Predict class labels for multi-output targets.
+
+        Args:
+            X:
+                The input data.
+
+        Returns:
+            Y:
+                The positive class labels.
+        """
         self._check_attr('predict', False, True)
         return self.best_estimator_.predict(X)
 
     def bet(self: Self, X: pd.DataFrame, O: pd.DataFrame) -> BoolData:
-        """Predict the value bets for the provided input data and odds."""
+        """Predict the value bets for the provided input data and odds.
+
+        Args:
+            X:
+                The input data.
+
+            O:
+                The odds data.
+
+        Returns:
+            B:
+                The value bets.
+        """
         self._check_attr('bet', False, True)
         return self.best_estimator_.bet(X, O)
 

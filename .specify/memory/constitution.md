@@ -2,14 +2,14 @@
 SYNC IMPACT REPORT
 ==================
 Version change: 11.5.0 -> 11.6.0
-Rationale: An override carries its summary line alone. The base documents the contract once, and repeating its `Args`
-and `Returns` in every subclass copies one fact into as many places as there are implementations, which the
-Duplication section already forbids. The sources showed it plainly: the `to_snapshots` blocks were byte-identical in
-six modules, and across the seven contract methods there were thirty copies of what the base already said. MINOR: one
-rule added, and the duplication it removes was never required by anything else.
+Rationale: An abstract method carries the complete docstring, since it is where the contract is written, and an
+override repeats it. The signature is the same, so the parameters and the return are the same, and a reader who opens
+`NBAStats.to_snapshots` finds what it takes and returns there rather than having to open `BaseSource`. The repetition
+is not the duplication the Duplication section forbids, which is about a fact the code derives twice. This is one
+contract written where each reader of it looks. MINOR: one rule added.
 
 Modified sections:
-  - Docstrings: a method that overrides a documented base carries the one-line summary alone.
+  - Docstrings: an abstract method carries the complete docstring, and an override repeats it.
 
 Templates requiring updates:
   - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
@@ -1293,9 +1293,10 @@ changed without breaking someone.
 - A public function and a public class MUST carry an `Args` block documenting every parameter, a `Returns` block
   saying what is returned, and a `Raises` block naming every exception it raises.
 - A private function and a private class MUST carry the one-line summary alone, and MUST NOT carry those blocks.
-- A method that overrides a documented base MUST carry the one-line summary alone. The base documents the contract,
-  the summary says what this implementation does differently, and repeating the base's blocks copies one fact into
-  every subclass.
+- An abstract method MUST carry the complete docstring, since it is where the contract is written.
+- A method that overrides it MUST repeat that complete docstring. The signature is the same, so the parameters and
+  the return are the same, and a reader who opens the override MUST find them there rather than having to open the
+  base. Only the summary line changes, where the implementation is worth a word of its own.
 - A command or a tool in a surface package MUST carry the one-line summary alone. The runner shows that line to a
   user as help text or to an agent as a tool description, and it documents the parameters itself, from the options
   and the schema it already holds.

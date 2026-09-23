@@ -26,15 +26,45 @@ class SampleSource:
     sport: ClassVar[str | None] = 'soccer'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return no items."""
+        """Return no items.
+
+        Args:
+            selection:
+                What is being looked for. `None` asks for everything.
+
+        Returns:
+            items:
+                The items whose payloads describe the catalogue.
+        """
         return []
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the leagues, divisions and seasons the sample carries."""
+        """Return the leagues, divisions and seasons the sample carries.
+
+        Args:
+            payloads:
+                The payloads of the index items.
+
+        Returns:
+            params:
+                The available `league`, `division` and `year` combinations.
+        """
         return list(ParameterGrid(PARAMS))
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return the bundled file of every selected season."""
+        """Return the bundled file of every selected season.
+
+        Args:
+            params:
+                The selected parameter combinations.
+
+            schedule:
+                The matches of the selected parameters, with their kick-off instants.
+
+        Returns:
+            items:
+                The items to read. Deterministic for the same parameters.
+        """
         items = []
         for param in params:
             key = f'{param["league"]}_{param["division"]}_{param["year"]}_{self.kind}'
@@ -44,7 +74,16 @@ class SampleSource:
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Return the long snapshots of the bundled files."""
+        """Return the long snapshots of the bundled files.
+
+        Args:
+            payloads:
+                The payloads of the required items.
+
+        Returns:
+            snapshots:
+                The long snapshots.
+        """
         if not payloads:
             return pd.DataFrame()
         frames = [pd.read_csv(io.BytesIO(payload.content), compression='gzip') for payload in payloads]

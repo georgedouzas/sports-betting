@@ -72,11 +72,29 @@ class EuroLeagueStats(BaseStatsSource):
     name: ClassVar[str] = 'euroleague'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the seasons the competition publishes."""
+        """Return the seasons the competition publishes.
+
+        Args:
+            selection:
+                What is being looked for. `None` asks for everything.
+
+        Returns:
+            items:
+                The items whose payloads describe the catalogue.
+        """
         return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the seasons the competition publishes, each named by the year it ends in."""
+        """Return the seasons the competition publishes, each named by the year it ends in.
+
+        Args:
+            payloads:
+                The payloads of the index items.
+
+        Returns:
+            params:
+                The available `league`, `division` and `year` combinations.
+        """
         if not payloads:
             return []
         seasons = json.loads(payloads[0].content).get('data', [])
@@ -86,7 +104,19 @@ class EuroLeagueStats(BaseStatsSource):
         )
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per selected season."""
+        """Return one item per selected season.
+
+        Args:
+            params:
+                The selected parameter combinations.
+
+            schedule:
+                The matches of the selected parameters, with their kick-off instants.
+
+        Returns:
+            items:
+                The items to read. Deterministic for the same parameters.
+        """
         return [
             RawItem(
                 source=self.name,
@@ -98,7 +128,16 @@ class EuroLeagueStats(BaseStatsSource):
         ]
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Transform the seasons into the long statistics snapshots."""
+        """Transform the seasons into the long statistics snapshots.
+
+        Args:
+            payloads:
+                The payloads of the required items.
+
+        Returns:
+            snapshots:
+                The long snapshots.
+        """
         frames = []
         for payload in payloads:
             year = int(payload.item.key.rsplit('_', 1)[-1])

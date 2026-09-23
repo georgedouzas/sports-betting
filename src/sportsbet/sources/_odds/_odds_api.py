@@ -279,20 +279,52 @@ class OddsApi(BaseOddsSource):
         return records
 
     def request_url(self: Self, item: RawItem) -> str:
-        """Return the URL to fetch an item from, with the key read from the environment and added."""
+        """Return the URL to fetch an item from, with the key read from the environment and added.
+
+        Args:
+            item:
+                The item to fetch.
+
+        Returns:
+            url:
+                Where to fetch it from.
+        """
         separator = '&' if '?' in item.url else '?'
         return f'{item.url}{separator}apiKey={os.environ[self.key_env]}'
 
     def needs_schedule(self: Self) -> bool:
-        """Return `True`."""
+        """Return `True`.
+
+        Returns:
+            needed:
+                Whether the source addresses its payloads by kick-off instant.
+        """
         return True
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the catalogue of the vendor."""
+        """Return the catalogue of the vendor.
+
+        Args:
+            selection:
+                What is being looked for. `None` asks for everything.
+
+        Returns:
+            items:
+                The items whose payloads describe the catalogue.
+        """
         return [RawItem(source=self.name, key=SPORTS_KEY, url=f'{SPORTS_URL}?all=true')]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the combinations the vendor covers, the years being its historical coverage."""
+        """Return the combinations the vendor covers, the years being its historical coverage.
+
+        Args:
+            payloads:
+                The payloads of the index items.
+
+        Returns:
+            params:
+                The available `league`, `division` and `year` combinations.
+        """
         if not payloads:
             return []
         sports = json.loads(payloads[0].content)
@@ -306,7 +338,19 @@ class OddsApi(BaseOddsSource):
         ]
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per snapshot the selected matches need, matches kicking off together sharing one."""
+        """Return one item per snapshot the selected matches need, matches kicking off together sharing one.
+
+        Args:
+            params:
+                The selected parameter combinations.
+
+            schedule:
+                The matches of the selected parameters, with their kick-off instants.
+
+        Returns:
+            items:
+                The items to read. Deterministic for the same parameters.
+        """
         if schedule is None or schedule.empty:
             return []
         _, _, moments = self._resolve_settings()
@@ -336,7 +380,16 @@ class OddsApi(BaseOddsSource):
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Transform the vendor's responses into long odds snapshots, keeping the matches each item asked for."""
+        """Transform the vendor's responses into long odds snapshots, keeping the matches each item asked for.
+
+        Args:
+            payloads:
+                The payloads of the required items.
+
+        Returns:
+            snapshots:
+                The long snapshots.
+        """
         records: list[dict] = []
         for payload in payloads:
             events, endpoint = _read_events(payload)
