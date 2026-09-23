@@ -1,6 +1,13 @@
 """Provide the shared types, constants and building primitives."""
 
-from ._errors import BuildError
+from ._errors import (
+    BuildError,
+    CancellationUnsupportedError,
+    CredentialError,
+    ExecutionError,
+    NotExtractedError,
+    VenueBlockedError,
+)
 from ._params import (
     ALIASES,
     EVENT_COLS,
@@ -38,11 +45,16 @@ __all__ = [
     'TEAMS_COLS',
     'BoolData',
     'BuildError',
+    'CancellationUnsupportedError',
+    'CredentialError',
     'Data',
+    'ExecutionError',
     'FixturesData',
     'Indices',
+    'NotExtractedError',
     'ParamGrid',
     'TrainData',
+    'VenueBlockedError',
     'format_event_time',
     'load_object',
     'parse_event_time',

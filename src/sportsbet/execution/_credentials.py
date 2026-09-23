@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from ._base import ExecutionError
+from ..core import CredentialError
 
 
 def resolve(ref: CredentialRef) -> str:
@@ -30,10 +30,6 @@ def resolve(ref: CredentialRef) -> str:
         msg = f'`{ref.var}` is not set. Set it to the secret, or name another variable.'
         raise CredentialError(msg)
     return secret
-
-
-class CredentialError(ExecutionError):
-    """Raised when a named variable holds nothing."""
 
 
 @dataclass(frozen=True)

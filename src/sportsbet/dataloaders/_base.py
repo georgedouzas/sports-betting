@@ -23,6 +23,7 @@ from ..core import (
     STATUS_RANK,
     STATUSES,
     FixturesData,
+    NotExtractedError,
     ParamGrid,
     TrainData,
     format_event_time,
@@ -759,13 +760,13 @@ class BaseDataLoader(ABC):
                 corresponding odds `O`, matching the training columns.
 
         Raises:
-            ValueError:
+            NotExtractedError:
                 If it is called before `extract_train_data`, which fixes the
                 columns the fixtures data must match.
         """
         if not hasattr(self, 'input_cols_'):
             msg = 'Call `extract_train_data` before `extract_fixtures_data`, since it fixes the columns to match.'
-            raise ValueError(msg)
+            raise NotExtractedError(msg)
         stats, odds = self._load_fixtures_snapshots()
         stats = self._finalize(stats)
         odds = self._finalize(odds)

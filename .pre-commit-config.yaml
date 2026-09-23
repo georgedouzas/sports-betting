@@ -7,21 +7,31 @@ repos:
     -   id: check-yaml
     -   id: check-toml
     -   id: check-added-large-files
--   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.2
+-   repo: local
     hooks:
-    -   id: ruff
-        args: [--fix]
--   repo: https://github.com/psf/black
-    rev: "25.1.0"
-    hooks:
-    -   id: black
-        language_version: python3
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
-    hooks:
-    -   id: mypy
+      - id: ruff
+        name: Lint with the project's ruff
+        entry: pdm run ruff check --fix
+        language: system
+        types: [python]
+      - id: black
+        name: Format with the project's black
+        entry: pdm run black
+        language: system
+        types: [python]
         exclude: ^(docs/examples/|docs/generated/|tests/fixtures)
+      - id: mypy-src
+        name: Type check src with the project's mypy
+        entry: pdm run mypy src
+        pass_filenames: false
+        language: system
+        types: [python]
+      - id: mypy-tests
+        name: Type check tests with the project's mypy
+        entry: pdm run mypy tests
+        pass_filenames: false
+        language: system
+        types: [python]
 -   repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.0.0
     hooks:

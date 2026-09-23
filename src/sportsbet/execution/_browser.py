@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Protocol
 
-from ._base import ExecutionError, VenueBlockedError
+from ..core import ExecutionError, VenueBlockedError
 
 BLOCKED_STATUS = frozenset({403, 429})
 REF_PATTERN = re.compile(r'^e\d+$')

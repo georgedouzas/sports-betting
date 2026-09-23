@@ -9,13 +9,16 @@ depend on it. Anything not on this list is internal, whatever it looks like toda
 The contract is negative: no name here is renamed, removed, or given a different signature, return, or exception. The
 only changes permitted to these names are to their docstrings.
 
-## The 88 re-exported names
+## The 88 re-exported names, of which 5 moved package
 
-### `sportsbet.core`, 21 names
+### `sportsbet.core`, 26 names
 
-`ALIASES`, `BoolData`, `BuildError`, `Data`, `EVENT_COLS`, `FixturesData`, `GROUPS_COLS`, `IDENTITY_COLS`,
-`IDENTITY_FIELDS`, `Indices`, `MATCH_COLS`, `NON_PREPLAY_EVENT_STATUSES`, `PREPLAY_EVENT_STATUSES`, `ParamGrid`,
-`STATUSES`, `STATUS_RANK`, `TEAMS_COLS`, `TrainData`, `format_event_time`, `load_object`, `parse_event_time`
+`ALIASES`, `BoolData`, `BuildError`, `CancellationUnsupportedError`, `CredentialError`, `Data`, `EVENT_COLS`,
+`ExecutionError`, `FixturesData`, `GROUPS_COLS`, `IDENTITY_COLS`, `IDENTITY_FIELDS`, `Indices`, `MATCH_COLS`,
+`NON_PREPLAY_EVENT_STATUSES`, `NotExtractedError`, `PREPLAY_EVENT_STATUSES`, `ParamGrid`, `STATUSES`, `STATUS_RANK`,
+`TEAMS_COLS`, `TrainData`, `VenueBlockedError`, `format_event_time`, `load_object`, `parse_event_time`
+
+Every named exception moved here at constitution version 12.0.0, so a caller finds them all in one place.
 
 `DATE_COLS` became private, and `Param`, `Schema` and `OutputsMapping` were removed as dead code, under the surface
 rules added at constitution version 10.3.0.
@@ -28,12 +31,14 @@ rules added at constitution version 10.3.0.
 `measure_names_similarity`, `normalize_identity`, `normalize_team_name`, `optional_col`, `pair_rosters`,
 `read_csv_content`, `required_col`, `resolve_odds`
 
-### `sportsbet.execution`, 19 names
+### `sportsbet.execution`, 15 names
 
-`BaseVenue`, `BetIdentity`, `BrowserSession`, `CancellationUnsupportedError`, `CredentialError`, `CredentialRef`,
-`ExecutionError`, `FixedSession`, `PageSnapshot`, `PlacementIntent`, `PlacementReceipt`, `PlacementStatus`,
-`Placer`, `VenueBlockedError`, `build_receipts_frame`, `build_venue`, `execute_event`, `find_betting_moment`,
-`resolve`
+`BaseVenue`, `BetIdentity`, `BrowserSession`, `CredentialRef`, `FixedSession`, `PageSnapshot`, `PlacementIntent`,
+`PlacementReceipt`, `PlacementStatus`, `Placer`, `build_receipts_frame`, `build_venue`, `execute_event`,
+`find_betting_moment`, `resolve`
+
+`ExecutionError`, `CancellationUnsupportedError`, `VenueBlockedError` and `CredentialError` moved to
+`sportsbet.core`.
 
 `PlacementReceiptSchema` became private, and `PlacementQuote` and `ExposureLimits` were removed as dead code.
 `Placer` stays, since it names the type of `execute_event`'s `placer` parameter.

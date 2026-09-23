@@ -11,12 +11,11 @@ from collections.abc import Awaitable, Callable
 
 import pandas as pd
 
-from ..core import NON_PREPLAY_EVENT_STATUSES, PREPLAY_EVENT_STATUSES
+from ..core import NON_PREPLAY_EVENT_STATUSES, PREPLAY_EVENT_STATUSES, ExecutionError
 from ..dataloaders import BaseDataLoader
 from ..evaluation import BaseBettor, find_latest_odds_column
 from ._base import (
     BetIdentity,
-    ExecutionError,
     PlacementIntent,
     PlacementReceipt,
     PlacementStatus,

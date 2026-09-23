@@ -71,18 +71,6 @@ class _PlacementReceiptSchema(pa.DataFrameModel):
         coerce = True
 
 
-class ExecutionError(Exception):
-    """Raised when placing cannot go ahead."""
-
-
-class CancellationUnsupportedError(ExecutionError):
-    """Raised when a venue is asked to cancel and cannot."""
-
-
-class VenueBlockedError(ExecutionError):
-    """Raised when a venue blocks automated access."""
-
-
 class PlacementStatus(StrEnum):
     """What became of an intended bet."""
 

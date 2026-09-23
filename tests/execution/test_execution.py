@@ -4,10 +4,9 @@ import asyncio
 
 import pytest
 
+from sportsbet.core import CancellationUnsupportedError, CredentialError
 from sportsbet.execution import (
     BetIdentity,
-    CancellationUnsupportedError,
-    CredentialError,
     CredentialRef,
     PlacementIntent,
     resolve,

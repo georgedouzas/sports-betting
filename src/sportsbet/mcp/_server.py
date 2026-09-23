@@ -13,6 +13,7 @@ import pandas as pd
 from mcp.server.fastmcp import FastMCP
 from sklearn.model_selection import TimeSeriesSplit
 
+from ..core import ExecutionError
 from ..dataloaders import DEFAULT_KEY_ENV, build_dataloader, build_extraction_settings, load_dataloader
 from ..evaluation import backtest as run_backtest
 from ..evaluation import build_bettor, load_bettor, save_bettor
@@ -20,7 +21,6 @@ from ..execution import (
     BaseVenue,
     BetIdentity,
     BrowserSession,
-    ExecutionError,
     build_venue,
     execute_event,
 )

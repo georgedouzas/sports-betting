@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from sportsbet.core import ExecutionError
 from sportsbet.execution import (
-    ExecutionError,
     FixedSession,
     PageSnapshot,
     PlacementIntent,

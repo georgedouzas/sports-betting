@@ -1,6 +1,36 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 11.6.1 -> 12.0.0
+Rationale: Every named exception lives in one errors module of the shared-leaves package and is offered by that
+package alone. They were scattered across three packages, so a caller catching what the library raises had to learn
+which package owned which failure, and `CredentialError` sat in the credentials module while its base sat in the
+execution base. MAJOR: five names leave the `sportsbet.execution` surface, so a caller imports them from
+`sportsbet.core` now.
+
+Modified sections:
+  - Errors: every named exception is defined in one errors module of the shared-leaves package and re-exported from
+    that package alone.
+  - Project Profile: names the six exceptions `core/_errors.py` defines.
+
+---- history ----
+Version change: 11.6.0 -> 11.6.1
+Rationale: Name the state error the dataloaders raise. Asking for fixtures data before training data has fixed the
+columns is a call-order error rather than invalid input, so the `ValueError` the profile permits for invalid input did
+not cover it. `NotExtractedError` subclasses the ecosystem's `NotFittedError`, which subclasses `ValueError`, so
+nothing that caught the old error stops catching it. PATCH: the profile gains the fourth exception the package
+already needed.
+
+Modified sections:
+  - Project Profile: the named exceptions include `NotExtractedError`, and a state error is distinguished from
+    invalid input.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 11.5.0 -> 11.6.0
 Rationale: An abstract method carries the complete docstring, since it is where the contract is written, and an
 override repeats it. The signature is the same, so the parameters and the return are the same, and a reader who opens
@@ -1424,8 +1454,11 @@ A suppression is a decision. One place to read it is one place to revisit it.
 ### Errors
 
 - The message MUST be built in a variable, and then raised.
-- A specific named exception defined for the module or package MUST be raised, and a bare `Exception` or `ValueError`
-  MUST NOT stand where a named one carries meaning.
+- A specific named exception MUST be raised, and a bare `Exception` or `ValueError` MUST NOT stand where a named one
+  carries meaning.
+- Every named exception MUST be defined in one errors module of the shared-leaves package, and re-exported from that
+  package alone. A caller who wants to catch what the library raises MUST find all of it in one place, rather than
+  learning which package owns which failure.
 - The message MUST tell the reader what to do, the variable that was missing, or the value that did not match.
 - An exception MUST NOT be caught and swallowed, and MUST be caught narrowly or left to propagate.
 
@@ -1750,9 +1783,12 @@ A contributor reads the repository before they read this file, so what they find
 - Package layering: the layers MUST be `core`, then the domain packages `sources`, `dataloaders`, `evaluation`, and
   `execution`, then the surfaces `cli` and `mcp`, and the builders MUST be `build_dataloader`, `build_bettor`, and
   `build_venue`.
-- Named exceptions: the package MUST raise `BuildError`, `ExecutionError`, and `CredentialError`. The dataloaders
-  and the evaluation package MUST raise the `ValueError` and `TypeError` the scikit-learn contract expects for
-  invalid input, since the ecosystem contract wins where the two disagree.
+- Named exceptions: `core/_errors.py` MUST define `BuildError`, `ExecutionError`, `CancellationUnsupportedError`,
+  `VenueBlockedError`, `CredentialError`, and `NotExtractedError`, and `sportsbet.core` MUST be the one surface that
+  offers them. The dataloaders and the evaluation package MUST raise the `ValueError` and `TypeError` the scikit-learn
+  contract expects for invalid input, since the ecosystem contract wins where the two disagree. A state error is not
+  invalid input, so a dataloader asked for data a previous extraction has to fix first MUST raise
+  `NotExtractedError`, which subclasses the ecosystem's `NotFittedError`.
 
 Example:
 
@@ -1777,4 +1813,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 11.6.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 12.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
