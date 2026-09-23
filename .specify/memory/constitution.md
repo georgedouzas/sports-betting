@@ -1,6 +1,22 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 11.0.0 -> 11.0.1
+Rationale: Say who counts as a client. The tests and the documentation are client code, so a name either of them
+reaches is used and stays re-exported. Without that, the rule reads as though only another package counts, which would
+have stripped eight names from the sources surface that the tests reach, among them the reconciliation helpers and the
+source base. PATCH: the rule always meant this, and no code changes.
+
+Modified sections:
+  - Surface: the unused-export rule names the tests and the documentation as clients, beside the public-signature
+    clause it already carried.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 10.3.0 -> 11.0.0
 Rationale: A module constant is never private. It is `UPPER_CASE` whatever its reach, and it is kept out of the
 surface by not being re-exported rather than by an underscore. The rules that turn an unexported name private no
@@ -1103,10 +1119,12 @@ cycles.
   subpackage reaching its parent's private module is not reaching past a surface.
 - A name its own package never re-exports MUST be private, so what a package exports and what its surface offers are
   the same list. A module constant is the exception, and stays `UPPER_CASE`.
-- A package MUST re-export only the names something outside it uses. An export nothing outside the package reaches for
-  is a promise the library gained nothing by making, and MUST stop being re-exported. A name that appears in a public
-  signature counts as used, since a caller reaches it through that signature. A name that is not a constant MUST also
-  become private.
+- A package MUST re-export only the names something outside it uses. An export nothing outside the package reaches
+  for is a promise the library gained nothing by making, and MUST stop being re-exported. A name that is not a
+  constant MUST also become private.
+- The tests and the documentation are client code, so a name either of them reaches is used, and MUST stay
+  re-exported. A name that appears in a public signature is used too, since a caller reaches it through that
+  signature.
 - A name nothing uses at all MUST be removed rather than kept private. Code that no caller reaches is code a reader
   still has to read.
 - A surface package, one that exists to serve a runner rather than an importer, MUST re-export its entry point alone.
@@ -1640,4 +1658,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 11.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 11.0.1 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
