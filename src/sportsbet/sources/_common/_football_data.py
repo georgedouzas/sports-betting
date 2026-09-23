@@ -889,16 +889,7 @@ class FootballDataSource(BaseSource):
         return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url)
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the index pages and whole-history files of the selected leagues.
-
-        Args:
-            selection:
-                What is being looked for. `None` asks for everything.
-
-        Returns:
-            items:
-                The items whose payloads describe the catalogue.
-        """
+        """Return the index pages and whole-history files of the selected leagues."""
         leagues = _collect_selected_leagues(selection)
         items = [
             RawItem(source=self.name, key=f'{INDEX_PREFIX}_{league}', url=_build_index_url(league))
@@ -913,16 +904,7 @@ class FootballDataSource(BaseSource):
         return items
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the combinations the feed publishes, reading whole-history seasons from the file itself.
-
-        Args:
-            payloads:
-                The payloads of the index items.
-
-        Returns:
-            params:
-                The available `league`, `division` and `year` combinations.
-        """
+        """Return the combinations the feed publishes, reading whole-history seasons from the file itself."""
         catalogue: list[tuple[str, int, int, str]] = []
         for payload in payloads:
             key = payload.item.key
@@ -940,19 +922,7 @@ class FootballDataSource(BaseSource):
         return sorted(params, key=lambda param: (param['league'], param['division'], param['year']))
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return the season file of each selected combination, a whole-history league read once.
-
-        Args:
-            params:
-                The selected parameter combinations.
-
-            schedule:
-                The matches of the selected parameters, with their kick-off instants.
-
-        Returns:
-            items:
-                The items to read. Deterministic for the same parameters.
-        """
+        """Return the season file of each selected combination, a whole-history league read once."""
         seasons = {(league, division, year): url for league, division, year, url in getattr(self, '_catalogue', [])}
         items: list[RawItem] = []
         for param in params:
@@ -965,19 +935,7 @@ class FootballDataSource(BaseSource):
         return items
 
     def list_fixtures_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return the season-in-progress files each selected league needs, plus the feed's fixtures file.
-
-        Args:
-            params:
-                The selected parameter combinations.
-
-            schedule:
-                The upcoming matches, for an odds source that prices by instant.
-
-        Returns:
-            items:
-                The items whose payloads yield the upcoming matches.
-        """
+        """Return the season-in-progress files each selected league needs, plus the feed's fixtures file."""
         items = [
             self._build_season_item(param['league'], param['division'], param['year'], url)
             for param, url in _find_current_seasons(params, getattr(self, '_catalogue', []))
@@ -986,15 +944,6 @@ class FootballDataSource(BaseSource):
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Transform the raw feed payloads into the long snapshots of this source.
-
-        Args:
-            payloads:
-                The payloads of the required items.
-
-        Returns:
-            snapshots:
-                The long snapshots.
-        """
+        """Transform the raw feed payloads into the long snapshots of this source."""
         stats, odds = _build_modelling_snapshots(payloads, getattr(self, '_catalogue', []))
         return stats if self.kind == 'stats' else odds

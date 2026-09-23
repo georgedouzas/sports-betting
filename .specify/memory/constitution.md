@@ -1,6 +1,22 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 11.5.0 -> 11.6.0
+Rationale: An override carries its summary line alone. The base documents the contract once, and repeating its `Args`
+and `Returns` in every subclass copies one fact into as many places as there are implementations, which the
+Duplication section already forbids. The sources showed it plainly: the `to_snapshots` blocks were byte-identical in
+six modules, and across the seven contract methods there were thirty copies of what the base already said. MINOR: one
+rule added, and the duplication it removes was never required by anything else.
+
+Modified sections:
+  - Docstrings: a method that overrides a documented base carries the one-line summary alone.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 11.4.0 -> 11.5.0
 Rationale: An example exercises the thing it documents. Five source classes spent their examples building a
 `DataLoader` and reading training data, which documents the dataloader, so a reader of `EuroLeagueStats` learned
@@ -1277,6 +1293,9 @@ changed without breaking someone.
 - A public function and a public class MUST carry an `Args` block documenting every parameter, a `Returns` block
   saying what is returned, and a `Raises` block naming every exception it raises.
 - A private function and a private class MUST carry the one-line summary alone, and MUST NOT carry those blocks.
+- A method that overrides a documented base MUST carry the one-line summary alone. The base documents the contract,
+  the summary says what this implementation does differently, and repeating the base's blocks copies one fact into
+  every subclass.
 - A command or a tool in a surface package MUST carry the one-line summary alone. The runner shows that line to a
   user as help text or to an agent as a tool description, and it documents the parameters itself, from the options
   and the schema it already holds.
@@ -1757,4 +1776,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 11.5.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 11.6.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
