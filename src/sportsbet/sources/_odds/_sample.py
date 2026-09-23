@@ -7,10 +7,10 @@
 from typing import ClassVar
 
 from .._base import BaseOddsSource
-from .._common._sample import _SampleSource
+from .._common._sample import SampleSource
 
 
-class SampleSoccerOdds(_SampleSource, BaseOddsSource):
+class SampleSoccerOdds(SampleSource, BaseOddsSource):
     """The market average and market maximum pre-match odds of the bundled soccer sample season.
 
     Examples:

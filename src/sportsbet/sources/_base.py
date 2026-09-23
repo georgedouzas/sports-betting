@@ -1,4 +1,4 @@
-"""Define the base a data source implements and read its raw content."""
+"""Define the base a data source implements, read its raw content, and validate its snapshots."""
 
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
@@ -12,26 +12,26 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 import aiohttp
 import pandas as pd
+import pandera.pandas as pa
+from pandera.typing.pandas import Timedelta
 
-from ..core import ParamGrid
+from ..core import STATUSES, ParamGrid
 
 CONNECTIONS_LIMIT = 20
 ENCODING = 'ISO-8859-1'
 FILE_SCHEME = 'file://'
-
 
 async def _fetch_url(client: aiohttp.ClientSession, url: str) -> str:
     """Return the text of a URL, read over the network."""
 
     async with client.get(url) as response:
         return await response.text(encoding=ENCODING)
-
 
 async def _fetch_urls(urls: list[str]) -> list[str]:
     """Return the text of several URLs, read over the network at once."""
@@ -42,18 +42,15 @@ async def _fetch_urls(urls: list[str]) -> list[str]:
     ) as client:
         return await asyncio.gather(*[_fetch_url(client, url) for url in urls])
 
-
 def _read_local_file(url: str) -> bytes:
     """Return the bytes of a `file://` URL, read from disk."""
     return Path(url2pathname(urlparse(url).path)).read_bytes()
-
 
 def _read_urls_content(urls: list[str]) -> list[bytes]:
     """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest."""
     remote = [url for url in urls if not url.startswith(FILE_SCHEME)]
     fetched = iter(asyncio.run(_fetch_urls(remote)) if remote else [])
     return [_read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING) for url in urls]
-
 
 def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
     """Read each item at the URL `authorize` gives it and pair the bytes back with the item, in order.
@@ -70,7 +67,6 @@ def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) ->
     """
     contents = _read_urls_content([authorize(item) for item in items])
     return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
-
 
 def read_csv_content(content: bytes) -> pd.DataFrame:
     r"""Return a data frame read from raw CSV content.
@@ -92,6 +88,66 @@ def read_csv_content(content: bytes) -> pd.DataFrame:
     names = pd.read_csv(io.StringIO(text), nrows=0, encoding=ENCODING).columns.to_list()
     return pd.read_csv(io.StringIO(text), names=names, skiprows=1, encoding=ENCODING, on_bad_lines='skip')
 
+def required_col(alias: str | None = None) -> Any:  # noqa: ANN401  # varied defaults
+    """Define a required snapshot-identity column.
+
+    Args:
+        alias:
+            The column name to use when it differs from the field's Python
+            identifier.
+
+    Returns:
+        A pandera field marking the column as a required snapshot-identity column.
+
+    Examples:
+        >>> from sportsbet.sources import BaseStatsSchema, required_col
+        >>>
+        >>> class MyStatsSchema(BaseStatsSchema):
+        ...     'The columns a statistics feed of your own must always carry.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        >>>
+        >>> # A required column may not be missing.
+        >>> MyStatsSchema.to_schema().columns['home_team'].nullable
+        False
+    """
+    return pa.Field(nullable=False, metadata={'snapshot': True}, alias=alias)
+
+def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> Any:  # noqa: ANN401  # varied defaults
+    """Define an optional feature or odds column.
+
+    Args:
+        include:
+            The event statuses at which the column is meaningful.
+        fixed:
+            Whether the column is time-invariant within a match.
+        alias:
+            The column name to use when it differs from the field's Python
+            identifier.
+
+    Returns:
+        A pandera field marking the column as an optional feature or odds column.
+
+    Examples:
+        >>> from sportsbet.sources import BaseStatsSchema, optional_col, required_col
+        >>>
+        >>> class MyStatsSchema(BaseStatsSchema):
+        ...     'The columns a statistics feed of your own may carry.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        ...     home_goals: float = optional_col(include=['inplay', 'postplay'], fixed=False)
+        ...     stadium_capacity: float = optional_col(include=['preplay'], fixed=True)
+        >>>
+        >>> # There is no score before the match starts.
+        >>> MyStatsSchema.to_schema().columns['home_goals'].metadata['include']
+        ['inplay', 'postplay']
+        >>> # A stadium does not change size at half time.
+        >>> MyStatsSchema.to_schema().columns['stadium_capacity'].metadata['fixed']
+        True
+    """
+    return pa.Field(nullable=True, metadata={'include': include, 'fixed': fixed}, alias=alias)
 
 @dataclass(frozen=True)
 class RawItem:
@@ -121,7 +177,6 @@ class RawItem:
     key: str
     url: str
 
-
 @dataclass(frozen=True)
 class RawPayload:
     r"""A payload a source returned, pairing the fetched item with its raw bytes.
@@ -146,6 +201,144 @@ class RawPayload:
     item: RawItem
     content: bytes
 
+class BaseSchema(pa.DataFrameModel):
+    """Sport-agnostic base schema for event snapshots."""
+
+    event_status: str = required_col()
+    event_time: Timedelta = required_col()
+
+    @pa.dataframe_check
+    @classmethod
+    def check_event_time_vs_status(cls: type[Self], df: pd.DataFrame) -> pd.Series:
+        """Check the event time is consistent with the event status.
+
+        Args:
+            df:
+                The snapshots to check.
+
+        Returns:
+            passing:
+                True for every row whose event time agrees with its status.
+        """
+        preplay_check = (df['event_status'] == 'preplay') & (df['event_time'] >= pd.Timedelta(0))
+        inplay_check = (df['event_status'] == 'inplay') & (df['event_time'] > pd.Timedelta(0))
+        postplay_check = (df['event_status'] == 'postplay') & (df['event_time'] == pd.Timedelta(0))
+        status_check = df['event_status'].isin(STATUSES)
+        return status_check & (preplay_check | inplay_check | postplay_check)
+
+    @classmethod
+    def list_snapshot_cols(cls: type[Self]) -> list[str]:
+        """Return the snapshot-identity columns.
+
+        Returns:
+            cols:
+                The columns that together identify one snapshot.
+        """
+        schema = cls.to_schema()
+        return [
+            name
+            for name, col in schema.columns.items()
+            if ((col.properties or {}).get('metadata') or {}).get('snapshot', False)
+        ]
+
+    @classmethod
+    def get_col_metadata(cls: type[Self], col: str) -> dict[str, Any]:
+        """Return the `include`, `fixed` and `snapshot` metadata of a column.
+
+        Args:
+            col:
+                The column to read the metadata of.
+
+        Returns:
+            metadata:
+                The metadata the schema carries for the column, empty where it carries none.
+        """
+        schema_col = dict(cls.to_schema().columns)[col]
+        return (schema_col.properties or {}).get('metadata') or {}
+
+    @pa.dataframe_check
+    @classmethod
+    def check_snapshot_unique(cls: type[Self], df: pd.DataFrame) -> bool:
+        """Check that no two rows share the same snapshot identity.
+
+        Args:
+            df:
+                The snapshots to check.
+
+        Returns:
+            unique:
+                Whether every snapshot identity appears once.
+        """
+        return not df.duplicated(subset=cls.list_snapshot_cols()).any()
+
+    class Config:
+        """Reject a frame carrying a column the schema does not declare."""
+
+        strict = True
+
+class BaseStatsSchema(BaseSchema):
+    """Base schema for statistics snapshots.
+
+    Examples:
+        >>> from sportsbet.sources import BaseStatsSchema, optional_col, required_col
+        >>>
+        >>> class MyStatsSchema(BaseStatsSchema):
+        ...     'The statistics of a feed of your own.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        ...     home_goals: float = optional_col(include=['inplay', 'postplay'], fixed=False)
+    """
+
+class BaseOddsSchema(BaseSchema):
+    """Base schema for odds snapshots.
+
+    Examples:
+        >>> from sportsbet.sources import BaseOddsSchema, optional_col, required_col
+        >>>
+        >>> class MyOddsSchema(BaseOddsSchema):
+        ...     'The odds of a feed of your own.'
+        ...
+        ...     home_team: str = required_col()
+        ...     away_team: str = required_col()
+        ...     provider: str = required_col()
+        ...     home_win: float = optional_col(include=['preplay', 'inplay'], fixed=False)
+        ...     away_win: float = optional_col(include=['preplay', 'inplay'], fixed=False)
+    """
+
+    @classmethod
+    def list_odds_cols(cls) -> list[str]:
+        """Return the market columns.
+
+        Returns:
+            cols:
+                The columns carrying a price, which is every column that is neither part of the snapshot
+                identity nor the provider.
+        """
+        schema_cols = list(cls.to_schema().columns.keys())
+        return [col for col in schema_cols if col not in cls.list_snapshot_cols() and col != 'provider']
+
+    @pa.dataframe_check
+    @classmethod
+    def check_postplay_missing_odds(cls, df: pd.DataFrame) -> pd.Series:
+        """Check that post-match snapshots carry no odds.
+
+        Args:
+            df:
+                The snapshots to check.
+
+        Returns:
+            passing:
+                True for every row that is not post-match, and for every post-match row with no price.
+        """
+        odds_cols = cls.list_odds_cols()
+        if not odds_cols:
+            return pd.Series(True, index=df.index)
+        is_post = df['event_status'].eq('postplay')
+        ok_post = df.loc[is_post, odds_cols].isna().all(axis=1)
+        out = pd.Series(True, index=df.index)
+        out.loc[is_post] = ok_post
+        return out
 
 class BaseSource(ABC):
     """The abstract base class for data sources.
@@ -285,7 +478,6 @@ class BaseSource(ABC):
                 The long snapshots.
         """
 
-
 class BaseStatsSource(BaseSource):
     r"""The abstract base class for statistics sources.
 
@@ -338,7 +530,6 @@ class BaseStatsSource(BaseSource):
     """
 
     kind: ClassVar[str] = 'stats'
-
 
 class BaseOddsSource(BaseSource):
     r"""The abstract base class for odds sources.

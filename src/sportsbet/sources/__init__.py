@@ -1,13 +1,17 @@
 """Read match statistics and odds from the feeds that publish them."""
 
 from ._base import (
+    BaseOddsSchema,
     BaseOddsSource,
     BaseSource,
+    BaseStatsSchema,
     BaseStatsSource,
     RawItem,
     RawPayload,
     fetch_payloads,
+    optional_col,
     read_csv_content,
+    required_col,
 )
 from ._odds._football_data import FootballDataOdds
 from ._odds._odds_api import OddsApi
@@ -20,12 +24,6 @@ from ._resolver import (
     normalize_team_name,
     pair_rosters,
     resolve_odds,
-)
-from ._schema import (
-    BaseOddsSchema,
-    BaseStatsSchema,
-    optional_col,
-    required_col,
 )
 from ._stats._euroleague import EuroLeagueStats
 from ._stats._football_data import FootballDataStats

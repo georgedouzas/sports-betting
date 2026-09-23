@@ -1,6 +1,25 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 11.2.0 -> 11.3.0
+Rationale: A base class is never private. A base exists to be subclassed, and client code may subclass it to build
+its own source, so its name is part of what the library offers even where a package does not re-export it. A base a
+client is expected to subclass is re-exported too, since a caller cannot name what no surface offers. The sources
+schema prompted it: the base of `BaseStatsSchema` and `BaseOddsSchema` was private, and reading a public class derive
+from a private one is the convention fighting itself. MINOR: one exception added, and nothing that conformed stops
+conforming.
+
+Modified sections:
+  - Structure: a base class carries no leading underscore, beside the rule that a constant carries none, and a base
+    a client is expected to subclass is re-exported.
+  - Surface: the unexported-name rule names the constant and the base class as its two exceptions.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 11.0.1 -> 11.2.0
 Rationale: Order a module by kind first and by privacy second, so it reads as the private functions, the public
 functions, the private classes, then the public classes. Version 10.2.0 ordered by privacy alone, which left a module
@@ -1069,6 +1088,10 @@ A name that tells the truth saves a comment, a docstring line, and a reading of 
   mid-file among the functions.
 - A module constant MUST NOT carry a leading underscore, whatever its reach. A constant is kept private by not
   re-exporting it, and the rules below that turn an unexported name private MUST NOT reach it.
+- A base class MUST NOT carry a leading underscore either, whatever its reach. A base exists to be subclassed, and
+  client code may subclass it to build its own, so its name is part of what the library offers even where a package
+  does not re-export it. A base is kept out of the surface by not being re-exported, never by an underscore.
+- A base a client is expected to subclass MUST be re-exported, since a caller cannot name what no surface offers.
 - One module MUST be one concern, and a file that grows two MUST be split.
 - Small general helpers MUST share a `_utils` module, whose one concern is the assorted helpers a package needs, and a
   helper MUST earn its own module only where it takes on a distinct role worth a name, as `_base` or `_types` do.
@@ -1157,7 +1180,7 @@ cycles.
   surface is a name that package never promised. A package and its subpackages are one package for this rule, so a
   subpackage reaching its parent's private module is not reaching past a surface.
 - A name its own package never re-exports MUST be private, so what a package exports and what its surface offers are
-  the same list. A module constant is the exception, and stays `UPPER_CASE`.
+  the same list. A module constant and a base class are the exceptions, and keep their public names.
 - A package MUST re-export only the names something outside it uses. An export nothing outside the package reaches
   for is a promise the library gained nothing by making, and MUST stop being re-exported. A name that is not a
   constant MUST also become private.
@@ -1697,4 +1720,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 11.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 11.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22

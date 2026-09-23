@@ -876,7 +876,7 @@ def _parse_index(league: str, content: bytes) -> list[tuple[str, int, int, str]]
     return seasons
 
 
-class _FootballDataSource(BaseSource):
+class FootballDataSource(BaseSource):
     """A source backed by the football-data.co.uk feed, its statistics and odds read from one file."""
 
     sport: ClassVar[str | None] = 'soccer'

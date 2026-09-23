@@ -18,7 +18,7 @@ DATA = Path(__file__).parent.parent / 'data'
 PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2024]}
 
 
-class _SampleSource:
+class SampleSource:
     """The half of a sample source shared by its statistics and odds, backed by the bundled files."""
 
     name: ClassVar[str] = 'sample_soccer'

@@ -5,10 +5,10 @@
 
 
 from .._base import BaseStatsSource
-from .._common._football_data import _FootballDataSource
+from .._common._football_data import FootballDataSource
 
 
-class FootballDataStats(_FootballDataSource, BaseStatsSource):
+class FootballDataStats(FootballDataSource, BaseStatsSource):
     """The soccer schedule, results and match statistics from the football-data.co.uk feed.
 
     Read more in the [user guide][user-guide].

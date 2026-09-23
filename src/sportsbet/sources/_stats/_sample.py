@@ -7,10 +7,10 @@
 from typing import ClassVar
 
 from .._base import BaseStatsSource
-from .._common._sample import _SampleSource
+from .._common._sample import SampleSource
 
 
-class SampleSoccerStats(_SampleSource, BaseStatsSource):
+class SampleSoccerStats(SampleSource, BaseStatsSource):
     """A frozen real season of the English and Spanish soccer first divisions, bundled with the library.
 
     It carries the identity of every match, each team's form before it, the half-time score and the result. The season

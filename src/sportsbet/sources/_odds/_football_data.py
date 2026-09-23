@@ -5,10 +5,10 @@
 
 
 from .._base import BaseOddsSource
-from .._common._football_data import _FootballDataSource
+from .._common._football_data import FootballDataSource
 
 
-class FootballDataOdds(_FootballDataSource, BaseOddsSource):
+class FootballDataOdds(FootballDataSource, BaseOddsSource):
     """The pre-match closing odds of the market average and market maximum from the football-data.co.uk feed.
 
     Read more in the [user guide][user-guide].
