@@ -144,6 +144,8 @@ def load_dataloader(path: str) -> BaseDataLoader:
     with Path(path).open('rb') as file:
         dataloader = cloudpickle.load(file)
     return dataloader
+
+
 class BaseDataLoader(ABC):
     """Read and validate source snapshots and extract moment-aware modelling data.
 
@@ -808,5 +810,3 @@ class BaseDataLoader(ABC):
         with Path(path).open('wb') as file:
             cloudpickle.dump(self, file)
         return self
-
-

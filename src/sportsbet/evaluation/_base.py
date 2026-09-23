@@ -193,6 +193,8 @@ def load_bettor(path: str) -> BaseBettor:
     with Path(path).open('rb') as file:
         bettor = cloudpickle.load(file)
     return bettor
+
+
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
     """The base class for bettors.
 
@@ -564,5 +566,3 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             max_sharpe_ratio = 100.0
             return max_sharpe_ratio if returns_mean > 0 else -max_sharpe_ratio
         return np.sqrt(365) * returns_mean / returns_std
-
-

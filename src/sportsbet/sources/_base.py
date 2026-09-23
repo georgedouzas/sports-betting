@@ -27,11 +27,13 @@ CONNECTIONS_LIMIT = 20
 ENCODING = 'ISO-8859-1'
 FILE_SCHEME = 'file://'
 
+
 async def _fetch_url(client: aiohttp.ClientSession, url: str) -> str:
     """Return the text of a URL, read over the network."""
 
     async with client.get(url) as response:
         return await response.text(encoding=ENCODING)
+
 
 async def _fetch_urls(urls: list[str]) -> list[str]:
     """Return the text of several URLs, read over the network at once."""
@@ -42,15 +44,18 @@ async def _fetch_urls(urls: list[str]) -> list[str]:
     ) as client:
         return await asyncio.gather(*[_fetch_url(client, url) for url in urls])
 
+
 def _read_local_file(url: str) -> bytes:
     """Return the bytes of a `file://` URL, read from disk."""
     return Path(url2pathname(urlparse(url).path)).read_bytes()
+
 
 def _read_urls_content(urls: list[str]) -> list[bytes]:
     """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest."""
     remote = [url for url in urls if not url.startswith(FILE_SCHEME)]
     fetched = iter(asyncio.run(_fetch_urls(remote)) if remote else [])
     return [_read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING) for url in urls]
+
 
 def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
     """Read each item at the URL `authorize` gives it and pair the bytes back with the item, in order.
@@ -67,6 +72,7 @@ def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) ->
     """
     contents = _read_urls_content([authorize(item) for item in items])
     return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
+
 
 def read_csv_content(content: bytes) -> pd.DataFrame:
     r"""Return a data frame read from raw CSV content.
@@ -87,6 +93,7 @@ def read_csv_content(content: bytes) -> pd.DataFrame:
     text = content.decode(ENCODING)
     names = pd.read_csv(io.StringIO(text), nrows=0, encoding=ENCODING).columns.to_list()
     return pd.read_csv(io.StringIO(text), names=names, skiprows=1, encoding=ENCODING, on_bad_lines='skip')
+
 
 def required_col(alias: str | None = None) -> Any:  # noqa: ANN401  # varied defaults
     """Define a required snapshot-identity column.
@@ -113,6 +120,7 @@ def required_col(alias: str | None = None) -> Any:  # noqa: ANN401  # varied def
         False
     """
     return pa.Field(nullable=False, metadata={'snapshot': True}, alias=alias)
+
 
 def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> Any:  # noqa: ANN401  # varied defaults
     """Define an optional feature or odds column.
@@ -149,6 +157,7 @@ def optional_col(include: list[str], fixed: bool, alias: str | None = None) -> A
     """
     return pa.Field(nullable=True, metadata={'include': include, 'fixed': fixed}, alias=alias)
 
+
 @dataclass(frozen=True)
 class RawItem:
     """A raw item to fetch, identified within its source by a key, at a URL or `file://` path.
@@ -177,6 +186,7 @@ class RawItem:
     key: str
     url: str
 
+
 @dataclass(frozen=True)
 class RawPayload:
     r"""A payload a source returned, pairing the fetched item with its raw bytes.
@@ -200,6 +210,7 @@ class RawPayload:
 
     item: RawItem
     content: bytes
+
 
 class BaseSchema(pa.DataFrameModel):
     """Sport-agnostic base schema for event snapshots."""
@@ -276,6 +287,7 @@ class BaseSchema(pa.DataFrameModel):
 
         strict = True
 
+
 class BaseStatsSchema(BaseSchema):
     """Base schema for statistics snapshots.
 
@@ -289,6 +301,7 @@ class BaseStatsSchema(BaseSchema):
         ...     away_team: str = required_col()
         ...     home_goals: float = optional_col(include=['inplay', 'postplay'], fixed=False)
     """
+
 
 class BaseOddsSchema(BaseSchema):
     """Base schema for odds snapshots.
@@ -339,6 +352,7 @@ class BaseOddsSchema(BaseSchema):
         out = pd.Series(True, index=df.index)
         out.loc[is_post] = ok_post
         return out
+
 
 class BaseSource(ABC):
     """The abstract base class for data sources.
@@ -478,6 +492,7 @@ class BaseSource(ABC):
                 The long snapshots.
         """
 
+
 class BaseStatsSource(BaseSource):
     r"""The abstract base class for statistics sources.
 
@@ -530,6 +545,7 @@ class BaseStatsSource(BaseSource):
     """
 
     kind: ClassVar[str] = 'stats'
+
 
 class BaseOddsSource(BaseSource):
     r"""The abstract base class for odds sources.

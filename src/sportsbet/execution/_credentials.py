@@ -30,6 +30,8 @@ def resolve(ref: CredentialRef) -> str:
         msg = f'`{ref.var}` is not set. Set it to the secret, or name another variable.'
         raise CredentialError(msg)
     return secret
+
+
 class CredentialError(ExecutionError):
     """Raised when a named variable holds nothing."""
 
@@ -52,5 +54,3 @@ class CredentialRef:
     def __str__(self: CredentialRef) -> str:
         """Return the variable name."""
         return self.var
-
-
