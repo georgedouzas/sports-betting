@@ -1,6 +1,91 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 10.1.0 -> 10.1.1
+Rationale: Correct two Project Profile bullets that did not hold. `SelectionError` is named as one of the four
+exceptions the package raises, and no such class exists, so it is dropped. The 31 bare `ValueError` and `TypeError`
+raises all sit in the dataloaders and the evaluation package, where the scikit-learn contract expects them for invalid
+input, so the bullet says that rather than leaving them looking like violations. PATCH: the profile is corrected to
+describe the repository.
+
+Modified sections:
+  - Project Profile: the named exceptions are the three that exist, and the estimator packages raise what the
+    ecosystem contract expects.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
+Version change: 10.0.1 -> 10.1.0
+Rationale: A command or a tool in a surface package carries its summary line alone. Its docstring is not developer
+documentation, it is the text the runner shows, `sportsbet evaluation fit --help` for a command and the tool
+description an agent reads for a tool. Putting an `Args` block there would print Google sections into help output and
+into what every agent sees, which is a user-visible change. The runner documents the parameters itself, from the
+options and the schema it holds. MINOR: one exception stated, and nothing that conformed stops conforming.
+
+Modified sections:
+  - Docstrings: a command or a tool in a surface package carries the one-line summary alone, beside the existing rule
+    for a private name.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
+Version change: 10.0.0 -> 10.0.1
+Rationale: Restore the licence header rule. Version 10.0.0 removed it on a measurement that searched for `Copyright`
+and missed the `# Author:` and `# License:` lines that 37 of the 53 modules carry. The rule described the practice
+correctly all along, and the 10 modules without a header are the package surfaces the rule already exempts. PATCH:
+10.0.0 removed a rule on a false premise, so this says what the constitution always meant.
+
+Modified sections:
+  - Structure: the module order carries the licence header again, and the example carries its two header lines.
+  - Comments: the licence header is a comment the rule allows again.
+  - Surface: the `__init__` carries no licence header, which is why the surfaces are not the gap.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
+Version change: 9.1.0 -> 10.0.0
+Rationale: Drop the licence header rule. The project licenses at the root, in a LICENSE file, and not one of its 53
+modules carries a header, so the rule described a practice the repository never had and the Comments section then
+carved an exception for a comment that does not exist. MAJOR: a rule is removed.
+
+Modified sections:
+  - Structure: the module order runs docstring, imports, constants, functions, with no header between them, and the
+    example drops its copyright line.
+  - Comments: the only comment left in source is a suppression.
+  - Surface: the `__init__` rule no longer says it carries no licence header, since no module carries one.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
+Version change: 9.0.0 -> 9.1.0
+Rationale: Carve the surface packages out of the re-export rule. A package that serves a runner rather than an
+importer, the CLI and the MCP server here, exposes its entry point alone, and the names inside it are reached by the
+runner that discovers them. A command function is named `fit` because the command is `fit`, so making it private to
+satisfy a rule about importers would rename the command for no reader. MINOR: the rule's reach is stated, and nothing
+that conformed stops conforming.
+
+Modified sections:
+  - Surface: a surface package re-exports its entry point alone, and the rule that a name a package keeps must be
+    private does not reach the names inside it.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 8.0.3 -> 9.0.0
 Rationale: Say what the import rule was reaching for. Privacy is about reaching past a surface, not about consuming
 one, so a module may import a public name from another package's surface whatever its own privacy, and what it MUST
@@ -863,8 +948,9 @@ A name that tells the truth saves a comment, a docstring line, and a reading of 
 
 ### Structure
 
-- A module MUST read top to bottom in one order, a one-line imperative module docstring, the license header, the imports
-  grouped standard library, third party, first party, the module constants and type aliases, and then the functions.
+- A module MUST read top to bottom in one order, a one-line imperative module docstring, the licence header, the
+  imports grouped standard library, third party, first party, the module constants and type aliases, and then the
+  functions.
 - The linter sorts the imports, so they MUST NOT be sorted by hand.
 - A module MUST add `from __future__ import annotations` above the imports only where a forward reference needs it.
   The supported language floor decides, and a version that resolves the annotations without it MUST NOT carry it.
@@ -896,7 +982,9 @@ A module in the one order, its constants at the top and its imports running down
 ```python
 """Resolve a venue from its name."""
 
-# Copyright (c) the sports-betting authors.
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
+
 from __future__ import annotations
 
 import json
@@ -946,8 +1034,8 @@ cycles.
 ### Surface
 
 - Implementation modules, classes, and helpers MUST be private, named `_name`.
-- The package `__init__` MUST re-export the public surface with an explicit `__all__`, and MUST carry only its docstring
-  and those re-exports, with no license header, since it holds no implementation of its own.
+- The package `__init__` MUST re-export the public surface with an explicit `__all__`, and MUST carry only its
+  docstring and those re-exports, with no licence header, since it holds no implementation of its own.
 - A public name used outside the module that defines it MUST be re-exported through its owning package's `__init__` and
   imported from that surface, and MUST NOT be imported from the private module that defines it.
 - A name MUST be re-exported once, where it lives, and a parent package MUST NOT re-export a subpackage's surface a
@@ -961,6 +1049,9 @@ cycles.
   subpackage reaching its parent's private module is not reaching past a surface.
 - A name its own package never re-exports MUST be private, so what a package exports and what its surface offers are
   the same list.
+- A surface package, one that exists to serve a runner rather than an importer, MUST re-export its entry point alone.
+  The names inside it are reached by the runner that discovers them, a command name or a tool name, so the rule above
+  MUST NOT reach them. The Project Profile names which packages these are.
 - The package `__init__` MUST be the only place a public name leaves a private module. That is the re-export, and
   everywhere else the name MUST be imported from the surface that re-exports it.
 
@@ -1009,6 +1100,9 @@ changed without breaking someone.
 - A public function and a public class MUST carry an `Args` block documenting every parameter, a `Returns` block
   saying what is returned, and a `Raises` block naming every exception it raises.
 - A private function and a private class MUST carry the one-line summary alone, and MUST NOT carry those blocks.
+- A command or a tool in a surface package MUST carry the one-line summary alone. The runner shows that line to a
+  user as help text or to an agent as a tool description, and it documents the parameters itself, from the options
+  and the schema it already holds.
 - A block that would stand empty MUST be omitted, so a function that takes no parameter carries no `Args`, one that
   returns nothing carries no `Returns`, and one that raises nothing carries no `Raises`.
 - A constructor parameter or a dataclass field MUST be documented under `Args`, and an `Attributes` block MUST hold
@@ -1080,7 +1174,7 @@ The docstring is what a user reads in an editor, without the source beside it. W
 - Source MUST carry almost no comments, since the names say what and the docstring says why.
 - An inline comment that explains the next line MUST be removed by fixing the line or its names, which are what is
   unclear.
-- The only comments in source MUST be the license header and, rarely, a suppression.
+- The only comments in source MUST be the licence header and, rarely, a suppression.
 
 Example:
 
@@ -1459,7 +1553,9 @@ A contributor reads the repository before they read this file, so what they find
 - Package layering: the layers MUST be `core`, then the domain packages `sources`, `dataloaders`, `evaluation`, and
   `execution`, then the surfaces `cli` and `mcp`, and the builders MUST be `build_dataloader`, `build_bettor`, and
   `build_venue`.
-- Named exceptions: the package MUST raise `BuildError`, `SelectionError`, `ExecutionError`, and `CredentialError`.
+- Named exceptions: the package MUST raise `BuildError`, `ExecutionError`, and `CredentialError`. The dataloaders
+  and the evaluation package MUST raise the `ValueError` and `TypeError` the scikit-learn contract expects for
+  invalid input, since the ecosystem contract wins where the two disagree.
 
 Example:
 
@@ -1484,4 +1580,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 9.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-21
+**Version**: 10.1.1 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
