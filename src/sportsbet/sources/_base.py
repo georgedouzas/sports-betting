@@ -4,6 +4,8 @@
 # License: MIT
 
 
+from __future__ import annotations
+
 import asyncio
 import io
 from abc import ABC, abstractmethod
@@ -22,60 +24,6 @@ from ..core import ParamGrid
 CONNECTIONS_LIMIT = 20
 ENCODING = 'ISO-8859-1'
 FILE_SCHEME = 'file://'
-
-
-@dataclass(frozen=True)
-class RawItem:
-    """A raw item to fetch, identified within its source by a key, at a URL or `file://` path.
-
-    Two items with the same source and key are equal.
-
-    Args:
-        source:
-            The source that declared it.
-        key:
-            The item's identity within the source.
-        url:
-            The URL, or a `file://` path for a bundled file.
-
-    Examples:
-        >>> from sportsbet.sources import RawItem
-        >>> item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
-        >>> item.key
-        'England_1_2025'
-        >>> # The same source and key make the same item.
-        >>> item == RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
-        True
-    """
-
-    source: str
-    key: str
-    url: str
-
-
-@dataclass(frozen=True)
-class RawPayload:
-    r"""A payload a source returned, pairing the fetched item with its raw bytes.
-
-    Args:
-        item:
-            The item that was fetched.
-        content:
-            The bytes of the response.
-
-    Examples:
-        >>> from sportsbet.sources import RawItem, RawPayload
-        >>> item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
-        >>> payload = RawPayload(item=item, content=b'date,home_team,away_team\n2025-08-16,A,B\n')
-        >>> payload.item.key
-        'England_1_2025'
-        >>> # The bytes are exactly what the feed returned.
-        >>> payload.content.splitlines()[0]
-        b'date,home_team,away_team'
-    """
-
-    item: RawItem
-    content: bytes
 
 
 async def _fetch_url(client: aiohttp.ClientSession, url: str) -> str:
@@ -143,6 +91,60 @@ def read_csv_content(content: bytes) -> pd.DataFrame:
     text = content.decode(ENCODING)
     names = pd.read_csv(io.StringIO(text), nrows=0, encoding=ENCODING).columns.to_list()
     return pd.read_csv(io.StringIO(text), names=names, skiprows=1, encoding=ENCODING, on_bad_lines='skip')
+
+
+@dataclass(frozen=True)
+class RawItem:
+    """A raw item to fetch, identified within its source by a key, at a URL or `file://` path.
+
+    Two items with the same source and key are equal.
+
+    Args:
+        source:
+            The source that declared it.
+        key:
+            The item's identity within the source.
+        url:
+            The URL, or a `file://` path for a bundled file.
+
+    Examples:
+        >>> from sportsbet.sources import RawItem
+        >>> item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
+        >>> item.key
+        'England_1_2025'
+        >>> # The same source and key make the same item.
+        >>> item == RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
+        True
+    """
+
+    source: str
+    key: str
+    url: str
+
+
+@dataclass(frozen=True)
+class RawPayload:
+    r"""A payload a source returned, pairing the fetched item with its raw bytes.
+
+    Args:
+        item:
+            The item that was fetched.
+        content:
+            The bytes of the response.
+
+    Examples:
+        >>> from sportsbet.sources import RawItem, RawPayload
+        >>> item = RawItem(source='my_stats', key='England_1_2025', url='https://example.com/2025.csv')
+        >>> payload = RawPayload(item=item, content=b'date,home_team,away_team\n2025-08-16,A,B\n')
+        >>> payload.item.key
+        'England_1_2025'
+        >>> # The bytes are exactly what the feed returned.
+        >>> payload.content.splitlines()[0]
+        b'date,home_team,away_team'
+    """
+
+    item: RawItem
+    content: bytes
 
 
 class BaseSource(ABC):

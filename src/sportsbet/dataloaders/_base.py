@@ -3,6 +3,8 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from types import NoneType
@@ -109,6 +111,39 @@ def _build_odds_schema(metadata: dict[str, dict[str, Any]]) -> type[BaseOddsSche
     return type('OddsSchema', (BaseOddsSchema,), namespace)
 
 
+def load_dataloader(path: str) -> BaseDataLoader:
+    """Load the dataloader object.
+
+    Args:
+        path:
+            The path of the dataloader pickled file.
+
+    Returns:
+        dataloader:
+            The dataloader object.
+
+    Examples:
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> from sportsbet.dataloaders import DataLoader, load_dataloader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
+        >>> _ = dataloader.save(path)
+        >>> # It comes back knowing what it was told, so the fixtures take the shape the training data took.
+        >>> loaded = load_dataloader(path)
+        >>> loaded.param_grid_ == dataloader.param_grid_
+        True
+        >>> X_fix, _, O_fix = loaded.extract_fixtures_data()
+        >>> list(X_fix.columns) == list(X.columns)
+        True
+    """
+    with Path(path).open('rb') as file:
+        dataloader = cloudpickle.load(file)
+    return dataloader
 class BaseDataLoader(ABC):
     """Read and validate source snapshots and extract moment-aware modelling data.
 
@@ -775,36 +810,3 @@ class BaseDataLoader(ABC):
         return self
 
 
-def load_dataloader(path: str) -> BaseDataLoader:
-    """Load the dataloader object.
-
-    Args:
-        path:
-            The path of the dataloader pickled file.
-
-    Returns:
-        dataloader:
-            The dataloader object.
-
-    Examples:
-        >>> import tempfile
-        >>> from pathlib import Path
-        >>> from sportsbet.dataloaders import DataLoader, load_dataloader
-        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
-        >>> path = str(Path(tempfile.mkdtemp()) / 'dataloader.pkl')
-        >>> dataloader = DataLoader(
-        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
-        ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
-        >>> _ = dataloader.save(path)
-        >>> # It comes back knowing what it was told, so the fixtures take the shape the training data took.
-        >>> loaded = load_dataloader(path)
-        >>> loaded.param_grid_ == dataloader.param_grid_
-        True
-        >>> X_fix, _, O_fix = loaded.extract_fixtures_data()
-        >>> list(X_fix.columns) == list(X.columns)
-        True
-    """
-    with Path(path).open('rb') as file:
-        dataloader = cloudpickle.load(file)
-    return dataloader

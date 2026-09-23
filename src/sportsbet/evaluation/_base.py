@@ -4,6 +4,8 @@
 # License: MIT
 
 
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import ClassVar, Self
@@ -129,6 +131,68 @@ def derive_complementary_events(markets: list[str]) -> list[list[str]]:
     return groups
 
 
+def save_bettor(bettor: BaseBettor, path: str) -> None:
+    """Save the bettor object.
+
+    Args:
+        bettor:
+            The bettor object.
+
+        path:
+            The path to save the object.
+
+    Examples:
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.evaluation import OddsComparisonBettor, load_bettor, save_bettor
+        >>> path = str(Path(tempfile.mkdtemp()) / 'bettor.pkl')
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
+        >>> bettor = OddsComparisonBettor(betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
+        >>> save_bettor(bettor, path)
+        >>> # A fitted bettor comes back fitted.
+        >>> load_bettor(path).betting_markets_.tolist()
+        ['home_win', 'draw', 'away_win']
+    """
+    with Path(path).open('wb') as file:
+        cloudpickle.dump(bettor, file)
+
+
+def load_bettor(path: str) -> BaseBettor:
+    """Load the bettor object.
+
+    Args:
+        path:
+            The path of the bettor pickled file.
+
+    Returns:
+        bettor:
+            The bettor object.
+
+    Examples:
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> from sportsbet.dataloaders import DataLoader
+        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.evaluation import OddsComparisonBettor, load_bettor, save_bettor
+        >>> path = str(Path(tempfile.mkdtemp()) / 'bettor.pkl')
+        >>> dataloader = DataLoader(
+        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
+        ... )
+        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
+        >>> save_bettor(OddsComparisonBettor(betting_markets=['home_win']).fit(X, Y, O), path)
+        >>> bettor = load_bettor(path)
+        >>> # It is ready to bet without being fitted again: one row per match, one column per market.
+        >>> bettor.bet(X, O).shape
+        (380, 1)
+    """
+    with Path(path).open('rb') as file:
+        bettor = cloudpickle.load(file)
+    return bettor
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
     """The base class for bettors.
 
@@ -502,65 +566,3 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         return np.sqrt(365) * returns_mean / returns_std
 
 
-def save_bettor(bettor: BaseBettor, path: str) -> None:
-    """Save the bettor object.
-
-    Args:
-        bettor:
-            The bettor object.
-
-        path:
-            The path to save the object.
-
-    Examples:
-        >>> import tempfile
-        >>> from pathlib import Path
-        >>> from sportsbet.dataloaders import DataLoader
-        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
-        >>> from sportsbet.evaluation import OddsComparisonBettor, load_bettor, save_bettor
-        >>> path = str(Path(tempfile.mkdtemp()) / 'bettor.pkl')
-        >>> dataloader = DataLoader(
-        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
-        ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
-        >>> bettor = OddsComparisonBettor(betting_markets=['home_win', 'draw', 'away_win']).fit(X, Y, O)
-        >>> save_bettor(bettor, path)
-        >>> # A fitted bettor comes back fitted.
-        >>> load_bettor(path).betting_markets_.tolist()
-        ['home_win', 'draw', 'away_win']
-    """
-    with Path(path).open('wb') as file:
-        cloudpickle.dump(bettor, file)
-
-
-def load_bettor(path: str) -> BaseBettor:
-    """Load the bettor object.
-
-    Args:
-        path:
-            The path of the bettor pickled file.
-
-    Returns:
-        bettor:
-            The bettor object.
-
-    Examples:
-        >>> import tempfile
-        >>> from pathlib import Path
-        >>> from sportsbet.dataloaders import DataLoader
-        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
-        >>> from sportsbet.evaluation import OddsComparisonBettor, load_bettor, save_bettor
-        >>> path = str(Path(tempfile.mkdtemp()) / 'bettor.pkl')
-        >>> dataloader = DataLoader(
-        ...     param_grid={'league': ['England']}, stats=SampleSoccerStats(), odds=SampleSoccerOdds()
-        ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
-        >>> save_bettor(OddsComparisonBettor(betting_markets=['home_win']).fit(X, Y, O), path)
-        >>> bettor = load_bettor(path)
-        >>> # It is ready to bet without being fitted again: one row per match, one column per market.
-        >>> bettor.bet(X, O).shape
-        (380, 1)
-    """
-    with Path(path).open('rb') as file:
-        bettor = cloudpickle.load(file)
-    return bettor

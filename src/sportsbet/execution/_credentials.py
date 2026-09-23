@@ -11,6 +11,25 @@ from dataclasses import dataclass
 from ._base import ExecutionError
 
 
+def resolve(ref: CredentialRef) -> str:
+    """Return what a named variable holds, raising when it holds nothing.
+
+    Args:
+        ref:
+            The name of the variable.
+
+    Returns:
+        secret:
+            What the variable holds.
+
+    Raises:
+        CredentialError: If the variable is unset or empty.
+    """
+    secret = os.environ.get(ref.var)
+    if not secret:
+        msg = f'`{ref.var}` is not set. Set it to the secret, or name another variable.'
+        raise CredentialError(msg)
+    return secret
 class CredentialError(ExecutionError):
     """Raised when a named variable holds nothing."""
 
@@ -35,22 +54,3 @@ class CredentialRef:
         return self.var
 
 
-def resolve(ref: CredentialRef) -> str:
-    """Return what a named variable holds, raising when it holds nothing.
-
-    Args:
-        ref:
-            The name of the variable.
-
-    Returns:
-        secret:
-            What the variable holds.
-
-    Raises:
-        CredentialError: If the variable is unset or empty.
-    """
-    secret = os.environ.get(ref.var)
-    if not secret:
-        msg = f'`{ref.var}` is not set. Set it to the secret, or name another variable.'
-        raise CredentialError(msg)
-    return secret

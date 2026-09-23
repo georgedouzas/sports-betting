@@ -1,6 +1,41 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 11.0.1 -> 11.2.0
+Rationale: Order a module by kind first and by privacy second, so it reads as the private functions, the public
+functions, the private classes, then the public classes. Version 10.2.0 ordered by privacy alone, which left a module
+free to put a public class above a private function, and ordering by privacy alone would have put a private class
+above a public function, which is the opposite of what a module wants. Dependency order wins where this and it
+disagree, which the schema module forced, since `_BaseSchema` calls `required_col` in its class body. MINOR: the rule
+covers more, and its intent is unchanged.
+
+Modified sections:
+  - Structure: a module orders its definitions by kind first and by privacy second, a class orders its methods by
+    privacy, and dependency order wins where the orders disagree.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
+Version change: 11.0.1 -> 11.1.0
+Rationale: Widen the ordering rule from functions to every definition. Version 10.2.0 named the private functions and
+the private methods, which left a module free to put a public class above a private function, as the sources base
+does with `RawItem` and `RawPayload` above the four fetch helpers. A reader meets the parts before the whole whatever
+kind the part is. Dependency order wins where the two disagree, which the schema module forced: `_BaseSchema` calls
+`required_col` in its class body, so it cannot precede it. MINOR: the rule covers more, and its intent is unchanged.
+
+Modified sections:
+  - Structure: the ordering rule reads every private definition, a function, a class and an alias alike, and
+    dependency order wins where the two disagree.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 11.0.0 -> 11.0.1
 Rationale: Say who counts as a client. The tests and the documentation are client code, so a name either of them
 reaches is used and stays re-exported. Without that, the rule reads as though only another package counts, which would
@@ -1024,8 +1059,12 @@ A name that tells the truth saves a comment, a docstring line, and a reading of 
   the way an import inside a function body does, and the cycle MUST be fixed instead.
 - Functions MUST come in dependency order, so a name is defined before it is used, the small helpers first and the
   function the module exists for last.
-- The private functions MUST come before the public ones, and the private methods of a class before its public
-  methods, so a reader meets the parts before the whole.
+- A module MUST order its definitions by kind first and by privacy second, so it reads as the private functions, the
+  public functions, the private classes, then the public classes. A reader meets the parts before the whole.
+- A class MUST order its methods the same way, its private methods before its public ones.
+- Where that order and dependency order disagree, dependency order MUST win, since a name a class body evaluates has
+  to exist before the class does. A module that needs a forward reference to order itself MUST carry
+  `from __future__ import annotations` for it.
 - A module constant MUST be `UPPER_CASE`, and MUST live in the constants block near the top of the module, never
   mid-file among the functions.
 - A module constant MUST NOT carry a leading underscore, whatever its reach. A constant is kept private by not
@@ -1658,4 +1697,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 11.0.1 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 11.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22

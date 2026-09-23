@@ -16,6 +16,61 @@ import pandas as pd
 import pandera.pandas as pa
 
 
+def build_receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
+    """Return receipts as a validated frame.
+
+    Args:
+        receipts: The receipts to frame.
+
+    Returns:
+        frame: The receipts as a validated frame.
+    """
+    records = [
+        {
+            'ref': receipt.identity.ref_,
+            'venue': receipt.identity.venue,
+            'match': receipt.identity.match,
+            'market': receipt.identity.market,
+            'selection': receipt.identity.selection,
+            'status': receipt.status.value,
+            'stake': receipt.stake,
+            'price': receipt.price,
+            'venue_bet_id': receipt.venue_bet_id,
+            'value_bet': receipt.value_bet,
+            'placed_at': receipt.placed_at,
+            'detail': receipt.detail,
+        }
+        for receipt in receipts
+    ]
+    frame = pd.DataFrame.from_records(records, columns=list(_PlacementReceiptSchema.to_schema().columns))
+    frame['placed_at'] = pd.to_datetime(frame['placed_at'], utc=True)
+    result: pd.DataFrame = _PlacementReceiptSchema.validate(frame)
+    return result
+
+
+class _PlacementReceiptSchema(pa.DataFrameModel):
+    """The receipts a placement returns."""
+
+    ref: str = pa.Field()
+    venue: str = pa.Field()
+    match: str = pa.Field()
+    market: str = pa.Field()
+    selection: str = pa.Field()
+    status: str = pa.Field()
+    stake: float = pa.Field(ge=0.0)
+    price: float = pa.Field(nullable=True)
+    venue_bet_id: str = pa.Field(nullable=True)
+    value_bet: str = pa.Field(nullable=True)
+    placed_at: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = pa.Field(nullable=True)
+    detail: str = pa.Field(nullable=True)
+
+    class Config:
+        """Allow no column beyond the ones named, and coerce the dtypes."""
+
+        strict = True
+        coerce = True
+
+
 class ExecutionError(Exception):
     """Raised when placing cannot go ahead."""
 
@@ -120,61 +175,6 @@ class PlacementReceipt:
     value_bet: str = ''
     placed_at: datetime | None = None
     detail: str = ''
-
-
-class _PlacementReceiptSchema(pa.DataFrameModel):
-    """The receipts a placement returns."""
-
-    ref: str = pa.Field()
-    venue: str = pa.Field()
-    match: str = pa.Field()
-    market: str = pa.Field()
-    selection: str = pa.Field()
-    status: str = pa.Field()
-    stake: float = pa.Field(ge=0.0)
-    price: float = pa.Field(nullable=True)
-    venue_bet_id: str = pa.Field(nullable=True)
-    value_bet: str = pa.Field(nullable=True)
-    placed_at: Annotated[pd.DatetimeTZDtype, 'ns', 'utc'] = pa.Field(nullable=True)
-    detail: str = pa.Field(nullable=True)
-
-    class Config:
-        """Allow no column beyond the ones named, and coerce the dtypes."""
-
-        strict = True
-        coerce = True
-
-
-def build_receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
-    """Return receipts as a validated frame.
-
-    Args:
-        receipts: The receipts to frame.
-
-    Returns:
-        frame: The receipts as a validated frame.
-    """
-    records = [
-        {
-            'ref': receipt.identity.ref_,
-            'venue': receipt.identity.venue,
-            'match': receipt.identity.match,
-            'market': receipt.identity.market,
-            'selection': receipt.identity.selection,
-            'status': receipt.status.value,
-            'stake': receipt.stake,
-            'price': receipt.price,
-            'venue_bet_id': receipt.venue_bet_id,
-            'value_bet': receipt.value_bet,
-            'placed_at': receipt.placed_at,
-            'detail': receipt.detail,
-        }
-        for receipt in receipts
-    ]
-    frame = pd.DataFrame.from_records(records, columns=list(_PlacementReceiptSchema.to_schema().columns))
-    frame['placed_at'] = pd.to_datetime(frame['placed_at'], utc=True)
-    result: pd.DataFrame = _PlacementReceiptSchema.validate(frame)
-    return result
 
 
 class BaseVenue(abc.ABC):
