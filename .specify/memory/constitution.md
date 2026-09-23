@@ -1,6 +1,21 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 10.1.1 -> 10.2.0
+Rationale: Order a module and a class by privacy. The private functions come before the public ones, and a class puts
+its private methods before its public ones, so a reader meets the parts before the whole. It sits beside the
+dependency-order rule, which already puts the small helpers first and the function the module exists for last, and
+the two agree in almost every module. MINOR: one new rule.
+
+Modified sections:
+  - Structure: the private functions and methods come first.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 10.1.0 -> 10.1.1
 Rationale: Correct two Project Profile bullets that did not hold. `SelectionError` is named as one of the four
 exceptions the package raises, and no such class exists, so it is dropped. The 31 bare `ValueError` and `TypeError`
@@ -958,6 +973,8 @@ A name that tells the truth saves a comment, a docstring line, and a reading of 
   the way an import inside a function body does, and the cycle MUST be fixed instead.
 - Functions MUST come in dependency order, so a name is defined before it is used, the small helpers first and the
   function the module exists for last.
+- The private functions MUST come before the public ones, and the private methods of a class before its public
+  methods, so a reader meets the parts before the whole.
 - A module constant MUST be `UPPER_CASE`, and MUST live in the constants block near the top of the module, never
   mid-file among the functions.
 - One module MUST be one concern, and a file that grows two MUST be split.
@@ -1580,4 +1597,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 10.1.1 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 10.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22

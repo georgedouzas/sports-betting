@@ -155,6 +155,55 @@ def _bet(dataloader: str, bettor: str) -> list[dict[str, Any]]:
     return _to_records(pd.concat([games, value_bets], axis=1))
 
 
+def _load_venue(reference: str) -> BaseVenue:
+    """Return the venue a reference names."""
+    built = build_venue(reference)
+    if not isinstance(built, BaseVenue):
+        msg = f'`{reference}` is a browser session, which has no bets of its own to place. Use the browser tools.'
+        raise ExecutionError(msg)
+    return built
+
+
+def _run_event(
+    venue: str,
+    dataloader: str,
+    bettor: str,
+    event: str,
+    stake: float,
+    urls: list[str],
+    live: bool,
+    poll: str,
+    output: str | None,
+) -> pd.DataFrame:
+    """Watch one event and place the model's bet at its moment."""
+    session = build_venue(venue)
+    if isinstance(session, BaseVenue):
+        msg = f'`{venue}` is a venue with an API rather than a browser session, so `execution_run` does not apply.'
+        raise ExecutionError(msg)
+    loader = load_dataloader(dataloader)
+    fitted = load_bettor(bettor)
+    receipts = asyncio.run(
+        execute_event(event, fitted, loader, session, stake=stake, urls=urls, live=live, poll=pd.Timedelta(poll)),
+    )
+    if output is not None:
+        written = Path(output) / 'sports-betting-data'
+        written.mkdir(parents=True, exist_ok=True)
+        receipts.to_csv(written / 'receipts.csv', index=False)
+    return receipts
+
+
+async def _open_session(venue: str) -> BrowserSession:
+    """Return the browser session a reference names, opening it once and keeping it open."""
+    if venue not in _SESSIONS:
+        built = build_venue(venue)
+        if isinstance(built, BaseVenue):
+            msg = f'`{venue}` is a venue with an API rather than a browser session, so the browser tools do not apply.'
+            raise ExecutionError(msg)
+        await built.start()
+        _SESSIONS[venue] = built
+    return _SESSIONS[venue]
+
+
 @server.tool()
 async def available_params(
     stats: str,
@@ -355,43 +404,6 @@ async def bet(dataloader: str, bettor: str) -> list[dict[str, Any]]:
     return result
 
 
-def _load_venue(reference: str) -> BaseVenue:
-    """Return the venue a reference names."""
-    built = build_venue(reference)
-    if not isinstance(built, BaseVenue):
-        msg = f'`{reference}` is a browser session, which has no bets of its own to place. Use the browser tools.'
-        raise ExecutionError(msg)
-    return built
-
-
-def _run_event(
-    venue: str,
-    dataloader: str,
-    bettor: str,
-    event: str,
-    stake: float,
-    urls: list[str],
-    live: bool,
-    poll: str,
-    output: str | None,
-) -> pd.DataFrame:
-    """Watch one event and place the model's bet at its moment."""
-    session = build_venue(venue)
-    if isinstance(session, BaseVenue):
-        msg = f'`{venue}` is a venue with an API rather than a browser session, so `execution_run` does not apply.'
-        raise ExecutionError(msg)
-    loader = load_dataloader(dataloader)
-    fitted = load_bettor(bettor)
-    receipts = asyncio.run(
-        execute_event(event, fitted, loader, session, stake=stake, urls=urls, live=live, poll=pd.Timedelta(poll)),
-    )
-    if output is not None:
-        written = Path(output) / 'sports-betting-data'
-        written.mkdir(parents=True, exist_ok=True)
-        receipts.to_csv(written / 'receipts.csv', index=False)
-    return receipts
-
-
 @server.tool()
 async def execution_venue_info(venue: str) -> dict[str, Any]:
     """Return what a venue is and what its owner wrote down about the site."""
@@ -467,18 +479,6 @@ async def execution_run(
     """
     receipts = await _offload(_run_event, venue, dataloader, bettor, event, stake, urls or [], live, poll, output)
     return _to_records(receipts)
-
-
-async def _open_session(venue: str) -> BrowserSession:
-    """Return the browser session a reference names, opening it once and keeping it open."""
-    if venue not in _SESSIONS:
-        built = build_venue(venue)
-        if isinstance(built, BaseVenue):
-            msg = f'`{venue}` is a venue with an API rather than a browser session, so the browser tools do not apply.'
-            raise ExecutionError(msg)
-        await built.start()
-        _SESSIONS[venue] = built
-    return _SESSIONS[venue]
 
 
 @server.tool()

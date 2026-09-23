@@ -64,6 +64,63 @@ def _logging_to_terminal() -> Iterator[None]:
         _logger.setLevel(level)
 
 
+def _parse_locators(given: tuple[str, ...]) -> dict[str, str]:
+    """Return what was found, each of them a name and a locator."""
+    found = {}
+    for pair in given:
+        name, sep, locator = pair.partition('=')
+        if not sep or not name or not locator:
+            msg = f'`{pair}` should be a name and a locator, as in `stake=textbox[name="Stake"]`.'
+            raise click.UsageError(msg)
+        found[name] = locator
+    return found
+
+
+async def _read(session: BrowserSession, url: str | None, selector: str | None, depth: int | None) -> str:
+    """Open the browser, read the page and close it."""
+    try:
+        await session.navigate(url or session.url)
+        shot = await session.read_snapshot(selector, depth)
+        return shot.yaml
+    finally:
+        await session.stop()
+
+
+async def _act(
+    session: BrowserSession,
+    url: str,
+    click_ref: str | None,
+    type_ref: str | None,
+    text: str | None,
+    select_ref: str | None,
+    value: str | None,
+) -> str:
+    """Open the browser, act on the page and close it."""
+    try:
+        await session.navigate(url)
+        if click_ref:
+            shot = await session.click(click_ref)
+        elif type_ref:
+            shot = await session.type(type_ref, text or '')
+        elif select_ref:
+            shot = await session.select(select_ref, value or '')
+        else:
+            msg = 'Name what to do: `--click`, `--type` with `--text`, or `--select` with `--value`.'
+            raise click.UsageError(msg)
+        return shot.yaml
+    finally:
+        await session.stop()
+
+
+async def _fix(session: BrowserSession, url: str, match: str, locators: dict[str, str]) -> FixedSession:
+    """Open the browser, pin what was found and close it."""
+    try:
+        await session.navigate(url)
+        return session.fix(match, locators)
+    finally:
+        await session.stop()
+
+
 @click.group()
 def execution() -> None:
     """Place the value bets a model found, at a venue where you hold an account.
@@ -216,63 +273,6 @@ def page() -> None:
     closed and the balance lost. The library supplies the browser and the page, and the knowledge of the site is yours.
     """
     return
-
-
-def _parse_locators(given: tuple[str, ...]) -> dict[str, str]:
-    """Return what was found, each of them a name and a locator."""
-    found = {}
-    for pair in given:
-        name, sep, locator = pair.partition('=')
-        if not sep or not name or not locator:
-            msg = f'`{pair}` should be a name and a locator, as in `stake=textbox[name="Stake"]`.'
-            raise click.UsageError(msg)
-        found[name] = locator
-    return found
-
-
-async def _read(session: BrowserSession, url: str | None, selector: str | None, depth: int | None) -> str:
-    """Open the browser, read the page and close it."""
-    try:
-        await session.navigate(url or session.url)
-        shot = await session.read_snapshot(selector, depth)
-        return shot.yaml
-    finally:
-        await session.stop()
-
-
-async def _act(
-    session: BrowserSession,
-    url: str,
-    click_ref: str | None,
-    type_ref: str | None,
-    text: str | None,
-    select_ref: str | None,
-    value: str | None,
-) -> str:
-    """Open the browser, act on the page and close it."""
-    try:
-        await session.navigate(url)
-        if click_ref:
-            shot = await session.click(click_ref)
-        elif type_ref:
-            shot = await session.type(type_ref, text or '')
-        elif select_ref:
-            shot = await session.select(select_ref, value or '')
-        else:
-            msg = 'Name what to do: `--click`, `--type` with `--text`, or `--select` with `--value`.'
-            raise click.UsageError(msg)
-        return shot.yaml
-    finally:
-        await session.stop()
-
-
-async def _fix(session: BrowserSession, url: str, match: str, locators: dict[str, str]) -> FixedSession:
-    """Open the browser, pin what was found and close it."""
-    try:
-        await session.navigate(url)
-        return session.fix(match, locators)
-    finally:
-        await session.stop()
 
 
 @page.command('read')

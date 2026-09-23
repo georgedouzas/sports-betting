@@ -17,6 +17,21 @@ _MIN_SIMILARITY = 0.6
 _MIN_MARGIN = 0.15
 
 
+def _map_odds_names(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -> dict:
+    """Return, per league and season, the odds names mapped to the statistics names."""
+    given = {normalize_team_name(name): normalize_team_name(alias) for name, alias in aliases.items()}
+    mapping: dict = {}
+    for key, odds_group in odds.groupby(GROUPS_COLS):
+        stats_group = stats[(stats[GROUPS_COLS] == pd.Series(key, index=GROUPS_COLS)).all(axis=1)]
+        if stats_group.empty:
+            continue
+        stats_names = set(build_roster(stats_group))
+        odds_names = {given.get(name, name) for name in build_roster(odds_group)}
+        paired, _, _ = pair_rosters(stats_names, odds_names)
+        mapping[key] = {**given, **paired}
+    return mapping
+
+
 def normalize_team_name(name: str) -> str:
     """Return a team name with the parts that carry no meaning removed.
 
@@ -148,23 +163,15 @@ def build_roster(data: pd.DataFrame) -> dict[str, str]:
 
     Returns:
         The clubs, keyed by normalized name and valued by their original spelling.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.sources import build_roster
+        >>> data = pd.DataFrame({'home_team': ['Manchester United'], 'away_team': ['Arsenal FC']})
+        >>> build_roster(data)
+        {'manchester united': 'Manchester United', 'arsenal': 'Arsenal FC'}
     """
     return {normalize_team_name(name): name for col in TEAMS_COLS for name in data[col]}
-
-
-def _map_odds_names(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -> dict:
-    """Return, per league and season, the odds names mapped to the statistics names."""
-    given = {normalize_team_name(name): normalize_team_name(alias) for name, alias in aliases.items()}
-    mapping: dict = {}
-    for key, odds_group in odds.groupby(GROUPS_COLS):
-        stats_group = stats[(stats[GROUPS_COLS] == pd.Series(key, index=GROUPS_COLS)).all(axis=1)]
-        if stats_group.empty:
-            continue
-        stats_names = set(build_roster(stats_group))
-        odds_names = {given.get(name, name) for name in build_roster(odds_group)}
-        paired, _, _ = pair_rosters(stats_names, odds_names)
-        mapping[key] = {**given, **paired}
-    return mapping
 
 
 def normalize_identity(data: pd.DataFrame, mapping: dict | None = None) -> pd.DataFrame:

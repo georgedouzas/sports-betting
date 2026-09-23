@@ -121,6 +121,14 @@ def build_dataloader(
     Raises:
         BuildError:
             If a source name is unknown, or an argument is malformed.
+
+    Examples:
+        >>> from sportsbet.dataloaders import build_dataloader
+        >>> dataloader = build_dataloader(
+        ...     stats='football-data', odds='football-data', leagues=['England'], divisions=[1], years=[2025]
+        ... )
+        >>> type(dataloader.stats).__name__, type(dataloader.odds).__name__
+        ('FootballDataStats', 'FootballDataOdds')
     """
     if stats not in STATS_SOURCES:
         msg = f'`{stats}` is not a statistics source. Available: {", ".join(sorted(STATS_SOURCES))}.'

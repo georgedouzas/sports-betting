@@ -214,11 +214,6 @@ class BaseDataLoader(ABC):
         """Return the long `stats`/`odds` snapshots of the upcoming matches, the training ones by default."""
         return self._load_snapshots()
 
-    @property
-    def sources_(self: Self) -> tuple:
-        """The data sources, empty for a dataloader carrying its own data."""
-        return ()
-
     def _list_all_params(self: Self) -> list[dict]:
         """Return the parameter combinations the sources publish, used to filter `param_grid`."""
         msg = f'{type(self).__name__} carries its own data, so it publishes no catalogue of parameters.'
@@ -262,15 +257,6 @@ class BaseDataLoader(ABC):
         if 'provider' not in odds.columns:
             msg = 'The odds data is missing the `provider` column.'
             raise ValueError(msg)
-
-    def get_odds_types(self: Self) -> list[str]:
-        """Return the available odds types (providers) derived from the data.
-
-        Returns:
-            The provider names the odds data carries, sorted.
-        """
-        _, odds = self._load_snapshots()
-        return sorted(odds['provider'].dropna().unique().tolist())
 
     def _load(self: Self, odds_type: str | None) -> None:
         """Read and validate the snapshots, derive their metadata and build the inputs, reusing what is held."""
@@ -559,6 +545,20 @@ class BaseDataLoader(ABC):
         X = self._apply_drop_na(X, drop_na_thres)
         self.odds_cols_ = O.columns
         return X, O, target_event_status, target_event_time
+
+    @property
+    def sources_(self: Self) -> tuple:
+        """The data sources, empty for a dataloader carrying its own data."""
+        return ()
+
+    def get_odds_types(self: Self) -> list[str]:
+        """Return the available odds types (providers) derived from the data.
+
+        Returns:
+            The provider names the odds data carries, sorted.
+        """
+        _, odds = self._load_snapshots()
+        return sorted(odds['provider'].dropna().unique().tolist())
 
     def extract_train_data(
         self: Self,

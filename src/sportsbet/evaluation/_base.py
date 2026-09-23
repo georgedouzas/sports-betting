@@ -23,6 +23,27 @@ _N_ODDS_TOKENS = 4
 _OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
 
 
+def _is_odds_column(col: str) -> bool:
+    """Return whether a column follows the four-token odds grammar."""
+    return len(col.split('__')) == _N_ODDS_TOKENS
+
+
+def _check_is_dataframe(data: pd.DataFrame, name: str, *, date_index: bool = False) -> None:
+    """Raise when data is not a dataframe, or lacks a date index when one is required."""
+    labels = {'X': 'Input', 'Y': 'Output', 'O': 'Odds'}
+    if not isinstance(data, pd.DataFrame) or (date_index and not isinstance(data.index, pd.DatetimeIndex)):
+        suffix = ' with a date index' if date_index else ''
+        error_msg = f'{labels[name]} data `{name}` should be pandas dataframe{suffix}.'
+        raise TypeError(error_msg)
+
+
+def _check_markets_compatible(Y_betting_markets: list[str], O_betting_markets: list[str]) -> None:
+    """Raise when the output and odds column names name different markets."""
+    if set(Y_betting_markets) != set(O_betting_markets):
+        error_msg = 'Output and odds data column names are not compatible.'
+        raise ValueError(error_msg)
+
+
 def derive_market_base(market: str) -> str:
     """Return the base market name (drop the ``__status__time`` suffix).
 
@@ -39,11 +60,6 @@ def derive_market_base(market: str) -> str:
         'home_win'
     """
     return market.split('__', maxsplit=1)[0]
-
-
-def _is_odds_column(col: str) -> bool:
-    """Return whether a column follows the four-token odds grammar."""
-    return len(col.split('__')) == _N_ODDS_TOKENS
 
 
 def find_latest_odds_column(columns: list[str], base: str, provider: str | None = None) -> str | None:
@@ -111,22 +127,6 @@ def derive_complementary_events(markets: list[str]) -> list[list[str]]:
                 lines.setdefault(market.removeprefix(f'{side}_'), []).append(market)
     groups.extend(sorted(group) for group in lines.values() if len(group) > 1)
     return groups
-
-
-def _check_is_dataframe(data: pd.DataFrame, name: str, *, date_index: bool = False) -> None:
-    """Raise when data is not a dataframe, or lacks a date index when one is required."""
-    labels = {'X': 'Input', 'Y': 'Output', 'O': 'Odds'}
-    if not isinstance(data, pd.DataFrame) or (date_index and not isinstance(data.index, pd.DatetimeIndex)):
-        suffix = ' with a date index' if date_index else ''
-        error_msg = f'{labels[name]} data `{name}` should be pandas dataframe{suffix}.'
-        raise TypeError(error_msg)
-
-
-def _check_markets_compatible(Y_betting_markets: list[str], O_betting_markets: list[str]) -> None:
-    """Raise when the output and odds column names name different markets."""
-    if set(Y_betting_markets) != set(O_betting_markets):
-        error_msg = 'Output and odds data column names are not compatible.'
-        raise ValueError(error_msg)
 
 
 class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
@@ -258,16 +258,6 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         if O is not None:
             self.feature_names_odds_ = self._get_feature_names_odds(O)
 
-    @property
-    def classes_(self: Self) -> list:
-        """The classes of each betting market."""
-        try:
-            check_is_fitted(self)
-        except NotFittedError as nfe:
-            error_msg = f"'{self.__class__.__name__}' object has no attribute 'classes_'"
-            raise AttributeError(error_msg) from nfe
-        return [np.array([0, 1]) for _ in enumerate(self.betting_markets_)]
-
     def _validate_X_Y(  # noqa: N802  # X, Y, O are the scikit-learn data-matrix names
         self: Self,
         X: pd.DataFrame,
@@ -337,6 +327,16 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
                 Y_proba_pred_sum[Y_proba_pred_sum == 0.0] = self.TOL
                 Y_proba_pred[:, mask] = Y_proba_pred[:, mask] / Y_proba_pred_sum.reshape(-1, 1)
         return Y_proba_pred
+
+    @property
+    def classes_(self: Self) -> list:
+        """The classes of each betting market."""
+        try:
+            check_is_fitted(self)
+        except NotFittedError as nfe:
+            error_msg = f"'{self.__class__.__name__}' object has no attribute 'classes_'"
+            raise AttributeError(error_msg) from nfe
+        return [np.array([0, 1]) for _ in enumerate(self.betting_markets_)]
 
     def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
         """Fit the bettor to the input data and multi-output targets.

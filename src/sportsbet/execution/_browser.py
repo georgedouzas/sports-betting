@@ -213,6 +213,26 @@ class BrowserSession:
         self.fixed_: FixedSession | None = None
         self._playwright: object | None = None
 
+    def _read_page(self: BrowserSession) -> _Page:
+        """Return the page being driven."""
+        if self.context_ is None:
+            msg = 'The browser is not open. Call `start` first.'
+            raise ExecutionError(msg)
+        if not self.context_.pages:
+            msg = 'The browser is open at no page. Call `navigate` first.'
+            raise ExecutionError(msg)
+        return self.context_.pages[0]
+
+    async def _paced(self: BrowserSession) -> None:
+        """Leave the configured interval between actions."""
+        await asyncio.sleep(self.min_interval)
+
+    async def _capture(self: BrowserSession, selector: str | None = None, depth: int | None = None) -> PageSnapshot:
+        """Return the page as it is now."""
+        page = self._read_page()
+        target = page.locator(selector) if selector else page.locator('body')
+        return PageSnapshot(yaml=await target.aria_snapshot(mode='ai', depth=depth), url=page.url)
+
     async def authenticate(self: BrowserSession) -> None:
         """Open the browser at the site, starting from the saved profile."""
         await self.navigate(self.url)
@@ -240,26 +260,6 @@ class BrowserSession:
         if self._playwright is not None:
             await self._playwright.stop()  # type: ignore[attr-defined]  # driver untyped to keep the extra optional
             self._playwright = None
-
-    def _read_page(self: BrowserSession) -> _Page:
-        """Return the page being driven."""
-        if self.context_ is None:
-            msg = 'The browser is not open. Call `start` first.'
-            raise ExecutionError(msg)
-        if not self.context_.pages:
-            msg = 'The browser is open at no page. Call `navigate` first.'
-            raise ExecutionError(msg)
-        return self.context_.pages[0]
-
-    async def _paced(self: BrowserSession) -> None:
-        """Leave the configured interval between actions."""
-        await asyncio.sleep(self.min_interval)
-
-    async def _capture(self: BrowserSession, selector: str | None = None, depth: int | None = None) -> PageSnapshot:
-        """Return the page as it is now."""
-        page = self._read_page()
-        target = page.locator(selector) if selector else page.locator('body')
-        return PageSnapshot(yaml=await target.aria_snapshot(mode='ai', depth=depth), url=page.url)
 
     async def navigate(self: BrowserSession, url: str) -> PageSnapshot:
         """Go to a page and return it.

@@ -220,6 +220,63 @@ class OddsApi(BaseOddsSource):
         markets, regions, _ = self._settings()
         return {'regions': ','.join(regions), 'markets': ','.join(markets), 'oddsFormat': 'decimal'}
 
+    def _historical_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
+        """Return the odds of the matches an historical snapshot was asked for."""
+        sport, year, snapshot, event_status, minutes = _parse_key(payload.item.key)
+        offset = _CLOSING_OFFSET if event_status == 'preplay' else pd.Timedelta(minutes=minutes)
+        league, division = _LEAGUES_MAPPING[sport]
+        records = []
+        for event in events:
+            kickoff = pd.Timestamp(event['commence_time'])
+            if snapshot is None or abs((kickoff + offset) - snapshot) > _SNAPSHOT_TOLERANCE:
+                continue
+            records.extend(self._event_records(event, kickoff, league, division, year, event_status, minutes))
+        return records
+
+    def _live_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
+        """Return the odds of the matches the live endpoint priced, upcoming and running alike."""
+        sport, year, *_ = _parse_key(payload.item.key)
+        league, division = _LEAGUES_MAPPING[sport]
+        now = _last_update(events)
+        records = []
+        for event in events:
+            kickoff = pd.Timestamp(event['commence_time'])
+            elapsed = (now - kickoff).total_seconds() / 60 if now is not None else 0
+            event_status, minutes = ('inplay', _round_minutes(elapsed)) if elapsed > 0 else ('preplay', 0)
+            records.extend(self._event_records(event, kickoff, league, division, year, event_status, minutes))
+        return records
+
+    def _event_records(
+        self: Self,
+        event: dict,
+        kickoff: pd.Timestamp,
+        league: str,
+        division: int,
+        year: int,
+        event_status: str,
+        minutes: int,
+    ) -> list[dict]:
+        """Return one row per bookmaker of a match, with its markets as columns."""
+        records = []
+        for bookmaker in event.get('bookmakers', []):
+            outcomes = _outcomes(bookmaker, event['home_team'], event['away_team'])
+            if not outcomes:
+                continue
+            records.append(
+                {
+                    'event_status': event_status,
+                    'event_time': minutes,
+                    'date': kickoff,
+                    'league': league,
+                    'division': division,
+                    'year': year,
+                    'home_team': event['home_team'],
+                    'away_team': event['away_team'],
+                    'provider': bookmaker['key'],
+                    **outcomes,
+                },
+            )
+        return records
     def request_url(self: Self, item: RawItem) -> str:
         """Return the URL to fetch an item from, with the key read from the environment and added.
 
@@ -340,60 +397,3 @@ class OddsApi(BaseOddsSource):
                 records.extend(self._live_records(payload, events))
         return pd.DataFrame(records)
 
-    def _historical_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
-        """Return the odds of the matches an historical snapshot was asked for."""
-        sport, year, snapshot, event_status, minutes = _parse_key(payload.item.key)
-        offset = _CLOSING_OFFSET if event_status == 'preplay' else pd.Timedelta(minutes=minutes)
-        league, division = _LEAGUES_MAPPING[sport]
-        records = []
-        for event in events:
-            kickoff = pd.Timestamp(event['commence_time'])
-            if snapshot is None or abs((kickoff + offset) - snapshot) > _SNAPSHOT_TOLERANCE:
-                continue
-            records.extend(self._event_records(event, kickoff, league, division, year, event_status, minutes))
-        return records
-
-    def _live_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
-        """Return the odds of the matches the live endpoint priced, upcoming and running alike."""
-        sport, year, *_ = _parse_key(payload.item.key)
-        league, division = _LEAGUES_MAPPING[sport]
-        now = _last_update(events)
-        records = []
-        for event in events:
-            kickoff = pd.Timestamp(event['commence_time'])
-            elapsed = (now - kickoff).total_seconds() / 60 if now is not None else 0
-            event_status, minutes = ('inplay', _round_minutes(elapsed)) if elapsed > 0 else ('preplay', 0)
-            records.extend(self._event_records(event, kickoff, league, division, year, event_status, minutes))
-        return records
-
-    def _event_records(
-        self: Self,
-        event: dict,
-        kickoff: pd.Timestamp,
-        league: str,
-        division: int,
-        year: int,
-        event_status: str,
-        minutes: int,
-    ) -> list[dict]:
-        """Return one row per bookmaker of a match, with its markets as columns."""
-        records = []
-        for bookmaker in event.get('bookmakers', []):
-            outcomes = _outcomes(bookmaker, event['home_team'], event['away_team'])
-            if not outcomes:
-                continue
-            records.append(
-                {
-                    'event_status': event_status,
-                    'event_time': minutes,
-                    'date': kickoff,
-                    'league': league,
-                    'division': division,
-                    'year': year,
-                    'home_team': event['home_team'],
-                    'away_team': event['away_team'],
-                    'provider': bookmaker['key'],
-                    **outcomes,
-                },
-            )
-        return records

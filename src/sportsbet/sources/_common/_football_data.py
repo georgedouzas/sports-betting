@@ -882,6 +882,12 @@ class _FootballDataSource(BaseSource):
     sport: ClassVar[str | None] = 'soccer'
     name: ClassVar[str] = 'football_data'
 
+    def _build_season_item(self: Self, league: str, division: int, year: int, url: str) -> RawItem:
+        """Return the item of a season file."""
+        if league in _HISTORY_LEAGUES:
+            return RawItem(source=self.name, key=f'{league}_{division}', url=url)
+        return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url)
+
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
         """Return the index pages and whole-history files of the selected leagues.
 
@@ -932,12 +938,6 @@ class _FootballDataSource(BaseSource):
         self._catalogue = catalogue
         params = [{'league': league, 'division': division, 'year': year} for league, division, year, _ in catalogue]
         return sorted(params, key=lambda param: (param['league'], param['division'], param['year']))
-
-    def _build_season_item(self: Self, league: str, division: int, year: int, url: str) -> RawItem:
-        """Return the item of a season file."""
-        if league in _HISTORY_LEAGUES:
-            return RawItem(source=self.name, key=f'{league}_{division}', url=url)
-        return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url)
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the season file of each selected combination, a whole-history league read once.
