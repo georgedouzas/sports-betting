@@ -1,5 +1,8 @@
 """Load objects by reference and convert event times to and from column tokens."""
 
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
+
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -16,6 +19,12 @@ def format_event_time(event_time: pd.Timedelta) -> str:
 
     Returns:
         The token, e.g. `60min`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.core import format_event_time
+        >>> format_event_time(pd.Timedelta('60min'))
+        '60min'
     """
     total_minutes = int(event_time.total_seconds() / 60)
     return f'{total_minutes}min'
@@ -29,6 +38,11 @@ def parse_event_time(token: str) -> pd.Timedelta:
 
     Returns:
         The time delta the token names.
+
+    Examples:
+        >>> from sportsbet.core import parse_event_time
+        >>> parse_event_time('60min')
+        Timedelta('0 days 01:00:00')
     """
     return pd.Timedelta(minutes=int(token[: -len('min')]))
 

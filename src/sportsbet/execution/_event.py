@@ -8,12 +8,12 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from ..core import NON_PREPLAY_EVENT_STATUSES, PREPLAY_EVENT_STATUSES
-from ..evaluation import find_latest_odds_column
+from ..dataloaders import BaseDataLoader
+from ..evaluation import BaseBettor, find_latest_odds_column
 from ._base import (
     BetIdentity,
     ExecutionError,
@@ -25,17 +25,13 @@ from ._base import (
 from ._browser import BrowserSession, PageSnapshot
 from ._schedule import find_betting_moment
 
-if TYPE_CHECKING:
-    from sportsbet.dataloaders import BaseDataLoader
-    from sportsbet.evaluation import BaseBettor
+_logger = logging.getLogger('sportsbet.execution')
 
-logger = logging.getLogger('sportsbet.execution')
+_FALLBACK_PRICE = 1.01
+_DEFAULT_POLL = pd.Timedelta('30s')
 
-FALLBACK_PRICE = 1.01
-DEFAULT_POLL = pd.Timedelta('30s')
-
-Clock = Callable[[], pd.Timestamp]
-Wait = Callable[[float], Awaitable[None]]
+_Clock = Callable[[], pd.Timestamp]
+_Wait = Callable[[float], Awaitable[None]]
 Placer = Callable[[PlacementIntent, BrowserSession], Awaitable[PlacementReceipt]]
 
 
@@ -90,7 +86,7 @@ def _build_intent(
     return PlacementIntent(
         identity=BetIdentity(venue_key, event, market, selection),
         stake=stake,
-        min_price=price if price is not None else FALLBACK_PRICE,
+        min_price=price if price is not None else _FALLBACK_PRICE,
         value_bet=f'{event}|{market}',
     )
 
@@ -138,8 +134,8 @@ async def _monitor(
     moment: pd.Timestamp,
     kickoff: pd.Timestamp,
     poll: pd.Timedelta,
-    read_now: Clock,
-    hold: Wait,
+    read_now: _Clock,
+    hold: _Wait,
 ) -> None:
     """Log the event, its status, and its price on each poll until the betting moment."""
     while True:
@@ -148,7 +144,7 @@ async def _monitor(
         if remaining <= 0:
             return
         price = _price_of(odds, market)
-        logger.info('%s is %s, price %s.', event, _status(now, kickoff), price if price is not None else 'unavailable')
+        _logger.info('%s is %s, price %s.', event, _status(now, kickoff), price if price is not None else 'unavailable')
         await hold(min(poll.total_seconds(), remaining))
 
 
@@ -162,9 +158,9 @@ async def execute_event(
     urls: list[str],
     live: bool = False,
     placer: Placer | None = None,
-    poll: pd.Timedelta = DEFAULT_POLL,
-    clock: Clock | None = None,
-    wait: Wait | None = None,
+    poll: pd.Timedelta = _DEFAULT_POLL,
+    clock: _Clock | None = None,
+    wait: _Wait | None = None,
 ) -> pd.DataFrame:
     """Watch one event and place the model's bet at its moment, once.
 
@@ -209,29 +205,29 @@ async def execute_event(
     place = placer or _default_placer
 
     if not await _match_url(session, event, urls):
-        logger.info('No candidate URL carried %s, so nothing was placed.', event)
+        _logger.info('No candidate URL carried %s, so nothing was placed.', event)
         return build_receipts_frame([])
 
     try:
         await session.authenticate()
     except ExecutionError:
-        logger.info('Authentication for %s failed, so nothing was placed.', session.key)
+        _logger.info('Authentication for %s failed, so nothing was placed.', session.key)
         return build_receipts_frame([])
 
     X_event, O_event, kickoff = _select_event(dataloader, event)
     moment = find_betting_moment(dataloader, kickoff)
     if read_now() > moment:
-        logger.info('The betting moment for %s has passed, so nothing was placed.', event)
+        _logger.info('The betting moment for %s has passed, so nothing was placed.', event)
         return build_receipts_frame([])
 
     await _monitor(event, O_event, next(iter(bettor.betting_markets_)), moment, kickoff, poll, read_now, hold)
 
     intent = _build_intent(session.key, event, bettor, X_event, O_event, stake)
     if intent is None:
-        logger.info('No value bet found for %s, so nothing was placed.', event)
+        _logger.info('No value bet found for %s, so nothing was placed.', event)
         return build_receipts_frame([])
 
-    logger.info(
+    _logger.info(
         'About to stake %s on %s %s at %s, price %s.',
         stake,
         intent.identity.selection,
@@ -241,7 +237,7 @@ async def execute_event(
     )
     if live:
         receipt = await place(intent, session)
-        logger.info('%s: %s.', event, receipt.status.value)
+        _logger.info('%s: %s.', event, receipt.status.value)
     else:
         receipt = PlacementReceipt(
             identity=intent.identity,
@@ -249,5 +245,5 @@ async def execute_event(
             value_bet=intent.value_bet,
             detail='Dry run, so nothing was staked.',
         )
-        logger.info('%s: dry run, nothing staked.', event)
+        _logger.info('%s: dry run, nothing staked.', event)
     return build_receipts_frame([receipt])

@@ -81,6 +81,7 @@ class OddsComparisonBettor(BaseBettor):
         self.alpha = alpha
 
     def _check_odds_types(self: Self, X: pd.DataFrame) -> Self:
+        """Validate that the input data carries the odds types the bettor needs."""
         available_odds_types = {col.split('__', maxsplit=1)[0] for col in X.columns if _is_odds_column(col)}
         if not available_odds_types:
             error_msg = 'Input data do not include any odds columns.'
@@ -104,6 +105,7 @@ class OddsComparisonBettor(BaseBettor):
         return self
 
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame) -> Self:
+        """Learn the markets and the margin the rule bets on."""
         self._check_odds_types(X)
         self.alpha_ = check_scalar(self.alpha, 'alpha', target_type=float, min_val=0.0, max_val=1.0)
         self.output_keys_ = [derive_market_base(col) for col in Y.columns]

@@ -1,5 +1,8 @@
 """Name the identity columns, event statuses, identity-field types and team aliases."""
 
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
+
 from typing import Annotated
 
 import pandas as pd

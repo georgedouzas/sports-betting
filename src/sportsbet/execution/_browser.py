@@ -7,18 +7,119 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Literal, Protocol
 
 from ._base import ExecutionError, VenueBlockedError
 
-if TYPE_CHECKING:
-    from playwright.async_api import BrowserContext, Page
+_BLOCKED_STATUS = frozenset({403, 429})
+_REF_PATTERN = re.compile(r'^e\d+$')
+_BROWSER_EXTRA = "Driving a site needs playwright's browser. Install it with `python -m playwright install chromium`."
 
-BLOCKED_STATUS = frozenset({403, 429})
-REF_PATTERN = re.compile(r'^e\d+$')
-BROWSER_EXTRA = "Driving a site needs playwright's browser. Install it with `python -m playwright install chromium`."
+
+class _Response(Protocol):
+    """What the session reads from a navigation response."""
+
+    @property
+    def status(self: _Response) -> int:
+        """Status the site answered with."""
+
+
+class _Locator(Protocol):
+    """What the session does with an element it has located."""
+
+    async def aria_snapshot(self: _Locator, *, mode: Literal['ai', 'default'] | None, depth: int | None) -> str:
+        """Return the element as an accessibility tree.
+
+        Args:
+            mode: Shape of the tree to return.
+            depth: How deep to walk, or None for the whole subtree.
+
+        Returns:
+            The tree.
+        """
+        ...
+
+    async def click(self: _Locator, *, timeout: float) -> None:
+        """Click the element.
+
+        Args:
+            timeout: Milliseconds to wait for it.
+        """
+        ...
+
+    async def fill(self: _Locator, value: str, *, timeout: float) -> None:
+        """Type into the element.
+
+        Args:
+            value: Text to type.
+            timeout: Milliseconds to wait for it.
+        """
+        ...
+
+    async def select_option(self: _Locator, value: str, *, timeout: float) -> list[str]:
+        """Choose an option in the element.
+
+        Args:
+            value: Option to choose.
+            timeout: Milliseconds to wait for it.
+
+        Returns:
+            The options that ended up chosen.
+        """
+        ...
+
+
+class _Page(Protocol):
+    """What the session does with the page it drives."""
+
+    @property
+    def url(self: _Page) -> str:
+        """URL the page is at."""
+
+    def locator(self: _Page, selector: str) -> _Locator:
+        """Locate an element.
+
+        Args:
+            selector: Selector to locate it by.
+
+        Returns:
+            The located element.
+        """
+        ...
+
+    async def goto(self: _Page, url: str) -> _Response | None:
+        """Go to a URL.
+
+        Args:
+            url: URL to go to.
+
+        Returns:
+            The response, or None where the site answered none.
+        """
+        ...
+
+
+class _Context(Protocol):
+    """What the session does with the browser context it holds open."""
+
+    @property
+    def pages(self: _Context) -> Sequence[_Page]:
+        """Pages the context has open."""
+
+    async def new_page(self: _Context) -> _Page:
+        """Open a page.
+
+        Returns:
+            The opened page.
+        """
+        ...
+
+    async def close(self: _Context) -> None:
+        """Close the context."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -108,7 +209,7 @@ class BrowserSession:
         self.min_interval = min_interval
         self.timeout = timeout
         self.headless = headless
-        self.context_: BrowserContext | None = None
+        self.context_: _Context | None = None
         self.fixed_: FixedSession | None = None
         self._playwright: object | None = None
 
@@ -140,7 +241,7 @@ class BrowserSession:
             await self._playwright.stop()  # type: ignore[attr-defined]  # driver untyped to keep the extra optional
             self._playwright = None
 
-    def _read_page(self: BrowserSession) -> Page:
+    def _read_page(self: BrowserSession) -> _Page:
         """Return the page being driven."""
         if self.context_ is None:
             msg = 'The browser is not open. Call `start` first.'
@@ -180,7 +281,7 @@ class BrowserSession:
         page = self.context_.pages[0] if self.context_.pages else await self.context_.new_page()
         await self._paced()
         response = await page.goto(url)
-        if response is not None and response.status in BLOCKED_STATUS:
+        if response is not None and response.status in _BLOCKED_STATUS:
             msg = f'`{self.key}` refused automated access with status {response.status}.'
             raise VenueBlockedError(msg)
         return await self._capture()
@@ -270,7 +371,7 @@ class BrowserSession:
             ExecutionError: If a locator is a ref or looks like a price.
         """
         for name, locator in locators.items():
-            if REF_PATTERN.match(locator) or locator.startswith('aria-ref='):
+            if _REF_PATTERN.match(locator) or locator.startswith('aria-ref='):
                 msg = (
                     f'`{name}` is pinned to the ref `{locator}`, which belongs to one state of the page. '
                     f'Pin a role and an accessible name instead, as in `textbox[name="Stake"]`.'

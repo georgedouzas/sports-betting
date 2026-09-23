@@ -6,7 +6,7 @@ import pytest
 from sportsbet.dataloaders import DataLoader
 from sportsbet.sources import BaseStatsSource, RawItem, RawPayload
 
-PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}]
+_PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}]
 CURRENT = {'league': 'England', 'division': 1, 'year': 2026}
 
 
@@ -33,7 +33,7 @@ class _Feed:
         return [RawItem(source=self.name, key='catalogue', url='file:///dev/null')]
 
     def read_catalogue(self, payloads):
-        return [*PARAMS, CURRENT]
+        return [*_PARAMS, CURRENT]
 
     def list_required_items(self, params, schedule=None):
         return [RawItem(source=self.name, key=f'train_{param["year"]}', url='file:///dev/null') for param in params]

@@ -1,5 +1,8 @@
 """Entry-point module."""
 
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
+
 import sys
 
 from sportsbet.cli import main

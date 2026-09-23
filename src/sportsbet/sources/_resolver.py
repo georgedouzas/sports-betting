@@ -11,10 +11,10 @@ import pandas as pd
 
 from ..core import ALIASES, GROUPS_COLS, MATCH_COLS, TEAMS_COLS
 
-NOISE = {'fc', 'afc', 'cf', 'sc', 'ac', 'as', 'ss', 'us', 'if', 'bk', 'club', 'the'}
-MIN_PREFIX = 3
-MIN_SIMILARITY = 0.6
-MIN_MARGIN = 0.15
+_NOISE = {'fc', 'afc', 'cf', 'sc', 'ac', 'as', 'ss', 'us', 'if', 'bk', 'club', 'the'}
+_MIN_PREFIX = 3
+_MIN_SIMILARITY = 0.6
+_MIN_MARGIN = 0.15
 
 
 def normalize_team_name(name: str) -> str:
@@ -26,11 +26,16 @@ def normalize_team_name(name: str) -> str:
 
     Returns:
         The normalized name: lower case, without accents, punctuation or noise words.
+
+    Examples:
+        >>> from sportsbet.sources import normalize_team_name
+        >>> normalize_team_name('Atlético Madrid CF')
+        'atletico madrid'
     """
     text = unicodedata.normalize('NFKD', str(name))
     text = ''.join(character for character in text if not unicodedata.combining(character))
     text = re.sub(r'[^a-z0-9 ]', '', text.lower())
-    tokens = [token for token in text.split() if token not in NOISE]
+    tokens = [token for token in text.split() if token not in _NOISE]
     return ' '.join(tokens)
 
 
@@ -46,6 +51,11 @@ def count_common_prefix(one: str, other: str) -> int:
 
     Returns:
         The number of leading characters the two share.
+
+    Examples:
+        >>> from sportsbet.sources import count_common_prefix
+        >>> count_common_prefix('manchester united', 'manchester city')
+        11
     """
     common = 0
     for character, candidate in zip(one, other, strict=False):
@@ -67,6 +77,11 @@ def measure_names_similarity(one: str, other: str) -> float:
 
     Returns:
         A score in `[0.0, 1.0]`, higher the more the names share.
+
+    Examples:
+        >>> from sportsbet.sources import measure_names_similarity
+        >>> measure_names_similarity('manchester united', 'man united')
+        1.0
     """
     tokens, others = sorted([one.split(), other.split()], key=len)
     if not tokens or not others:
@@ -76,7 +91,7 @@ def measure_names_similarity(one: str, other: str) -> float:
         scores = [
             count_common_prefix(token, candidate) / min(len(token), len(candidate))
             for candidate in others
-            if count_common_prefix(token, candidate) >= MIN_PREFIX
+            if count_common_prefix(token, candidate) >= _MIN_PREFIX
         ]
         total += max(scores, default=0.0)
     return total / len(tokens)
@@ -97,6 +112,11 @@ def pair_rosters(
 
     Returns:
         The odds-to-stats name pairing, the odds names left unpaired, and the stats names left unpaired.
+
+    Examples:
+        >>> from sportsbet.sources import pair_rosters
+        >>> pair_rosters({'manchester united', 'arsenal'}, {'man united', 'chelsea'})
+        ({'man united': 'manchester united'}, {'chelsea'}, {'arsenal'})
     """
     matched = {name: name for name in normalized_odds_names & normalized_stats_names}
     unpaired_odds = normalized_odds_names - set(matched)
@@ -112,7 +132,7 @@ def pair_rosters(
         if name not in unpaired_odds or other not in unpaired_stats:
             continue
         alone = len(unpaired_odds) == 1 and len(unpaired_stats) == 1
-        if score >= MIN_SIMILARITY and (margin >= MIN_MARGIN or alone):
+        if score >= _MIN_SIMILARITY and (margin >= _MIN_MARGIN or alone):
             matched[name] = other
             unpaired_odds.discard(name)
             unpaired_stats.discard(other)

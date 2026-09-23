@@ -9,7 +9,7 @@ import pandas as pd
 
 from sportsbet.core import Data
 from sportsbet.dataloaders import DataLoader
-from sportsbet.evaluation._base import BaseBettor
+from sportsbet.evaluation import BaseBettor
 from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
 
 _loader = DataLoader(stats=SampleSoccerStats(), odds=SampleSoccerOdds())

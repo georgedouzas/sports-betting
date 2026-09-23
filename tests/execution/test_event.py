@@ -8,7 +8,7 @@ import pandas as pd
 from sportsbet.execution import PlacementStatus, execute_event
 from tests.execution.conftest import EVENT, RecordingPlacer, StubBettor, StubSession
 
-URL = 'https://book.invalid/arsenal-chelsea'
+_URL = 'https://book.invalid/arsenal-chelsea'
 STAKE = 10.0
 
 
@@ -30,7 +30,7 @@ def test_execute_event_places_one_bet_when_armed(event_dataloader, clock_and_wai
             loader,
             StubSession(),
             stake=STAKE,
-            urls=[URL],
+            urls=[_URL],
             live=True,
             placer=placer,
             poll=pd.Timedelta('5min'),
@@ -59,7 +59,7 @@ def test_execute_event_places_nothing_without_value(event_dataloader, clock_and_
             loader,
             StubSession(),
             stake=STAKE,
-            urls=[URL],
+            urls=[_URL],
             live=True,
             placer=placer,
             poll=pd.Timedelta('5min'),
@@ -83,7 +83,7 @@ def test_execute_event_dry_run_stakes_nothing(event_dataloader, clock_and_wait):
             loader,
             StubSession(),
             stake=STAKE,
-            urls=[URL],
+            urls=[_URL],
             live=False,
             placer=placer,
             poll=pd.Timedelta('5min'),
@@ -109,7 +109,7 @@ def test_execute_event_stops_when_moment_passed(event_dataloader, clock_and_wait
             loader,
             StubSession(),
             stake=STAKE,
-            urls=[URL],
+            urls=[_URL],
             live=True,
             placer=placer,
             clock=clock,
@@ -133,7 +133,7 @@ def test_execute_event_stops_when_no_url_matches(event_dataloader, clock_and_wai
             loader,
             session,
             stake=STAKE,
-            urls=[URL],
+            urls=[_URL],
             live=True,
             placer=placer,
             clock=clock,
@@ -157,7 +157,7 @@ def test_execute_event_logs_status_and_decision(event_dataloader, clock_and_wait
             loader,
             StubSession(),
             stake=STAKE,
-            urls=[URL],
+            urls=[_URL],
             live=False,
             poll=pd.Timedelta('5min'),
             clock=clock,
@@ -180,7 +180,7 @@ def test_execute_event_places_at_most_one_bet(event_dataloader, clock_and_wait):
             loader,
             StubSession(),
             stake=STAKE,
-            urls=[URL],
+            urls=[_URL],
             live=True,
             placer=placer,
             poll=pd.Timedelta('30s'),

@@ -13,14 +13,14 @@ import pandas as pd
 
 from ...core import ParamGrid
 from .._base import BaseStatsSource, RawItem, RawPayload
-from .._common._basketball import DIVISION, SEASONS_KEY, _snapshots
+from .._common._basketball import _DIVISION, _SEASONS_KEY, _snapshots
 
-SEASONS_URL = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons?limit=100'
-GAMES_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start}-{end}&limit=1000'
-LEAGUE = 'NBA'
-EXHIBITION = 'ALLSTAR'
-PRESEASON = 1
-MONTHS = [(-1, month) for month in (9, 10, 11, 12)] + [(0, month) for month in (1, 2, 3, 4, 5, 6, 7)]
+_SEASONS_URL = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons?limit=100'
+_GAMES_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start}-{end}&limit=1000'
+_LEAGUE = 'NBA'
+_EXHIBITION = 'ALLSTAR'
+_PRESEASON = 1
+_MONTHS = [(-1, month) for month in (9, 10, 11, 12)] + [(0, month) for month in (1, 2, 3, 4, 5, 6, 7)]
 
 
 def _wanted(event: dict[str, Any]) -> bool:
@@ -28,7 +28,7 @@ def _wanted(event: dict[str, Any]) -> bool:
     competitions = event.get('competitions') or [{}]
     season_type = event.get('season', {}).get('type')
     competition_type = competitions[0].get('type', {}).get('abbreviation')
-    return season_type != PRESEASON and competition_type != EXHIBITION
+    return season_type != _PRESEASON and competition_type != _EXHIBITION
 
 
 def _games(content: bytes, year: int) -> pd.DataFrame:
@@ -47,8 +47,8 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
         records.append(
             {
                 'date': event['date'],
-                'league': LEAGUE,
-                'division': DIVISION,
+                'league': _LEAGUE,
+                'division': _DIVISION,
                 'year': year,
                 'home_team': home.get('team', {}).get('displayName'),
                 'away_team': away.get('team', {}).get('displayName'),
@@ -92,41 +92,80 @@ class NBAStats(BaseStatsSource):
     name: ClassVar[str] = 'nba'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return the seasons the competition publishes."""
-        return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
+        """Return the seasons the competition publishes.
+
+        Args:
+            selection:
+                What is being looked for. `None` asks for everything.
+
+        Returns:
+            items:
+                The items whose payloads describe the catalogue.
+        """
+        return [RawItem(source=self.name, key=_SEASONS_KEY, url=_SEASONS_URL)]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the seasons the competition publishes, each named by the year it ends in."""
+        """Return the seasons the competition publishes, each named by the year it ends in.
+
+        Args:
+            payloads:
+                The payloads of the index items.
+
+        Returns:
+            params:
+                The available `league`, `division` and `year` combinations.
+        """
         if not payloads:
             return []
         seasons = json.loads(payloads[0].content).get('items', [])
         years = {int(season['$ref'].rsplit('/', 1)[-1].split('?')[0]) for season in seasons if '$ref' in season}
         return sorted(
-            ({'league': LEAGUE, 'division': DIVISION, 'year': year} for year in years),
+            ({'league': _LEAGUE, 'division': _DIVISION, 'year': year} for year in years),
             key=lambda params: params['year'],
         )
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return one item per month of each selected season."""
+        """Return one item per month of each selected season.
+
+        Args:
+            params:
+                The selected parameter combinations.
+
+            schedule:
+                The matches of the selected parameters, with their kick-off instants.
+
+        Returns:
+            items:
+                The items to read. Deterministic for the same parameters.
+        """
         items = []
         for param in params:
-            if param['league'] != LEAGUE:
+            if param['league'] != _LEAGUE:
                 continue
             year = param['year']
-            for offset, month in MONTHS:
+            for offset, month in _MONTHS:
                 start = pd.Timestamp(year=year + offset, month=month, day=1)
                 last = calendar.monthrange(start.year, month)[1]
                 items.append(
                     RawItem(
                         source=self.name,
-                        key=f'{LEAGUE}_{param["division"]}_{year}_{start.year}{month:02d}',
-                        url=GAMES_URL.format(start=f'{start.year}{month:02d}01', end=f'{start.year}{month:02d}{last}'),
+                        key=f'{_LEAGUE}_{param["division"]}_{year}_{start.year}{month:02d}',
+                        url=_GAMES_URL.format(start=f'{start.year}{month:02d}01', end=f'{start.year}{month:02d}{last}'),
                     ),
                 )
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Transform the months into the long statistics snapshots."""
+        """Transform the months into the long statistics snapshots.
+
+        Args:
+            payloads:
+                The payloads of the required items.
+
+        Returns:
+            snapshots:
+                The long snapshots.
+        """
         seasons: dict[int, list[pd.DataFrame]] = {}
         for payload in payloads:
             year = int(payload.item.key.split('_')[2])

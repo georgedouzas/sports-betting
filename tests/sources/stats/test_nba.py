@@ -12,7 +12,7 @@ import pytest
 from sportsbet.sources import NBAStats, RawPayload
 
 SNAPSHOTS = 9
-MONTHS = 11
+_MONTHS = 11
 HOME_POINTS = 120
 AWAY_POINTS = 96
 FORM_POINTS = 120
@@ -139,7 +139,7 @@ def test_a_season_is_asked_for_one_month_at_a_time(source):
     test exists to make widening it fail here rather than in a backtest.
     """
     items = source.list_required_items([{'league': 'NBA', 'division': 1, 'year': 2026}])
-    assert len(items) == MONTHS
+    assert len(items) == _MONTHS
     windows = [item.url.split('dates=')[1].split('&')[0] for item in items]
     for window in windows:
         start, end = window.split('-')

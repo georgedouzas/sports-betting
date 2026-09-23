@@ -19,8 +19,8 @@ from sklearn.utils.validation import _check_feature_names, check_is_fitted
 
 from ..core import STATUS_RANK, BoolData, Data, parse_event_time
 
-N_ODDS_TOKENS = 4
-OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
+_N_ODDS_TOKENS = 4
+_OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
 
 
 def derive_market_base(market: str) -> str:
@@ -32,13 +32,18 @@ def derive_market_base(market: str) -> str:
 
     Returns:
         The base market name (e.g. `home_win`).
+
+    Examples:
+        >>> from sportsbet.evaluation import derive_market_base
+        >>> derive_market_base('home_win__preplay__0min')
+        'home_win'
     """
     return market.split('__', maxsplit=1)[0]
 
 
 def _is_odds_column(col: str) -> bool:
     """Return whether a column follows the four-token odds grammar."""
-    return len(col.split('__')) == N_ODDS_TOKENS
+    return len(col.split('__')) == _N_ODDS_TOKENS
 
 
 def find_latest_odds_column(columns: list[str], base: str, provider: str | None = None) -> str | None:
@@ -54,6 +59,12 @@ def find_latest_odds_column(columns: list[str], base: str, provider: str | None 
 
     Returns:
         The matching column at the latest ``(status, time)``, or `None`.
+
+    Examples:
+        >>> from sportsbet.evaluation import find_latest_odds_column
+        >>> columns = ['pinnacle__home_win__preplay__0min', 'pinnacle__home_win__preplay__60min']
+        >>> find_latest_odds_column(columns, 'home_win')
+        'pinnacle__home_win__preplay__60min'
     """
     best: str | None = None
     best_key: tuple[int, pd.Timedelta] | None = None
@@ -90,7 +101,7 @@ def derive_complementary_events(markets: list[str]) -> list[list[str]]:
         []
     """
     groups = []
-    outcomes = [market for market in OUTCOME_MARKETS if market in markets]
+    outcomes = [market for market in _OUTCOME_MARKETS if market in markets]
     if len(outcomes) > 1:
         groups.append(outcomes)
     lines: dict[str, list[str]] = {}
@@ -180,6 +191,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         self.stake = stake
 
     def _get_feature_names_odds(self: Self, O: pd.DataFrame) -> NDArray[np.str_]:
+        """Return the latest odds column of every betting market."""
         columns = list(O.columns)
         odds_cols = [find_latest_odds_column(columns, base) for base in self.betting_markets_]
         return np.array([col for col in odds_cols if col is not None])
@@ -197,6 +209,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         O: pd.DataFrame | None,
         Y_betting_markets: list[str],
     ) -> None:
+        """Validate the input data and learn what the bettor needs from it."""
 
         Y_bases = list(dict.fromkeys(Y_betting_markets))
         self.complementary_events_ = (
@@ -247,6 +260,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
 
     @property
     def classes_(self: Self) -> list:
+        """The classes of each betting market."""
         try:
             check_is_fitted(self)
         except NotFittedError as nfe:
@@ -259,6 +273,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         X: pd.DataFrame,
         Y: pd.DataFrame,
     ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+        """Validate the input data and the multi-output targets against each other."""
 
         check_consistent_length(X, Y)
 
@@ -281,6 +296,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         X: pd.DataFrame,
         O: pd.DataFrame,
     ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+        """Validate the input data and the odds against each other."""
 
         check_consistent_length(X, O)
 
@@ -292,7 +308,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             "Odds data column names should follow a naming "
             "convention of the form `f'{provider}__{betting_market}__{event_status}__{event_time}'`"
         )
-        if {len(tokens) for tokens in O_cols} != {N_ODDS_TOKENS}:
+        if {len(tokens) for tokens in O_cols} != {_N_ODDS_TOKENS}:
             raise ValueError(error_msg)
         O_providers = [tokens[0] for tokens in O_cols]
         if len(set(O_providers)) != 1:
@@ -304,13 +320,16 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
 
     @abstractmethod
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None) -> Self:
+        """Fit the bettor to the data, which a subclass implements."""
         return self
 
     @abstractmethod
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
+        """Return the probabilities the bettor predicts, which a subclass implements."""
         return np.array([], dtype=float)
 
     def _normalize_proba(self: Self, Y_proba_pred: Data) -> Data:
+        """Scale the probabilities of complementary events to sum to one."""
         for events in self.complementary_events_:
             if set(self.betting_markets_).issuperset(events):
                 mask = np.isin(self.betting_markets_, events)

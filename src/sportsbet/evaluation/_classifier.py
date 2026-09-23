@@ -81,6 +81,7 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         self.classifier = classifier
 
     def _check_classifier(self: Self) -> Self:
+        """Validate the classifier and clone it into the fitted attribute."""
         if not isinstance(self.classifier, BaseEstimator) or not is_classifier(self.classifier):
             error_msg = f'`ClassifierBettor` requires a classifier. Instead {type(self.classifier)} is given.'
             raise TypeError(error_msg)
@@ -88,6 +89,7 @@ class ClassifierBettor(MetaEstimatorMixin, BaseBettor):
         return self
 
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame) -> Self:
+        """Fit the cloned classifier to the data and the targets."""
         self._check_classifier()
         self.classifier_.fit(X, Y)
         return self

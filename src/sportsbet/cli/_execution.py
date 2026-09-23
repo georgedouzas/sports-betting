@@ -51,17 +51,17 @@ def _load_session(venue_ref: str) -> BrowserSession:
 @contextmanager
 def _logging_to_terminal() -> Iterator[None]:
     """Show the run's log on the terminal while a command runs."""
-    logger = logging.getLogger('sportsbet.execution')
+    _logger = logging.getLogger('sportsbet.execution')
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter('%(message)s'))
-    logger.addHandler(handler)
-    level = logger.level
-    logger.setLevel(logging.INFO)
+    _logger.addHandler(handler)
+    level = _logger.level
+    _logger.setLevel(logging.INFO)
     try:
         yield
     finally:
-        logger.removeHandler(handler)
-        logger.setLevel(level)
+        _logger.removeHandler(handler)
+        _logger.setLevel(level)
 
 
 @click.group()

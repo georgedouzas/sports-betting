@@ -44,7 +44,7 @@ class PlacementStatus(StrEnum):
     REJECTED = 'rejected'
 
 
-REF_BYTES = 16
+_REF_BYTES = 16
 
 
 @dataclass(frozen=True)
@@ -77,7 +77,7 @@ class BetIdentity:
     def ref_(self: BetIdentity) -> str:
         """The reference a venue carries for this bet."""
         seed = f'{self.venue}|{self.match}|{self.market}|{self.selection}'
-        return blake2s(seed.encode(), digest_size=REF_BYTES).hexdigest()
+        return blake2s(seed.encode(), digest_size=_REF_BYTES).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -224,20 +224,55 @@ class BaseVenue(abc.ABC):
 
     @abc.abstractmethod
     async def list_markets(self: BaseVenue, matches: list[str]) -> pd.DataFrame:
-        """Return the markets on offer for the given matches, with their current prices."""
+        """Return the markets on offer for the given matches, with their current prices.
+
+        Args:
+            matches: Matches to read the markets of.
+
+        Returns:
+            One row per market on offer, with its current price.
+        """
 
     @abc.abstractmethod
     async def read_balance(self: BaseVenue) -> tuple[float, float]:
-        """Return the balance and the exposure currently open."""
+        """Return the balance and the exposure currently open.
+
+        Returns:
+            The balance and the exposure, in that order.
+        """
 
     @abc.abstractmethod
     async def place(self: BaseVenue, intent: PlacementIntent) -> PlacementReceipt:
-        """Place one bet, once and only once for its identity."""
+        """Place one bet, once and only once for its identity.
+
+        Args:
+            intent: The bet to place, carrying the identity that makes it unique.
+
+        Returns:
+            What the venue recorded for the bet.
+        """
 
     @abc.abstractmethod
     async def read_status(self: BaseVenue, identities: list[BetIdentity]) -> pd.DataFrame:
-        """Return what the venue holds for these identities."""
+        """Return what the venue holds for these identities.
+
+        Args:
+            identities: Identities to read the status of.
+
+        Returns:
+            One row per identity, with the status the venue holds for it.
+        """
 
     @abc.abstractmethod
     async def cancel(self: BaseVenue, identity: BetIdentity) -> PlacementReceipt:
-        """Cancel a bet, raising `CancellationUnsupportedError` where the venue cannot."""
+        """Cancel a bet.
+
+        Args:
+            identity: Identity of the bet to cancel.
+
+        Returns:
+            What the venue recorded for the cancellation.
+
+        Raises:
+            CancellationUnsupportedError: If the venue cannot cancel a bet.
+        """

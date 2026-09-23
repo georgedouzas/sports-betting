@@ -14,8 +14,8 @@ from sklearn.model_selection import ParameterGrid
 from ...core import ParamGrid
 from .._base import RawItem, RawPayload
 
-DATA = Path(__file__).parent.parent / 'data'
-PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2024]}
+_DATA = Path(__file__).parent.parent / 'data'
+_PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2024]}
 
 
 class _SampleSource:
@@ -26,25 +26,64 @@ class _SampleSource:
     sport: ClassVar[str | None] = 'soccer'
 
     def list_index_items(self: Self, selection: ParamGrid | None = None) -> list[RawItem]:
-        """Return no items."""
+        """Return no items.
+
+        Args:
+            selection:
+                What is being looked for. `None` asks for everything.
+
+        Returns:
+            items:
+                The items whose payloads describe the catalogue.
+        """
         return []
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
-        """Return the leagues, divisions and seasons the sample carries."""
-        return list(ParameterGrid(PARAMS))
+        """Return the leagues, divisions and seasons the sample carries.
+
+        Args:
+            payloads:
+                The payloads of the index items.
+
+        Returns:
+            params:
+                The available `league`, `division` and `year` combinations.
+        """
+        return list(ParameterGrid(_PARAMS))
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
-        """Return the bundled file of every selected season."""
+        """Return the bundled file of every selected season.
+
+        Args:
+            params:
+                The selected parameter combinations.
+
+            schedule:
+                The matches of the selected parameters, with their kick-off instants.
+
+        Returns:
+            items:
+                The items to read. Deterministic for the same parameters.
+        """
         items = []
         for param in params:
             key = f'{param["league"]}_{param["division"]}_{param["year"]}_{self.kind}'
-            path = DATA / f'{key}.csv.gz'
+            path = _DATA / f'{key}.csv.gz'
             if path.exists():
                 items.append(RawItem(source=self.name, key=key, url=path.as_uri()))
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:
-        """Return the long snapshots of the bundled files."""
+        """Return the long snapshots of the bundled files.
+
+        Args:
+            payloads:
+                The payloads of the required items.
+
+        Returns:
+            snapshots:
+                The long snapshots.
+        """
         if not payloads:
             return pd.DataFrame()
         frames = [pd.read_csv(io.BytesIO(payload.content), compression='gzip') for payload in payloads]

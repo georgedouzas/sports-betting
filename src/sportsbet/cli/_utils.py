@@ -88,6 +88,7 @@ def _print_console(dfs: list[pd.DataFrame], titles: list[str], *, index: bool = 
             height += len(rows) * (len(headings) + 1)
 
     def show() -> None:
+        """Print each rendered table under its title."""
         for title, table in rendered:
             console.print(f'[bold green]{title}[/bold green]')
             console.print(table)

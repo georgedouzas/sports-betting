@@ -21,7 +21,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..core import BoolData, Data, Indices
 from ._base import BaseBettor, _check_is_dataframe
 
-TSCV = TimeSeriesSplit(n_splits=3)
+_TSCV = TimeSeriesSplit(n_splits=3)
 
 
 def _check_time_series_cv(cv: TimeSeriesSplit) -> None:
@@ -39,6 +39,7 @@ def _fit_bet(
     Y: pd.DataFrame,
     O: pd.DataFrame,
 ) -> dict:
+    """Fit the bettor on the training split and bet on the test split."""
 
     bettor.fit(X.iloc[train_ind], Y.iloc[train_ind], O.iloc[train_ind])
 
@@ -373,7 +374,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         scoring: str | Callable | list | tuple | dict[str, Callable] | None = None,
         n_jobs: int | None = None,
         refit: bool | str | Callable = True,
-        cv: TimeSeriesSplit = TSCV,
+        cv: TimeSeriesSplit = _TSCV,
         verbose: int = 0,
         pre_dispatch: int | str = '2*n_jobs',
         error_score: str | float | int = np.nan,
@@ -394,6 +395,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         )
 
     def _check_attr(self: Self, attr_name: str, raise_attr_error: bool, check_best_estimator: bool) -> None:
+        """Raise where an attribute is read before the search has run."""
         if raise_attr_error:
             try:
                 check_is_fitted(self)
@@ -407,6 +409,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
             raise AttributeError(error_msg)
 
     def _modify_scorer(self: Self, scorer: Callable) -> Callable:
+        """Wrap the scorer so it scores a bettor rather than a classifier."""
         def _scorer(
             estimator: BaseBettor,
             X: pd.DataFrame,
@@ -414,12 +417,14 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
             sample_weight: NDArray[np.float64] | None = None,
             **kwargs: dict[str, Any],
         ) -> float:
+            """Score the estimator on the data the search passes it."""
             Y = Y[estimator.feature_names_out_]
             return scorer(estimator, X, Y, sample_weight, **kwargs)
 
         return _scorer
 
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None) -> Self:
+        """Search the parameter grid and keep the bettor that scored best."""
         if not isinstance(self.estimator, BaseBettor):
             error_msg = f'`BettorGridSearchCV` requires a bettor as estimator. Instead {type(self.estimator)} is given.'
             raise TypeError(error_msg)
@@ -450,6 +455,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         return self
 
     def _predict_proba(self: Self, X: pd.DataFrame) -> Data:
+        """Return the probabilities the best estimator predicts."""
         return self.best_estimator_._predict_proba(X)
 
     def fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None = None) -> Self:
@@ -526,5 +532,6 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
 
     @property
     def classes_(self: Self) -> list:
+        """The classes of each betting market."""
         self._check_attr('classes_', True, True)
         return [np.array([0, 1]) for _ in enumerate(self.betting_markets_)]

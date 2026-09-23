@@ -85,7 +85,16 @@ class _BaseSchema(pa.DataFrameModel):
     @pa.dataframe_check
     @classmethod
     def check_event_time_vs_status(cls: type[Self], df: pd.DataFrame) -> pd.Series:
-        """Check the event time is consistent with the event status."""
+        """Check the event time is consistent with the event status.
+
+        Args:
+            df:
+                The snapshots to check.
+
+        Returns:
+            passing:
+                True for every row whose event time agrees with its status.
+        """
         preplay_check = (df['event_status'] == 'preplay') & (df['event_time'] >= pd.Timedelta(0))
         inplay_check = (df['event_status'] == 'inplay') & (df['event_time'] > pd.Timedelta(0))
         postplay_check = (df['event_status'] == 'postplay') & (df['event_time'] == pd.Timedelta(0))
@@ -94,7 +103,12 @@ class _BaseSchema(pa.DataFrameModel):
 
     @classmethod
     def list_snapshot_cols(cls: type[Self]) -> list[str]:
-        """Return the snapshot-identity columns."""
+        """Return the snapshot-identity columns.
+
+        Returns:
+            cols:
+                The columns that together identify one snapshot.
+        """
         schema = cls.to_schema()
         return [
             name
@@ -104,17 +118,37 @@ class _BaseSchema(pa.DataFrameModel):
 
     @classmethod
     def get_col_metadata(cls: type[Self], col: str) -> dict[str, Any]:
-        """Return the `include`/`fixed`/`snapshot` metadata of a column."""
+        """Return the `include`, `fixed` and `snapshot` metadata of a column.
+
+        Args:
+            col:
+                The column to read the metadata of.
+
+        Returns:
+            metadata:
+                The metadata the schema carries for the column, empty where it carries none.
+        """
         schema_col = dict(cls.to_schema().columns)[col]
         return (schema_col.properties or {}).get('metadata') or {}
 
     @pa.dataframe_check
     @classmethod
     def check_snapshot_unique(cls: type[Self], df: pd.DataFrame) -> bool:
-        """Check that no two rows share the same snapshot identity."""
+        """Check that no two rows share the same snapshot identity.
+
+        Args:
+            df:
+                The snapshots to check.
+
+        Returns:
+            unique:
+                Whether every snapshot identity appears once.
+        """
         return not df.duplicated(subset=cls.list_snapshot_cols()).any()
 
     class Config:
+        """Reject a frame carrying a column the schema does not declare."""
+
         strict = True
 
 
@@ -151,14 +185,29 @@ class BaseOddsSchema(_BaseSchema):
 
     @classmethod
     def list_odds_cols(cls) -> list[str]:
-        """Return the odds (market) columns."""
+        """Return the market columns.
+
+        Returns:
+            cols:
+                The columns carrying a price, which is every column that is neither part of the snapshot
+                identity nor the provider.
+        """
         schema_cols = list(cls.to_schema().columns.keys())
         return [col for col in schema_cols if col not in cls.list_snapshot_cols() and col != 'provider']
 
     @pa.dataframe_check
     @classmethod
     def check_postplay_missing_odds(cls, df: pd.DataFrame) -> pd.Series:
-        """Check that post-match snapshots carry no odds."""
+        """Check that post-match snapshots carry no odds.
+
+        Args:
+            df:
+                The snapshots to check.
+
+        Returns:
+            passing:
+                True for every row that is not post-match, and for every post-match row with no price.
+        """
         odds_cols = cls.list_odds_cols()
         if not odds_cols:
             return pd.Series(True, index=df.index)

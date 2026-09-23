@@ -22,7 +22,7 @@ from sportsbet.sources import derive_market_outcomes
 # the only thing you tell it. Implement `_load_snapshots` and everything else follows.
 
 MATCHES = [('2024-08-16', 'Arsenal', 'Chelsea', 2, 0), ('2024-08-23', 'Everton', 'Spurs', 1, 2)]
-MARKETS = ['home_win', 'draw', 'away_win']
+_MARKETS = ['home_win', 'draw', 'away_win']
 
 
 class MyDataLoader(BaseDataLoader):
@@ -39,7 +39,7 @@ class MyDataLoader(BaseDataLoader):
                 'home_team': home,
                 'away_team': away,
             }
-            outcomes = derive_market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), MARKETS).iloc[0]
+            outcomes = derive_market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), _MARKETS).iloc[0]
             stats += [
                 {**identity, 'event_status': 'preplay', 'event_time': pd.Timedelta('0min'), 'home_points_avg': 2.1},
                 {**identity, 'event_status': 'postplay', 'event_time': pd.Timedelta('0min'), **outcomes},
@@ -84,12 +84,12 @@ O
 # The odds my feed carries imply a probability for each outcome. The probabilities sum to more than one. That surplus is
 # the bookmaker's margin, built into every price.
 
-prices = {market: O.filter(like=f'__{market}__').iloc[0, 0] for market in MARKETS}
+prices = {market: O.filter(like=f'__{market}__').iloc[0, 0] for market in _MARKETS}
 implied = {market: 1 / price for market, price in prices.items()}
 overround = sum(implied.values())
 
 fig, ax = plt.subplots()
 ax.bar(list(implied), list(implied.values()))
-ax.axhline(1 / len(MARKETS), color='black', linewidth=0.8, linestyle='--')
+ax.axhline(1 / len(_MARKETS), color='black', linewidth=0.8, linestyle='--')
 ax.set_title(f'What the prices imply, summing to {overround:.2f}')
 ax.set_ylabel('implied probability')

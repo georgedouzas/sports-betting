@@ -19,9 +19,9 @@ import pandas as pd
 
 from ..core import ParamGrid
 
-CONNECTIONS_LIMIT = 20
-ENCODING = 'ISO-8859-1'
-FILE_SCHEME = 'file://'
+_CONNECTIONS_LIMIT = 20
+_ENCODING = 'ISO-8859-1'
+_FILE_SCHEME = 'file://'
 
 
 @dataclass(frozen=True)
@@ -82,7 +82,7 @@ async def _fetch_url(client: aiohttp.ClientSession, url: str) -> str:
     """Return the text of a URL, read over the network."""
 
     async with client.get(url) as response:
-        return await response.text(encoding=ENCODING)
+        return await response.text(encoding=_ENCODING)
 
 
 async def _fetch_urls(urls: list[str]) -> list[str]:
@@ -90,7 +90,7 @@ async def _fetch_urls(urls: list[str]) -> list[str]:
 
     async with aiohttp.ClientSession(
         raise_for_status=True,
-        connector=aiohttp.TCPConnector(limit=CONNECTIONS_LIMIT),
+        connector=aiohttp.TCPConnector(limit=_CONNECTIONS_LIMIT),
     ) as client:
         return await asyncio.gather(*[_fetch_url(client, url) for url in urls])
 
@@ -102,9 +102,9 @@ def _read_local_file(url: str) -> bytes:
 
 def _read_urls_content(urls: list[str]) -> list[bytes]:
     """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest."""
-    remote = [url for url in urls if not url.startswith(FILE_SCHEME)]
+    remote = [url for url in urls if not url.startswith(_FILE_SCHEME)]
     fetched = iter(asyncio.run(_fetch_urls(remote)) if remote else [])
-    return [_read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING) for url in urls]
+    return [_read_local_file(url) if url.startswith(_FILE_SCHEME) else next(fetched).encode(_ENCODING) for url in urls]
 
 
 def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
@@ -125,7 +125,7 @@ def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) ->
 
 
 def read_csv_content(content: bytes) -> pd.DataFrame:
-    """Return a data frame read from raw CSV content.
+    r"""Return a data frame read from raw CSV content.
 
     Args:
         content:
@@ -133,10 +133,16 @@ def read_csv_content(content: bytes) -> pd.DataFrame:
 
     Returns:
         The parsed data frame.
+
+    Examples:
+        >>> from sportsbet.sources import read_csv_content
+        >>> read_csv_content(b'league,goals\nEngland,2\n')
+            league  goals
+        0  England      2
     """
-    text = content.decode(ENCODING)
-    names = pd.read_csv(io.StringIO(text), nrows=0, encoding=ENCODING).columns.to_list()
-    return pd.read_csv(io.StringIO(text), names=names, skiprows=1, encoding=ENCODING, on_bad_lines='skip')
+    text = content.decode(_ENCODING)
+    names = pd.read_csv(io.StringIO(text), nrows=0, encoding=_ENCODING).columns.to_list()
+    return pd.read_csv(io.StringIO(text), names=names, skiprows=1, encoding=_ENCODING, on_bad_lines='skip')
 
 
 class BaseSource(ABC):

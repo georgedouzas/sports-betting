@@ -113,6 +113,7 @@ def options(*groups: list[Callable[[FC], FC]]) -> Callable[[FC], FC]:
     """Add groups of options to a command."""
 
     def decorate(command: FC) -> FC:
+        """Add every option of the groups to the command."""
         for option in reversed([option for group in groups for option in group]):
             command = option(command)
         return command

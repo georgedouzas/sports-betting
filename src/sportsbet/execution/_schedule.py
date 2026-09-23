@@ -5,12 +5,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import pandas as pd
 
-if TYPE_CHECKING:
-    import pandas as pd
-
-    from sportsbet.dataloaders import BaseDataLoader
+from sportsbet.dataloaders import BaseDataLoader
 
 
 def find_betting_moment(dataloader: BaseDataLoader, kickoff: pd.Timestamp) -> pd.Timestamp:

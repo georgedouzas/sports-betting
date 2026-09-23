@@ -1,5 +1,8 @@
 """Define the types shared across the library."""
 
+# Author: Georgios Douzas <gdouzas@icloud.com>
+# License: MIT
+
 from collections.abc import Callable
 from typing import Any, TypeAlias
 
