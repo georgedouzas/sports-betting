@@ -56,22 +56,16 @@ class EuroLeagueStats(BaseStatsSource):
     Read more in the [user guide][user-guide].
 
     Examples:
-        >>> from sportsbet.dataloaders import DataLoader
-        >>> from sportsbet.sources import EuroLeagueStats, OddsApi
+        >>> from sportsbet.sources import EuroLeagueStats
         >>> source = EuroLeagueStats()
         >>> source.name, source.kind, source.sport
         ('euroleague', 'stats', 'basketball')
-        >>> # A whole season arrives in one request, and asking what it publishes costs one more.
-        >>> len(source.list_index_items())
-        1
-        >>> # Pair the statistics with an odds source.
-        >>> dataloader = DataLoader(
-        ...     param_grid={'league': ['Euroleague'], 'division': [1], 'year': [2025]},
-        ...     stats=source,
-        ...     odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h']),
-        ... )
-        >>> dataloader.sport_
-        'basketball'
+        >>> # Asking what it publishes costs one request, for the list of seasons.
+        >>> [item.key for item in source.list_index_items()]
+        ['seasons']
+        >>> # A whole season then arrives in one more.
+        >>> [item.key for item in source.list_required_items([{'league': 'Euroleague', 'division': 1, 'year': 2025}])]
+        ['Euroleague_1_2025']
     """
 
     sport: ClassVar[str | None] = 'basketball'

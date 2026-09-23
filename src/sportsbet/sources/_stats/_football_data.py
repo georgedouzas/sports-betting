@@ -14,20 +14,14 @@ class FootballDataStats(FootballDataSource, BaseStatsSource):
     Read more in the [user guide][user-guide].
 
     Examples:
-        >>> from sportsbet.dataloaders import DataLoader
-        >>> from sportsbet.sources import FootballDataOdds, FootballDataStats
+        >>> from sportsbet.sources import FootballDataStats
         >>> source = FootballDataStats()
         >>> source.name, source.kind, source.sport
         ('football_data', 'stats', 'soccer')
         >>> # It declares what it would read to learn what it publishes, and reads nothing.
         >>> [item.key for item in source.list_index_items({'league': ['Italy']})]
         ['index_Italy']
-        >>> # Hand it to a dataloader, together with wherever the odds come from.
-        >>> dataloader = DataLoader(
-        ...     param_grid={'league': ['Italy'], 'division': [1], 'year': [2024]},
-        ...     stats=source,
-        ...     odds=FootballDataOdds(),
-        ... )
-        >>> dataloader.sport_
-        'soccer'
+        >>> # Asking for everything it publishes declares one index page per league.
+        >>> len(source.list_index_items()) > 1
+        True
     """

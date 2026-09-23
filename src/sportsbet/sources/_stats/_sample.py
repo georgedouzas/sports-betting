@@ -17,23 +17,18 @@ class SampleSoccerStats(SampleSource, BaseStatsSource):
     is finished.
 
     Examples:
-        >>> from sportsbet.dataloaders import DataLoader
-        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.sources import SampleSoccerStats, fetch_payloads
         >>> source = SampleSoccerStats()
         >>> source.name, source.kind, source.sport
         ('sample_soccer', 'stats', 'soccer')
-        >>> # The bundled data is known up front.
+        >>> # The bundled data is known up front, so nothing is read to learn it.
         >>> source.list_available_params()
         [{'division': 1, 'league': 'England', 'year': 2024}, {'division': 1, 'league': 'Spain', 'year': 2024}]
-        >>> dataloader = DataLoader(
-        ...     param_grid={'league': ['England']},
-        ...     stats=source,
-        ...     odds=SampleSoccerOdds(),
-        ... )
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_average')
-        >>> # A whole season of the Premier League.
-        >>> len(X)
-        380
+        >>> # Reading the bundled file and shaping it gives the long snapshots of one season.
+        >>> items = source.list_required_items(source.list_available_params()[:1])
+        >>> snapshots = source.to_snapshots(fetch_payloads(items, source.request_url))
+        >>> sorted(snapshots['event_status'].unique())
+        ['inplay', 'postplay', 'preplay']
     """
 
     kind: ClassVar[str] = 'stats'

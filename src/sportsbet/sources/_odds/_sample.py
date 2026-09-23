@@ -14,19 +14,19 @@ class SampleSoccerOdds(SampleSource, BaseOddsSource):
     """The market average and market maximum pre-match odds of the bundled soccer sample season.
 
     Examples:
-        >>> from sportsbet.dataloaders import DataLoader
-        >>> from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats
+        >>> from sportsbet.sources import SampleSoccerOdds, fetch_payloads
         >>> source = SampleSoccerOdds()
         >>> source.name, source.kind, source.sport
         ('sample_soccer', 'odds', 'soccer')
-        >>> dataloader = DataLoader(stats=SampleSoccerStats(), odds=source)
-        >>> X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')
-        >>> # The providers and the markets are read from the data.
-        >>> dataloader.get_odds_types()
+        >>> # The bundled seasons are known up front, so nothing is read to learn them.
+        >>> params = source.list_available_params()
+        >>> items = source.list_required_items(params[:1])
+        >>> [item.key for item in items]
+        ['England_1_2024_odds']
+        >>> # Reading the bundled file and shaping it gives the long snapshots.
+        >>> snapshots = source.to_snapshots(fetch_payloads(items, source.request_url))
+        >>> sorted(snapshots['provider'].unique())
         ['market_average', 'market_maximum']
-        >>> list(Y.columns)
-        ['home_win__postplay__0min', 'draw__postplay__0min', 'away_win__postplay__0min', \
-'over_2.5__postplay__0min', 'under_2.5__postplay__0min']
     """
 
     kind: ClassVar[str] = 'odds'

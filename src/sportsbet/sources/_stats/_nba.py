@@ -69,23 +69,16 @@ class NBAStats(BaseStatsSource):
     Read more in the [user guide][user-guide].
 
     Examples:
-        >>> from sportsbet.dataloaders import DataLoader
-        >>> from sportsbet.sources import NBAStats, OddsApi
+        >>> from sportsbet.sources import NBAStats
         >>> source = NBAStats()
         >>> source.name, source.kind, source.sport
         ('nba', 'stats', 'basketball')
-        >>> # A season is named by the year it ends in, so 2026 is the 2025-26 season.
-        >>> dataloader = DataLoader(
-        ...     param_grid={'league': ['NBA'], 'year': [2026]},
-        ...     stats=source,
-        ...     odds=OddsApi(key_env='ODDS_API_KEY', markets=['h2h']),
-        ... )
-        >>> dataloader.sport_
-        'basketball'
-        >>> # A league is a source. The same sport is the same dataloader.
-        >>> from sportsbet.sources import EuroLeagueStats
-        >>> NBAStats().sport == EuroLeagueStats().sport
-        True
+        >>> # Asking what it publishes costs one request, for the list of seasons.
+        >>> [item.key for item in source.list_index_items()]
+        ['seasons']
+        >>> # A season is named by the year it ends in, so 2026 is the 2025-26 season, read a month at a time.
+        >>> len(source.list_required_items([{'league': 'NBA', 'division': 1, 'year': 2026}]))
+        11
     """
 
     sport: ClassVar[str | None] = 'basketball'

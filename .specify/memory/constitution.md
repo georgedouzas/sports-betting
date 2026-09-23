@@ -1,6 +1,21 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 11.4.0 -> 11.5.0
+Rationale: An example exercises the thing it documents. Five source classes spent their examples building a
+`DataLoader` and reading training data, which documents the dataloader, so a reader of `EuroLeagueStats` learned
+nothing about the source. Each now exercises the source contract itself, what it publishes, what it declares it would
+read, and for the bundled sources what its snapshots hold. MINOR: one new rule.
+
+Modified sections:
+  - Documentation: an example exercises the thing it documents.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 11.3.0 -> 11.4.0
 Rationale: Say which names the verb-first rule does not reach. A command a runner exposes, a tool an agent calls, a
 member a third-party protocol declares, and a method the ecosystem contract names are fixed from outside, so renaming
@@ -912,6 +927,8 @@ silently degrading.
 - Every code example in the documentation and the docstrings MUST run, and the build MUST prove it, the documentation
   build running the gallery examples and the doctest run running the docstring examples.
 - An example MUST NOT be a fragment, pseudo-code, or a demo that cannot run.
+- An example MUST exercise the thing it documents. An example that spends its lines building another object documents
+  that object instead, and the reader of the first one learns nothing about it.
 
 Example:
 
@@ -1740,4 +1757,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 11.4.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 11.5.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
