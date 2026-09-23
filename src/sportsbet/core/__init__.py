@@ -3,7 +3,6 @@
 from ._errors import BuildError
 from ._params import (
     ALIASES,
-    DATE_COLS,
     EVENT_COLS,
     GROUPS_COLS,
     IDENTITY_COLS,
@@ -20,17 +19,13 @@ from ._types import (
     Data,
     FixturesData,
     Indices,
-    OutputsMapping,
-    Param,
     ParamGrid,
-    Schema,
     TrainData,
 )
 from ._utils import format_event_time, load_object, parse_event_time
 
 __all__ = [
     'ALIASES',
-    'DATE_COLS',
     'EVENT_COLS',
     'GROUPS_COLS',
     'IDENTITY_COLS',
@@ -46,10 +41,7 @@ __all__ = [
     'Data',
     'FixturesData',
     'Indices',
-    'OutputsMapping',
-    'Param',
     'ParamGrid',
-    'Schema',
     'TrainData',
     'format_event_time',
     'load_object',

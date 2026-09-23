@@ -1,6 +1,23 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 10.2.0 -> 10.3.0
+Rationale: Say what a surface is for. A package re-exports only the names something outside it uses, since an export
+nobody reaches for is a promise the library gained nothing by making, and a name in a public signature counts as used,
+since a caller reaches it through that signature. A name nothing uses at all is removed rather than made private,
+since code no caller reaches is code a reader still has to read. The `core` and `execution` packages prompted all of
+it: eight of their 47 exports are reached from nowhere outside them, five of those are referenced nowhere at all, and
+one names the type of a public parameter. MINOR: two new rules.
+
+Modified sections:
+  - Surface: a package re-exports only what something outside it uses, and a name nothing uses is removed.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 10.1.1 -> 10.2.0
 Rationale: Order a module and a class by privacy. The private functions come before the public ones, and a class puts
 its private methods before its public ones, so a reader meets the parts before the whole. It sits beside the
@@ -1066,6 +1083,11 @@ cycles.
   subpackage reaching its parent's private module is not reaching past a surface.
 - A name its own package never re-exports MUST be private, so what a package exports and what its surface offers are
   the same list.
+- A package MUST re-export only the names something outside it uses. An export nothing outside the package reaches for
+  is a promise the library gained nothing by making, and MUST become private. A name that appears in a public
+  signature counts as used, since a caller reaches it through that signature.
+- A name nothing uses at all MUST be removed rather than kept private. Code that no caller reaches is code a reader
+  still has to read.
 - A surface package, one that exists to serve a runner rather than an importer, MUST re-export its entry point alone.
   The names inside it are reached by the runner that discovers them, a command name or a tool name, so the rule above
   MUST NOT reach them. The Project Profile names which packages these are.
@@ -1597,4 +1619,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 10.2.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 10.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22

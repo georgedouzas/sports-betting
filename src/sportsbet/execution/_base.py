@@ -98,23 +98,6 @@ class PlacementIntent:
 
 
 @dataclass(frozen=True)
-class PlacementQuote:
-    """What is about to be staked, before any bet is placed.
-
-    Args:
-        intents: The bets the quote covers.
-        total_stake: The total to be staked.
-        total_exposure: The total exposure after staking.
-        quoted_at: When the quote was taken.
-    """
-
-    intents: list[PlacementIntent]
-    total_stake: float
-    total_exposure: float
-    quoted_at: datetime
-
-
-@dataclass(frozen=True)
 class PlacementReceipt:
     """What happened to an intended bet.
 
@@ -139,22 +122,7 @@ class PlacementReceipt:
     detail: str = ''
 
 
-@dataclass
-class ExposureLimits:
-    """The limits a placement must stay within, and the kill switch that stops it.
-
-    Args:
-        max_stake_per_bet: The most to stake on one bet.
-        max_total_exposure: The most to have staked at once.
-        killed: Whether the kill switch is on.
-    """
-
-    max_stake_per_bet: float = 0.0
-    max_total_exposure: float = 0.0
-    killed: bool = False
-
-
-class PlacementReceiptSchema(pa.DataFrameModel):
+class _PlacementReceiptSchema(pa.DataFrameModel):
     """The receipts a placement returns."""
 
     ref: str = pa.Field()
@@ -203,9 +171,9 @@ def build_receipts_frame(receipts: list[PlacementReceipt]) -> pd.DataFrame:
         }
         for receipt in receipts
     ]
-    frame = pd.DataFrame.from_records(records, columns=list(PlacementReceiptSchema.to_schema().columns))
+    frame = pd.DataFrame.from_records(records, columns=list(_PlacementReceiptSchema.to_schema().columns))
     frame['placed_at'] = pd.to_datetime(frame['placed_at'], utc=True)
-    result: pd.DataFrame = PlacementReceiptSchema.validate(frame)
+    result: pd.DataFrame = _PlacementReceiptSchema.validate(frame)
     return result
 
 
