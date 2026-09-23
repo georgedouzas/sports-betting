@@ -149,6 +149,7 @@ class DataLoader(BaseDataLoader):
         schedule = self._select_moments(upcoming) if odds_source is not None and odds_source.needs_schedule() else None
         odds_items = odds_source.list_fixtures_items(params, schedule) if odds_source is not None else []
         return self._fetch_paired_odds(stats, odds_items)
+
     @property
     def sport_(self: Self) -> str | None:
         """The sport the sources carry."""
@@ -159,4 +160,3 @@ class DataLoader(BaseDataLoader):
     def sources_(self: Self) -> tuple[BaseStatsSource, BaseOddsSource | None]:
         """The statistics and odds sources."""
         return self._resolve_sources()
-

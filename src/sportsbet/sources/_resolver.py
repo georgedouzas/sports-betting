@@ -186,6 +186,21 @@ def normalize_identity(data: pd.DataFrame, mapping: dict | None = None) -> pd.Da
 
     Returns:
         The match columns with normalized, and optionally remapped, team names.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from sportsbet.sources import normalize_identity
+        >>> data = pd.DataFrame(
+        ...     {
+        ...         'league': ['England'],
+        ...         'division': [1],
+        ...         'year': [2025],
+        ...         'home_team': ['Manchester United'],
+        ...         'away_team': ['Arsenal FC'],
+        ...     }
+        ... )
+        >>> normalize_identity(data)[['home_team', 'away_team']].to_dict('records')
+        [{'home_team': 'manchester united', 'away_team': 'arsenal'}]
     """
     identity = data[MATCH_COLS].copy()
     for col in TEAMS_COLS:

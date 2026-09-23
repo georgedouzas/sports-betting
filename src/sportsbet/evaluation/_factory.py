@@ -27,7 +27,7 @@ def _build_bettor_namespace() -> dict[str, object]:
 
 
 def build_bettor(model: str) -> BaseBettor:
-    """Build a betting model from a scikit-learn expression or a reference to your own.
+    r"""Build a betting model from a scikit-learn expression or a reference to your own.
 
     Args:
         model:
@@ -42,6 +42,17 @@ def build_bettor(model: str) -> BaseBettor:
     Raises:
         BuildError:
             When the expression or the reference does not describe a bettor.
+
+    Examples:
+        >>> import pathlib
+        >>> import tempfile
+        >>> from sportsbet.evaluation import build_bettor
+        >>> path = pathlib.Path(tempfile.mkdtemp()) / 'bettors.py'
+        >>> _ = path.write_text(
+        ...     'from sportsbet.evaluation import OddsComparisonBettor\nbettor = OddsComparisonBettor()'
+        ... )
+        >>> build_bettor(f'{path}:bettor')
+        OddsComparisonBettor()
     """
     if ':' in model and '(' not in model:
         built = load_object(model)

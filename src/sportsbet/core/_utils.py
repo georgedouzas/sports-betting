@@ -58,6 +58,15 @@ def load_object(reference: str) -> object:
 
     Raises:
         BuildError: If the reference is malformed, the file is missing or unreadable, or it has no such object.
+
+    Examples:
+        >>> import pathlib
+        >>> import tempfile
+        >>> from sportsbet.core import load_object
+        >>> path = pathlib.Path(tempfile.mkdtemp()) / 'models.py'
+        >>> _ = path.write_text('threshold = 42')
+        >>> load_object(f'{path}:threshold')
+        42
     """
     path, _, name = reference.rpartition(':')
     if not name:

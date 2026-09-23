@@ -277,6 +277,7 @@ class OddsApi(BaseOddsSource):
                 },
             )
         return records
+
     def request_url(self: Self, item: RawItem) -> str:
         """Return the URL to fetch an item from, with the key read from the environment and added.
 
@@ -396,4 +397,3 @@ class OddsApi(BaseOddsSource):
             else:
                 records.extend(self._live_records(payload, events))
         return pd.DataFrame(records)
-

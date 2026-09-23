@@ -210,7 +210,6 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Y_betting_markets: list[str],
     ) -> None:
         """Validate the input data and learn what the bettor needs from it."""
-
         Y_bases = list(dict.fromkeys(Y_betting_markets))
         self.complementary_events_ = (
             derive_complementary_events(Y_bases) if self.COMPLEMENTARY_EVENTS is None else self.COMPLEMENTARY_EVENTS
@@ -264,7 +263,6 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         Y: pd.DataFrame,
     ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
         """Validate the input data and the multi-output targets against each other."""
-
         check_consistent_length(X, Y)
 
         _check_is_dataframe(X, 'X', date_index=True)
@@ -287,7 +285,6 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         O: pd.DataFrame,
     ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
         """Validate the input data and the odds against each other."""
-
         check_consistent_length(X, O)
 
         _check_is_dataframe(X, 'X', date_index=True)

@@ -40,7 +40,6 @@ def _fit_bet(
     O: pd.DataFrame,
 ) -> dict:
     """Fit the bettor on the training split and bet on the test split."""
-
     bettor.fit(X.iloc[train_ind], Y.iloc[train_ind], O.iloc[train_ind])
 
     value_bets = bettor.bet(X.iloc[test_ind], O.iloc[test_ind])
@@ -410,6 +409,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
 
     def _modify_scorer(self: Self, scorer: Callable) -> Callable:
         """Wrap the scorer so it scores a bettor rather than a classifier."""
+
         def _scorer(
             estimator: BaseBettor,
             X: pd.DataFrame,
