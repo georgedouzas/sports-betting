@@ -108,7 +108,7 @@ def test_matches_that_kick_off_together_share_a_snapshot(source):
     """Test one snapshot prices every match played at that instant, so it is paid for once."""
     items = source.list_required_items([], SCHEDULE)
     historical = [item for item in items if 'live' not in item.key]
-    assert len(historical) == len(source._settings()[2])
+    assert len(historical) == len(source._resolve_settings()[2])
 
 
 def test_the_key_never_reaches_an_item(source):

@@ -410,7 +410,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
     def _modify_scorer(self: Self, scorer: Callable) -> Callable:
         """Wrap the scorer so it scores a bettor rather than a classifier."""
 
-        def _scorer(
+        def _score(
             estimator: BaseBettor,
             X: pd.DataFrame,
             Y: pd.DataFrame,
@@ -421,7 +421,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
             Y = Y[estimator.feature_names_out_]
             return scorer(estimator, X, Y, sample_weight, **kwargs)
 
-        return _scorer
+        return _score
 
     def _fit(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame | None) -> Self:
         """Search the parameter grid and keep the bettor that scored best."""
@@ -482,7 +482,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
             self.betting_markets_ = self.best_estimator_.betting_markets_
             self.feature_names_out_ = self.best_estimator_.feature_names_out_
         if O is not None and hasattr(self, 'best_estimator_'):
-            self.feature_names_odds_ = self.best_estimator_._get_feature_names_odds(O)
+            self.feature_names_odds_ = self.best_estimator_._list_odds_columns(O)
         return self
 
     def predict_proba(self: Self, X: pd.DataFrame) -> Data:

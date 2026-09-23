@@ -12,7 +12,7 @@ import pandas as pd
 
 from ...core import ParamGrid
 from .._base import BaseStatsSource, RawItem, RawPayload
-from .._common._basketball import DIVISION, SEASONS_KEY, _snapshots
+from .._common._basketball import DIVISION, SEASONS_KEY, _build_snapshots
 
 URL = 'https://api-live.euroleague.net/v2/competitions/E'
 SEASONS_URL = f'{URL}/seasons'
@@ -20,7 +20,7 @@ GAMES_URL = f'{URL}/seasons/E{{season}}/games'
 LEAGUE = 'Euroleague'
 
 
-def _games(content: bytes, year: int) -> pd.DataFrame:
+def _read_games(content: bytes, year: int) -> pd.DataFrame:
     """Return the games of a season, taking the tip-off from the API's UTC field."""
     games: list[dict[str, Any]] = json.loads(content).get('data', [])
     records = []
@@ -147,9 +147,9 @@ class EuroLeagueStats(BaseStatsSource):
         frames = []
         for payload in payloads:
             year = int(payload.item.key.rsplit('_', 1)[-1])
-            games = _games(payload.content, year)
+            games = _read_games(payload.content, year)
             if not games.empty:
-                frames.append(_snapshots(games))
+                frames.append(_build_snapshots(games))
         if not frames:
             return pd.DataFrame()
         return pd.concat(frames, ignore_index=True).replace({np.nan: None}).infer_objects()

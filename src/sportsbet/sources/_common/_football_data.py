@@ -493,7 +493,7 @@ def _convert_data_types(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def _get_output_cols_mapping(home: bool, cols: pd.Index) -> dict:
+def _build_output_cols_mapping(home: bool, cols: pd.Index) -> dict:
     """Get the names mapping of output columns."""
     suffix1 = 'for' if home else 'against'
     suffix2 = 'against' if home else 'for'
@@ -551,10 +551,10 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
 
     features_data = data[team_cols + target_cols].copy()
     home_features_data = features_data.drop(columns='away_team').rename(
-        columns=_get_output_cols_mapping(True, features_data.columns),
+        columns=_build_output_cols_mapping(True, features_data.columns),
     )
     away_features_data = features_data.drop(columns='home_team').rename(
-        columns=_get_output_cols_mapping(False, features_data.columns),
+        columns=_build_output_cols_mapping(False, features_data.columns),
     )
     features_data = pd.concat([home_features_data, away_features_data]).reset_index().set_index(['team', 'date'])
     features_data = features_data.sort_index()

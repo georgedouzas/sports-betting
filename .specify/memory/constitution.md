@@ -1,6 +1,23 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 11.3.0 -> 11.4.0
+Rationale: Say which names the verb-first rule does not reach. A command a runner exposes, a tool an agent calls, a
+member a third-party protocol declares, and a method the ecosystem contract names are fixed from outside, so renaming
+one renames what a caller types. Without the exception the rule reads as though `sportsbet dataloader params` should
+become `sportsbet dataloader list_params`, and the playwright protocol members should stop matching playwright. MINOR:
+one exception stated, and nothing that conformed stops conforming.
+
+Modified sections:
+  - Naming: a name an outside contract fixes keeps that spelling, beside the rule that a function name begins with a
+    verb.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 11.2.0 -> 11.3.0
 Rationale: A base class is never private. A base exists to be subclassed, and client code may subclass it to build
 its own source, so its name is part of what the library offers even where a package does not re-export it. A base a
@@ -1014,6 +1031,9 @@ A reader who can scan a document acts on it. Prose that performs makes a reader 
 ### Naming
 
 - A function name MUST begin with a verb, and MUST name what the function actually does or returns.
+- A name an outside contract fixes MUST keep the spelling that contract fixes, and the verb-first rule MUST NOT reach
+  it. A command a runner exposes, a tool an agent calls, a member a third-party protocol declares, and a method the
+  ecosystem contract names are all fixed from outside, and renaming one renames what a caller types.
 - A name MUST read `count_common_prefix`, not `common_prefix_length`, `normalize_identity`, not `transform_identity`,
   and `build_roster`, not `roster`.
 - A name that begins with a noun describes a value, so a function MUST NOT carry one.
@@ -1720,4 +1740,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 11.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 11.4.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22

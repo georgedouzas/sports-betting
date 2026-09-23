@@ -35,17 +35,17 @@ _Wait = Callable[[float], Awaitable[None]]
 Placer = Callable[[PlacementIntent, BrowserSession], Awaitable[PlacementReceipt]]
 
 
-def _now() -> pd.Timestamp:
+def _read_now() -> pd.Timestamp:
     """Return the current time."""
     return pd.Timestamp.now(tz='UTC')
 
 
-def _status(now: pd.Timestamp, kickoff: pd.Timestamp) -> str:
+def _read_status(now: pd.Timestamp, kickoff: pd.Timestamp) -> str:
     """Return the event's lifecycle status at a time."""
     return PREPLAY_EVENT_STATUSES[0] if now < kickoff else NON_PREPLAY_EVENT_STATUSES[0]
 
 
-def _price_of(odds: pd.DataFrame, market: str) -> float | None:
+def _read_price(odds: pd.DataFrame, market: str) -> float | None:
     """Return the latest price the odds carry for a market, or `None`."""
     column = find_latest_odds_column(list(odds.columns), market)
     if column is None:
@@ -82,7 +82,7 @@ def _build_intent(
         return None
     market = backed[0]
     selection = str(X_event.iloc[0]['home_team'])
-    price = _price_of(O_event, market)
+    price = _read_price(O_event, market)
     return PlacementIntent(
         identity=BetIdentity(venue_key, event, market, selection),
         stake=stake,
@@ -91,7 +91,7 @@ def _build_intent(
     )
 
 
-def _first_ref(snapshot: PageSnapshot) -> str:
+def _find_first_ref(snapshot: PageSnapshot) -> str:
     """Return the first actionable ref in a page snapshot."""
     for line in snapshot.yaml.splitlines():
         if '[ref=' in line:
@@ -100,23 +100,23 @@ def _first_ref(snapshot: PageSnapshot) -> str:
     raise ExecutionError(msg)
 
 
-async def _default_placer(intent: PlacementIntent, session: BrowserSession) -> PlacementReceipt:
+async def _place_bet(intent: PlacementIntent, session: BrowserSession) -> PlacementReceipt:
     """Drive the pinned stake and confirm controls to place one bet."""
     stake_control = await session.resolve('stake')
-    await session.type(_first_ref(stake_control), str(intent.stake))
+    await session.type(_find_first_ref(stake_control), str(intent.stake))
     confirm_control = await session.resolve('confirm')
-    await session.click(_first_ref(confirm_control))
+    await session.click(_find_first_ref(confirm_control))
     return PlacementReceipt(
         identity=intent.identity,
         status=PlacementStatus.MATCHED_FULL,
         stake=intent.stake,
         price=intent.min_price,
         value_bet=intent.value_bet,
-        placed_at=_now().to_pydatetime(),
+        placed_at=_read_now().to_pydatetime(),
     )
 
 
-async def _match_url(session: BrowserSession, event: str, urls: list[str]) -> bool:
+async def _pin_match_url(session: BrowserSession, event: str, urls: list[str]) -> bool:
     """Explore the candidate URLs and pin the controls at the one that carries the event."""
     for url in urls:
         snapshot = await session.navigate(url)
@@ -143,8 +143,9 @@ async def _monitor(
         remaining = (moment - now).total_seconds()
         if remaining <= 0:
             return
-        price = _price_of(odds, market)
-        _logger.info('%s is %s, price %s.', event, _status(now, kickoff), price if price is not None else 'unavailable')
+        price = _read_price(odds, market)
+        shown = price if price is not None else 'unavailable'
+        _logger.info('%s is %s, price %s.', event, _read_status(now, kickoff), shown)
         await hold(min(poll.total_seconds(), remaining))
 
 
@@ -200,11 +201,11 @@ async def execute_event(
     Raises:
         ExecutionError: If the event is not among the fixtures.
     """
-    read_now = clock or _now
+    read_now = clock or _read_now
     hold = wait or asyncio.sleep
-    place = placer or _default_placer
+    place = placer or _place_bet
 
-    if not await _match_url(session, event, urls):
+    if not await _pin_match_url(session, event, urls):
         _logger.info('No candidate URL carried %s, so nothing was placed.', event)
         return build_receipts_frame([])
 

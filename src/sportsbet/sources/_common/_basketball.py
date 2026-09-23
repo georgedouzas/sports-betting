@@ -16,7 +16,7 @@ ROLLING_GAMES = 3
 FEATURES = ['points_for', 'points_against', 'wins']
 
 
-def _form(games: pd.DataFrame) -> pd.DataFrame:
+def _build_form(games: pd.DataFrame) -> pd.DataFrame:
     """Return each team's scoring form from the games before each one."""
     played = games['home_points'].ge(0) & games['away_points'].ge(0)
     sides = [
@@ -42,11 +42,11 @@ def _form(games: pd.DataFrame) -> pd.DataFrame:
     return form.drop(columns=FEATURES).reset_index()
 
 
-def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
+def _build_snapshots(games: pd.DataFrame) -> pd.DataFrame:
     """Return the long snapshots of a season, an unplayed game keeping only its pre-play row."""
     if games.empty:
         return games
-    form = _form(games)
+    form = _build_form(games)
     feature_cols = [col for col in form.columns if col.endswith('avg')]
     preplay = games[IDENTITY_COLS].copy()
     for side in ('home', 'away'):

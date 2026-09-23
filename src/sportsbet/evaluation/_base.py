@@ -254,7 +254,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         self.init_cash = init_cash
         self.stake = stake
 
-    def _get_feature_names_odds(self: Self, O: pd.DataFrame) -> NDArray[np.str_]:
+    def _list_odds_columns(self: Self, O: pd.DataFrame) -> NDArray[np.str_]:
         """Return the latest odds column of every betting market."""
         columns = list(O.columns)
         odds_cols = [find_latest_odds_column(columns, base) for base in self.betting_markets_]
@@ -319,7 +319,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         base_to_target = {derive_market_base(col): col for col in Y.columns}
         self.feature_names_out_ = np.array([base_to_target[base] for base in self.betting_markets_])
         if O is not None:
-            self.feature_names_odds_ = self._get_feature_names_odds(O)
+            self.feature_names_odds_ = self._list_odds_columns(O)
 
     def _validate_X_Y(  # noqa: N802  # X, Y, O are the scikit-learn data-matrix names
         self: Self,
@@ -502,7 +502,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         if not set(O_betting_markets).issuperset(self.betting_markets_):
             error_msg = 'Odds data do not include selected betting markets.'
             raise ValueError(error_msg)
-        O = O[self._get_feature_names_odds(O)]
+        O = O[self._list_odds_columns(O)]
         B_pred = Y_proba_pred * O > 1
         B_pred_selected = []
         for events in self.complementary_events_:
@@ -549,7 +549,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
         _check_markets_compatible(Y_betting_markets, O_betting_markets)
         value_bets = self.bet(X, O)
         Y = Y[self.feature_names_out_]
-        O = O[self._get_feature_names_odds(O)]
+        O = O[self._list_odds_columns(O)]
         returns = np.sum(
             np.nan_to_num(
                 (Y.to_numpy().astype(int) * O.to_numpy().astype(float) - 1) * value_bets.astype(int),

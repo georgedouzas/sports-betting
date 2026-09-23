@@ -13,7 +13,7 @@ import pandas as pd
 
 from ...core import ParamGrid
 from .._base import BaseStatsSource, RawItem, RawPayload
-from .._common._basketball import DIVISION, SEASONS_KEY, _snapshots
+from .._common._basketball import DIVISION, SEASONS_KEY, _build_snapshots
 
 SEASONS_URL = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons?limit=100'
 GAMES_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start}-{end}&limit=1000'
@@ -23,7 +23,7 @@ PRESEASON = 1
 MONTHS = [(-1, month) for month in (9, 10, 11, 12)] + [(0, month) for month in (1, 2, 3, 4, 5, 6, 7)]
 
 
-def _wanted(event: dict[str, Any]) -> bool:
+def _is_competition_game(event: dict[str, Any]) -> bool:
     """Return whether an event is a game of the competition rather than an exhibition."""
     competitions = event.get('competitions') or [{}]
     season_type = event.get('season', {}).get('type')
@@ -31,12 +31,12 @@ def _wanted(event: dict[str, Any]) -> bool:
     return season_type != PRESEASON and competition_type != EXHIBITION
 
 
-def _games(content: bytes, year: int) -> pd.DataFrame:
+def _read_games(content: bytes, year: int) -> pd.DataFrame:
     """Return the games of a month, with the API's UTC tip-off and its played flag."""
     events = json.loads(content).get('events', [])
     records = []
     for event in events:
-        if not _wanted(event):
+        if not _is_competition_game(event):
             continue
         competition = (event.get('competitions') or [{}])[0]
         competitors = {side.get('homeAway'): side for side in competition.get('competitors', [])}
@@ -169,13 +169,13 @@ class NBAStats(BaseStatsSource):
         seasons: dict[int, list[pd.DataFrame]] = {}
         for payload in payloads:
             year = int(payload.item.key.split('_')[2])
-            games = _games(payload.content, year)
+            games = _read_games(payload.content, year)
             if not games.empty:
                 seasons.setdefault(year, []).append(games)
         frames = []
         for year in sorted(seasons):
             games = pd.concat(seasons[year], ignore_index=True).sort_values('date').reset_index(drop=True)
-            frames.append(_snapshots(games))
+            frames.append(_build_snapshots(games))
         if not frames:
             return pd.DataFrame()
         return pd.concat(frames, ignore_index=True).replace({np.nan: None}).infer_objects()

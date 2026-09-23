@@ -73,22 +73,22 @@ DELIMITER = '__'
 SNAPSHOT_MINUTES = 5
 
 
-def _now() -> pd.Timestamp:
+def _read_now() -> pd.Timestamp:
     """Return the current instant."""
     return pd.Timestamp(datetime.now(tz=UTC))
 
 
-def _timestamp(moment: pd.Timestamp) -> str:
+def _format_timestamp(moment: pd.Timestamp) -> str:
     """Render an instant the way the vendor addresses its snapshots."""
     return moment.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def _key_timestamp(moment: pd.Timestamp) -> str:
+def _format_key_timestamp(moment: pd.Timestamp) -> str:
     """Render an instant for use in an item key."""
     return moment.tz_convert('UTC').strftime('%Y%m%dT%H%M%SZ')
 
 
-def _events(payload: RawPayload) -> tuple[list[dict], str]:
+def _read_events(payload: RawPayload) -> tuple[list[dict], str]:
     """Return the events of a payload and the endpoint they came from."""
     content: Any = json.loads(payload.content)
     if isinstance(content, dict):
@@ -106,7 +106,7 @@ def _parse_key(key: str) -> tuple[str, int, pd.Timestamp | None, str, int]:
     return sport, int(year), pd.Timestamp(snapshot, tz='UTC'), event_status, int(minutes)
 
 
-def _last_update(events: list[dict]) -> pd.Timestamp | None:
+def _find_last_update(events: list[dict]) -> pd.Timestamp | None:
     """Return the latest instant the vendor priced anything at, which stands in for now."""
     updates = [
         pd.Timestamp(bookmaker['last_update'])
@@ -122,7 +122,7 @@ def _round_minutes(elapsed: float) -> int:
     return int(round(elapsed / SNAPSHOT_MINUTES) * SNAPSHOT_MINUTES)
 
 
-def _outcomes(bookmaker: dict, home_team: str, away_team: str) -> dict:
+def _derive_outcomes(bookmaker: dict, home_team: str, away_team: str) -> dict:
     """Return the markets of a bookmaker, named the way the library names them."""
     outcomes: dict[str, float] = {}
     for market in bookmaker.get('markets', []):
@@ -196,7 +196,7 @@ class OddsApi(BaseOddsSource):
         self.regions = regions
         self.moments = moments
 
-    def _settings(self: Self) -> tuple[list[str], list[str], list[tuple[str, int]]]:
+    def _resolve_settings(self: Self) -> tuple[list[str], list[str], list[tuple[str, int]]]:
         """Return the markets, regions and moments, defaulted."""
         markets = self.markets if self.markets is not None else MARKETS
         regions = self.regions if self.regions is not None else REGIONS
@@ -204,7 +204,7 @@ class OddsApi(BaseOddsSource):
         return markets, regions, moments
 
     @staticmethod
-    def _moments(schedule: pd.DataFrame) -> list[tuple[str, int]]:
+    def _list_moments(schedule: pd.DataFrame) -> list[tuple[str, int]]:
         """Return the moments the statistics carry."""
         moments = schedule[list(EVENT_COLS)].drop_duplicates()
         return sorted(
@@ -215,12 +215,12 @@ class OddsApi(BaseOddsSource):
             },
         )
 
-    def _query(self: Self) -> dict[str, str]:
+    def _build_query(self: Self) -> dict[str, str]:
         """Return the query parameters the vendor expects."""
-        markets, regions, _ = self._settings()
+        markets, regions, _ = self._resolve_settings()
         return {'regions': ','.join(regions), 'markets': ','.join(markets), 'oddsFormat': 'decimal'}
 
-    def _historical_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
+    def _read_historical_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
         """Return the odds of the matches an historical snapshot was asked for."""
         sport, year, snapshot, event_status, minutes = _parse_key(payload.item.key)
         offset = CLOSING_OFFSET if event_status == 'preplay' else pd.Timedelta(minutes=minutes)
@@ -230,23 +230,23 @@ class OddsApi(BaseOddsSource):
             kickoff = pd.Timestamp(event['commence_time'])
             if snapshot is None or abs((kickoff + offset) - snapshot) > SNAPSHOT_TOLERANCE:
                 continue
-            records.extend(self._event_records(event, kickoff, league, division, year, event_status, minutes))
+            records.extend(self._build_event_records(event, kickoff, league, division, year, event_status, minutes))
         return records
 
-    def _live_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
+    def _read_live_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
         """Return the odds of the matches the live endpoint priced, upcoming and running alike."""
         sport, year, *_ = _parse_key(payload.item.key)
         league, division = LEAGUES_MAPPING[sport]
-        now = _last_update(events)
+        now = _find_last_update(events)
         records = []
         for event in events:
             kickoff = pd.Timestamp(event['commence_time'])
             elapsed = (now - kickoff).total_seconds() / 60 if now is not None else 0
             event_status, minutes = ('inplay', _round_minutes(elapsed)) if elapsed > 0 else ('preplay', 0)
-            records.extend(self._event_records(event, kickoff, league, division, year, event_status, minutes))
+            records.extend(self._build_event_records(event, kickoff, league, division, year, event_status, minutes))
         return records
 
-    def _event_records(
+    def _build_event_records(
         self: Self,
         event: dict,
         kickoff: pd.Timestamp,
@@ -259,7 +259,7 @@ class OddsApi(BaseOddsSource):
         """Return one row per bookmaker of a match, with its markets as columns."""
         records = []
         for bookmaker in event.get('bookmakers', []):
-            outcomes = _outcomes(bookmaker, event['home_team'], event['away_team'])
+            outcomes = _derive_outcomes(bookmaker, event['home_team'], event['away_team'])
             if not outcomes:
                 continue
             records.append(
@@ -328,7 +328,7 @@ class OddsApi(BaseOddsSource):
         if not payloads:
             return []
         sports = json.loads(payloads[0].content)
-        years = range(FIRST_YEAR, _now().year + 2)
+        years = range(FIRST_YEAR, _read_now().year + 2)
         return [
             {'league': league, 'division': division, 'year': year}
             for sport in sports
@@ -353,11 +353,11 @@ class OddsApi(BaseOddsSource):
         """
         if schedule is None or schedule.empty:
             return []
-        _, _, moments = self._settings()
+        _, _, moments = self._resolve_settings()
         if self.moments is None:
-            moments = self._moments(schedule)
+            moments = self._list_moments(schedule)
         sports = {(league, division): sport for sport, (league, division) in LEAGUES_MAPPING.items()}
-        now = _now()
+        now = _read_now()
 
         items: list[RawItem] = []
         for (league, division, year), matches in schedule.groupby(['league', 'division', 'year']):
@@ -369,11 +369,12 @@ class OddsApi(BaseOddsSource):
                 snapshots = (matches['date'] + offset).drop_duplicates()
                 snapshots = snapshots[(snapshots >= HISTORICAL_START) & (snapshots < now)]
                 for snapshot in sorted(snapshots):
-                    query = urlencode({**self._query(), 'date': _timestamp(snapshot)})
+                    query = urlencode({**self._build_query(), 'date': _format_timestamp(snapshot)})
                     url = f'{HISTORICAL_URL.format(sport=sport)}?{query}'
-                    key = DELIMITER.join([sport, str(year), _key_timestamp(snapshot), event_status, str(minutes)])
+                    stamp = _format_key_timestamp(snapshot)
+                    key = DELIMITER.join([sport, str(year), stamp, event_status, str(minutes)])
                     items.append(RawItem(source=self.name, key=key, url=url))
-            live = f'{LIVE_URL.format(sport=sport)}?{urlencode(self._query())}'
+            live = f'{LIVE_URL.format(sport=sport)}?{urlencode(self._build_query())}'
             live_key = DELIMITER.join([sport, str(year), LIVE_KEY])
             items.append(RawItem(source=self.name, key=live_key, url=live))
         return items
@@ -391,9 +392,9 @@ class OddsApi(BaseOddsSource):
         """
         records: list[dict] = []
         for payload in payloads:
-            events, endpoint = _events(payload)
+            events, endpoint = _read_events(payload)
             if endpoint == 'historical':
-                records.extend(self._historical_records(payload, events))
+                records.extend(self._read_historical_records(payload, events))
             else:
-                records.extend(self._live_records(payload, events))
+                records.extend(self._read_live_records(payload, events))
         return pd.DataFrame(records)

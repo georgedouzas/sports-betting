@@ -223,7 +223,7 @@ class BrowserSession:
             raise ExecutionError(msg)
         return self.context_.pages[0]
 
-    async def _paced(self: BrowserSession) -> None:
+    async def _wait_interval(self: BrowserSession) -> None:
         """Leave the configured interval between actions."""
         await asyncio.sleep(self.min_interval)
 
@@ -279,7 +279,7 @@ class BrowserSession:
             await self.start()
         assert self.context_ is not None
         page = self.context_.pages[0] if self.context_.pages else await self.context_.new_page()
-        await self._paced()
+        await self._wait_interval()
         response = await page.goto(url)
         if response is not None and response.status in BLOCKED_STATUS:
             msg = f'`{self.key}` refused automated access with status {response.status}.'
@@ -316,7 +316,7 @@ class BrowserSession:
             snapshot:
                 The page after the click.
         """
-        await self._paced()
+        await self._wait_interval()
         await self._read_page().locator(f'aria-ref={ref}').click(timeout=self.timeout)
         return await self._capture()
 
@@ -333,7 +333,7 @@ class BrowserSession:
             snapshot:
                 The page after the text went in.
         """
-        await self._paced()
+        await self._wait_interval()
         await self._read_page().locator(f'aria-ref={ref}').fill(text, timeout=self.timeout)
         return await self._capture()
 
@@ -350,7 +350,7 @@ class BrowserSession:
             snapshot:
                 The page after the option was chosen.
         """
-        await self._paced()
+        await self._wait_interval()
         await self._read_page().locator(f'aria-ref={ref}').select_option(value, timeout=self.timeout)
         return await self._capture()
 
