@@ -9,11 +9,11 @@ import pandas as pd
 from ...core import IDENTITY_COLS
 from .._utils import derive_market_outcomes
 
-_DIVISION = 1
-_SEASONS_KEY = 'seasons'
-_MARKETS = ['home_win', 'away_win']
-_ROLLING_GAMES = 3
-_FEATURES = ['points_for', 'points_against', 'wins']
+DIVISION = 1
+SEASONS_KEY = 'seasons'
+MARKETS = ['home_win', 'away_win']
+ROLLING_GAMES = 3
+FEATURES = ['points_for', 'points_against', 'wins']
 
 
 def _form(games: pd.DataFrame) -> pd.DataFrame:
@@ -33,13 +33,13 @@ def _form(games: pd.DataFrame) -> pd.DataFrame:
     ]
     form = pd.concat(sides).set_index(['team', 'date']).sort_index()
 
-    averages = [f'{col}_avg' for col in _FEATURES]
-    latest = [f'{col}_latest_avg' for col in _FEATURES]
-    form[averages] = form.groupby('team')[_FEATURES].expanding().mean().to_numpy()
+    averages = [f'{col}_avg' for col in FEATURES]
+    latest = [f'{col}_latest_avg' for col in FEATURES]
+    form[averages] = form.groupby('team')[FEATURES].expanding().mean().to_numpy()
     form[averages] = form.groupby('team')[averages].shift(1)
-    form[latest] = form.groupby('team')[_FEATURES].rolling(window=_ROLLING_GAMES, min_periods=1).mean().to_numpy()
+    form[latest] = form.groupby('team')[FEATURES].rolling(window=ROLLING_GAMES, min_periods=1).mean().to_numpy()
     form[latest] = form.groupby('team')[latest].shift(1)
-    return form.drop(columns=_FEATURES).reset_index()
+    return form.drop(columns=FEATURES).reset_index()
 
 
 def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
@@ -67,10 +67,10 @@ def _snapshots(games: pd.DataFrame) -> pd.DataFrame:
         event_status='postplay',
         event_time=0,
     )
-    outcomes = derive_market_outcomes(postplay['home_points'], postplay['away_points'], _MARKETS)
+    outcomes = derive_market_outcomes(postplay['home_points'], postplay['away_points'], MARKETS)
     postplay = pd.concat([postplay, outcomes], axis=1)
 
     snapshots = pd.concat([preplay, postplay], ignore_index=True)
     sided = [f'{side}_{col}' for side in ('home', 'away') for col in feature_cols]
-    order = ['event_status', 'event_time', *IDENTITY_COLS, 'home_points', 'away_points', *_MARKETS, *sided]
+    order = ['event_status', 'event_time', *IDENTITY_COLS, 'home_points', 'away_points', *MARKETS, *sided]
     return snapshots.reindex(columns=[col for col in order if col in snapshots.columns])

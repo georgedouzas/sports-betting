@@ -361,9 +361,9 @@ def odds_schema() -> BaseOddsSchema:
     return OddsSchema
 
 
-_MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
-_PROVIDERS = ['market_average', 'market_maximum']
-_FEATURES = ['home_points_avg', 'away_points_avg']
+MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
+PROVIDERS = ['market_average', 'market_maximum']
+FEATURES = ['home_points_avg', 'away_points_avg']
 _IDENTITY = ['date', 'league', 'division', 'year', 'home_team', 'away_team']
 _BASE_ODDS = {'home_win': 1.80, 'draw': 3.40, 'away_win': 4.20, 'over_2.5': 1.90, 'under_2.5': 1.95}
 _PROVIDER_FACTOR = {'market_average': 0.98, 'market_maximum': 1.06}
@@ -497,10 +497,10 @@ def long_snapshots() -> tuple[pd.DataFrame, pd.DataFrame]:
         }
         for status, minutes, home_goals, away_goals in _timeline(match):
             markets = (
-                derive_market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), _MARKETS).iloc[0].to_dict()
+                derive_market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), MARKETS).iloc[0].to_dict()
             )
             features = (
-                dict(zip(_FEATURES, match['form'], strict=True)) if status == 'preplay' else dict.fromkeys(_FEATURES)
+                dict(zip(FEATURES, match['form'], strict=True)) if status == 'preplay' else dict.fromkeys(FEATURES)
             )
             stats_records.append(
                 {
@@ -515,7 +515,7 @@ def long_snapshots() -> tuple[pd.DataFrame, pd.DataFrame]:
             )
             if status == 'postplay':
                 continue
-            for provider in _PROVIDERS:
+            for provider in PROVIDERS:
                 factor = _PROVIDER_FACTOR[provider] * (1 + 0.004 * minutes)
                 odds_records.append(
                     {
@@ -527,7 +527,7 @@ def long_snapshots() -> tuple[pd.DataFrame, pd.DataFrame]:
                     },
                 )
     stats = pd.DataFrame(stats_records)[
-        ['event_status', 'event_time', *_IDENTITY, 'home_goals', 'away_goals', *_MARKETS, *_FEATURES]
+        ['event_status', 'event_time', *_IDENTITY, 'home_goals', 'away_goals', *MARKETS, *FEATURES]
     ]
-    odds = pd.DataFrame(odds_records)[['event_status', 'event_time', *_IDENTITY, 'provider', *_MARKETS]]
+    odds = pd.DataFrame(odds_records)[['event_status', 'event_time', *_IDENTITY, 'provider', *MARKETS]]
     return stats, odds

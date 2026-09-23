@@ -44,7 +44,7 @@ class PlacementStatus(StrEnum):
     REJECTED = 'rejected'
 
 
-_REF_BYTES = 16
+REF_BYTES = 16
 
 
 @dataclass(frozen=True)
@@ -77,7 +77,7 @@ class BetIdentity:
     def ref_(self: BetIdentity) -> str:
         """The reference a venue carries for this bet."""
         seed = f'{self.venue}|{self.match}|{self.market}|{self.selection}'
-        return blake2s(seed.encode(), digest_size=_REF_BYTES).hexdigest()
+        return blake2s(seed.encode(), digest_size=REF_BYTES).hexdigest()
 
 
 @dataclass(frozen=True)

@@ -15,7 +15,7 @@ from sportsbet.sources import (
 )
 from tests.conftest import SnapshotsDataLoader
 
-_PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}, {'league': 'Spain', 'division': 1, 'year': 2024}]
+PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}, {'league': 'Spain', 'division': 1, 'year': 2024}]
 ITEM_COST = 2
 TOTAL_COST = 4
 DISTINCT_ITEMS = 2
@@ -30,7 +30,7 @@ class _TestSource(BaseSource):
         return [RawItem(source=self.name, key='index', url='index.html')]
 
     def read_catalogue(self, payloads):
-        return _PARAMS
+        return PARAMS
 
     def list_required_items(self, params, schedule=None):
         return [
@@ -57,7 +57,7 @@ class _TestOddsSource(_TestSource, BaseOddsSource):
 def test_required_items_is_deterministic():
     """Test the same parameters declare the same items in the same order."""
     source = _TestSource()
-    assert source.list_required_items(_PARAMS) == source.list_required_items(_PARAMS)
+    assert source.list_required_items(PARAMS) == source.list_required_items(PARAMS)
 
 
 def test_items_are_identified_by_source_and_key():

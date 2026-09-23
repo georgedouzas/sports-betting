@@ -27,8 +27,8 @@ from ._schedule import find_betting_moment
 
 _logger = logging.getLogger('sportsbet.execution')
 
-_FALLBACK_PRICE = 1.01
-_DEFAULT_POLL = pd.Timedelta('30s')
+FALLBACK_PRICE = 1.01
+DEFAULT_POLL = pd.Timedelta('30s')
 
 _Clock = Callable[[], pd.Timestamp]
 _Wait = Callable[[float], Awaitable[None]]
@@ -86,7 +86,7 @@ def _build_intent(
     return PlacementIntent(
         identity=BetIdentity(venue_key, event, market, selection),
         stake=stake,
-        min_price=price if price is not None else _FALLBACK_PRICE,
+        min_price=price if price is not None else FALLBACK_PRICE,
         value_bet=f'{event}|{market}',
     )
 
@@ -158,7 +158,7 @@ async def execute_event(
     urls: list[str],
     live: bool = False,
     placer: Placer | None = None,
-    poll: pd.Timedelta = _DEFAULT_POLL,
+    poll: pd.Timedelta = DEFAULT_POLL,
     clock: _Clock | None = None,
     wait: _Wait | None = None,
 ) -> pd.DataFrame:

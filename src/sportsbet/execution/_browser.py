@@ -14,9 +14,9 @@ from typing import Literal, Protocol
 
 from ._base import ExecutionError, VenueBlockedError
 
-_BLOCKED_STATUS = frozenset({403, 429})
-_REF_PATTERN = re.compile(r'^e\d+$')
-_BROWSER_EXTRA = "Driving a site needs playwright's browser. Install it with `python -m playwright install chromium`."
+BLOCKED_STATUS = frozenset({403, 429})
+REF_PATTERN = re.compile(r'^e\d+$')
+BROWSER_EXTRA = "Driving a site needs playwright's browser. Install it with `python -m playwright install chromium`."
 
 
 class _Response(Protocol):
@@ -281,7 +281,7 @@ class BrowserSession:
         page = self.context_.pages[0] if self.context_.pages else await self.context_.new_page()
         await self._paced()
         response = await page.goto(url)
-        if response is not None and response.status in _BLOCKED_STATUS:
+        if response is not None and response.status in BLOCKED_STATUS:
             msg = f'`{self.key}` refused automated access with status {response.status}.'
             raise VenueBlockedError(msg)
         return await self._capture()
@@ -371,7 +371,7 @@ class BrowserSession:
             ExecutionError: If a locator is a ref or looks like a price.
         """
         for name, locator in locators.items():
-            if _REF_PATTERN.match(locator) or locator.startswith('aria-ref='):
+            if REF_PATTERN.match(locator) or locator.startswith('aria-ref='):
                 msg = (
                     f'`{name}` is pinned to the ref `{locator}`, which belongs to one state of the page. '
                     f'Pin a role and an accessible name instead, as in `textbox[name="Stake"]`.'

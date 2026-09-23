@@ -11,10 +11,10 @@ import pandas as pd
 
 from ..core import ALIASES, GROUPS_COLS, MATCH_COLS, TEAMS_COLS
 
-_NOISE = {'fc', 'afc', 'cf', 'sc', 'ac', 'as', 'ss', 'us', 'if', 'bk', 'club', 'the'}
-_MIN_PREFIX = 3
-_MIN_SIMILARITY = 0.6
-_MIN_MARGIN = 0.15
+NOISE = {'fc', 'afc', 'cf', 'sc', 'ac', 'as', 'ss', 'us', 'if', 'bk', 'club', 'the'}
+MIN_PREFIX = 3
+MIN_SIMILARITY = 0.6
+MIN_MARGIN = 0.15
 
 
 def _map_odds_names(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -> dict:
@@ -50,7 +50,7 @@ def normalize_team_name(name: str) -> str:
     text = unicodedata.normalize('NFKD', str(name))
     text = ''.join(character for character in text if not unicodedata.combining(character))
     text = re.sub(r'[^a-z0-9 ]', '', text.lower())
-    tokens = [token for token in text.split() if token not in _NOISE]
+    tokens = [token for token in text.split() if token not in NOISE]
     return ' '.join(tokens)
 
 
@@ -106,7 +106,7 @@ def measure_names_similarity(one: str, other: str) -> float:
         scores = [
             count_common_prefix(token, candidate) / min(len(token), len(candidate))
             for candidate in others
-            if count_common_prefix(token, candidate) >= _MIN_PREFIX
+            if count_common_prefix(token, candidate) >= MIN_PREFIX
         ]
         total += max(scores, default=0.0)
     return total / len(tokens)
@@ -147,7 +147,7 @@ def pair_rosters(
         if name not in unpaired_odds or other not in unpaired_stats:
             continue
         alone = len(unpaired_odds) == 1 and len(unpaired_stats) == 1
-        if score >= _MIN_SIMILARITY and (margin >= _MIN_MARGIN or alone):
+        if score >= MIN_SIMILARITY and (margin >= MIN_MARGIN or alone):
             matched[name] = other
             unpaired_odds.discard(name)
             unpaired_stats.discard(other)

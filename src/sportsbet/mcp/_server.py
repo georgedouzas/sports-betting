@@ -29,7 +29,7 @@ server: FastMCP = FastMCP('sportsbet')
 
 Answer = TypeVar('Answer')
 Selection = dict[str, Any]
-_SESSIONS: dict[str, BrowserSession] = {}
+SESSIONS: dict[str, BrowserSession] = {}
 
 
 async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
@@ -194,14 +194,14 @@ def _run_event(
 
 async def _open_session(venue: str) -> BrowserSession:
     """Return the browser session a reference names, opening it once and keeping it open."""
-    if venue not in _SESSIONS:
+    if venue not in SESSIONS:
         built = build_venue(venue)
         if isinstance(built, BaseVenue):
             msg = f'`{venue}` is a venue with an API rather than a browser session, so the browser tools do not apply.'
             raise ExecutionError(msg)
         await built.start()
-        _SESSIONS[venue] = built
-    return _SESSIONS[venue]
+        SESSIONS[venue] = built
+    return SESSIONS[venue]
 
 
 @server.tool()

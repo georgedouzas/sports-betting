@@ -27,23 +27,23 @@ from ..core import (
 )
 from ..sources import BaseOddsSchema, BaseStatsSchema, optional_col, required_col
 
-_DELIMITER = '__'
-_DAY = pd.Timedelta('1D')
+DELIMITER = '__'
+DAY = pd.Timedelta('1D')
 
 
 def _build_feature_column(col: str, event_status: str, event_time: pd.Timedelta) -> str:
     """Build a time-varying feature column name."""
-    return _DELIMITER.join([col, event_status, format_event_time(event_time)])
+    return DELIMITER.join([col, event_status, format_event_time(event_time)])
 
 
 def _build_odds_column(provider: str, col: str, event_status: str, event_time: pd.Timedelta) -> str:
     """Build an odds column name."""
-    return _DELIMITER.join([provider, col, event_status, format_event_time(event_time)])
+    return DELIMITER.join([provider, col, event_status, format_event_time(event_time)])
 
 
 def _build_target_column(col: str, target_event_status: str, target_event_time: pd.Timedelta) -> str:
     """Build a target (Y) column name."""
-    return _DELIMITER.join([col, target_event_status, format_event_time(target_event_time)])
+    return DELIMITER.join([col, target_event_status, format_event_time(target_event_time)])
 
 
 def _to_field_name(col: str) -> str:
@@ -403,7 +403,7 @@ class BaseDataLoader(ABC):
         priced = priced.drop_duplicates()
         if priced.empty:
             return None
-        latest = priced.loc[priced['event_status'].map(STATUS_RANK).mul(_DAY).add(priced['event_time']).idxmax()]
+        latest = priced.loc[priced['event_status'].map(STATUS_RANK).mul(DAY).add(priced['event_time']).idxmax()]
         return str(latest['event_status']), pd.Timedelta(latest['event_time'])
 
     def _extract(

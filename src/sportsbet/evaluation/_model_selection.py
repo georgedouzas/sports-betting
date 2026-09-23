@@ -21,7 +21,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..core import BoolData, Data, Indices
 from ._base import BaseBettor, _check_is_dataframe
 
-_TSCV = TimeSeriesSplit(n_splits=3)
+TSCV = TimeSeriesSplit(n_splits=3)
 
 
 def _check_time_series_cv(cv: TimeSeriesSplit) -> None:
@@ -373,7 +373,7 @@ class BettorGridSearchCV(GridSearchCV, BaseBettor):
         scoring: str | Callable | list | tuple | dict[str, Callable] | None = None,
         n_jobs: int | None = None,
         refit: bool | str | Callable = True,
-        cv: TimeSeriesSplit = _TSCV,
+        cv: TimeSeriesSplit = TSCV,
         verbose: int = 0,
         pre_dispatch: int | str = '2*n_jobs',
         error_score: str | float | int = np.nan,

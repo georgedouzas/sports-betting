@@ -27,7 +27,7 @@ ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
     'football-data': FootballDataOdds,
     'odds-api': OddsApi,
 }
-_KEYED_SOURCES = {'odds-api'}
+KEYED_SOURCES = {'odds-api'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
 
 
@@ -70,7 +70,7 @@ def _build_odds_source(
     if odds not in ODDS_SOURCES:
         msg = f'`{odds}` is not an odds source. Available: {", ".join(sorted(ODDS_SOURCES))}.'
         raise BuildError(msg)
-    if odds not in _KEYED_SOURCES:
+    if odds not in KEYED_SOURCES:
         return ODDS_SOURCES[odds]()
     if not os.environ.get(key_env):
         msg = f'`{odds}` needs a key. Set `{key_env}`, or name another variable with `--odds-key-env`.'

@@ -7,7 +7,7 @@ from sportsbet.dataloaders import BaseDataLoader, DataLoader
 from sportsbet.sources import BaseOddsSource, BaseStatsSource, FootballDataOdds, FootballDataStats
 from tests.conftest import SnapshotsDataLoader
 
-_PROVIDERS = ['market_average', 'market_maximum']
+PROVIDERS = ['market_average', 'market_maximum']
 
 
 @pytest.fixture
@@ -66,7 +66,7 @@ def test_the_dataloader_has_no_public_discovery():
 
 def test_get_odds_types_derived_from_data(loader):
     """Test odds types are derived from the odds ``provider`` column."""
-    assert loader.get_odds_types() == _PROVIDERS
+    assert loader.get_odds_types() == PROVIDERS
 
 
 def test_extract_train_data_maps_snapshots(loader):
@@ -131,7 +131,7 @@ def test_long_snapshots_are_consumed_without_downloading(long_snapshots):
     """Test a dataloader of snapshots provided directly needs no store and no network."""
     stats, odds = long_snapshots
     loader = SnapshotsDataLoader(stats, odds)
-    assert loader.get_odds_types() == _PROVIDERS
+    assert loader.get_odds_types() == PROVIDERS
     _, Y, O = loader.extract_train_data(odds_type='market_average')
     assert 'home_win__postplay__0min' in Y.columns
     assert {col.split('__')[0] for col in O.columns} == {'market_average'}

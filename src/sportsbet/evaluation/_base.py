@@ -19,13 +19,13 @@ from sklearn.utils.validation import _check_feature_names, check_is_fitted
 
 from ..core import STATUS_RANK, BoolData, Data, parse_event_time
 
-_N_ODDS_TOKENS = 4
-_OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
+N_ODDS_TOKENS = 4
+OUTCOME_MARKETS = ['home_win', 'draw', 'away_win']
 
 
 def _is_odds_column(col: str) -> bool:
     """Return whether a column follows the four-token odds grammar."""
-    return len(col.split('__')) == _N_ODDS_TOKENS
+    return len(col.split('__')) == N_ODDS_TOKENS
 
 
 def _check_is_dataframe(data: pd.DataFrame, name: str, *, date_index: bool = False) -> None:
@@ -117,7 +117,7 @@ def derive_complementary_events(markets: list[str]) -> list[list[str]]:
         []
     """
     groups = []
-    outcomes = [market for market in _OUTCOME_MARKETS if market in markets]
+    outcomes = [market for market in OUTCOME_MARKETS if market in markets]
     if len(outcomes) > 1:
         groups.append(outcomes)
     lines: dict[str, list[str]] = {}
@@ -295,7 +295,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             "Odds data column names should follow a naming "
             "convention of the form `f'{provider}__{betting_market}__{event_status}__{event_time}'`"
         )
-        if {len(tokens) for tokens in O_cols} != {_N_ODDS_TOKENS}:
+        if {len(tokens) for tokens in O_cols} != {N_ODDS_TOKENS}:
             raise ValueError(error_msg)
         O_providers = [tokens[0] for tokens in O_cols]
         if len(set(O_providers)) != 1:

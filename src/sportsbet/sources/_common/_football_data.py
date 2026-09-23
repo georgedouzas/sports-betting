@@ -11,11 +11,11 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from ...core import IDENTITY_COLS, ParamGrid
-from .._base import _ENCODING, BaseSource, RawItem, RawPayload, read_csv_content
+from .._base import ENCODING, BaseSource, RawItem, RawPayload, read_csv_content
 from .._utils import derive_market_outcomes
 
-_URL = 'https://www.football-data.co.uk'
-_BASE_URLS = [
+URL = 'https://www.football-data.co.uk'
+BASE_URLS = [
     'englandm.php',
     'scotlandm.php',
     'germanym.php',
@@ -44,10 +44,10 @@ _BASE_URLS = [
     'Switzerland.php',
     'USA.php',
 ]
-_MAIN_LEAGUES = [base_url.replace('.php', '')[:-1].capitalize() for base_url in _BASE_URLS if base_url[0].islower()]
-_HISTORY_LEAGUES = [base_url.replace('.php', '') for base_url in _BASE_URLS if not base_url[0].islower()]
-_INDEX_PREFIX = 'index'
-_LEAGUES_MAPPING = {
+MAIN_LEAGUES = [base_url.replace('.php', '')[:-1].capitalize() for base_url in BASE_URLS if base_url[0].islower()]
+HISTORY_LEAGUES = [base_url.replace('.php', '') for base_url in BASE_URLS if not base_url[0].islower()]
+INDEX_PREFIX = 'index'
+LEAGUES_MAPPING = {
     'England': ('E', '0', '1', '2', '3', 'C'),
     'Scotland': ('SC', '0', '1', '2', '3', 'C'),
     'Germany': ('D', '1', '2'),
@@ -76,7 +76,7 @@ _LEAGUES_MAPPING = {
     'Switzerland': ('SWZ', '1'),
     'USA': ('USA', '1'),
 }
-_REMOVED_COLS = [
+REMOVED_COLS = [
     'Div',
     'Country',
     'Season',
@@ -92,7 +92,7 @@ _REMOVED_COLS = [
     'League',
     'divisions',
 ]
-_COLS_MAPPING = {
+COLS_MAPPING = {
     'HT': 'home_team',
     'Home': 'home_team',
     'AT': 'away_team',
@@ -260,7 +260,7 @@ _COLS_MAPPING = {
     'HBP': 'target__home_team__bookings_points',
     'ABP': 'target__away_team__bookings_points',
 }
-_SCHEMA = [
+SCHEMA = [
     ('league', object),
     ('division', np.int64),
     ('year', np.int64),
@@ -434,26 +434,26 @@ _SCHEMA = [
     ('target__home_team__bookings_points', float),
     ('target__away_team__bookings_points', float),
 ]
-_MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
-_PROVIDERS = ['market_average', 'market_maximum']
-_HALF_TIME_COLS = {
+MARKETS = ['home_win', 'draw', 'away_win', 'over_2.5', 'under_2.5']
+PROVIDERS = ['market_average', 'market_maximum']
+HALF_TIME_COLS = {
     'target__home_team__half_time_goals': 'home_half_goals',
     'target__away_team__half_time_goals': 'away_half_goals',
 }
-_CHAMPIONSHIP_DIVISION = 5
-_CENTURY_PIVOT = 68
-_FEED_TIMEZONE = 'Europe/London'
-_KEY_PARTS = 3
-_DRAW_MARGIN = 0.25
-_FIXTURES_KEY = 'fixtures'
-_ROLLING_GAMES = 3
+CHAMPIONSHIP_DIVISION = 5
+CENTURY_PIVOT = 68
+FEED_TIMEZONE = 'Europe/London'
+KEY_PARTS = 3
+DRAW_MARGIN = 0.25
+FIXTURES_KEY = 'fixtures'
+ROLLING_GAMES = 3
 
 
 def _preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
     """Rename the raw columns, back-fill each odds column from its closing twin, and order by date."""
     data = data.drop(
-        columns=[col for col in data.columns if 'Unnamed' in col or col in _REMOVED_COLS],
-    ).rename(columns=_COLS_MAPPING)
+        columns=[col for col in data.columns if 'Unnamed' in col or col in REMOVED_COLS],
+    ).rename(columns=COLS_MAPPING)
     backfilled = {}
     for col in data.columns:
         if 'closing' in col:
@@ -464,7 +464,7 @@ def _preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
         replaced = [col for col in backfilled if col in data.columns]
         data = pd.concat([data.drop(columns=replaced), pd.DataFrame(backfilled)], axis=1)
     data = data.drop(columns=[col for col in data.columns if 'closing' in col])
-    schema_cols = [col for col, _ in _SCHEMA]
+    schema_cols = [col for col, _ in SCHEMA]
     data = data.merge(pd.DataFrame(columns=schema_cols), how='outer')
     data = data[schema_cols]
     data = data.set_index('date').sort_values('date')
@@ -473,10 +473,10 @@ def _preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
 
 def _convert_data_types(data: pd.DataFrame) -> pd.DataFrame:
     """Cast each column to its schema type, missing integers becoming the `-1` played/not-played sentinel."""
-    data_types = {data_type for _, data_type in _SCHEMA}
+    data_types = {data_type for _, data_type in SCHEMA}
     for data_type in data_types:
         converted_cols = list(
-            {col for col, selected_data_type in _SCHEMA if selected_data_type is data_type and col in data.columns},
+            {col for col, selected_data_type in SCHEMA if selected_data_type is data_type and col in data.columns},
         )
         if converted_cols:
             data_converted_cols = data[converted_cols]
@@ -578,8 +578,8 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
         features_data['goals_for'] == features_data['goals_against']
     )
     features_data['adj_points'] = (
-        3 * (features_data['adj_goals_for'] > features_data['adj_goals_against'] + _DRAW_MARGIN)
-        + 1.0 * (np.abs(features_data['adj_goals_for'] - features_data['adj_goals_against']) <= _DRAW_MARGIN)
+        3 * (features_data['adj_goals_for'] > features_data['adj_goals_against'] + DRAW_MARGIN)
+        + 1.0 * (np.abs(features_data['adj_goals_for'] - features_data['adj_goals_against']) <= DRAW_MARGIN)
     ).astype(int)
     features_data = features_data[
         ['points', 'adj_points', 'goals_for', 'goals_against', 'adj_goals_for', 'adj_goals_against']
@@ -591,7 +591,7 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
     features_data[features_avg_cols] = features_data.groupby('team')[features_cols].expanding().mean().to_numpy()
     features_data[features_avg_cols] = features_data.groupby('team')[features_avg_cols].shift(1)
     features_data[features_latest_avg_cols] = (
-        features_data.groupby('team')[features_cols].rolling(window=_ROLLING_GAMES, min_periods=1).mean().to_numpy()
+        features_data.groupby('team')[features_cols].rolling(window=ROLLING_GAMES, min_periods=1).mean().to_numpy()
     )
     features_data[features_latest_avg_cols] = features_data.groupby('team')[features_latest_avg_cols].shift(1)
     features_data = features_data.drop(columns=features_cols).reset_index()
@@ -644,7 +644,7 @@ def _to_snapshots(modelling: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
             event_status='inplay',
             event_time=45,
         )
-        outcomes = derive_market_outcomes(inplay['home_goals'], inplay['away_goals'], _MARKETS)
+        outcomes = derive_market_outcomes(inplay['home_goals'], inplay['away_goals'], MARKETS)
         inplay = pd.concat([inplay, outcomes], axis=1)
         stats_frames.append(inplay)
 
@@ -655,7 +655,7 @@ def _to_snapshots(modelling: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         event_status='postplay',
         event_time=0,
     )
-    outcomes = derive_market_outcomes(postplay['home_goals'], postplay['away_goals'], _MARKETS)
+    outcomes = derive_market_outcomes(postplay['home_goals'], postplay['away_goals'], MARKETS)
     postplay = pd.concat([postplay, outcomes], axis=1)
     stats_frames.append(postplay)
 
@@ -666,28 +666,28 @@ def _to_snapshots(modelling: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         *IDENTITY_COLS,
         'home_goals',
         'away_goals',
-        *_MARKETS,
+        *MARKETS,
         *feature_cols,
     ]
     stats = stats.reindex(columns=[col for col in stats_order if col in stats.columns])
 
     odds_frames = []
-    for provider in _PROVIDERS:
-        mapping = {f'{provider}__{market}': market for market in _MARKETS if f'{provider}__{market}' in odds_cols}
+    for provider in PROVIDERS:
+        mapping = {f'{provider}__{market}': market for market in MARKETS if f'{provider}__{market}' in odds_cols}
         if not mapping:
             continue
         provider_odds = modelling[IDENTITY_COLS + list(mapping)].rename(columns=mapping)
         provider_odds = provider_odds.assign(provider=provider, event_status='preplay', event_time=0)
         odds_frames.append(provider_odds)
     odds = pd.concat(odds_frames, ignore_index=True)
-    odds = odds.reindex(columns=['event_status', 'event_time', *IDENTITY_COLS, 'provider', *_MARKETS])
+    odds = odds.reindex(columns=['event_status', 'event_time', *IDENTITY_COLS, 'provider', *MARKETS])
     return stats, odds
 
 
 def _derive_division(league: str, code: str) -> int:
     """Map a feed division code to the division number."""
-    if 'C' in _LEAGUES_MAPPING[league][1:]:
-        return int(code) + 1 if code != 'C' else _CHAMPIONSHIP_DIVISION
+    if 'C' in LEAGUES_MAPPING[league][1:]:
+        return int(code) + 1 if code != 'C' else CHAMPIONSHIP_DIVISION
     return int(code)
 
 
@@ -715,7 +715,7 @@ def _extract_season_years(data: pd.DataFrame) -> pd.Series:
 def _parse_key_params(key: str) -> tuple[str, int, int | None]:
     """Return the league, division and year an item key encodes."""
     parts = key.split('_')
-    year = int(parts[2]) if len(parts) == _KEY_PARTS else None
+    year = int(parts[2]) if len(parts) == KEY_PARTS else None
     return parts[0], int(parts[1]), year
 
 
@@ -725,7 +725,7 @@ def _derive_kickoff(data: pd.DataFrame, date_format: str) -> pd.Series:
     if 'Time' in data.columns:
         time = pd.to_timedelta(data['Time'].astype(str) + ':00', errors='coerce')
         date = date + time.fillna(pd.Timedelta(0))
-    date = date.dt.tz_localize(_FEED_TIMEZONE, ambiguous=True, nonexistent='shift_forward')
+    date = date.dt.tz_localize(FEED_TIMEZONE, ambiguous=True, nonexistent='shift_forward')
     return date.dt.tz_convert('UTC').dt.tz_localize(None)
 
 
@@ -762,7 +762,7 @@ def _process_fixtures(content: bytes, latest_years: pd.DataFrame) -> pd.DataFram
     data = data.rename(columns={'ï»¿Div': 'Div'}).copy()
     data['Date'] = _derive_kickoff(data, '%d/%m/%Y')
     data = data.dropna(axis=0, how='any', subset=['Div', 'HomeTeam', 'AwayTeam'])
-    leagues_mapping = {value[0]: key for key, value in _LEAGUES_MAPPING.items()}
+    leagues_mapping = {value[0]: key for key, value in LEAGUES_MAPPING.items()}
     data = data.assign(
         league=data['Div'].apply(lambda div: leagues_mapping[div[:-1]]),
         division=data['Div'].apply(lambda div: _derive_division(leagues_mapping[div[:-1]], div[-1])),
@@ -790,8 +790,8 @@ def _build_modelling_frames(
         features = _extract_features(data).assign(league=league, division=division, year=year)
         params_cols = ['league', 'division', 'year']
         features = features[params_cols + [col for col in features.columns if col not in params_cols]]
-        half_time = data.reset_index()[['date', 'home_team', 'away_team', *_HALF_TIME_COLS]].rename(
-            columns=_HALF_TIME_COLS,
+        half_time = data.reset_index()[['date', 'home_team', 'away_team', *HALF_TIME_COLS]].rename(
+            columns=HALF_TIME_COLS,
         )
         features = features.reset_index().merge(half_time, on=['date', 'home_team', 'away_team'], how='left')
         modelling.append((training.shape[0], features))
@@ -800,8 +800,8 @@ def _build_modelling_frames(
 
 def _build_modelling_snapshots(payloads: list[RawPayload], catalogue: list) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run the feed transform and return the long `stats` and `odds` snapshots."""
-    fixtures_payloads = [payload for payload in payloads if payload.item.key == _FIXTURES_KEY]
-    season_payloads = [payload for payload in payloads if payload.item.key != _FIXTURES_KEY]
+    fixtures_payloads = [payload for payload in payloads if payload.item.key == FIXTURES_KEY]
+    season_payloads = [payload for payload in payloads if payload.item.key != FIXTURES_KEY]
     processed = _process_training(season_payloads)
     fixtures = pd.DataFrame()
     if fixtures_payloads:
@@ -833,7 +833,7 @@ def _build_modelling_snapshots(payloads: list[RawPayload], catalogue: list) -> t
 def _parse_year(season: str) -> int:
     """Map a two-digit feed season token to its year, pivoting the century at 68 as the feed does."""
     year = int(season[2:])
-    return year + (2000 if year <= _CENTURY_PIVOT else 1900)
+    return year + (2000 if year <= CENTURY_PIVOT else 1900)
 
 
 def _collect_selected_leagues(selection: ParamGrid | None) -> set[str] | None:
@@ -851,17 +851,17 @@ def _collect_selected_leagues(selection: ParamGrid | None) -> set[str] | None:
 
 def _build_index_url(league: str) -> str:
     """Return the index page of a league published one file per season."""
-    return f'{_URL}/{league.lower()}m.php'
+    return f'{URL}/{league.lower()}m.php'
 
 
 def _build_history_url(league: str) -> str:
     """Return the whole-history file of a league published as a single file."""
-    return f'{_URL}/new/{_LEAGUES_MAPPING[league][0]}.csv'
+    return f'{URL}/new/{LEAGUES_MAPPING[league][0]}.csv'
 
 
 def _parse_index(league: str, content: bytes) -> list[tuple[str, int, int, str]]:
     """Parse an index page for the division, year and URL of every season it publishes."""
-    page = BeautifulSoup(content.decode(_ENCODING), features='html.parser')
+    page = BeautifulSoup(content.decode(ENCODING), features='html.parser')
     hrefs = {
         href
         for href in (element.get('href') for element in page.find_all('a'))
@@ -871,7 +871,7 @@ def _parse_index(league: str, content: bytes) -> list[tuple[str, int, int, str]]
     for href in hrefs:
         *_, season, division = href.split('/')
         seasons.append(
-            (league, _derive_division(league, division.replace('.csv', '')[-1]), _parse_year(season), f'{_URL}/{href}'),
+            (league, _derive_division(league, division.replace('.csv', '')[-1]), _parse_year(season), f'{URL}/{href}'),
         )
     return seasons
 
@@ -884,7 +884,7 @@ class _FootballDataSource(BaseSource):
 
     def _build_season_item(self: Self, league: str, division: int, year: int, url: str) -> RawItem:
         """Return the item of a season file."""
-        if league in _HISTORY_LEAGUES:
+        if league in HISTORY_LEAGUES:
             return RawItem(source=self.name, key=f'{league}_{division}', url=url)
         return RawItem(source=self.name, key=f'{league}_{division}_{year}', url=url)
 
@@ -901,13 +901,13 @@ class _FootballDataSource(BaseSource):
         """
         leagues = _collect_selected_leagues(selection)
         items = [
-            RawItem(source=self.name, key=f'{_INDEX_PREFIX}_{league}', url=_build_index_url(league))
-            for league in _MAIN_LEAGUES
+            RawItem(source=self.name, key=f'{INDEX_PREFIX}_{league}', url=_build_index_url(league))
+            for league in MAIN_LEAGUES
             if leagues is None or league in leagues
         ]
         items.extend(
             RawItem(source=self.name, key=f'{league}_1', url=_build_history_url(league))
-            for league in _HISTORY_LEAGUES
+            for league in HISTORY_LEAGUES
             if leagues is None or league in leagues
         )
         return items
@@ -926,8 +926,8 @@ class _FootballDataSource(BaseSource):
         catalogue: list[tuple[str, int, int, str]] = []
         for payload in payloads:
             key = payload.item.key
-            if key.startswith(f'{_INDEX_PREFIX}_'):
-                catalogue.extend(_parse_index(key.removeprefix(f'{_INDEX_PREFIX}_'), payload.content))
+            if key.startswith(f'{INDEX_PREFIX}_'):
+                catalogue.extend(_parse_index(key.removeprefix(f'{INDEX_PREFIX}_'), payload.content))
             else:
                 league, _ = key.rsplit('_', 1)
                 data = read_csv_content(payload.content)
@@ -982,7 +982,7 @@ class _FootballDataSource(BaseSource):
             self._build_season_item(param['league'], param['division'], param['year'], url)
             for param, url in _find_current_seasons(params, getattr(self, '_catalogue', []))
         ]
-        items.append(RawItem(source=self.name, key=_FIXTURES_KEY, url=f'{_URL}/fixtures.csv'))
+        items.append(RawItem(source=self.name, key=FIXTURES_KEY, url=f'{URL}/fixtures.csv'))
         return items
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:

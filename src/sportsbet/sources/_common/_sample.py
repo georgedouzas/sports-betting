@@ -14,8 +14,8 @@ from sklearn.model_selection import ParameterGrid
 from ...core import ParamGrid
 from .._base import RawItem, RawPayload
 
-_DATA = Path(__file__).parent.parent / 'data'
-_PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2024]}
+DATA = Path(__file__).parent.parent / 'data'
+PARAMS: ParamGrid = {'league': ['England', 'Spain'], 'division': [1], 'year': [2024]}
 
 
 class _SampleSource:
@@ -49,7 +49,7 @@ class _SampleSource:
             params:
                 The available `league`, `division` and `year` combinations.
         """
-        return list(ParameterGrid(_PARAMS))
+        return list(ParameterGrid(PARAMS))
 
     def list_required_items(self: Self, params: list[dict], schedule: pd.DataFrame | None = None) -> list[RawItem]:
         """Return the bundled file of every selected season.
@@ -68,7 +68,7 @@ class _SampleSource:
         items = []
         for param in params:
             key = f'{param["league"]}_{param["division"]}_{param["year"]}_{self.kind}'
-            path = _DATA / f'{key}.csv.gz'
+            path = DATA / f'{key}.csv.gz'
             if path.exists():
                 items.append(RawItem(source=self.name, key=key, url=path.as_uri()))
         return items

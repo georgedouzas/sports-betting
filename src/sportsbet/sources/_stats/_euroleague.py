@@ -12,12 +12,12 @@ import pandas as pd
 
 from ...core import ParamGrid
 from .._base import BaseStatsSource, RawItem, RawPayload
-from .._common._basketball import _DIVISION, _SEASONS_KEY, _snapshots
+from .._common._basketball import DIVISION, SEASONS_KEY, _snapshots
 
-_URL = 'https://api-live.euroleague.net/v2/competitions/E'
-_SEASONS_URL = f'{_URL}/seasons'
-_GAMES_URL = f'{_URL}/seasons/E{{season}}/games'
-_LEAGUE = 'Euroleague'
+URL = 'https://api-live.euroleague.net/v2/competitions/E'
+SEASONS_URL = f'{URL}/seasons'
+GAMES_URL = f'{URL}/seasons/E{{season}}/games'
+LEAGUE = 'Euroleague'
 
 
 def _games(content: bytes, year: int) -> pd.DataFrame:
@@ -34,8 +34,8 @@ def _games(content: bytes, year: int) -> pd.DataFrame:
         records.append(
             {
                 'date': game['utcDate'],
-                'league': _LEAGUE,
-                'division': _DIVISION,
+                'league': LEAGUE,
+                'division': DIVISION,
                 'year': year,
                 'home_team': home_name,
                 'away_team': away_name,
@@ -88,7 +88,7 @@ class EuroLeagueStats(BaseStatsSource):
             items:
                 The items whose payloads describe the catalogue.
         """
-        return [RawItem(source=self.name, key=_SEASONS_KEY, url=_SEASONS_URL)]
+        return [RawItem(source=self.name, key=SEASONS_KEY, url=SEASONS_URL)]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the seasons the competition publishes, each named by the year it ends in.
@@ -105,7 +105,7 @@ class EuroLeagueStats(BaseStatsSource):
             return []
         seasons = json.loads(payloads[0].content).get('data', [])
         return sorted(
-            ({'league': _LEAGUE, 'division': _DIVISION, 'year': int(season['year']) + 1} for season in seasons),
+            ({'league': LEAGUE, 'division': DIVISION, 'year': int(season['year']) + 1} for season in seasons),
             key=lambda params: params['year'],
         )
 
@@ -126,11 +126,11 @@ class EuroLeagueStats(BaseStatsSource):
         return [
             RawItem(
                 source=self.name,
-                key=f'{_LEAGUE}_{param["division"]}_{param["year"]}',
-                url=_GAMES_URL.format(season=param['year'] - 1),
+                key=f'{LEAGUE}_{param["division"]}_{param["year"]}',
+                url=GAMES_URL.format(season=param['year'] - 1),
             )
             for param in params
-            if param['league'] == _LEAGUE
+            if param['league'] == LEAGUE
         ]
 
     def to_snapshots(self: Self, payloads: list[RawPayload]) -> pd.DataFrame:

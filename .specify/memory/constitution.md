@@ -1,6 +1,24 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 10.3.0 -> 11.0.0
+Rationale: A module constant is never private. It is `UPPER_CASE` whatever its reach, and it is kept out of the
+surface by not being re-exported rather than by an underscore. The rules that turn an unexported name private no
+longer reach a constant, since `_UPPER_CASE` reads as two conventions fighting, and the underscore says nothing the
+missing re-export does not already say. MAJOR: the privacy rules are redefined for constants, and 63 names that
+version 10.3.0 required to be private are required not to be.
+
+Modified sections:
+  - Structure: a module constant carries no leading underscore, whatever its reach.
+  - Surface: the rule that an unexported name is private, and the rule that an unused export becomes private, both
+    exempt constants. An unused export stops being re-exported either way.
+
+Templates requiring updates:
+  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
+  - .specify/templates/spec-template.md: generic, no conflict. OK.
+  - .specify/templates/tasks-template.md: generic, no conflict. OK.
+
+---- history ----
 Version change: 10.2.0 -> 10.3.0
 Rationale: Say what a surface is for. A package re-exports only the names something outside it uses, since an export
 nobody reaches for is a promise the library gained nothing by making, and a name in a public signature counts as used,
@@ -994,6 +1012,8 @@ A name that tells the truth saves a comment, a docstring line, and a reading of 
   methods, so a reader meets the parts before the whole.
 - A module constant MUST be `UPPER_CASE`, and MUST live in the constants block near the top of the module, never
   mid-file among the functions.
+- A module constant MUST NOT carry a leading underscore, whatever its reach. A constant is kept private by not
+  re-exporting it, and the rules below that turn an unexported name private MUST NOT reach it.
 - One module MUST be one concern, and a file that grows two MUST be split.
 - Small general helpers MUST share a `_utils` module, whose one concern is the assorted helpers a package needs, and a
   helper MUST earn its own module only where it takes on a distinct role worth a name, as `_base` or `_types` do.
@@ -1082,10 +1102,11 @@ cycles.
   surface is a name that package never promised. A package and its subpackages are one package for this rule, so a
   subpackage reaching its parent's private module is not reaching past a surface.
 - A name its own package never re-exports MUST be private, so what a package exports and what its surface offers are
-  the same list.
+  the same list. A module constant is the exception, and stays `UPPER_CASE`.
 - A package MUST re-export only the names something outside it uses. An export nothing outside the package reaches for
-  is a promise the library gained nothing by making, and MUST become private. A name that appears in a public
-  signature counts as used, since a caller reaches it through that signature.
+  is a promise the library gained nothing by making, and MUST stop being re-exported. A name that appears in a public
+  signature counts as used, since a caller reaches it through that signature. A name that is not a constant MUST also
+  become private.
 - A name nothing uses at all MUST be removed rather than kept private. Code that no caller reaches is code a reader
   still has to read.
 - A surface package, one that exists to serve a runner rather than an importer, MUST re-export its entry point alone.
@@ -1619,4 +1640,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 10.3.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 11.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22

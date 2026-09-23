@@ -9,7 +9,7 @@ from ..core import BuildError, load_object
 from ._base import BaseVenue
 from ._browser import BrowserSession
 
-_EXECUTION_EXTRA = "Placing bets needs the execution extra. Install it with `pip install 'sports-betting[execution]'`."
+EXECUTION_EXTRA = "Placing bets needs the execution extra. Install it with `pip install 'sports-betting[execution]'`."
 
 
 def build_venue(venue: str) -> BaseVenue | BrowserSession:
@@ -34,7 +34,7 @@ def build_venue(venue: str) -> BaseVenue | BrowserSession:
     try:
         from ._browser import BrowserSession  # noqa: PLC0415  # defer the optional execution extra
     except ImportError as missing:
-        raise BuildError(_EXECUTION_EXTRA) from missing
+        raise BuildError(EXECUTION_EXTRA) from missing
     if not isinstance(built, BaseVenue | BrowserSession):
         msg = f'`{venue}` is not a venue and is not a browser session.'
         raise BuildError(msg)

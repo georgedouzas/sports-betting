@@ -15,11 +15,11 @@ import pandas as pd
 from ...core import EVENT_COLS, ParamGrid
 from .._base import BaseOddsSource, RawItem, RawPayload
 
-_URL = 'https://api.the-odds-api.com/v4'
-_SPORTS_URL = f'{_URL}/sports'
-_HISTORICAL_URL = f'{_URL}/historical/sports/{{sport}}/odds'
-_LIVE_URL = f'{_URL}/sports/{{sport}}/odds'
-_LEAGUES_MAPPING = {
+URL = 'https://api.the-odds-api.com/v4'
+SPORTS_URL = f'{URL}/sports'
+HISTORICAL_URL = f'{URL}/historical/sports/{{sport}}/odds'
+LIVE_URL = f'{URL}/sports/{{sport}}/odds'
+LEAGUES_MAPPING = {
     'soccer_epl': ('England', 1),
     'soccer_efl_champ': ('England', 2),
     'soccer_england_league1': ('England', 3),
@@ -59,18 +59,18 @@ _LEAGUES_MAPPING = {
     'basketball_ncaab': ('NCAAB', 1),
     'basketball_nbl': ('NBL', 1),
 }
-_MARKETS = ['h2h', 'totals']
-_REGIONS = ['eu']
-_MOMENTS = [('preplay', 0), ('inplay', 45)]
-_CLOSING_OFFSET = pd.Timedelta(minutes=-1)
-_SNAPSHOT_TOLERANCE = pd.Timedelta(minutes=5)
-_TOTALS_POINT = 2.5
-_HISTORICAL_START = pd.Timestamp('2020-06-06', tz='UTC')
-_FIRST_YEAR = 2021
-_SPORTS_KEY = 'sports'
-_LIVE_KEY = 'live'
-_DELIMITER = '__'
-_SNAPSHOT_MINUTES = 5
+MARKETS = ['h2h', 'totals']
+REGIONS = ['eu']
+MOMENTS = [('preplay', 0), ('inplay', 45)]
+CLOSING_OFFSET = pd.Timedelta(minutes=-1)
+SNAPSHOT_TOLERANCE = pd.Timedelta(minutes=5)
+TOTALS_POINT = 2.5
+HISTORICAL_START = pd.Timestamp('2020-06-06', tz='UTC')
+FIRST_YEAR = 2021
+SPORTS_KEY = 'sports'
+LIVE_KEY = 'live'
+DELIMITER = '__'
+SNAPSHOT_MINUTES = 5
 
 
 def _now() -> pd.Timestamp:
@@ -98,8 +98,8 @@ def _events(payload: RawPayload) -> tuple[list[dict], str]:
 
 def _parse_key(key: str) -> tuple[str, int, pd.Timestamp | None, str, int]:
     """Return the sport, the season, the instant and the moment an item key encodes."""
-    parts = key.split(_DELIMITER)
-    if parts[-1] == _LIVE_KEY:
+    parts = key.split(DELIMITER)
+    if parts[-1] == LIVE_KEY:
         sport, year, _ = parts
         return sport, int(year), None, 'preplay', 0
     sport, year, snapshot, event_status, minutes = parts
@@ -119,7 +119,7 @@ def _last_update(events: list[dict]) -> pd.Timestamp | None:
 
 def _round_minutes(elapsed: float) -> int:
     """Round an elapsed time to the granularity the vendor prices at."""
-    return int(round(elapsed / _SNAPSHOT_MINUTES) * _SNAPSHOT_MINUTES)
+    return int(round(elapsed / SNAPSHOT_MINUTES) * SNAPSHOT_MINUTES)
 
 
 def _outcomes(bookmaker: dict, home_team: str, away_team: str) -> dict:
@@ -135,7 +135,7 @@ def _outcomes(bookmaker: dict, home_team: str, away_team: str) -> dict:
                     outcomes['away_win'] = price
                 elif name == 'Draw':
                     outcomes['draw'] = price
-            elif market['key'] == 'totals' and point == _TOTALS_POINT:
+            elif market['key'] == 'totals' and point == TOTALS_POINT:
                 if name == 'Over':
                     outcomes['over_2.5'] = price
                 elif name == 'Under':
@@ -198,9 +198,9 @@ class OddsApi(BaseOddsSource):
 
     def _settings(self: Self) -> tuple[list[str], list[str], list[tuple[str, int]]]:
         """Return the markets, regions and moments, defaulted."""
-        markets = self.markets if self.markets is not None else _MARKETS
-        regions = self.regions if self.regions is not None else _REGIONS
-        moments = self.moments if self.moments is not None else _MOMENTS
+        markets = self.markets if self.markets is not None else MARKETS
+        regions = self.regions if self.regions is not None else REGIONS
+        moments = self.moments if self.moments is not None else MOMENTS
         return markets, regions, moments
 
     @staticmethod
@@ -223,12 +223,12 @@ class OddsApi(BaseOddsSource):
     def _historical_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
         """Return the odds of the matches an historical snapshot was asked for."""
         sport, year, snapshot, event_status, minutes = _parse_key(payload.item.key)
-        offset = _CLOSING_OFFSET if event_status == 'preplay' else pd.Timedelta(minutes=minutes)
-        league, division = _LEAGUES_MAPPING[sport]
+        offset = CLOSING_OFFSET if event_status == 'preplay' else pd.Timedelta(minutes=minutes)
+        league, division = LEAGUES_MAPPING[sport]
         records = []
         for event in events:
             kickoff = pd.Timestamp(event['commence_time'])
-            if snapshot is None or abs((kickoff + offset) - snapshot) > _SNAPSHOT_TOLERANCE:
+            if snapshot is None or abs((kickoff + offset) - snapshot) > SNAPSHOT_TOLERANCE:
                 continue
             records.extend(self._event_records(event, kickoff, league, division, year, event_status, minutes))
         return records
@@ -236,7 +236,7 @@ class OddsApi(BaseOddsSource):
     def _live_records(self: Self, payload: RawPayload, events: list[dict]) -> list[dict]:
         """Return the odds of the matches the live endpoint priced, upcoming and running alike."""
         sport, year, *_ = _parse_key(payload.item.key)
-        league, division = _LEAGUES_MAPPING[sport]
+        league, division = LEAGUES_MAPPING[sport]
         now = _last_update(events)
         records = []
         for event in events:
@@ -312,7 +312,7 @@ class OddsApi(BaseOddsSource):
             items:
                 The items whose payloads describe the catalogue.
         """
-        return [RawItem(source=self.name, key=_SPORTS_KEY, url=f'{_SPORTS_URL}?all=true')]
+        return [RawItem(source=self.name, key=SPORTS_KEY, url=f'{SPORTS_URL}?all=true')]
 
     def read_catalogue(self: Self, payloads: list[RawPayload]) -> list[dict]:
         """Return the combinations the vendor covers, the years being its historical coverage.
@@ -328,11 +328,11 @@ class OddsApi(BaseOddsSource):
         if not payloads:
             return []
         sports = json.loads(payloads[0].content)
-        years = range(_FIRST_YEAR, _now().year + 2)
+        years = range(FIRST_YEAR, _now().year + 2)
         return [
             {'league': league, 'division': division, 'year': year}
             for sport in sports
-            if (mapped := _LEAGUES_MAPPING.get(sport['key'])) is not None
+            if (mapped := LEAGUES_MAPPING.get(sport['key'])) is not None
             for league, division in [mapped]
             for year in years
         ]
@@ -356,7 +356,7 @@ class OddsApi(BaseOddsSource):
         _, _, moments = self._settings()
         if self.moments is None:
             moments = self._moments(schedule)
-        sports = {(league, division): sport for sport, (league, division) in _LEAGUES_MAPPING.items()}
+        sports = {(league, division): sport for sport, (league, division) in LEAGUES_MAPPING.items()}
         now = _now()
 
         items: list[RawItem] = []
@@ -365,16 +365,16 @@ class OddsApi(BaseOddsSource):
             if sport is None:
                 continue
             for event_status, minutes in moments:
-                offset = _CLOSING_OFFSET if event_status == 'preplay' else pd.Timedelta(minutes=minutes)
+                offset = CLOSING_OFFSET if event_status == 'preplay' else pd.Timedelta(minutes=minutes)
                 snapshots = (matches['date'] + offset).drop_duplicates()
-                snapshots = snapshots[(snapshots >= _HISTORICAL_START) & (snapshots < now)]
+                snapshots = snapshots[(snapshots >= HISTORICAL_START) & (snapshots < now)]
                 for snapshot in sorted(snapshots):
                     query = urlencode({**self._query(), 'date': _timestamp(snapshot)})
-                    url = f'{_HISTORICAL_URL.format(sport=sport)}?{query}'
-                    key = _DELIMITER.join([sport, str(year), _key_timestamp(snapshot), event_status, str(minutes)])
+                    url = f'{HISTORICAL_URL.format(sport=sport)}?{query}'
+                    key = DELIMITER.join([sport, str(year), _key_timestamp(snapshot), event_status, str(minutes)])
                     items.append(RawItem(source=self.name, key=key, url=url))
-            live = f'{_LIVE_URL.format(sport=sport)}?{urlencode(self._query())}'
-            live_key = _DELIMITER.join([sport, str(year), _LIVE_KEY])
+            live = f'{LIVE_URL.format(sport=sport)}?{urlencode(self._query())}'
+            live_key = DELIMITER.join([sport, str(year), LIVE_KEY])
             items.append(RawItem(source=self.name, key=live_key, url=live))
         return items
 

@@ -19,7 +19,7 @@ SPORTS = json.dumps(
     ],
 ).encode()
 KICKOFF = pd.Timestamp('2024-08-16 19:00', tz='UTC')
-_FIRST_YEAR = 2021
+FIRST_YEAR = 2021
 BEFORE_HISTORY = 2019
 SCHEDULE = pd.DataFrame(
     [
@@ -100,7 +100,7 @@ def test_the_catalogue_starts_where_the_history_does(source):
     """Test the vendor's history begins in 2020, so earlier seasons are never offered."""
     payloads = [RawPayload(item=source.list_index_items()[0], content=SPORTS)]
     years = {param['year'] for param in source.read_catalogue(payloads)}
-    assert min(years) == _FIRST_YEAR
+    assert min(years) == FIRST_YEAR
     assert BEFORE_HISTORY not in years
 
 
