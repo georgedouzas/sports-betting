@@ -1,0 +1,53 @@
+schema: spec-driven
+
+context: |
+  A typed Python library for sports betting: read match statistics and odds from data feeds, shape them into
+  modelling data, build and evaluate betting models, and place the bets they choose.
+
+  Layers, each importing only downward: core, then sources, dataloaders, evaluation and execution, then the cli and
+  mcp surfaces. Delivery is the Python API, the `sportsbet` command line, and the `sportsbet-mcp` server, and a
+  parity test asserts they stay in step.
+
+  Python >=3.11,<3.14. PDM with SCM-derived versioning and a src layout. The gate runs in order, `pdm run formatting`,
+  `pdm run checks`, `pdm run docs build`, then `pdm run tests`, covering black, docformatter, ruff at line length 120,
+  interrogate, bandit, pip-audit, pytest with --doctest-modules, and mypy. Read its verdict from the nox session
+  summary line, never from a piped exit code. Pre-commit runs the project's own ruff, black and mypy.
+
+  The engineering rules this repository is held to are in openspec/conventions.md, at version 12.0.0. Read it before
+  writing code here. It is binding, it states every rule with MUST or MUST NOT, and it carries an example and a
+  counter-example for each. Amending it is a change in its own right, with a version bump and a Sync Impact Report
+  entry.
+
+  Commits follow the angular convention, since CHANGELOG.md is generated from them. Never add a Co-Authored-By
+  trailer.
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
