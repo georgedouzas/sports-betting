@@ -13,10 +13,15 @@ context: |
   interrogate, bandit, pip-audit, pytest with --doctest-modules, and mypy. Read its verdict from the nox session
   summary line, never from a piped exit code. Pre-commit runs the project's own ruff, black and mypy.
 
-  The engineering rules this repository is held to are in openspec/conventions.md, at version 12.0.0. Read it before
-  writing code here. It is binding, it states every rule with MUST or MUST NOT, and it carries an example and a
-  counter-example for each. Amending it is a change in its own right, with a version bump and a Sync Impact Report
-  entry.
+  Read openspec/constitution.md in full before proposing, planning, applying or reviewing anything here, and read it
+  from disk each time rather than from memory of an earlier turn. It is 79 KB, too large to carry in this field, and
+  it is the binding constraint on every artifact and every line of code in this repository. Treat it as part of this
+  context: work that contradicts it is wrong even where this field is silent.
+
+  It states every rule with MUST or MUST NOT, and gives each an example and a counter-example, so a rule shows what it
+  means as well as saying it. It is at version 12.0.0. Amending it is a change in its own right, with a version bump
+  and a Sync Impact Report entry at the top of the file, and a rule that turns out to be wrong is amended in the open
+  rather than worked around.
 
   Commits follow the angular convention, since CHANGELOG.md is generated from them. Never add a Co-Authored-By
   trailer.

@@ -33,4 +33,4 @@
 
 - Named products (the competition's official API, the odds vendor) are referred to by role in the requirements and named only in the Context, where they are the reason the feature is possible at all. They are decisions already taken by the maintainer and belong in the plan.
 - FR-014 (the undocumented time zone) is deliberately phrased as a *prohibition on assuming*, not as a value to implement. The value is a research task, and the previous feature was bitten by exactly this: the soccer feed turned out to publish every league in UK time, which no documentation said.
-- Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
+- Items marked incomplete require spec updates before clarification or planning.

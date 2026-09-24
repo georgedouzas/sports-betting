@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "make project compatible to speckit constitution"
+**Input**: User description: "make project compatible to the constitution"
 
 ## Clarifications
 

@@ -95,7 +95,7 @@ specs/004-nba-espn-source/
 │   └── nba.md           # The source contract: items in, snapshots out
 ├── checklists/
 │   └── requirements.md
-└── tasks.md             # /speckit-tasks output, not this command's
+└── tasks.md             # the task list, not this command's
 ```
 
 ### Source Code (repository root)

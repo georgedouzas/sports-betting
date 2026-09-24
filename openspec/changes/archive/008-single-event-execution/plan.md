@@ -81,7 +81,7 @@ specs/008-single-event-execution/
 │   ├── python-api.md
 │   ├── surfaces.md
 │   └── retirement.md
-└── tasks.md             # Phase 2 output (/speckit-tasks, not created here)
+└── tasks.md             # Phase 2 output (the task list, not created here)
 ```
 
 ### Source Code (repository root)

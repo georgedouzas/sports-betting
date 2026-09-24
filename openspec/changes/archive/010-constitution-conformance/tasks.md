@@ -197,13 +197,13 @@ failing
 
 - [X] T060 [US5] Rewrite the docstring of `src/sportsbet/__init__.py` to name all seven public surfaces, since it
       names three today
-- [X] T061 [P] [US5] Check the package layering bullet in `.specify/memory/constitution.md` against `src/sportsbet/`
+- [X] T061 [P] [US5] Check the package layering bullet in `openspec/constitution.md` against `src/sportsbet/`
       and correct whichever of the two is wrong, the bullet or the layout
 - [X] T062 [P] [US5] Check the builders bullet against `src/sportsbet/`, and confirm `build_dataloader`,
       `build_bettor`, and `build_venue` each live in the package that owns what they build
 - [X] T063 [P] [US5] Search `src/sportsbet/` and confirm no bare `Exception` or `ValueError` stands where
       `BuildError`, `SelectionError`, `ExecutionError`, or `CredentialError` carries meaning
-- [X] T064 [US5] Correct any Project Profile bullet that does not hold in `.specify/memory/constitution.md`, with a
+- [X] T064 [US5] Correct any Project Profile bullet that does not hold in `openspec/constitution.md`, with a
       PATCH version bump and a Sync Impact Report entry
 - [X] T065 [US5] Run `pdm run formatting`, `pdm run checks`, `pdm run docs build`, then `pdm run tests`, and
       confirm the suite passed with no test in `tests/` edited
@@ -227,7 +227,7 @@ failing
 - [X] T065a Added the `# Author:` and `# License:` lines to `src/sportsbet/__main__.py`, `core/_params.py`,
       `core/_types.py`, `core/_utils.py`, and `dataloaders/_base.py`, the five implementation modules that lacked them
 - [X] T065b Confirmed the 11 remaining headerless modules are all `__init__.py`, which the Surface rule exempts
-- [X] T065c Restored the licence header rule in `.specify/memory/constitution.md` at version 10.0.1, after version
+- [X] T065c Restored the licence header rule in `openspec/constitution.md` at version 10.0.1, after version
       10.0.0 removed it on a measurement that searched for `Copyright` and missed `# License:`
 
 ---

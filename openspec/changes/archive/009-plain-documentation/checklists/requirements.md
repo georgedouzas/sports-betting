@@ -33,4 +33,4 @@
 
 - The three questions the user raised (scope, how the style is checkable in review, how examples are proven to run and
   what happens when one needs a secret or the network) are resolved in the Assumptions section with reasonable
-  defaults. No clarification markers remain. Ready for `/speckit-plan`.
+  defaults. No clarification markers remain. Ready for planning.

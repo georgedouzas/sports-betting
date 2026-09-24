@@ -69,7 +69,7 @@ specs/003-basketball-euroleague/
 │   └── euroleague.md
 ├── checklists/
 │   └── requirements.md
-└── tasks.md             # Phase 2 (/speckit-tasks — NOT created here)
+└── tasks.md             # Phase 2 (the task list, not created here)
 ```
 
 ### Source Code (repository root)

@@ -2,6 +2,20 @@
 
 Contributions are welcome, and they are greatly appreciated.
 
+## The constitution
+
+Every rule this project is held to lives in [`openspec/constitution.md`](openspec/constitution.md). Read it before
+writing code here.
+
+It is binding rather than advisory. Every rule is stated with MUST or MUST NOT, and each section carries an example
+and a counter-example, so a rule shows what it means as well as saying it. It covers what the code obeys, how it is
+written, the tools it is built with, and the gate it passes before merge, and it ends with a Project Profile that
+instantiates all of it for this repository.
+
+Amending it is a change in its own right. An amendment edits that file, states its rationale, bumps the version, and
+adds a Sync Impact Report entry at the top. A rule that turns out to be wrong is amended in the open, never worked
+around.
+
 ## Tasks
 
 This project uses [nox](https://nox.thea.codes/en/stable/) to run development tasks. Please check the `noxfile.py` at the root of

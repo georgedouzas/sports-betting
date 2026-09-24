@@ -11,7 +11,7 @@ description: "Task list for plain documentation"
 
 ## Phase 1: Foundational (the standard)
 
-- [x] T001 Update `.specify/memory/constitution.md`: rewrite the Writing Style rules to require the plain style and
+- [x] T001 Update `openspec/constitution.md`: rewrite the Writing Style rules to require the plain style and
   forbid the clever, inverted, passive-for-effect, idiomatic, and defensive style, per `contracts/style-rules.md`. Add
   the rule that a code example must run, verified by the build, with no un-runnable demo. Record the 0.15.0 release
   lessons (docs build in the gate runs the examples, a cached toolchain or a local secret can mask a failure, an

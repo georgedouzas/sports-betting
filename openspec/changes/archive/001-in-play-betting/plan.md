@@ -55,7 +55,7 @@ run offline against the sample dataloader (Principle III); full quality gate mus
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-Evaluated against `.specify/memory/constitution.md` v1.0.0:
+Evaluated against `openspec/constitution.md` v1.0.0:
 
 - **I. scikit-learn-Compatible API** — PASS (by design). Dataloaders keep the `param_grid`
   selection style and `get_all_params`/`get_odds_types` discovery; bettors remain
@@ -106,7 +106,7 @@ specs/001-in-play-betting/
 │   └── cli.md
 ├── checklists/
 │   └── requirements.md
-└── tasks.md             # /speckit-tasks output (NOT created here)
+└── tasks.md             # the task list, not created here
 ```
 
 ### Source Code (repository root)

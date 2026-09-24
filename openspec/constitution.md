@@ -25,11 +25,6 @@ Modified sections:
   - Project Profile: the named exceptions include `NotExtractedError`, and a state error is distinguished from
     invalid input.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 11.5.0 -> 11.6.0
 Rationale: An abstract method carries the complete docstring, since it is where the contract is written, and an
@@ -41,11 +36,6 @@ contract written where each reader of it looks. MINOR: one rule added.
 Modified sections:
   - Docstrings: an abstract method carries the complete docstring, and an override repeats it.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 11.4.0 -> 11.5.0
 Rationale: An example exercises the thing it documents. Five source classes spent their examples building a
@@ -55,11 +45,6 @@ read, and for the bundled sources what its snapshots hold. MINOR: one new rule.
 
 Modified sections:
   - Documentation: an example exercises the thing it documents.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 11.3.0 -> 11.4.0
@@ -72,11 +57,6 @@ one exception stated, and nothing that conformed stops conforming.
 Modified sections:
   - Naming: a name an outside contract fixes keeps that spelling, beside the rule that a function name begins with a
     verb.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 11.2.0 -> 11.3.0
@@ -92,11 +72,6 @@ Modified sections:
     a client is expected to subclass is re-exported.
   - Surface: the unexported-name rule names the constant and the base class as its two exceptions.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 11.0.1 -> 11.2.0
 Rationale: Order a module by kind first and by privacy second, so it reads as the private functions, the public
@@ -110,11 +85,6 @@ Modified sections:
   - Structure: a module orders its definitions by kind first and by privacy second, a class orders its methods by
     privacy, and dependency order wins where the orders disagree.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 11.0.1 -> 11.1.0
 Rationale: Widen the ordering rule from functions to every definition. Version 10.2.0 named the private functions and
@@ -127,11 +97,6 @@ Modified sections:
   - Structure: the ordering rule reads every private definition, a function, a class and an alias alike, and
     dependency order wins where the two disagree.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 11.0.0 -> 11.0.1
 Rationale: Say who counts as a client. The tests and the documentation are client code, so a name either of them
@@ -142,11 +107,6 @@ source base. PATCH: the rule always meant this, and no code changes.
 Modified sections:
   - Surface: the unused-export rule names the tests and the documentation as clients, beside the public-signature
     clause it already carried.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 10.3.0 -> 11.0.0
@@ -161,11 +121,6 @@ Modified sections:
   - Surface: the rule that an unexported name is private, and the rule that an unused export becomes private, both
     exempt constants. An unused export stops being re-exported either way.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 10.2.0 -> 10.3.0
 Rationale: Say what a surface is for. A package re-exports only the names something outside it uses, since an export
@@ -178,11 +133,6 @@ one names the type of a public parameter. MINOR: two new rules.
 Modified sections:
   - Surface: a package re-exports only what something outside it uses, and a name nothing uses is removed.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 10.1.1 -> 10.2.0
 Rationale: Order a module and a class by privacy. The private functions come before the public ones, and a class puts
@@ -192,11 +142,6 @@ the two agree in almost every module. MINOR: one new rule.
 
 Modified sections:
   - Structure: the private functions and methods come first.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 10.1.0 -> 10.1.1
@@ -210,11 +155,6 @@ Modified sections:
   - Project Profile: the named exceptions are the three that exist, and the estimator packages raise what the
     ecosystem contract expects.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 10.0.1 -> 10.1.0
 Rationale: A command or a tool in a surface package carries its summary line alone. Its docstring is not developer
@@ -226,11 +166,6 @@ options and the schema it holds. MINOR: one exception stated, and nothing that c
 Modified sections:
   - Docstrings: a command or a tool in a surface package carries the one-line summary alone, beside the existing rule
     for a private name.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 10.0.0 -> 10.0.1
@@ -244,11 +179,6 @@ Modified sections:
   - Comments: the licence header is a comment the rule allows again.
   - Surface: the `__init__` carries no licence header, which is why the surfaces are not the gap.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 9.1.0 -> 10.0.0
 Rationale: Drop the licence header rule. The project licenses at the root, in a LICENSE file, and not one of its 53
@@ -261,11 +191,6 @@ Modified sections:
   - Comments: the only comment left in source is a suppression.
   - Surface: the `__init__` rule no longer says it carries no licence header, since no module carries one.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 9.0.0 -> 9.1.0
 Rationale: Carve the surface packages out of the re-export rule. A package that serves a runner rather than an
@@ -277,11 +202,6 @@ that conformed stops conforming.
 Modified sections:
   - Surface: a surface package re-exports its entry point alone, and the rule that a name a package keeps must be
     private does not reach the names inside it.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 8.0.3 -> 9.0.0
@@ -303,11 +223,6 @@ Modified sections:
   - Structure: `from __future__ import annotations` is for a forward reference, a `TYPE_CHECKING` guard is forbidden,
     the base-module rule drops its type-only-alias clause, and the example imports plainly.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 8.0.2 -> 8.0.3
 Rationale: Strip the Project Profile of what the body already says. A profile instantiates a rule, it does not repeat
@@ -322,11 +237,6 @@ Modified sections:
     that restates Documentation and Gates, the builder-lives-with-what-it-builds clause that restates Structure, the
     second statement of line length 120, and a rationale clause about composing with pipelines.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 8.0.1 -> 8.0.2
 Rationale: Keep the docstring rules in the Docstrings section. The coverage rule moves there, and the Documentation
@@ -337,11 +247,6 @@ that never runs and an output pasted by hand. PATCH: one rule relocated and two 
 Modified sections:
   - Docstrings: gains the rule that every module, class, and function carries a docstring.
   - Documentation: loses that rule, and both its examples are documentation pages rather than docstrings.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 8.0.0 -> 8.0.1
@@ -354,11 +259,6 @@ Modified sections:
   - Documentation: the coverage rule reads that every module, class, and function has a docstring, with no clause
     about which style, since three other places already answer that.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 7.0.0 -> 8.0.0
 Rationale: Split the docstring rule by privacy. A public function and a public class carry the summary line and the
@@ -370,11 +270,6 @@ Modified sections:
   - Docstrings: the blocks are a public rule, and a private function or class carries the one-line summary alone.
   - Docstrings: the example shows a public function with its blocks beside a private helper with its one line, and the
     counter-example adds a private helper carrying blocks it MUST NOT.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 6.1.0 -> 7.0.0
@@ -390,11 +285,6 @@ Modified sections:
   - Docstrings: the top-level `__init__` bullet no longer cites a one-line rule that no longer exists.
   - Documentation: its first rule covers every module, class, and function, public or private, and its example carries
     the `Args`, `Returns`, and `Raises` blocks. Its counter-example is now a docstring with none of them.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 6.0.0 -> 6.1.0
@@ -415,11 +305,6 @@ Modified sections:
     that stands in for a name in the Comments counter-example.
   - Surface: the example labels its three cases with module docstrings rather than comments.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 5.2.1 -> 6.0.0
 Rationale: Give every section the layout the Contract section already had, the rules as bullets, then the example,
@@ -437,11 +322,6 @@ Modified sections:
   - Toolchain: the closing line about the Project Profile becomes its last rule.
   - Project Profile: gained an opening rule, a code example, and a rationale, and its facts are stated as rules.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 5.2.0 -> 5.2.1
 Rationale: Correct the public half of the import rule. A public module imports public names from public modules, and
@@ -452,11 +332,6 @@ PATCH: 5.2.0 stated the intended rule wrongly, so this says what it always meant
 Modified sections:
   - Surface: the privacy rule reads public names from public modules, with the `__init__` exception on its own bullet.
     The example marks `from _a import b` and `from _a._b import c` as bad in a public module.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 5.1.0 -> 5.2.0
@@ -471,11 +346,6 @@ Modified sections:
     of every good and bad import form. The re-export bullet names the public modules and the tests as its scope.
   - Types, Library, Style, Naming, Comments, Duplication, Credentials: the examples label the good and the bad form.
   - Versioning: its example shows this amendment's own bump.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 5.0.0 -> 5.1.0
@@ -497,11 +367,6 @@ Modified sections:
     Project Profile: sports-betting to Project Profile.
   - Toolchain: cites Library by its current name.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 4.0.3 -> 5.0.0
 Rationale: Flatten the document to three heading levels. The title absorbs the Constitution section, so the preamble
@@ -518,11 +383,6 @@ Modified sections:
   - Development Workflow & Quality Gates and Compliance Review cite the conventions and the constitution rather than
     two headings that no longer exist.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 4.0.2 -> 4.0.3
 Rationale: Rename the first section from Principles to Constitution, since the principles that govern the code now live
@@ -532,11 +392,6 @@ bullets sit directly under the heading rather than nesting a single child. PATCH
 Modified sections:
   - Constitution: renamed from Principles, absorbed its Purpose subsection, and dropped the intro sentence that
     restated the first bullet.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 4.0.1 -> 4.0.2
@@ -548,11 +403,6 @@ Modified sections:
   - Development Workflow & Quality Gates: dropped the PR compliance bullet, which is governance, not workflow.
   - Compliance Review: holds the PR compliance rules now, with the reviewer duty folded into its first bullet.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 4.0.0 -> 4.0.1
 Rationale: Move Writing Style into Engineering. It governs the prose documents, the docstrings, and the examples, which
@@ -563,11 +413,6 @@ subsection relocated, no rule changed.
 Modified sections:
   - Principles: Writing Style moves out, leaving Purpose. The opening sentence drops the style clause.
   - Engineering: gains Writing Style between Core Principles and Code Conventions, and its opening sentence names it.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 3.0.1 -> 4.0.0
@@ -588,11 +433,6 @@ Modified sections:
   - Governance: Amendments, Versioning & Compliance splits into Amendments, Versioning Policy, Compliance Review, and
     Runtime Guidance, each a subsection of its own.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 3.0.0 -> 3.0.1
 Rationale: Drop the roman numerals from the Core Principles headings, so every subsection in the document is named and
@@ -605,11 +445,6 @@ Modified sections:
   - Toolchain & Standards: the optional-extra rule cites A Library, Not an Application by name.
   - Project Profile: the ecosystem contract, library, delivery surfaces, and schema validation bullets drop their
     trailing numeral citation, since each bullet label already names its principle.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 2.5.0 -> 3.0.0
@@ -625,11 +460,6 @@ Modified sections:
   - Governance: keeps its intro, gains an Amendments, Versioning & Compliance subsection for its rules, and now holds
     the Project Profile as its closing subsection.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 2.4.2 -> 2.5.0
 Rationale: Recast every rule-bearing section as a bullet list, one rule per bullet, so a reader can scan the rules
@@ -640,11 +470,6 @@ Modified sections:
   - Writing Style: added the rule that a set of rules is written as a bullet list, one rule per bullet.
   - Purpose & Scope, Core Principles I to VI, and every Code Conventions subsection: reformatted from paragraphs into
     bullet lists. Rule text is unchanged apart from splitting joined sentences into separate bullets.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 2.4.1 -> 2.4.2
@@ -670,11 +495,6 @@ Modified sections:
   - Project Profile: a local secret can hide an example, and release keeps development a superset of main with no tag
     collision.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 2.2.0 -> 2.3.0
 Rationale: The gate is the full sequence in order, formatting, then checks, then the documentation build, then tests.
@@ -691,11 +511,6 @@ Modified sections:
   - Code Conventions: split `Files & Module Structure` into `Module Structure` and `Package Layering`, and gave the
     credential rule its own `Credentials` subsection. Content unchanged.
 
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
-
 ---- history ----
 Version change: 2.1.0 -> 2.2.0
 Rationale: Fold in the lessons of the whole-src conformance sweep. The `from __future__ import annotations` import is
@@ -710,11 +525,6 @@ Modified sections:
   - Public Surface: an `__init__` carries no license header.
   - Don't Repeat Yourself: extended the one-fact rule to behavior and distinct surface contracts.
   - Project Profile: added how to read the gate's verdict from the nox session summary.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 
 ---- history ----
 Version change: 2.0.0 -> 2.1.0
@@ -745,11 +555,6 @@ Modified sections:
   - Surface parity and the agent-is-a-client rule move into a new VI. A Library, Not an Application.
   - Principle VI (naming, docstrings, structure) becomes the Code Conventions section, one subsection per concern.
   - Added Writing Style, which the document itself now follows.
-
-Templates requiring updates:
-  - .specify/templates/plan-template.md: Constitution Check gate is generic. OK.
-  - .specify/templates/spec-template.md: generic, no conflict. OK.
-  - .specify/templates/tasks-template.md: generic, no conflict. OK.
 -->
 
 # Constitution

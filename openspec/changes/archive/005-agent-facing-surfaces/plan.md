@@ -84,7 +84,7 @@ specs/005-agent-facing-surfaces/
 │   ├── cli.md           # The configuration contract
 │   └── mcp.md           # The tool set, and the spending rule
 ├── checklists/
-└── tasks.md             # /speckit-tasks output
+└── tasks.md             # the task list
 ```
 
 ### Source Code (repository root)

@@ -67,7 +67,7 @@ specs/002-data-source-providers/
 │   └── dataloader.md
 ├── checklists/
 │   └── requirements.md
-└── tasks.md             # Phase 2 output (/speckit-tasks — NOT created here)
+└── tasks.md             # Phase 2 output (the task list, not created here)
 ```
 
 ### Source Code (repository root)

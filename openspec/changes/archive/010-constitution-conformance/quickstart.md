@@ -80,7 +80,7 @@ To see an example fail the way a reader would, break one on purpose and rerun. T
 
 ### User Story 5, the Project Profile
 
-There is no command for this one. Read each bullet of the Project Profile in `.specify/memory/constitution.md` against
+There is no command for this one. Read each bullet of the Project Profile in `openspec/constitution.md` against
 the tree and confirm it holds: the layers, the builders, the four named exceptions, and the front page naming every
 public surface the package ships.
 

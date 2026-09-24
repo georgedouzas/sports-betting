@@ -32,4 +32,4 @@
 ## Notes
 
 - All items pass. The two open questions, FR-018 (real-money gate) and FR-019 (live-data supply), were resolved with
-  the user on 2026-07-27 and recorded in the Clarifications section. Ready for `/speckit-plan`.
+  the user on 2026-07-27 and recorded in the Clarifications section. Ready for planning.

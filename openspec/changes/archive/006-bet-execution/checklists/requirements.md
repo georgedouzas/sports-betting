@@ -32,7 +32,7 @@
 ## Notes
 
 - No venue, SDK, browser driver or library was named anywhere in the spec at authoring time.
-  Those are technology choices and belong to `/speckit-plan` research, which settled them on
+  Those are technology choices and belong to planning research, which settled them on
   Betfair and Playwright. See [research.md](../research.md) D1 and D4.
 - The Assumptions section now names Betfair, added after planning. Judged to pass: planning
   falsified two of the spec's assumptions, and an Assumptions section that keeps asserting a
@@ -43,7 +43,7 @@
   technology choices: the product *is* a library, its surfaces are mandated by
   Constitution Principle I, and FR-001/FR-002 exist precisely to fix an architectural
   boundary (placement must not sit on an estimator). Judged to pass in substance.
-- Zero [NEEDS CLARIFICATION] markers were needed at authoring time. A `/speckit-clarify`
+- Zero [NEEDS CLARIFICATION] markers were needed at authoring time. A clarification pass
   session on 2026-07-16 then resolved the five highest-impact open decisions and wrote them
   into the spec: the site-driven scope (FR-007), who may authorise real money (FR-009), where
   the placement record lives (FR-015), what makes two bets the same (FR-014), and how the
@@ -67,7 +67,7 @@
 - The money-safety requirements (FR-009 to FR-016) and the boundary requirements
   (FR-023, FR-024) are the ones most worth a reviewer's attention. FR-023 forbidding any
   evasion of a venue's automation controls is a hard boundary, not a preference.
-- CONTRADICTION found during planning, and it needs a reviewer's eye before `/speckit-tasks`.
+- CONTRADICTION found during planning, and it needs a reviewer's eye before the task list is written.
   FR-005 requires every venue to implement `place`. FR-007 requires the site-driven path to be
   generic primitives with the agent supplying site knowledge. A `place` on a website has to find
   the market, click the price, fill the stake and confirm, all of which is site knowledge, so it

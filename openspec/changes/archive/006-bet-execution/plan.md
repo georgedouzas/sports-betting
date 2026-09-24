@@ -95,7 +95,7 @@ specs/006-bet-execution/
 ├── contracts/           # Phase 1 output
 ├── checklists/
 │   └── requirements.md
-└── tasks.md             # Phase 2, not created by /speckit-plan
+└── tasks.md             # Phase 2, not created by planning
 ```
 
 ### Source Code (repository root)

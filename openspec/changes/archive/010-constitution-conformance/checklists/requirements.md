@@ -39,4 +39,4 @@
   what a contributor reads rather than what the library does. The Content Quality items are checked against that
   reader.
 - Every count quoted in the specification was measured against the tree, not estimated.
-- Ready for `/speckit-plan`.
+- Ready for planning.

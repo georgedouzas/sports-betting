@@ -33,4 +33,4 @@
 
 - Named products (the upstream statistics site, the commercial odds vendor, the columnar file format) are deliberately kept out of the spec body and referred to by role. They are decisions already taken by the maintainer and are recorded in the plan, not the spec.
 - The `BaseDataLoader` contract and the dummy/factory entry points are named in the spec because they are the *existing* user-facing surface this feature must not break — they are scope boundaries, not implementation choices.
-- Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
+- Items marked incomplete require spec updates before clarification or planning.

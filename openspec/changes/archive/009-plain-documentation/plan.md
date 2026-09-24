@@ -55,7 +55,7 @@ README.md                              # rewrite, with install subsections
 docs/overview/user_guide/*.md          # rewrite index, sources, dataloader, bettor, execution
 docs/examples/**/plot_*.py             # rewrite prose, keep every example runnable offline
 src/sportsbet/**/*.py                   # rewrite public docstring prose, keep signatures and doctests
-.specify/memory/constitution.md        # strengthen Writing Style, add the example-runs rule, record release lessons
+openspec/constitution.md        # strengthen Writing Style, add the example-runs rule, record release lessons
 ```
 
 **Structure Decision**: documentation and constitution only. No source layout change. Docstring edits change prose, not
