@@ -45,9 +45,8 @@ def backtest(
 ) -> None:
     """Backtest a model on a saved dataloader's training data."""
     _require_model(selection)
-    with _report_errors(), _build_modelled(selection) as bettor:
-        if bettor is None:
-            return
+    with _report_errors():
+        bettor = _build_modelled(selection)
         X_train, Y_train, O_train = load_dataloader(dataloader_path).extract_train_data()
         if O_train is None or O_train.empty:
             Console().print(Panel.fit('[bold red]There are no odds, so there is nothing to backtest against.'))
@@ -74,9 +73,8 @@ def backtest(
 def fit(dataloader_path: str, output: str, **selection: object) -> None:
     """Fit a model on a saved dataloader's training data and save it."""
     _require_model(selection)
-    with _report_errors(), _build_modelled(selection) as bettor:
-        if bettor is None:
-            return
+    with _report_errors():
+        bettor = _build_modelled(selection)
         X_train, Y_train, O_train = load_dataloader(dataloader_path).extract_train_data()
         bettor.fit(X_train, Y_train, O_train)
         save_bettor(bettor, output)

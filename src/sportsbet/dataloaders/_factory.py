@@ -51,11 +51,11 @@ def _parse_aliases(aliases: list[str] | None) -> dict[str, str] | None:
         return None
     paired = {}
     for alias in aliases:
-        stats_name, sep, odds_name = alias.partition('=')
-        if not sep or not stats_name or not odds_name:
+        odds_name, sep, stats_name = alias.partition('=')
+        if not sep or not odds_name or not stats_name:
             msg = f'`{alias}` should be two names, as in `Olimpia Milano=EA7 Emporio Armani Milan`.'
             raise BuildError(msg)
-        paired[stats_name] = odds_name
+        paired[odds_name] = stats_name
     return paired
 
 
@@ -112,7 +112,7 @@ def build_dataloader(
         odds_moments:
             The moments the odds source should price, each as `status:minute`, or `None` for its default.
         aliases:
-            The teams the sources spell differently, each as `stats name=odds name`.
+            The teams the sources spell differently, each as `odds name=stats name`.
 
     Returns:
         dataloader:

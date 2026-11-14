@@ -48,24 +48,14 @@ def _collect_given(selection: dict[str, object], names: tuple[str, ...]) -> dict
     return cast('dict[str, Any]', {name: _to_list(selection[name]) for name in names if name in selection})
 
 
-@contextmanager
-def _build_selected(selection: dict[str, object]) -> Iterator[BaseDataLoader | None]:
-    """Build the dataloader a command was told to use, or say what is wrong with what it was told."""
-    try:
-        yield build_dataloader(**_collect_given(selection, SELECTED))
-    except BuildError as error:
-        Console().print(Panel.fit(f'[bold red]{error}'))
-        yield None
+def _build_selected(selection: dict[str, object]) -> BaseDataLoader:
+    """Build the dataloader a command was told to use."""
+    return build_dataloader(**_collect_given(selection, SELECTED))
 
 
-@contextmanager
-def _build_modelled(selection: dict[str, object]) -> Iterator[BaseBettor | None]:
-    """Build the bettor a command was told to use, or say what is wrong with what it was told."""
-    try:
-        yield build_bettor(**_collect_given(selection, MODELLED))
-    except BuildError as error:
-        Console().print(Panel.fit(f'[bold red]{error}'))
-        yield None
+def _build_modelled(selection: dict[str, object]) -> BaseBettor:
+    """Build the bettor a command was told to use."""
+    return build_bettor(**_collect_given(selection, MODELLED))
 
 
 def _build_extraction(selection: dict[str, object]) -> dict[str, Any]:

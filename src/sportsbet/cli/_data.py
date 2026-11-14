@@ -31,9 +31,8 @@ def dataloader() -> None:
 @options(SELECTION)
 def params(**selection: object) -> None:
     """Show the leagues, divisions and seasons a source publishes."""
-    with _report_errors(), _build_selected(selection) as loader:
-        if loader is None:
-            return
+    with _report_errors():
+        loader = _build_selected(selection)
         stats_source, *_ = loader.sources_
         available = stats_source.list_available_params()
         cols = list({param for params in available for param in params})
@@ -48,9 +47,8 @@ def odds_types(**selection: object) -> None:
 
     Downloads the data to read them.
     """
-    with _report_errors(), _build_selected(selection) as loader:
-        if loader is None:
-            return
+    with _report_errors():
+        loader = _build_selected(selection)
         frame = pd.DataFrame(loader.get_odds_types(), columns=['Type'])
         _print_console([frame], ['Available odds types'], index=False)
 
@@ -66,9 +64,8 @@ def train() -> None:
 @click.option('--output', '-o', 'output', required=True, type=click.Path(), help='Where to save the dataloader.')
 def extract_train(output: str, **selection: object) -> None:
     """Download the training data and save the dataloader to a file."""
-    with _report_errors(), _build_selected(selection) as loader:
-        if loader is None:
-            return
+    with _report_errors():
+        loader = _build_selected(selection)
         X_train, Y_train, O_train = loader.extract_train_data(**_build_extraction(selection))
         loader.save(output)
         has_odds = O_train is not None and not O_train.empty
@@ -92,9 +89,8 @@ def exploration() -> None:
 @options(SELECTION, HORIZON, OUTPUT)
 def extract_exploration(data_path: str | None, **selection: object) -> None:
     """Download the features of the selection."""
-    with _report_errors(), _build_selected(selection) as loader:
-        if loader is None:
-            return
+    with _report_errors():
+        loader = _build_selected(selection)
         X = loader.extract_exploration_data(**_build_extraction(selection))
         _print_console([X], ['Exploration features'])
         if data_path is not None:

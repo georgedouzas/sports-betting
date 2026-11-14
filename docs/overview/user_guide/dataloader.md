@@ -220,7 +220,8 @@ Clubs are abbreviated by shortening their words, so the dataloader compares name
 is clearly the best on the roster and clearly better than the next best. It leaves anything ambiguous out.
 
 The dataloader drops a name it cannot place. A small alias fixes this. When you know the club a leftover name means, you
-pass it, and the match keeps its odds.
+pass it, and the match keeps its odds. Each alias maps the odds source's name to the statistics source's name. On the
+command line it is written the same way, as `--alias 'Athletic Bilbao=Ath Bilbao'`.
 
 ```python
 DataLoader(..., aliases={'Athletic Bilbao': 'Ath Bilbao'})
