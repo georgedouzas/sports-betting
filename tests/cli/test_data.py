@@ -1,8 +1,11 @@
 """Test the dataloader commands."""
 
+import pandas as pd
 import pytest
 
 from sportsbet.cli import main
+from sportsbet.dataloaders import DataLoader, build_dataloader
+from sportsbet.sources import SampleSoccerOdds, SampleSoccerStats, resolve_odds
 
 SELECTION = ['--stats', 'football-data', '--odds', 'football-data', '--league', 'England']
 MARKET = ['--odds-type', 'market_average', '--target-event-status', 'postplay']
@@ -135,4 +138,59 @@ def test_an_odds_type_that_does_not_exist_says_what_there_is(cli_runner, offline
     exit_code = 1
     assert result.exit_code == exit_code
     assert 'market_average' in result.output
+    assert 'Traceback' not in result.output
+
+
+def test_an_alias_names_the_odds_spelling_first(cli_runner, monkeypatch, tmp_path):
+    """Test an alias written as the help says, odds name then stats name, pairs a club the pairing leaves over."""
+    built = []
+
+    def build(**selection: object) -> DataLoader:
+        built.append(build_dataloader(**selection))
+        return DataLoader(stats=SampleSoccerStats(), odds=SampleSoccerOdds())
+
+    monkeypatch.setattr('sportsbet.cli._building.build_dataloader', build)
+    help_result = cli_runner.invoke(main, ['dataloader', 'params', '--help'])
+    assert 'odds name=stats name' in ' '.join(help_result.output.split())
+    result = cli_runner.invoke(main, ['dataloader', 'params', *SELECTION, '--alias', 'Utd of Manchester=Man United'])
+    assert result.exit_code == 0, result.output
+
+    identity = {'league': 'England', 'division': 1, 'year': 2025, 'event_status': 'preplay', 'event_time': 0}
+    date = pd.Timestamp('2025-08-16', tz='UTC')
+    stats = pd.DataFrame([{'date': date, **identity, 'home_team': 'Man United', 'away_team': 'Arsenal'}])
+    odds = pd.DataFrame(
+        [{'date': date, **identity, 'home_team': 'Utd of Manchester', 'away_team': 'Arsenal', 'home_win': 1.8}],
+    )
+    paired = resolve_odds(stats, odds, built[0].aliases)
+    assert paired['home_team'].tolist() == ['Man United']
+
+
+def test_a_selection_that_does_not_build_exits_with_one(cli_runner):
+    """Test a selection the library cannot build fails the command, so a script that chains commands stops."""
+    result = cli_runner.invoke(main, ['dataloader', 'params', *SELECTION, '--alias', 'nonsense'])
+    assert result.exit_code == 1, result.output
+    assert 'Olimpia Milano' in result.output
+    assert 'Traceback' not in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_extraction_settings_that_do_not_build_exit_with_one(cli_runner, offline_dataloader, tmp_path):
+    """Test a moment the library cannot read, met after the selection is built, fails the command with its message."""
+    result = cli_runner.invoke(
+        main,
+        [
+            'dataloader',
+            'train',
+            'extract',
+            *SELECTION,
+            '--target-event-status',
+            'inplay',
+            '--target-event-time',
+            'soon',
+            '-o',
+            str(tmp_path / 'dataloader.pkl'),
+        ],
+    )
+    assert result.exit_code == 1, result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit)
     assert 'Traceback' not in result.output

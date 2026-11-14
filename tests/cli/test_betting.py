@@ -3,6 +3,7 @@
 import pytest
 
 from sportsbet.cli import main
+from sportsbet.core import BuildError
 
 ODDS_COMPARISON = ['--model', 'OddsComparisonBettor(alpha=0.03)']
 CLASSIFIER = (
@@ -131,3 +132,34 @@ def test_the_odds_a_model_compares_can_be_chosen(cli_runner, saved_dataloader):
     )
     assert result.exit_code == 0, result.output
     assert 'Backtesting results' in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_a_model_that_does_not_build_exits_with_one(cli_runner, saved_dataloader, tmp_path):
+    """Test a model the library cannot build fails the command, so a script that chains commands stops."""
+    model = ['--model', f'{tmp_path / "missing.py"}:bettor']
+    result = cli_runner.invoke(
+        main,
+        ['evaluation', 'fit', '--dataloader', str(saved_dataloader), *model, '-o', str(tmp_path / 'bettor.pkl')],
+    )
+    assert result.exit_code == 1, result.output
+    assert 'does not exist' in result.output
+    assert 'Traceback' not in result.output
+
+
+@pytest.mark.xdist_group(name='serial')
+def test_a_build_error_met_inside_a_command_exits_with_one(cli_runner, saved_dataloader, monkeypatch, tmp_path):
+    """Test a build error raised after the model is built is reported like any other, not as a generator error."""
+
+    def load(path: str) -> None:
+        message = f'Not a dataloader: {path}'
+        raise BuildError(message)
+
+    monkeypatch.setattr('sportsbet.cli._betting.load_dataloader', load)
+    result = cli_runner.invoke(
+        main,
+        ['evaluation', 'fit', '--dataloader', str(saved_dataloader), *ODDS_COMPARISON, '-o', str(tmp_path / 'b.pkl')],
+    )
+    assert result.exit_code == 1, result.output
+    assert 'Not a dataloader' in result.output
+    assert not isinstance(result.exception, RuntimeError)

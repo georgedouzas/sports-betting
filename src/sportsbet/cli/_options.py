@@ -45,7 +45,7 @@ SELECTION: list[Callable[[FC], FC]] = [
         '--alias',
         'aliases',
         multiple=True,
-        help='A team the sources spell differently, as `stats name=odds name`. Repeatable.',
+        help='A team the sources spell differently, as `odds name=stats name`. Repeatable.',
     ),
 ]
 
