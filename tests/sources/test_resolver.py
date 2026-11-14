@@ -1,5 +1,7 @@
 """Tests for the reconciliation of two sources."""
 
+import pandas as pd
+
 from sportsbet.core import MATCH_COLS
 from sportsbet.sources import (
     build_roster,
@@ -86,3 +88,33 @@ def test_resolve_odds_bridges_unpairable_club_with_alias(stats, odds):
     unpairable = odds.assign(home_team=odds['home_team'].replace('Manchester United', 'Utd of Manchester'))
     resolved = resolve_odds(stats, unpairable, {'Utd of Manchester': 'Man United'})
     assert 'Man United' in set(resolved['home_team'])
+
+
+def _build_meetings(odds_dates: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return the statistics of two meetings of one pairing in a season, and odds on the given days."""
+    identity = {'league': 'Euroleague', 'division': 1, 'year': 2026, 'event_status': 'preplay', 'event_time': 0}
+    teams = {'home_team': 'Olympiacos', 'away_team': 'Real Madrid'}
+    kickoffs = ['2025-10-16 19:00', '2026-03-05 19:00']
+    stats = pd.DataFrame([{'date': pd.Timestamp(day, tz='UTC'), **identity, **teams} for day in kickoffs])
+    odds = pd.DataFrame(
+        [
+            {'date': pd.Timestamp(day, tz='UTC'), **identity, **teams, 'provider': 'acme', 'home_win': price}
+            for price, day in enumerate(odds_dates, start=2)
+        ],
+    )
+    return stats, odds
+
+
+def test_resolve_odds_keeps_each_meeting_of_a_pairing_on_its_own_date():
+    """Test a pairing that meets twice in a season gives each game its own odds."""
+    stats, odds = _build_meetings(['2025-10-16 18:00', '2026-03-05 20:30'])
+    resolved = resolve_odds(stats, odds)
+    dates = resolved.set_index('home_win')['date']
+    assert dates[2] == pd.Timestamp('2025-10-16 19:00', tz='UTC')
+    assert dates[3] == pd.Timestamp('2026-03-05 19:00', tz='UTC')
+
+
+def test_resolve_odds_drops_odds_far_from_any_kickoff():
+    """Test odds whose pairing has no kick-off within 36 hours belong to no known game and are dropped."""
+    stats, odds = _build_meetings(['2025-10-19 19:00'])
+    assert resolve_odds(stats, odds).empty

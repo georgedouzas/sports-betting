@@ -302,6 +302,8 @@ bare name. A column that is not fixed like `home_goals` becomes `home_goals__inp
 Two sources rarely spell a club the same way. One calls a club `Man United` and the other `Manchester United`, and a
 name that fails to match silently loses its odds. The library reconciles them: it compares the spellings, pairs the two
 feeds, and drops a name it cannot place rather than guess. When the pairing leaves a club unmatched, you pass an alias.
+Each odds row then goes to the game of those two clubs whose kick-off is nearest to its own, within 36 hours, so two
+clubs that meet twice in a season keep each game's odds on that game.
 You can reconcile two tables yourself with [`resolve_odds`][sportsbet.sources.resolve_odds], which returns the odds
 carrying the identity of the statistics.
 
