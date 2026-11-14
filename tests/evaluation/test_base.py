@@ -1,6 +1,7 @@
 """Test the base Bettor class."""
 
 import re
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -264,3 +265,35 @@ def bettor_data():
         return X, Y, O
 
     return build
+
+
+class ReversedGroupsBettor(TestBettor):
+    """Test bettor whose complementary groups list the over/under group before the result group."""
+
+    __test__ = False
+    COMPLEMENTARY_EVENTS: ClassVar[list[list[str]] | None] = [
+        ['over_2.5', 'under_2.5'],
+        ['home_win', 'draw', 'away_win'],
+    ]
+
+
+class PartialGroupsBettor(TestBettor):
+    """Test bettor whose complementary groups leave out the over/under markets."""
+
+    __test__ = False
+    COMPLEMENTARY_EVENTS: ClassVar[list[list[str]] | None] = [['home_win', 'draw', 'away_win']]
+
+
+def test_bet_columns_follow_betting_markets_whatever_the_group_order():
+    """Test the value bets keep the order of the betting markets when the groups are ordered against it."""
+    expected = TestBettor().fit(X_train, Y_train).bet(X_train, O_train)
+    reversed_bettor = ReversedGroupsBettor().fit(X_train, Y_train)
+    assert list(reversed_bettor.betting_markets_[:3]) == ['home_win', 'draw', 'away_win']
+    np.testing.assert_array_equal(reversed_bettor.bet(X_train, O_train), expected)
+
+
+def test_fit_market_outside_every_group_value_error():
+    """Test fitting with a selected market that no complementary group holds names that market."""
+    bettor = PartialGroupsBettor(betting_markets=['home_win', 'over_2.5'])
+    with pytest.raises(ValueError, match=re.escape('over_2.5')):
+        bettor.fit(X_train, Y_train)

@@ -292,6 +292,14 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
             raise ValueError(error_msg)
         else:
             self.betting_markets_ = np.array(self.betting_markets)
+        grouped = {market for events in self.complementary_events_ for market in events}
+        ungrouped = [market for market in self.betting_markets_ if market not in grouped]
+        if ungrouped:
+            error_msg = (
+                f'The betting markets {ungrouped} belong to no complementary group of {self.complementary_events_}. '
+                'Add them to `COMPLEMENTARY_EVENTS` or leave them out of `betting_markets`.'
+            )
+            raise ValueError(error_msg)
 
         init_cash = self.init_cash
         if init_cash is None:
@@ -518,7 +526,7 @@ class BaseBettor(MultiOutputMixin, ClassifierMixin, BaseEstimator, metaclass=ABC
                 B_pred_events = B_pred.iloc[:, events_indices].copy()
                 B_pred_events[mask] = False
                 B_pred_selected.append(B_pred_events)
-        return pd.concat(B_pred_selected, axis=1).to_numpy()
+        return pd.concat(B_pred_selected, axis=1)[O.columns].to_numpy()
 
     def score(self: Self, X: pd.DataFrame, Y: pd.DataFrame, O: pd.DataFrame) -> float:
         """Return the annual sharpe ratio on the given data.
