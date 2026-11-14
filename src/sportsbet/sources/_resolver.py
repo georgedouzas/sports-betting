@@ -15,6 +15,7 @@ NOISE = {'fc', 'afc', 'cf', 'sc', 'ac', 'as', 'ss', 'us', 'if', 'bk', 'club', 't
 MIN_PREFIX = 3
 MIN_SIMILARITY = 0.6
 MIN_MARGIN = 0.15
+KICKOFF_TOLERANCE = pd.Timedelta('36h')
 
 
 def _map_odds_names(stats: pd.DataFrame, odds: pd.DataFrame, aliases: dict[str, str]) -> dict:
@@ -213,6 +214,11 @@ def normalize_identity(data: pd.DataFrame, mapping: dict | None = None) -> pd.Da
     return identity
 
 
+def _to_kickoff(dates: pd.Series) -> pd.Series:
+    """Return the kick-offs as UTC instants of one resolution, so the two sources can be joined on them."""
+    return pd.to_datetime(dates, utc=True).astype('datetime64[ns, UTC]')
+
+
 def resolve_odds(
     stats: pd.DataFrame,
     odds: pd.DataFrame,
@@ -258,19 +264,38 @@ def resolve_odds(
         ...                  aliases={'Utd of Manchester': 'Man United'})
         >>> len(paired)
         1
+        >>> # A pairing that meets twice keeps each game's odds on that game, the nearest kick-off within 36 hours.
+        >>> rematch = pd.Timestamp('2026-03-05', tz='UTC')
+        >>> stats = pd.concat([stats, stats.assign(date=rematch)], ignore_index=True)
+        >>> odds = pd.concat([odds, odds.assign(date=rematch, home_win=2.1)], ignore_index=True)
+        >>> resolved = resolve_odds(stats, odds)
+        >>> resolved['date'].dt.strftime('%Y-%m-%d').tolist(), resolved['home_win'].tolist()
+        (['2025-08-16', '2026-03-05'], [1.8, 2.1])
     """
     mapping = _map_odds_names(stats, odds, {**ALIASES, **(aliases or {})})
-    matches = stats[[*MATCH_COLS, 'date']].drop_duplicates(subset=MATCH_COLS)
+    matches = stats[[*MATCH_COLS, 'date']].drop_duplicates()
     canonical = normalize_identity(matches).assign(
+        kickoff=_to_kickoff(matches['date']).to_numpy(),
         date_=matches['date'].to_numpy(),
         home_team_=matches['home_team'].to_numpy(),
         away_team_=matches['away_team'].to_numpy(),
     )
-    resolved = odds.drop(columns=['date']).assign(**{col: normalize_identity(odds, mapping)[col] for col in MATCH_COLS})
-    resolved = resolved.merge(canonical, on=MATCH_COLS, how='left')
+    resolved = odds.assign(
+        **{col: normalize_identity(odds, mapping)[col] for col in MATCH_COLS},
+        kickoff=_to_kickoff(odds['date']),
+        order_=range(len(odds)),
+    )
+    resolved = pd.merge_asof(
+        resolved[resolved['kickoff'].notna()].sort_values('kickoff'),
+        canonical.sort_values('kickoff'),
+        on='kickoff',
+        by=MATCH_COLS,
+        direction='nearest',
+        tolerance=KICKOFF_TOLERANCE,
+    )
 
     found = resolved['date_'].notna()
-    resolved = resolved[found.to_numpy()].copy()
+    resolved = resolved[found.to_numpy()].sort_values('order_').reset_index(drop=True)
     resolved['date'] = resolved.pop('date_')
     resolved['home_team'] = resolved.pop('home_team_')
     resolved['away_team'] = resolved.pop('away_team_')
