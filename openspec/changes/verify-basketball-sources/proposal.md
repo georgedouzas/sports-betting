@@ -28,7 +28,9 @@ This change carries those tasks, so the archived changes can be closed honestly.
 
 ## Non-goals
 
-- Changing the behaviour of any source. If a check finds a defect, that defect gets its own change.
+- Changing the behaviour of any source, beyond what a check finds broken. The NBA checks found two ESPN defects that
+  stopped them, a refused date range and placeholder teams, and those two are fixed here so the checks can run. Any
+  other defect gets its own change.
 
 ## Capabilities
 
@@ -43,5 +45,6 @@ None. These are checks of behaviour the specs already state.
 ## Impact
 
 - Tests: a new EuroLeague sample and test under `tests/sources/`.
-- Code: possibly an NBA alias in `sportsbet.core`, only if the pairing needs one.
+- Code: the NBA alias `Los Angeles Clippers=LA Clippers` in `sportsbet.core`, and the two ESPN fixes in
+  `sportsbet.sources`.
 - Cost: the NBA checks spend `OddsApi` credits. Each run is quoted with `prepare(dry_run=True)` first.

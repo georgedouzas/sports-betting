@@ -27,4 +27,5 @@ IDENTITY_FIELDS = {
 }
 ALIASES: dict[str, str] = {
     'Olimpia Milano': 'EA7 Emporio Armani Milan',
+    'Los Angeles Clippers': 'LA Clippers',
 }

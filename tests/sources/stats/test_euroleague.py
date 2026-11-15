@@ -1,10 +1,11 @@
 """Tests for the statistics source backed by the EuroLeague's official API.
 
-The API is fetched on the user's machine and nothing is redistributed, so the transform is exercised against a payload
-shaped like the real response.
+Most tests exercise the transform against a payload shaped like the real response. One reads a small recorded sample of
+the completed 2025-26 season, so the transform is also proven on what the API really returns.
 """
 
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -133,3 +134,21 @@ def test_the_form_of_a_team_never_sees_its_own_game(source):
     later = preplay[preplay['home_team'] == 'Panathinaikos Athens'].iloc[0]
     assert later['home_points_for_avg'] == FORM_POINTS
     assert later['home_wins_avg'] == 1
+
+
+SAMPLE = Path(__file__).parents[1] / 'samples' / 'euroleague_2026.json'
+SAMPLE_GAMES = 21
+SAMPLE_TEAMS = 20
+
+
+def test_a_recorded_season_transforms_offline(source):
+    """Test the first two rounds and the final of the 2025-26 season, as the API returned them, become snapshots."""
+    item = source.list_required_items([{'league': 'Euroleague', 'division': 1, 'year': 2026}])[0]
+    snapshots = source.to_snapshots([RawPayload(item=item, content=SAMPLE.read_bytes())])
+    assert snapshots['event_status'].value_counts().to_dict() == {'preplay': SAMPLE_GAMES, 'postplay': SAMPLE_GAMES}
+    assert len(set(snapshots['home_team']) | set(snapshots['away_team'])) == SAMPLE_TEAMS
+    postplay = snapshots[snapshots['event_status'] == 'postplay']
+    assert 'draw' not in snapshots.columns
+    assert (postplay['home_win'] + postplay['away_win'] == 1).all()
+    final = postplay.sort_values('date').iloc[-1]
+    assert (final['home_team'], final['away_team'], final['home_win']) == ('Olympiacos Piraeus', 'Real Madrid', 1)

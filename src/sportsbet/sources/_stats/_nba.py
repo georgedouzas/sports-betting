@@ -4,7 +4,6 @@
 # License: MIT
 
 
-import calendar
 import json
 from typing import Any, ClassVar, Self
 
@@ -16,7 +15,7 @@ from .._base import BaseStatsSource, RawItem, RawPayload
 from .._common._basketball import DIVISION, SEASONS_KEY, _build_snapshots
 
 SEASONS_URL = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons?limit=100'
-GAMES_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start}-{end}&limit=1000'
+GAMES_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={month}&limit=1000'
 LEAGUE = 'NBA'
 EXHIBITION = 'ALLSTAR'
 PRESEASON = 1
@@ -31,6 +30,11 @@ def _is_competition_game(event: dict[str, Any]) -> bool:
     return season_type != PRESEASON and competition_type != EXHIBITION
 
 
+def _is_placeholder(side: dict[str, Any]) -> bool:
+    """Return whether a side is a slot the feed has not filled yet, which it names `TBD` under a negative id."""
+    return str(side.get('team', {}).get('id', '')).startswith('-')
+
+
 def _read_games(content: bytes, year: int) -> pd.DataFrame:
     """Return the games of a month, with the API's UTC tip-off and its played flag."""
     events = json.loads(content).get('events', [])
@@ -41,7 +45,7 @@ def _read_games(content: bytes, year: int) -> pd.DataFrame:
         competition = (event.get('competitions') or [{}])[0]
         competitors = {side.get('homeAway'): side for side in competition.get('competitors', [])}
         home, away = competitors.get('home'), competitors.get('away')
-        if home is None or away is None or not event.get('date'):
+        if home is None or away is None or not event.get('date') or _is_placeholder(home) or _is_placeholder(away):
             continue
         played = bool(competition.get('status', {}).get('type', {}).get('completed'))
         records.append(
@@ -137,13 +141,12 @@ class NBAStats(BaseStatsSource):
                 continue
             year = param['year']
             for offset, month in MONTHS:
-                start = pd.Timestamp(year=year + offset, month=month, day=1)
-                last = calendar.monthrange(start.year, month)[1]
+                stamp = f'{year + offset}{month:02d}'
                 items.append(
                     RawItem(
                         source=self.name,
-                        key=f'{LEAGUE}_{param["division"]}_{year}_{start.year}{month:02d}',
-                        url=GAMES_URL.format(start=f'{start.year}{month:02d}01', end=f'{start.year}{month:02d}{last}'),
+                        key=f'{LEAGUE}_{param["division"]}_{year}_{stamp}',
+                        url=GAMES_URL.format(month=stamp),
                     ),
                 )
         return items
