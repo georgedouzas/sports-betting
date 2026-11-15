@@ -3,15 +3,15 @@
 # Author: Georgios Douzas <gdouzas@icloud.com>
 # License: MIT
 
-from typing import Any, TypeAlias
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-ParamGrid: TypeAlias = dict[str, list[Any]] | list[dict[str, list[Any]]]
-TrainData: TypeAlias = tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame]
-FixturesData: TypeAlias = tuple[pd.DataFrame, None, pd.DataFrame]
-Data: TypeAlias = NDArray[np.float64]
-BoolData: TypeAlias = NDArray[np.bool_]
-Indices: TypeAlias = NDArray[np.intp]
+type ParamGrid = dict[str, list[Any]] | list[dict[str, list[Any]]]
+type TrainData = tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame]
+type FixturesData = tuple[pd.DataFrame, None, pd.DataFrame]
+type Data = NDArray[np.float64]
+type BoolData = NDArray[np.bool_]
+type Indices = NDArray[np.intp]

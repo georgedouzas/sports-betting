@@ -7,7 +7,7 @@
 import asyncio
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 import pandas as pd
 from mcp.server.mcpserver import MCPServer
@@ -29,12 +29,11 @@ from ..execution._event import DEFAULT_LEDGER
 
 server: MCPServer = MCPServer('sportsbet')
 
-Answer = TypeVar('Answer')
 Selection = dict[str, Any]
 SESSIONS: dict[str, BrowserSession] = {}
 
 
-async def _offload(work: Callable[..., Answer], *args: object) -> Answer:
+async def _offload[Answer](work: Callable[..., Answer], *args: object) -> Answer:
     """Run the work in a thread, off the tool's event loop."""
     return await asyncio.to_thread(work, *args)
 
