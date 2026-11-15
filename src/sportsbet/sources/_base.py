@@ -19,7 +19,9 @@ from urllib.request import url2pathname
 import aiohttp
 import pandas as pd
 import pandera.pandas as pa
+from multidict import CIMultiDict, CIMultiDictProxy
 from pandera.typing.pandas import Timedelta
+from yarl import URL
 
 from ..core import STATUSES, ParamGrid
 
@@ -28,21 +30,34 @@ ENCODING = 'ISO-8859-1'
 FILE_SCHEME = 'file://'
 
 
-async def _fetch_url(client: aiohttp.ClientSession, url: str) -> str:
-    """Return the text of a URL, read over the network."""
+async def _fetch_url(client: aiohttp.ClientSession, url: str, shown: str) -> str:
+    """Return the text of a URL, read over the network, naming it `shown` if the server answers with an error."""
+    try:
+        async with client.get(url) as response:
+            return await response.text(encoding=ENCODING)
+    except aiohttp.ClientResponseError as error:
+        request_info = aiohttp.RequestInfo(
+            url=URL(shown),
+            method=error.request_info.method,
+            headers=CIMultiDictProxy(CIMultiDict()),
+            real_url=URL(shown),
+        )
+        raise aiohttp.ClientResponseError(
+            request_info,
+            (),
+            status=error.status,
+            message=error.message,
+        ) from None
 
-    async with client.get(url) as response:
-        return await response.text(encoding=ENCODING)
 
-
-async def _fetch_urls(urls: list[str]) -> list[str]:
-    """Return the text of several URLs, read over the network at once."""
+async def _fetch_urls(urls: list[tuple[str, str]]) -> list[str]:
+    """Return the text of several URLs, each paired with the URL to name it by, read over the network at once."""
 
     async with aiohttp.ClientSession(
         raise_for_status=True,
         connector=aiohttp.TCPConnector(limit=CONNECTIONS_LIMIT),
     ) as client:
-        return await asyncio.gather(*[_fetch_url(client, url) for url in urls])
+        return await asyncio.gather(*[_fetch_url(client, url, shown) for url, shown in urls])
 
 
 def _read_local_file(url: str) -> bytes:
@@ -50,11 +65,14 @@ def _read_local_file(url: str) -> bytes:
     return Path(url2pathname(urlparse(url).path)).read_bytes()
 
 
-def _read_urls_content(urls: list[str]) -> list[bytes]:
-    """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest."""
-    remote = [url for url in urls if not url.startswith(FILE_SCHEME)]
+def _read_urls_content(urls: list[tuple[str, str]]) -> list[bytes]:
+    """Return the content behind each URL, from disk for a `file://` URL and over the network for the rest.
+
+    Each URL comes paired with the URL an error names, so a credential in the first never reaches an error.
+    """
+    remote = [(url, shown) for url, shown in urls if not url.startswith(FILE_SCHEME)]
     fetched = iter(asyncio.run(_fetch_urls(remote)) if remote else [])
-    return [_read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING) for url in urls]
+    return [_read_local_file(url) if url.startswith(FILE_SCHEME) else next(fetched).encode(ENCODING) for url, _ in urls]
 
 
 def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) -> list[RawPayload]:
@@ -70,7 +88,7 @@ def fetch_payloads(items: list[RawItem], authorize: Callable[[RawItem], str]) ->
     Returns:
         The payloads, each pairing an item with its bytes, in the order given.
     """
-    contents = _read_urls_content([authorize(item) for item in items])
+    contents = _read_urls_content([(authorize(item), item.url) for item in items])
     return [RawPayload(item=item, content=content) for item, content in zip(items, contents, strict=True)]
 
 

@@ -1,5 +1,11 @@
 """Tests for the base of the data sources."""
 
+import threading
+import traceback
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import aiohttp
 import pandas as pd
 import pytest
 
@@ -19,6 +25,8 @@ PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}, {'league': 'Spain'
 ITEM_COST = 2
 TOTAL_COST = 4
 DISTINCT_ITEMS = 2
+KEY = 'secret'
+UNAUTHORIZED = 401
 
 
 class _TestSource(BaseSource):
@@ -130,3 +138,52 @@ def test_fetch_payloads_reads_the_url_from_authorize(tmp_path):
     item = RawItem(source='s', key='k', url='https://example.invalid/never')
     payloads = fetch_payloads([item], lambda _: path.as_uri())
     assert payloads[0].content == b'content'
+
+
+def _serve_status(status: int) -> Iterator[str]:
+    """Serve every request with the given status on a local port and yield the server's address."""
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(status)
+            self.end_headers()
+
+        def log_message(self, *args: object) -> None:
+            """Keep the test output quiet."""
+
+    server = HTTPServer(('127.0.0.1', 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f'http://127.0.0.1:{server.server_port}'
+    finally:
+        server.shutdown()
+
+
+@pytest.fixture
+def missing_server():
+    """A local server that answers 404 to everything."""
+    yield from _serve_status(404)
+
+
+@pytest.fixture
+def refusing_server():
+    """A local server that answers 401 to everything."""
+    yield from _serve_status(401)
+
+
+def test_fetch_payloads_raises_on_an_error_status(missing_server):
+    """Test a server's error status raises rather than returning its body as a payload."""
+    item = RawItem(source='test', key='missing', url=f'{missing_server}/missing.csv')
+    with pytest.raises(aiohttp.ClientResponseError):
+        fetch_payloads([item], lambda item: item.url)
+
+
+def test_fetch_payloads_keeps_the_key_out_of_the_error(refusing_server):
+    """Test a refused request names the item and never the key `authorize` added, even in a traceback."""
+    item = RawItem(source='test', key='odds', url=f'{refusing_server}/odds?date=2026-11-11')
+    with pytest.raises(aiohttp.ClientResponseError) as caught:
+        fetch_payloads([item], lambda item: f'{item.url}&apiKey={KEY}')
+    assert caught.value.status == UNAUTHORIZED
+    assert item.url in str(caught.value)
+    assert KEY not in ''.join(traceback.format_exception(caught.value))
