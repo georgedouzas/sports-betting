@@ -12,7 +12,7 @@ import nox
 os.environ.update({'PDM_IGNORE_SAVED_PYTHON': '1'})
 
 
-PYTHON_VERSIONS: list[str] = ['3.11', '3.12', '3.13']
+PYTHON_VERSIONS: list[str] = ['3.12', '3.13', '3.14']
 FILES: list[str] = ['src', 'tests', 'docs', 'noxfile.py']
 CHANGELOG_ARGS: dict[str, Any] = {
     'repository': '.',
@@ -90,7 +90,8 @@ def docs(session: nox.Session) -> None:
     """
     arg = check_cli(session, ['serve', 'build'], default='serve')
     session.run('pdm', 'install', '-dG', 'docs', external=True)
-    session.run('properdocs', arg, env={'DISABLE_MKDOCS_2_WARNING': 'true'})
+    strict = ['--strict'] if arg == 'build' else []
+    session.run('properdocs', arg, *strict, env={'DISABLE_MKDOCS_2_WARNING': 'true'})
 
 
 @nox.session

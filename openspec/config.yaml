@@ -8,7 +8,7 @@ context: |
   mcp surfaces. Delivery is the Python API, the `sportsbet` command line, and the `sportsbet-mcp` server, and a
   parity test asserts they stay in step.
 
-  Python >=3.11,<3.14. PDM with SCM-derived versioning and a src layout. The gate runs in order, `pdm run formatting`,
+  Python >=3.12,<3.15. PDM with SCM-derived versioning and a src layout. The gate runs in order, `pdm run formatting`,
   `pdm run checks`, `pdm run docs build`, then `pdm run tests`, covering black, docformatter, ruff at line length 120,
   interrogate, bandit, pip-audit, pytest with --doctest-modules, and mypy. Read its verdict from the nox session
   summary line, never from a piped exit code. Pre-commit runs the project's own ruff, black and mypy.
