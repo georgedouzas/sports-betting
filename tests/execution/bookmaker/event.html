@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head><title>Arsenal vs Chelsea</title></head>
+<body>
+<h1>Arsenal vs Chelsea</h1>
+<section aria-label="Match result">
+  <button class="selection" data-label="Arsenal" data-price="{{home_price}}">Arsenal {{home_price}}</button>
+  <button class="selection" data-label="Draw" data-price="{{draw_price}}">Draw {{draw_price}}</button>
+  <button class="selection" data-label="Chelsea" data-price="{{away_price}}">Chelsea {{away_price}}</button>
+</section>
+<form id="slip" aria-label="Bet slip" hidden>
+  <span id="slip-label"></span>
+  <span id="slip-price"></span>
+  <label for="stake">Stake</label><input id="stake">
+  <button id="confirm" type="button">Place bet</button>
+</form>
+<div id="confirmation" role="status" hidden></div>
+<script>
+  const slipLabel = '{{slip_label}}';
+  const confirmation = '{{confirmation}}';
+  for (const button of document.querySelectorAll('button.selection')) {
+    button.addEventListener('click', () => {
+      document.getElementById('slip-label').textContent = slipLabel || button.dataset.label;
+      document.getElementById('slip-price').textContent = button.dataset.price;
+      document.getElementById('slip').hidden = false;
+    });
+  }
+  document.getElementById('confirm').addEventListener('click', () => {
+    const shown = document.getElementById('confirmation');
+    const price = document.getElementById('slip-price').textContent;
+    if (confirmation === 'appear') {
+      shown.dataset.status = 'accepted';
+      shown.dataset.betId = 'B-1042';
+      shown.dataset.price = price;
+      shown.textContent = 'Bet placed. Reference B-1042.';
+      shown.hidden = false;
+    } else if (confirmation === 'refuse') {
+      shown.dataset.status = 'refused_limit';
+      shown.textContent = 'Your stake exceeds your limit of 5.00.';
+      shown.hidden = false;
+    }
+  });
+</script>
+</body>
+</html>

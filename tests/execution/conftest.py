@@ -40,7 +40,7 @@ EVENT = 'Arsenal vs Chelsea'
 STAKE = 10.0
 SOURCE_PRICE = 2.0
 BOOK_KEY = (EVENT, 'home_win', 'Arsenal')
-SITE = Path(__file__).parent / 'site'
+SITE = Path(__file__).parent / 'bookmaker'
 CONFIRMATION_TIMEOUT = 400.0
 
 
