@@ -14,6 +14,7 @@ The sources that ship with the library:
 | [`EuroLeagueStats`][sportsbet.sources.EuroLeagueStats] | basketball | free | statistics, from the competition's own API |
 | [`NBAStats`][sportsbet.sources.NBAStats] | basketball | free | statistics, the NBA, live through a season |
 | [`OddsApi`][sportsbet.sources.OddsApi] | any | your key | time stamped odds, live and historical |
+| [`LumifyOdds`][sportsbet.sources.LumifyOdds] | any | your key | live and upcoming odds (NBA, major soccer leagues) |
 | [`SampleSoccerStats`][sportsbet.sources.SampleSoccerStats] | soccer | free | one frozen season, shipped for offline examples |
 | [`SampleSoccerOdds`][sportsbet.sources.SampleSoccerOdds] | soccer | free | the odds for that frozen season |
 
@@ -68,6 +69,11 @@ Two optional hooks:
 
 * `request_url(item)` adds a credential at the moment of the request. The credential never reaches a `RawItem` and never
   enters the data you save.
+* `request_headers(item)` does the same for credentials that travel as headers. `LumifyOdds` uses it for
+  `Authorization: Bearer`.
+* `fetch_items(items)` is the fetch hook. The default is a GET per item. A source whose vendor needs more than one
+  request per item overrides it and keeps the planning methods pure. `LumifyOdds` does (list the slate, then fetch each
+  event with odds).
 * `needs_schedule()` returns `True` when you address your data by instant rather than by season. `OddsApi` does. "The
   price at minute 45" is a timestamp. The source can build it only once it knows the kick off.
 

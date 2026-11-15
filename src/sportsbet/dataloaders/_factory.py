@@ -13,6 +13,7 @@ from ..sources import (
     EuroLeagueStats,
     FootballDataOdds,
     FootballDataStats,
+    LumifyOdds,
     NBAStats,
     OddsApi,
 )
@@ -26,9 +27,11 @@ STATS_SOURCES: dict[str, type[BaseStatsSource]] = {
 ODDS_SOURCES: dict[str, type[BaseOddsSource]] = {
     'football-data': FootballDataOdds,
     'odds-api': OddsApi,
+    'lumify': LumifyOdds,
 }
-KEYED_SOURCES = {'odds-api'}
+KEYED_SOURCES = {'odds-api', 'lumify'}
 DEFAULT_KEY_ENV = 'ODDS_API_KEY'
+DEFAULT_LUMIFY_KEY_ENV = 'LUMIFY_API_KEY'
 
 
 def _parse_moments(moments: list[str] | None) -> list[tuple[str, int]] | None:
@@ -72,10 +75,20 @@ def _build_odds_source(
         raise BuildError(msg)
     if odds not in KEYED_SOURCES:
         return ODDS_SOURCES[odds]()
-    if not os.environ.get(key_env):
-        msg = f'`{odds}` needs a key. Set `{key_env}`, or name another variable with `--odds-key-env`.'
+    resolved_key_env = key_env
+    if odds == 'lumify' and key_env == DEFAULT_KEY_ENV:
+        resolved_key_env = DEFAULT_LUMIFY_KEY_ENV
+    if not os.environ.get(resolved_key_env):
+        msg = f'`{odds}` needs a key. Set `{resolved_key_env}`, or name another variable with `--odds-key-env`.'
         raise BuildError(msg)
-    return OddsApi(key_env=key_env, markets=markets or None, regions=regions or None, moments=_parse_moments(moments))
+    if odds == 'lumify':
+        return LumifyOdds(key_env=resolved_key_env, markets=markets or None, bookmakers=regions or None)
+    return OddsApi(
+        key_env=resolved_key_env,
+        markets=markets or None,
+        regions=regions or None,
+        moments=_parse_moments(moments),
+    )
 
 
 def build_dataloader(

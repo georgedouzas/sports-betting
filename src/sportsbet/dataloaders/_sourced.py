@@ -9,7 +9,7 @@ from typing import Self
 import pandas as pd
 
 from ..core import EVENT_COLS, IDENTITY_COLS, ParamGrid
-from ..sources import BaseOddsSource, BaseStatsSource, RawItem, fetch_payloads, resolve_odds
+from ..sources import BaseOddsSource, BaseStatsSource, RawItem, resolve_odds
 from ._base import BaseDataLoader
 
 
@@ -103,7 +103,7 @@ class DataLoader(BaseDataLoader):
 
     def _read_catalogue(self: Self, source: BaseStatsSource | BaseOddsSource) -> list[dict]:
         """Return the combinations a source publishes for the selection."""
-        payloads = fetch_payloads(source.list_index_items(self.param_grid), source.request_url)
+        payloads = source.fetch_items(source.list_index_items(self.param_grid))
         return source.read_catalogue(payloads)
 
     def _list_all_params(self: Self) -> list[dict]:
@@ -124,7 +124,7 @@ class DataLoader(BaseDataLoader):
         stats_source, odds_source = self._resolve_sources()
         if odds_source is None:
             return stats, self._build_empty_odds()
-        odds = self._finalize(odds_source.to_snapshots(fetch_payloads(odds_items, odds_source.request_url)))
+        odds = self._finalize(odds_source.to_snapshots(odds_source.fetch_items(odds_items)))
         if stats_source.name != odds_source.name and not odds.empty:
             odds = resolve_odds(stats, odds, self.aliases)
         return stats, odds
@@ -139,9 +139,7 @@ class DataLoader(BaseDataLoader):
         stats_source, odds_source = self._resolve_sources()
         params = self._filter_params(self._list_all_params())
         stats = self._finalize(
-            stats_source.to_snapshots(
-                fetch_payloads(stats_source.list_required_items(params), stats_source.request_url),
-            ),
+            stats_source.to_snapshots(stats_source.fetch_items(stats_source.list_required_items(params))),
         )
         schedule = self._select_moments(stats) if odds_source is not None and odds_source.needs_schedule() else None
         odds_items = odds_source.list_required_items(params, schedule) if odds_source is not None else []
@@ -152,9 +150,7 @@ class DataLoader(BaseDataLoader):
         stats_source, odds_source = self._resolve_sources()
         params = self._filter_params(self._list_all_params())
         stats = self._finalize(
-            stats_source.to_snapshots(
-                fetch_payloads(stats_source.list_fixtures_items(params), stats_source.request_url),
-            ),
+            stats_source.to_snapshots(stats_source.fetch_items(stats_source.list_fixtures_items(params))),
         )
         upcoming = stats.loc[self._is_upcoming(stats)] if not stats.empty else stats
         schedule = self._select_moments(upcoming) if odds_source is not None and odds_source.needs_schedule() else None

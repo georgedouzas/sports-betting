@@ -10,6 +10,7 @@ from ._base import (
     read_csv_content,
 )
 from ._odds._football_data import FootballDataOdds
+from ._odds._lumify import LumifyOdds
 from ._odds._odds_api import OddsApi
 from ._odds._sample import SampleSoccerOdds
 from ._resolver import (
@@ -42,6 +43,7 @@ __all__: list[str] = [
     'EuroLeagueStats',
     'FootballDataOdds',
     'FootballDataStats',
+    'LumifyOdds',
     'NBAStats',
     'OddsApi',
     'RawItem',
