@@ -243,8 +243,8 @@ COLS_MAPPING = {
     'AS': 'target__away_team__shots',
     'HST': 'target__home_team__shots_on_target',
     'AST': 'target__away_team__shots_on_target',
-    'HHW': 'target__home_team__hit_woodork',
-    'AHW': 'target__away_team__hit_woodork',
+    'HHW': 'target__home_team__hit_woodwork',
+    'AHW': 'target__away_team__hit_woodwork',
     'HC': 'target__home_team__corners',
     'AC': 'target__away_team__corners',
     'HF': 'target__home_team__fouls_committed',
@@ -417,8 +417,8 @@ SCHEMA = [
     ('target__away_team__shots', np.int64),
     ('target__home_team__shots_on_target', np.int64),
     ('target__away_team__shots_on_target', np.int64),
-    ('target__home_team__hit_woodork', np.int64),
-    ('target__away_team__hit_woodork', np.int64),
+    ('target__home_team__hit_woodwork', np.int64),
+    ('target__away_team__hit_woodwork', np.int64),
     ('target__home_team__corners', np.int64),
     ('target__away_team__corners', np.int64),
     ('target__home_team__fouls_committed', np.int64),
@@ -531,7 +531,7 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
         col
         for col in data.columns
         if col.startswith('target')
-        and col.endswith(('full_time_goals', 'shots', 'shots_on_target', 'corners', 'fouls_commited', 'cards'))
+        and col.endswith(('full_time_goals', 'shots', 'shots_on_target', 'corners', 'fouls_committed', 'cards'))
     ]
     odds_cols = [
         col
@@ -563,7 +563,7 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
         + features_data['red_cards_for']
         + features_data['yellow_cards_for'] / 20
         + features_data['shots_on_target_for'] / 10
-        + features_data['shots_on_target_for'] / 50
+        + features_data['shots_for'] / 50
         + features_data['corners_for'] / 100
     )
     features_data['adj_goals_against'] = (
@@ -571,7 +571,7 @@ def _extract_features(data: pd.DataFrame) -> pd.DataFrame:
         + features_data['red_cards_against']
         + features_data['yellow_cards_against'] / 20
         + features_data['shots_on_target_against'] / 10
-        + features_data['shots_on_target_against'] / 50
+        + features_data['shots_against'] / 50
         + features_data['corners_against'] / 100
     )
     features_data['points'] = 3 * (features_data['goals_for'] > features_data['goals_against']) + (

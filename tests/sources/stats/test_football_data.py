@@ -107,6 +107,19 @@ def test_features_precede_the_match_they_describe(sources):
     assert preplay.loc['Chelsea', 'home_points_avg'] == 0
 
 
+def test_adjusted_goals_count_each_statistic_once(sources):
+    """Test the adjusted goals add the goals, cards, shots on target, shots and corners, each with its own weight."""
+    feed = (
+        'Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,HTHG,HTAG,HS,AS,HST,AST,HC,AC,HY,AY,HR,AR,AvgH,AvgD,AvgA\n'
+        'E0,10/08/2024,Arsenal,Chelsea,2,0,1,0,10,3,5,1,4,1,2,0,1,0,1.80,3.50,4.20\n'
+        'E0,17/08/2024,Arsenal,Liverpool,1,1,0,0,9,9,3,3,5,5,1,1,0,0,2.10,3.40,3.30\n'
+    )
+    stats, _ = sources
+    snapshots = stats.to_snapshots(payloads(feed))
+    preplay = snapshots[snapshots['event_status'] == 'preplay'].set_index('away_team')
+    assert preplay.loc['Liverpool', 'home_adj_goals_for_avg'] == pytest.approx(3.84)
+
+
 def test_sources_perform_no_input_output(sources):
     """Test a source never fetches, so extraction can never download by accident."""
     stats, odds = sources
