@@ -141,12 +141,26 @@ def test_a_season_is_asked_for_one_month_at_a_time(source):
     items = source.list_required_items([{'league': 'NBA', 'division': 1, 'year': 2026}])
     assert len(items) == MONTHS
     windows = [item.url.split('dates=')[1].split('&')[0] for item in items]
-    for window in windows:
-        start, end = window.split('-')
-        assert start[:6] == end[:6]
-        assert start[6:] == '01'
-    assert windows[0].startswith('202509')
-    assert windows[-1].startswith('202607')
+    assert windows == [
+        '202509',
+        '202510',
+        '202511',
+        '202512',
+        '202601',
+        '202602',
+        '202603',
+        '202604',
+        '202605',
+        '202606',
+        '202607',
+    ]
+
+
+def test_a_month_is_asked_for_by_its_year_and_month(source):
+    """Test a month is named as `YYYYMM`, the form ESPN answers, since it refuses a range of days with a 400."""
+    item = source.list_required_items([{'league': 'NBA', 'division': 1, 'year': 2027}])[2]
+    assert 'dates=202611&limit=1000' in item.url
+    assert item.key == 'NBA_1_2027_202611'
 
 
 def test_the_tipoff_is_the_instant_the_feed_gives(source):
@@ -203,6 +217,17 @@ def test_an_unfamiliar_label_is_excluded_rather_than_admitted(source):
         },
     ).encode()
     snapshots = source.to_snapshots(_payloads(source, content))
+    teams = set(snapshots['home_team']) | set(snapshots['away_team'])
+    assert teams == {'Boston Celtics', 'New York Knicks'}
+
+
+def test_a_slot_whose_teams_are_not_yet_known_is_excluded(source):
+    """Test a scheduled slot the feed fills with `TBD` placeholders, under negative team ids, never becomes a team."""
+    slot = _event('2026-12-04T05:00Z', 'TBD', 'TBD', 0, 0, played=False)
+    for team_id, competitor in zip(('-1', '-2'), slot['competitions'][0]['competitors'], strict=True):
+        competitor['team']['id'] = team_id
+    game = _event('2025-10-21T23:30Z', 'Boston Celtics', 'New York Knicks', 120, 96, played=True)
+    snapshots = source.to_snapshots(_payloads(source, json.dumps({'events': [slot, game]}).encode()))
     teams = set(snapshots['home_team']) | set(snapshots['away_team'])
     assert teams == {'Boston Celtics', 'New York Knicks'}
 

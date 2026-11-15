@@ -118,3 +118,13 @@ def test_resolve_odds_drops_odds_far_from_any_kickoff():
     """Test odds whose pairing has no kick-off within 36 hours belong to no known game and are dropped."""
     stats, odds = _build_meetings(['2025-10-19 19:00'])
     assert resolve_odds(stats, odds).empty
+
+
+def test_resolve_odds_pairs_the_clippers_with_no_alias_from_the_user():
+    """Test the Odds API's `Los Angeles Clippers` joins ESPN's `LA Clippers`, which the pairing alone cannot place."""
+    identity = {'league': 'NBA', 'division': 1, 'year': 2027, 'event_status': 'preplay', 'event_time': 0}
+    date = pd.Timestamp('2026-11-15 03:30', tz='UTC')
+    stats = pd.DataFrame([{'date': date, **identity, 'home_team': 'LA Clippers', 'away_team': 'Los Angeles Lakers'}])
+    odds = stats.assign(home_team='Los Angeles Clippers', provider='acme', home_win=1.9)
+    resolved = resolve_odds(stats, odds)
+    assert resolved['home_team'].tolist() == ['LA Clippers']

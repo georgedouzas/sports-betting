@@ -1,0 +1,3092 @@
+{
+ "data": [
+  {
+   "id": "d0ac221a-ff51-4f51-8cab-17039754b4d8",
+   "identifier": "E2025_15",
+   "gameCode": 15,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-03T21:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-03T21:30:00",
+   "utcDate": "2025-10-03T19:30:00Z",
+   "local": {
+    "club": {
+     "code": "TEL",
+     "name": "Maccabi Rapyd Tel Aviv",
+     "abbreviatedName": "Maccabi",
+     "editorialName": "Maccabi",
+     "tvCode": "MTA",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1b533342-78f5-4932-b714-a7d80b5826b5.png"
+     }
+    },
+    "score": 94,
+    "standingsScore": 94,
+    "partials": {
+     "partials1": 20,
+     "partials2": 21,
+     "partials3": 22,
+     "partials4": 31,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "PRS",
+     "name": "Paris Basketball",
+     "abbreviatedName": "Paris",
+     "editorialName": "Paris",
+     "tvCode": "PBB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/a033e5b3-0de7-48a3-98d9-d9a4b9df1f39.png"
+     }
+    },
+    "score": 101,
+    "standingsScore": 101,
+    "partials": {
+     "partials1": 27,
+     "partials2": 21,
+     "partials3": 26,
+     "partials4": 27,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 201,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OAEO",
+    "name": "PEREZ, EMILIO",
+    "alias": "PEREZ PIZARRO, E.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "885xkxloq8i9e9yf"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJIY",
+    "name": "PASTUSIAK, PIOTR",
+    "alias": "PASTUSIAK, P.",
+    "country": {
+     "code": "POL",
+     "name": "Poland"
+    },
+    "images": {
+     "verticalSmall": "885wrb4rki89jxa3"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJFV",
+    "name": "TRAWICKI, TOMASZ",
+    "alias": "TRAWICKI, T.",
+    "country": {
+     "code": "POL",
+     "name": "Poland"
+    },
+    "images": {
+     "verticalSmall": "886bu66ca97fclyr"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "ALEKSANDAR NIKOLIC HALL",
+    "code": "AUF4",
+    "capacity": 8000,
+    "address": "Carlija Caplina 39, Belgrade 11000, Serbia",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "831e8bda-1cf4-41bb-b2f2-4fa18eb66a83",
+   "identifier": "E2025_19",
+   "gameCode": 19,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-03T20:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-03T20:30:00",
+   "utcDate": "2025-10-03T18:30:00Z",
+   "local": {
+    "club": {
+     "code": "PAM",
+     "name": "Valencia Basket",
+     "abbreviatedName": "Valencia",
+     "editorialName": "Valencia",
+     "tvCode": "VBC",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHL/bc3e00b2-fea4-40be-a7ec-1e633129bde3.png"
+     }
+    },
+    "score": 103,
+    "standingsScore": 103,
+    "partials": {
+     "partials1": 26,
+     "partials2": 23,
+     "partials3": 26,
+     "partials4": 28,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "VIR",
+     "name": "Virtus Bologna",
+     "abbreviatedName": "Virtus",
+     "editorialName": "Virtus",
+     "tvCode": "VIR",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjCiezvk/a92d4c3b-9f9c-4163-8a10-bcf8fc15893e.png"
+     }
+    },
+    "score": 94,
+    "standingsScore": 94,
+    "partials": {
+     "partials1": 23,
+     "partials2": 23,
+     "partials3": 25,
+     "partials4": 23,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 14606,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OADJ",
+    "name": "PUKL,SASA",
+    "alias": "PUKL,S.",
+    "country": {
+     "code": "SLO",
+     "name": "Slovenia"
+    },
+    "images": {
+     "verticalSmall": "8863itxgormdtqhs"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJLM",
+    "name": "NEDOVIC, MILAN",
+    "alias": "NEDOVIC, M.",
+    "country": {
+     "code": "SLO",
+     "name": "Slovenia"
+    },
+    "images": {
+     "verticalSmall": "885uo7l4abjbyoam"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJLP",
+    "name": "SUKYS, ARTURAS",
+    "alias": "SUKYS, A.",
+    "country": {
+     "code": "LTU",
+     "name": "Lithuania"
+    },
+    "images": {
+     "verticalSmall": "89oview3i6xl9tp4"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "ROIG ARENA",
+    "code": "AVJ1",
+    "capacity": 15600,
+    "address": "C/ del Bomber Ramon Duart, 12, Quatre Carreres, 46013 Valencia ",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "df5208b7-c5ed-4b34-85f4-771d0ccee8b4",
+   "identifier": "E2025_18",
+   "gameCode": 18,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-03T20:15:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 3,
+   "localDate": "2025-10-03T21:15:00",
+   "utcDate": "2025-10-03T18:15:00Z",
+   "local": {
+    "club": {
+     "code": "PAN",
+     "name": "Panathinaikos AKTOR Athens",
+     "abbreviatedName": "Panathinaikos",
+     "editorialName": "Panathinaikos",
+     "tvCode": "PAO",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/e3dff28a-9ec6-4faf-9d96-ecbc68f75780.png"
+     }
+    },
+    "score": 96,
+    "standingsScore": 96,
+    "partials": {
+     "partials1": 17,
+     "partials2": 28,
+     "partials3": 24,
+     "partials4": 27,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "BAR",
+     "name": "FC Barcelona",
+     "abbreviatedName": "Barcelona",
+     "editorialName": "Barcelona",
+     "tvCode": "BAR",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/35dfa503-e417-481f-963a-bdf6f013763e.png"
+     }
+    },
+    "score": 103,
+    "standingsScore": 103,
+    "partials": {
+     "partials1": 26,
+     "partials2": 25,
+     "partials3": 24,
+     "partials4": 28,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 18492,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJCL",
+    "name": "LOTTERMOSER, ROBERT",
+    "alias": "LOTTERMOSER, R.",
+    "country": {
+     "code": "GER",
+     "name": "Germany"
+    },
+    "images": {
+     "verticalSmall": "8845rp7o4ifpg9kf"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OACY",
+    "name": "JOVCIC, MILIVOJE",
+    "alias": "JOVCIC, M.",
+    "country": {
+     "code": "SRB",
+     "name": "Serbia"
+    },
+    "images": {
+     "verticalSmall": "8844kualjiu9jr5p"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJGK",
+    "name": "PETEK, SASO",
+    "alias": "PETEK, S.",
+    "country": {
+     "code": "SLO",
+     "name": "Slovenia"
+    },
+    "images": {
+     "verticalSmall": "885y7w6ple8p7mei"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "TELEKOM CENTER ATHENS",
+    "code": "AUM6",
+    "capacity": 18500,
+    "address": "37 Kifisias Avenue, 15123 Marousi",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "624a6859-6acf-4757-9820-fb96a51f8a96",
+   "identifier": "E2025_17",
+   "gameCode": 17,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-03T20:00:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-03T20:00:00",
+   "utcDate": "2025-10-03T18:00:00Z",
+   "local": {
+    "club": {
+     "code": "ASV",
+     "name": "LDLC ASVEL Villeurbanne",
+     "abbreviatedName": "ASVEL",
+     "editorialName": "ASVEL",
+     "tvCode": "ASV",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/e33c6d1a-95ca-4dbc-b8cb-0201812104cc.png"
+     }
+    },
+    "score": 102,
+    "standingsScore": 102,
+    "partials": {
+     "partials1": 26,
+     "partials2": 22,
+     "partials3": 29,
+     "partials4": 25,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "BAS",
+     "name": "Kosner Baskonia Vitoria-Gasteiz",
+     "abbreviatedName": "Baskonia",
+     "editorialName": "Baskonia",
+     "tvCode": "KBA",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/cbc49cb0-99ce-4462-bdb7-56983ee03cf4.png"
+     }
+    },
+    "score": 95,
+    "standingsScore": 95,
+    "partials": {
+     "partials1": 33,
+     "partials2": 12,
+     "partials3": 21,
+     "partials4": 29,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 8276,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJDL",
+    "name": "MOGULKOC, EMIN",
+    "alias": "MOGULKOC, E.",
+    "country": {
+     "code": "TUR",
+     "name": "Turkiye"
+    },
+    "images": {
+     "verticalSmall": "885ubsvbyuo7gpso"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OACA",
+    "name": "RYZHYK, BORYS",
+    "alias": "RYZHYK, B.",
+    "country": {
+     "code": "UKR",
+     "name": "Ukraine"
+    },
+    "images": {
+     "verticalSmall": "8868n7x43bynj5fi"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJJA",
+    "name": "RADOJKOVIC, JOSIP ",
+    "alias": "RADOJKOVIC, J.",
+    "country": {
+     "code": "CRO",
+     "name": "Croatia"
+    },
+    "images": {
+     "verticalSmall": "8863vxdxmjmnauvq"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "LDLC ARENA",
+    "code": "AUZ1",
+    "capacity": 12523,
+    "address": "Avenue Simone Veil 5, 69150 Décines-Charpieu - France",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "6698341a-e156-4aca-ad1d-6cdf23a8bddc",
+   "identifier": "E2025_16",
+   "gameCode": 16,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-03T19:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-03T19:30:00",
+   "utcDate": "2025-10-03T17:30:00Z",
+   "local": {
+    "club": {
+     "code": "MCO",
+     "name": "AS Monaco",
+     "abbreviatedName": "Monaco",
+     "editorialName": "Monaco",
+     "tvCode": "ASM",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/89ed276a-2ba3-413f-8ea2-b3be209ca129.png"
+     }
+    },
+    "score": 103,
+    "standingsScore": 103,
+    "partials": {
+     "partials1": 26,
+     "partials2": 24,
+     "partials3": 29,
+     "partials4": 24,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "DUB",
+     "name": "Dubai Basketball",
+     "abbreviatedName": "Dubai",
+     "editorialName": "Dubai",
+     "tvCode": "DUB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/1efae090-16e2-4963-ae47-4b94f249c244.png"
+     }
+    },
+    "score": 81,
+    "standingsScore": 81,
+    "partials": {
+     "partials1": 23,
+     "partials2": 23,
+     "partials3": 13,
+     "partials4": 22,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 4137,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OAEF",
+    "name": "GARCIA, JUAN CARLOS",
+    "alias": "GARCIA GONZALEZ, J.C.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "883ghgjot7u5suil"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "QJLU",
+    "name": "UDYANSKYY, EDUARD",
+    "alias": "UDYANSKYY, E.",
+    "country": {
+     "code": "GBR",
+     "name": "United Kingdom"
+    },
+    "images": {
+     "verticalSmall": "94qqejbv9sckawws"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMA",
+    "name": "TSAROUCHA, VASILIKI",
+    "alias": "TSAROUCHA, V.",
+    "country": {
+     "code": "GRE",
+     "name": "Greece"
+    },
+    "images": {
+     "verticalSmall": "9ybhvmvviw9hqohm"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "SALLE GASTON MEDECIN",
+    "code": "AUR2",
+    "capacity": 5000,
+    "address": "3 et 7 Avenue des Castelans, 98000, Monaco",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "58957997-e399-4175-abdb-5cb70e58e109",
+   "identifier": "E2025_14",
+   "gameCode": 14,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-03T19:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-03T19:30:00",
+   "utcDate": "2025-10-03T17:30:00Z",
+   "local": {
+    "club": {
+     "code": "IST",
+     "name": "Anadolu Efes Istanbul",
+     "abbreviatedName": "Anadolu Efes",
+     "editorialName": "Efes",
+     "tvCode": "EFS",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjCgOCxM/a844756c-a58d-4666-93b8-48f7337bc79d.png"
+     }
+    },
+    "score": 81,
+    "standingsScore": 81,
+    "partials": {
+     "partials1": 22,
+     "partials2": 24,
+     "partials3": 13,
+     "partials4": 22,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "HTA",
+     "name": "Hapoel IBI Tel Aviv",
+     "abbreviatedName": "Hapoel Tel Aviv",
+     "editorialName": "Hapoel Tel Aviv",
+     "tvCode": "HTA",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/cbb1c3ad-03d5-426a-b5ef-2832a4eee484.png"
+     }
+    },
+    "score": 87,
+    "standingsScore": 87,
+    "partials": {
+     "partials1": 21,
+     "partials2": 14,
+     "partials3": 26,
+     "partials4": 26,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 2788,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJIZ",
+    "name": "PERUGA, CARLOS",
+    "alias": "PERUGA, C.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "885qkoqdo5npvomj"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJFA",
+    "name": "BISSANG, JOSEPH",
+    "alias": "BISSANG, J.",
+    "country": {
+     "code": "FRA",
+     "name": "France"
+    },
+    "images": {
+     "verticalSmall": "ayroh3wgvpblrcdk"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMF",
+    "name": "KARDUM, LUKA",
+    "alias": "KARDUM, L.",
+    "country": {
+     "code": "CRO",
+     "name": "Croatia"
+    },
+    "images": {
+     "verticalSmall": "awgpghekyaxank3l"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "MORACA",
+    "code": "AUA",
+    "capacity": 5262,
+    "address": "Ivana Milutinovica BB - 81000 Podgorica - Montenegro",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "c4fd9536-4465-4adf-96c0-f0b376bcd49a",
+   "identifier": "E2025_20",
+   "gameCode": 20,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-03T19:00:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 3,
+   "localDate": "2025-10-03T20:00:00",
+   "utcDate": "2025-10-03T17:00:00Z",
+   "local": {
+    "club": {
+     "code": "ZAL",
+     "name": "Zalgiris Kaunas",
+     "abbreviatedName": "Zalgiris",
+     "editorialName": "Zalgiris",
+     "tvCode": "ZAL",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/0aa09358-3847-4c4e-b228-3582ee4e536d.png"
+     }
+    },
+    "score": 84,
+    "standingsScore": 84,
+    "partials": {
+     "partials1": 29,
+     "partials2": 14,
+     "partials3": 22,
+     "partials4": 19,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "ULK",
+     "name": "Fenerbahce Beko Istanbul",
+     "abbreviatedName": "Fenerbahce",
+     "editorialName": "Fenerbahce",
+     "tvCode": "FBB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjCiezrk/aa39750a-6203-49ee-a87d-edd0c6f0397d.png"
+     }
+    },
+    "score": 81,
+    "standingsScore": 81,
+    "partials": {
+     "partials1": 20,
+     "partials2": 17,
+     "partials3": 16,
+     "partials4": 28,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 15203,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OACI",
+    "name": "BELOSEVIC, ILIJA",
+    "alias": "BELOSEVIC, I.",
+    "country": {
+     "code": "SRB",
+     "name": "Serbia"
+    },
+    "images": {
+     "verticalSmall": "ayrnxwrdng99dusy"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OAAX",
+    "name": "ZAMOJSKI, JAKUB",
+    "alias": "ZAMOJSKI, J.",
+    "country": {
+     "code": "POL",
+     "name": "Poland"
+    },
+    "images": {
+     "verticalSmall": "886d5v4r7bejwode"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJLJ",
+    "name": "PANTHER, ANNE",
+    "alias": "PANTHER, A.",
+    "country": {
+     "code": "GER",
+     "name": "Germany"
+    },
+    "images": {
+     "verticalSmall": "885wcxfmwtcvkvfd"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "ZALGIRIO ARENA",
+    "code": "ATJ",
+    "capacity": 15415,
+    "address": "Karaliaus Mindaugo Av. 50, 44287 Kaunas",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "07795872-b37b-44ea-a333-6a04c61b54a7",
+   "identifier": "E2025_13",
+   "gameCode": 13,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-02T20:45:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-02T20:45:00",
+   "utcDate": "2025-10-02T18:45:00Z",
+   "local": {
+    "club": {
+     "code": "MAD",
+     "name": "Real Madrid",
+     "abbreviatedName": "Real",
+     "editorialName": "Real",
+     "tvCode": "RMB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/371b0d9b-9250-4c09-bda7-0686cf024657.png"
+     }
+    },
+    "score": 89,
+    "standingsScore": 89,
+    "partials": {
+     "partials1": 19,
+     "partials2": 28,
+     "partials3": 17,
+     "partials4": 25,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "OLY",
+     "name": "Olympiacos Piraeus",
+     "abbreviatedName": "Olympiacos",
+     "editorialName": "Olympiacos",
+     "tvCode": "OLY",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+     }
+    },
+    "score": 77,
+    "standingsScore": 77,
+    "partials": {
+     "partials1": 29,
+     "partials2": 24,
+     "partials3": 16,
+     "partials4": 8,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 7920,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJFC",
+    "name": "JAVOR, DAMIR",
+    "alias": "JAVOR, D.",
+    "country": {
+     "code": "SLO",
+     "name": "Slovenia"
+    },
+    "images": {
+     "verticalSmall": "883i7yokjhfy7pih"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "QJLS",
+    "name": "NIKOLIC, UROS",
+    "alias": "NIKOLIC, U.",
+    "country": {
+     "code": "SRB",
+     "name": "Serbia"
+    },
+    "images": {
+     "verticalSmall": "94qpquklfn5tseb9"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMP",
+    "name": "POROBIC, DRAGAN",
+    "alias": "POROBIC, D.",
+    "country": {
+     "code": "BIH",
+     "name": "Bosnia and Herzegovina"
+    },
+    "images": {
+     "verticalSmall": null
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "MOVISTAR ARENA",
+    "code": "ATI7",
+    "capacity": 13109,
+    "address": "Avenida de Felipe II 1, 28009, Madrid",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "f9712d11-f473-4a9f-8117-106f4c547ef4",
+   "identifier": "E2025_12",
+   "gameCode": 12,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-02T20:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-02T20:30:00",
+   "utcDate": "2025-10-02T18:30:00Z",
+   "local": {
+    "club": {
+     "code": "PAR",
+     "name": "Partizan Mozzart Bet Belgrade",
+     "abbreviatedName": "Partizan",
+     "editorialName": "Partizan",
+     "tvCode": "PAR",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/2681304e-77dd-4331-88b1-683078c0fb49.png"
+     }
+    },
+    "score": 80,
+    "standingsScore": 80,
+    "partials": {
+     "partials1": 21,
+     "partials2": 24,
+     "partials3": 24,
+     "partials4": 11,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "MIL",
+     "name": "EA7 Emporio Armani Milan",
+     "abbreviatedName": "Milan",
+     "editorialName": "Milan",
+     "tvCode": "EA7",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHH/5c2f0ab6-f86a-4df0-b2f3-f9ab92f7267b.png"
+     }
+    },
+    "score": 78,
+    "standingsScore": 78,
+    "partials": {
+     "partials1": 19,
+     "partials2": 14,
+     "partials3": 29,
+     "partials4": 16,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 19214,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJLL",
+    "name": "DIFALLAH, MEHDI",
+    "alias": "DIFALLAH, M.",
+    "country": {
+     "code": "FRA",
+     "name": "France"
+    },
+    "images": {
+     "verticalSmall": "87ytu4ivn6qtsqni"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJGG",
+    "name": "CORTES, CARLOS",
+    "alias": "CORTES, C.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "87ytqfifoj5rk4lk"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMD",
+    "name": "KONSTANTINOVS, KRISTAPS",
+    "alias": "KONSTANTINOVS, K.",
+    "country": {
+     "code": "LAT",
+     "name": "Latvia"
+    },
+    "images": {
+     "verticalSmall": "awmiu6ag6kvhaq4c"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "BELGRADE ARENA",
+    "code": "ATM8",
+    "capacity": 21000,
+    "address": "Bulevar Arsenija Carnojevica 58, 11070 Belgrade - Serbia",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "613d4c74-9a82-4ca6-a9fe-9935d87faf2c",
+   "identifier": "E2025_11",
+   "gameCode": 11,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 2,
+   "roundAlias": "Round 2",
+   "roundName": "Round 2",
+   "played": true,
+   "date": "2025-10-02T20:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-02T20:30:00",
+   "utcDate": "2025-10-02T18:30:00Z",
+   "local": {
+    "club": {
+     "code": "MUN",
+     "name": "FC Bayern Munich",
+     "abbreviatedName": "Bayern",
+     "editorialName": "Bayern",
+     "tvCode": "BAY",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/817b0e58-d595-4b09-ab0b-1e7cc26249ff.png"
+     }
+    },
+    "score": 97,
+    "standingsScore": 97,
+    "partials": {
+     "partials1": 24,
+     "partials2": 26,
+     "partials3": 27,
+     "partials4": 20,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "RED",
+     "name": "Crvena Zvezda Meridianbet Belgrade",
+     "abbreviatedName": "Crvena Zvezda",
+     "editorialName": "Crvena Zvezda",
+     "tvCode": "CZV",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/d2eef4a8-62df-4fdd-9076-276004268515.png"
+     }
+    },
+    "score": 88,
+    "standingsScore": 88,
+    "partials": {
+     "partials1": 28,
+     "partials2": 27,
+     "partials3": 16,
+     "partials4": 17,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 11500,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJDF",
+    "name": "LATISEVS, OLEGS",
+    "alias": "LATISEVS, O.",
+    "country": {
+     "code": "LAT",
+     "name": "Latvia"
+    },
+    "images": {
+     "verticalSmall": "8845j7vs5indngbw"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJFQ",
+    "name": "FOUFIS, IOANNIS",
+    "alias": "FOUFIS, I.",
+    "country": {
+     "code": "GRE",
+     "name": "Greece"
+    },
+    "images": {
+     "verticalSmall": "87yuyhwl9wgoi74r"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OAEZ",
+    "name": "VYKLICKY, ROBERT",
+    "alias": "VYKLICKY, R.",
+    "country": {
+     "code": "CZE",
+     "name": "Czech Republic"
+    },
+    "images": {
+     "verticalSmall": "886cwwge7bwbagta"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "SAP GARDEN",
+    "code": "AVE1",
+    "capacity": 11500,
+    "address": "Toni-Merkens-Weg 4, 80809 Munich - Germany",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "b9858235-d50b-4b17-85e3-c7348f84fde6",
+   "identifier": "E2025_10",
+   "gameCode": 10,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-10-01T20:00:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-01T20:00:00",
+   "utcDate": "2025-10-01T18:00:00Z",
+   "local": {
+    "club": {
+     "code": "ASV",
+     "name": "LDLC ASVEL Villeurbanne",
+     "abbreviatedName": "ASVEL",
+     "editorialName": "ASVEL",
+     "tvCode": "ASV",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/e33c6d1a-95ca-4dbc-b8cb-0201812104cc.png"
+     }
+    },
+    "score": 77,
+    "standingsScore": 77,
+    "partials": {
+     "partials1": 18,
+     "partials2": 17,
+     "partials3": 26,
+     "partials4": 16,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "PAM",
+     "name": "Valencia Basket",
+     "abbreviatedName": "Valencia",
+     "editorialName": "Valencia",
+     "tvCode": "VBC",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHL/bc3e00b2-fea4-40be-a7ec-1e633129bde3.png"
+     }
+    },
+    "score": 80,
+    "standingsScore": 80,
+    "partials": {
+     "partials1": 19,
+     "partials2": 15,
+     "partials3": 26,
+     "partials4": 20,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 4671,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJCZ",
+    "name": "RADOVIC, SRETEN",
+    "alias": "RADOVIC, S.",
+    "country": {
+     "code": "CRO",
+     "name": "Croatia"
+    },
+    "images": {
+     "verticalSmall": "8864r3sdiwfigeb9"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJIT",
+    "name": "KOLJENSIC, MILOS ",
+    "alias": "KOLJENSIC, M.",
+    "country": {
+     "code": "MNE",
+     "name": "Montenegro"
+    },
+    "images": {
+     "verticalSmall": "8844wrt6a74iumoi"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJLN",
+    "name": "RACYS, SAULIUS",
+    "alias": "RACYS, S.",
+    "country": {
+     "code": "SWE",
+     "name": "Sweden"
+    },
+    "images": {
+     "verticalSmall": "8863qecdbweor58t"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "ASTROBALLE",
+    "code": "ASR",
+    "capacity": 5560,
+    "address": "40/44 Av. Marcel Cerdan, 69100 Villeurbanne, France",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "573db553-a896-4e58-9789-ca918dada8eb",
+   "identifier": "E2025_8",
+   "gameCode": 8,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-10-01T19:45:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 3,
+   "localDate": "2025-10-01T20:45:00",
+   "utcDate": "2025-10-01T17:45:00Z",
+   "local": {
+    "club": {
+     "code": "ULK",
+     "name": "Fenerbahce Beko Istanbul",
+     "abbreviatedName": "Fenerbahce",
+     "editorialName": "Fenerbahce",
+     "tvCode": "FBB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjCiezrk/aa39750a-6203-49ee-a87d-edd0c6f0397d.png"
+     }
+    },
+    "score": 96,
+    "standingsScore": 96,
+    "partials": {
+     "partials1": 25,
+     "partials2": 18,
+     "partials3": 27,
+     "partials4": 26,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "PRS",
+     "name": "Paris Basketball",
+     "abbreviatedName": "Paris",
+     "editorialName": "Paris",
+     "tvCode": "PBB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/a033e5b3-0de7-48a3-98d9-d9a4b9df1f39.png"
+     }
+    },
+    "score": 77,
+    "standingsScore": 77,
+    "partials": {
+     "partials1": 19,
+     "partials2": 21,
+     "partials3": 19,
+     "partials4": 18,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 10414,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OAEF",
+    "name": "GARCIA, JUAN CARLOS",
+    "alias": "GARCIA GONZALEZ, J.C.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "883ghgjot7u5suil"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJLP",
+    "name": "SUKYS, ARTURAS",
+    "alias": "SUKYS, A.",
+    "country": {
+     "code": "LTU",
+     "name": "Lithuania"
+    },
+    "images": {
+     "verticalSmall": "89oview3i6xl9tp4"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJFU",
+    "name": "SILVA, SERGIO",
+    "alias": "SILVA, S.",
+    "country": {
+     "code": "POR",
+     "name": "Portugal"
+    },
+    "images": {
+     "verticalSmall": "88694sdmpnbwjska"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "ULKER SPORTS AND EVENT HALL",
+    "code": "AMY",
+    "capacity": 13000,
+    "address": "Barbaros Mah. Ihlamur Sok. Batı Ataşehir, 34764 Istanbul, Turkiye ",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "55c3f780-a1fd-4e25-a6a1-6bc9f8678a5c",
+   "identifier": "E2025_9",
+   "gameCode": 9,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-10-01T19:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-10-01T19:30:00",
+   "utcDate": "2025-10-01T17:30:00Z",
+   "local": {
+    "club": {
+     "code": "MCO",
+     "name": "AS Monaco",
+     "abbreviatedName": "Monaco",
+     "editorialName": "Monaco",
+     "tvCode": "ASM",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/89ed276a-2ba3-413f-8ea2-b3be209ca129.png"
+     }
+    },
+    "score": 84,
+    "standingsScore": 84,
+    "partials": {
+     "partials1": 20,
+     "partials2": 15,
+     "partials3": 25,
+     "partials4": 24,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "ZAL",
+     "name": "Zalgiris Kaunas",
+     "abbreviatedName": "Zalgiris",
+     "editorialName": "Zalgiris",
+     "tvCode": "ZAL",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/0aa09358-3847-4c4e-b228-3582ee4e536d.png"
+     }
+    },
+    "score": 89,
+    "standingsScore": 89,
+    "partials": {
+     "partials1": 27,
+     "partials2": 18,
+     "partials3": 22,
+     "partials4": 22,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 4221,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJDL",
+    "name": "MOGULKOC, EMIN",
+    "alias": "MOGULKOC, E.",
+    "country": {
+     "code": "TUR",
+     "name": "Turkiye"
+    },
+    "images": {
+     "verticalSmall": "885ubsvbyuo7gpso"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJLI",
+    "name": "PEERANDI, RAIN",
+    "alias": "PEERANDI, R.",
+    "country": {
+     "code": "EST",
+     "name": "Estonia"
+    },
+    "images": {
+     "verticalSmall": "885xbuej88hcbpxv"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJFP",
+    "name": "DRAGOJEVIC, IGOR",
+    "alias": "DRAGOJEVIC, I.",
+    "country": {
+     "code": "MNE",
+     "name": "Montenegro"
+    },
+    "images": {
+     "verticalSmall": "87yus4cpo4p8q56s"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "SALLE GASTON MEDECIN",
+    "code": "AUR2",
+    "capacity": 5000,
+    "address": "3 et 7 Avenue des Castelans, 98000, Monaco",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "3ac6e534-8e3a-4be3-a92e-09cde224d43e",
+   "identifier": "E2025_7",
+   "gameCode": 7,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-09-30T20:45:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-09-30T20:45:00",
+   "utcDate": "2025-09-30T18:45:00Z",
+   "local": {
+    "club": {
+     "code": "VIR",
+     "name": "Virtus Bologna",
+     "abbreviatedName": "Virtus",
+     "editorialName": "Virtus",
+     "tvCode": "VIR",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjCiezvk/a92d4c3b-9f9c-4163-8a10-bcf8fc15893e.png"
+     }
+    },
+    "score": 74,
+    "standingsScore": 74,
+    "partials": {
+     "partials1": 14,
+     "partials2": 24,
+     "partials3": 17,
+     "partials4": 19,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "MAD",
+     "name": "Real Madrid",
+     "abbreviatedName": "Real",
+     "editorialName": "Real",
+     "tvCode": "RMB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/371b0d9b-9250-4c09-bda7-0686cf024657.png"
+     }
+    },
+    "score": 68,
+    "standingsScore": 68,
+    "partials": {
+     "partials1": 19,
+     "partials2": 16,
+     "partials3": 15,
+     "partials4": 18,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 5471,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJLL",
+    "name": "DIFALLAH, MEHDI",
+    "alias": "DIFALLAH, M.",
+    "country": {
+     "code": "FRA",
+     "name": "France"
+    },
+    "images": {
+     "verticalSmall": "87ytu4ivn6qtsqni"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "QJLV",
+    "name": "VILIUS, GYTIS",
+    "alias": "VILIUS, G.",
+    "country": {
+     "code": "LTU",
+     "name": "Lithuania"
+    },
+    "images": {
+     "verticalSmall": "94qq99ojsab3pjud"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMH",
+    "name": "BITTNER, STEVE",
+    "alias": "BITTNER, S.",
+    "country": {
+     "code": "GER",
+     "name": "Germany"
+    },
+    "images": {
+     "verticalSmall": "bugv8rrha7hj3eny"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "PALADOZZA",
+    "code": "AIG",
+    "capacity": 5570,
+    "address": "Via Nannetti 1, 40122 Bologna - Italy",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "7e2477cd-e396-47da-aee6-f8ba486db00b",
+   "identifier": "E2025_2",
+   "gameCode": 2,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-09-30T20:30:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-09-30T20:30:00",
+   "utcDate": "2025-09-30T18:30:00Z",
+   "local": {
+    "club": {
+     "code": "BAS",
+     "name": "Kosner Baskonia Vitoria-Gasteiz",
+     "abbreviatedName": "Baskonia",
+     "editorialName": "Baskonia",
+     "tvCode": "KBA",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/cbc49cb0-99ce-4462-bdb7-56983ee03cf4.png"
+     }
+    },
+    "score": 96,
+    "standingsScore": 96,
+    "partials": {
+     "partials1": 20,
+     "partials2": 28,
+     "partials3": 22,
+     "partials4": 26,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "OLY",
+     "name": "Olympiacos Piraeus",
+     "abbreviatedName": "Olympiacos",
+     "editorialName": "Olympiacos",
+     "tvCode": "OLY",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+     }
+    },
+    "score": 102,
+    "standingsScore": 102,
+    "partials": {
+     "partials1": 27,
+     "partials2": 22,
+     "partials3": 24,
+     "partials4": 29,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 8572,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJCL",
+    "name": "LOTTERMOSER, ROBERT",
+    "alias": "LOTTERMOSER, R.",
+    "country": {
+     "code": "GER",
+     "name": "Germany"
+    },
+    "images": {
+     "verticalSmall": "8845rp7o4ifpg9kf"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJLM",
+    "name": "NEDOVIC, MILAN",
+    "alias": "NEDOVIC, M.",
+    "country": {
+     "code": "SLO",
+     "name": "Slovenia"
+    },
+    "images": {
+     "verticalSmall": "885uo7l4abjbyoam"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJCI",
+    "name": "KOWALSKI, MARCIN",
+    "alias": "KOWALSKI, M.",
+    "country": {
+     "code": "POL",
+     "name": "Poland"
+    },
+    "images": {
+     "verticalSmall": "88458wn9bg4cds6q"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "BUESA ARENA",
+    "code": "AUC",
+    "capacity": 15431,
+    "address": "Ctra.  Zurbano s/n, 01013 Vitoria",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "a6181cab-623b-4242-ba75-5c5230e6c907",
+   "identifier": "E2025_6",
+   "gameCode": 6,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-09-30T20:15:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 3,
+   "localDate": "2025-09-30T21:15:00",
+   "utcDate": "2025-09-30T18:15:00Z",
+   "local": {
+    "club": {
+     "code": "PAN",
+     "name": "Panathinaikos AKTOR Athens",
+     "abbreviatedName": "Panathinaikos",
+     "editorialName": "Panathinaikos",
+     "tvCode": "PAO",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/e3dff28a-9ec6-4faf-9d96-ecbc68f75780.png"
+     }
+    },
+    "score": 87,
+    "standingsScore": 87,
+    "partials": {
+     "partials1": 23,
+     "partials2": 24,
+     "partials3": 21,
+     "partials4": 19,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "MUN",
+     "name": "FC Bayern Munich",
+     "abbreviatedName": "Bayern",
+     "editorialName": "Bayern",
+     "tvCode": "BAY",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/817b0e58-d595-4b09-ab0b-1e7cc26249ff.png"
+     }
+    },
+    "score": 79,
+    "standingsScore": 79,
+    "partials": {
+     "partials1": 22,
+     "partials2": 19,
+     "partials3": 20,
+     "partials4": 18,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 18480,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OACI",
+    "name": "BELOSEVIC, ILIJA",
+    "alias": "BELOSEVIC, I.",
+    "country": {
+     "code": "SRB",
+     "name": "Serbia"
+    },
+    "images": {
+     "verticalSmall": "ayrnxwrdng99dusy"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "QJLS",
+    "name": "NIKOLIC, UROS",
+    "alias": "NIKOLIC, U.",
+    "country": {
+     "code": "SRB",
+     "name": "Serbia"
+    },
+    "images": {
+     "verticalSmall": "94qpquklfn5tseb9"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMI",
+    "name": "BOUBERT, MAXIME",
+    "alias": "BOUBERT, M.",
+    "country": {
+     "code": "FRA",
+     "name": "France"
+    },
+    "images": {
+     "verticalSmall": "bugv8rk58e6ulyph"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "TELEKOM CENTER ATHENS",
+    "code": "AUM6",
+    "capacity": 18500,
+    "address": "37 Kifisias Avenue, 15123 Marousi",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "2835724d-c89f-4474-a000-d4ff8595dc42",
+   "identifier": "E2025_3",
+   "gameCode": 3,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-09-30T20:00:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-09-30T20:00:00",
+   "utcDate": "2025-09-30T18:00:00Z",
+   "local": {
+    "club": {
+     "code": "RED",
+     "name": "Crvena Zvezda Meridianbet Belgrade",
+     "abbreviatedName": "Crvena Zvezda",
+     "editorialName": "Crvena Zvezda",
+     "tvCode": "CZV",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/d2eef4a8-62df-4fdd-9076-276004268515.png"
+     }
+    },
+    "score": 82,
+    "standingsScore": 82,
+    "partials": {
+     "partials1": 20,
+     "partials2": 21,
+     "partials3": 22,
+     "partials4": 19,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "MIL",
+     "name": "EA7 Emporio Armani Milan",
+     "abbreviatedName": "Milan",
+     "editorialName": "Milan",
+     "tvCode": "EA7",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHH/5c2f0ab6-f86a-4df0-b2f3-f9ab92f7267b.png"
+     }
+    },
+    "score": 92,
+    "standingsScore": 92,
+    "partials": {
+     "partials1": 22,
+     "partials2": 23,
+     "partials3": 24,
+     "partials4": 23,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 17382,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJIZ",
+    "name": "PERUGA, CARLOS",
+    "alias": "PERUGA, C.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "885qkoqdo5npvomj"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OAEO",
+    "name": "PEREZ, EMILIO",
+    "alias": "PEREZ PIZARRO, E.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "885xkxloq8i9e9yf"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJDE",
+    "name": "SHEMMESH, SEFFI",
+    "alias": "SHEMMESH, S.",
+    "country": {
+     "code": "ISR",
+     "name": "Israel"
+    },
+    "images": {
+     "verticalSmall": "8868vo7rsgoyayqh"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "BELGRADE ARENA",
+    "code": "ATM8",
+    "capacity": 21000,
+    "address": "Bulevar Arsenija Carnojevica 58, 11070 Belgrade - Serbia",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "36b71746-aa99-4b5f-bac4-986444b0b917",
+   "identifier": "E2025_1",
+   "gameCode": 1,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-09-30T19:45:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 2,
+   "localDate": "2025-09-30T19:45:00",
+   "utcDate": "2025-09-30T17:45:00Z",
+   "local": {
+    "club": {
+     "code": "IST",
+     "name": "Anadolu Efes Istanbul",
+     "abbreviatedName": "Anadolu Efes",
+     "editorialName": "Efes",
+     "tvCode": "EFS",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjCgOCxM/a844756c-a58d-4666-93b8-48f7337bc79d.png"
+     }
+    },
+    "score": 85,
+    "standingsScore": 85,
+    "partials": {
+     "partials1": 21,
+     "partials2": 19,
+     "partials3": 20,
+     "partials4": 25,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "TEL",
+     "name": "Maccabi Rapyd Tel Aviv",
+     "abbreviatedName": "Maccabi",
+     "editorialName": "Maccabi",
+     "tvCode": "MTA",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.cortextech.io/1b533342-78f5-4932-b714-a7d80b5826b5.png"
+     }
+    },
+    "score": 78,
+    "standingsScore": 78,
+    "partials": {
+     "partials1": 19,
+     "partials2": 25,
+     "partials3": 15,
+     "partials4": 19,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 2110,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJFC",
+    "name": "JAVOR, DAMIR",
+    "alias": "JAVOR, D.",
+    "country": {
+     "code": "SLO",
+     "name": "Slovenia"
+    },
+    "images": {
+     "verticalSmall": "883i7yokjhfy7pih"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJLQ",
+    "name": "ALIAGA, JORDI",
+    "alias": "ALIAGA, J.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "ayrigtbycwi5iitj"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMJ",
+    "name": "GIOVANNETTI, GUIDO",
+    "alias": "GIOVANNETTI, G.",
+    "country": {
+     "code": "ITA",
+     "name": "Italy"
+    },
+    "images": {
+     "verticalSmall": "bugv8rdqtjift5pb"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "MORACA",
+    "code": "AUA",
+    "capacity": 5262,
+    "address": "Ivana Milutinovica BB - 81000 Podgorica - Montenegro",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "f0c804ff-8ebb-4f55-a2ff-0d37bcb3650b",
+   "identifier": "E2025_5",
+   "gameCode": 5,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-09-30T18:00:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 3,
+   "localDate": "2025-09-30T19:00:00",
+   "utcDate": "2025-09-30T16:00:00Z",
+   "local": {
+    "club": {
+     "code": "HTA",
+     "name": "Hapoel IBI Tel Aviv",
+     "abbreviatedName": "Hapoel Tel Aviv",
+     "editorialName": "Hapoel Tel Aviv",
+     "tvCode": "HTA",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/cbb1c3ad-03d5-426a-b5ef-2832a4eee484.png"
+     }
+    },
+    "score": 103,
+    "standingsScore": 103,
+    "partials": {
+     "partials1": 26,
+     "partials2": 25,
+     "partials3": 31,
+     "partials4": 21,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "BAR",
+     "name": "FC Barcelona",
+     "abbreviatedName": "Barcelona",
+     "editorialName": "Barcelona",
+     "tvCode": "BAR",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/35dfa503-e417-481f-963a-bdf6f013763e.png"
+     }
+    },
+    "score": 87,
+    "standingsScore": 87,
+    "partials": {
+     "partials1": 26,
+     "partials2": 19,
+     "partials3": 25,
+     "partials4": 17,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 8000,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OADJ",
+    "name": "PUKL,SASA",
+    "alias": "PUKL,S.",
+    "country": {
+     "code": "SLO",
+     "name": "Slovenia"
+    },
+    "images": {
+     "verticalSmall": "8863itxgormdtqhs"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJIL",
+    "name": "HORDOV, TOMISLAV ",
+    "alias": "HORDOV, T.",
+    "country": {
+     "code": "CRO",
+     "name": "Croatia"
+    },
+    "images": {
+     "verticalSmall": "883i3djf5vlm949m"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMN",
+    "name": "BISSUEL, THOMAS",
+    "alias": "BISSUEL, T.",
+    "country": {
+     "code": "FRA",
+     "name": "France"
+    },
+    "images": {
+     "verticalSmall": null
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "ARENA 8888 SOFIA",
+    "code": "AVK1",
+    "capacity": 12373,
+    "address": "",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "caf0e7d9-faa0-40b3-adf1-ecf876b7db1f",
+   "identifier": "E2025_4",
+   "gameCode": 4,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "b423dc4c-c635-422d-ad84-83cbe5caf086",
+    "order": 1,
+    "name": "Group Regular Season",
+    "rawName": "Regular Season"
+   },
+   "phaseType": {
+    "code": "RS",
+    "alias": "REGULAR SEASON",
+    "name": "Regular Season",
+    "isGroupPhase": true
+   },
+   "round": 1,
+   "roundAlias": "Round 1",
+   "roundName": "Round 1",
+   "played": true,
+   "date": "2025-09-30T18:00:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 4,
+   "localDate": "2025-09-30T20:00:00",
+   "utcDate": "2025-09-30T16:00:00Z",
+   "local": {
+    "club": {
+     "code": "DUB",
+     "name": "Dubai Basketball",
+     "abbreviatedName": "Dubai",
+     "editorialName": "Dubai",
+     "tvCode": "DUB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/1efae090-16e2-4963-ae47-4b94f249c244.png"
+     }
+    },
+    "score": 89,
+    "standingsScore": 89,
+    "partials": {
+     "partials1": 28,
+     "partials2": 19,
+     "partials3": 21,
+     "partials4": 21,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "PAR",
+     "name": "Partizan Mozzart Bet Belgrade",
+     "abbreviatedName": "Partizan",
+     "editorialName": "Partizan",
+     "tvCode": "PAR",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/2681304e-77dd-4331-88b1-683078c0fb49.png"
+     }
+    },
+    "score": 76,
+    "standingsScore": 76,
+    "partials": {
+     "partials1": 18,
+     "partials2": 22,
+     "partials3": 16,
+     "partials4": 20,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 6063,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OAEN",
+    "name": "PEREZ, MIGUEL ANGEL",
+    "alias": "PEREZ, M.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": "885xtwkcapuckeov"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJIY",
+    "name": "PASTUSIAK, PIOTR",
+    "alias": "PASTUSIAK, P.",
+    "country": {
+     "code": "POL",
+     "name": "Poland"
+    },
+    "images": {
+     "verticalSmall": "885wrb4rki89jxa3"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "QJMQ",
+    "name": "BAENA, ALBERTO",
+    "alias": "BAENA, A.",
+    "country": {
+     "code": "ESP",
+     "name": "Spain"
+    },
+    "images": {
+     "verticalSmall": null
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "COCA-COLA ARENA",
+    "code": "ACA4",
+    "capacity": 13221,
+    "address": "Al Wasl - سٹی واک - Dubai - United Arab Emirates",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  },
+  {
+   "id": "13302d2b-97e6-4b96-ab6a-d422324fb6f0",
+   "identifier": "E2025_406",
+   "gameCode": 406,
+   "season": {
+    "name": "EuroLeague 2025-26",
+    "code": "E2025",
+    "alias": "2025-26",
+    "competitionCode": "E",
+    "year": 2025,
+    "startDate": "2025-07-01T00:00:00"
+   },
+   "group": {
+    "id": "1c3f93b7-fd11-438e-9d5d-77a998c1a1e9",
+    "order": 3,
+    "name": "Group CHAMPIONSHIP GAME ",
+    "rawName": "CHAMPIONSHIP GAME "
+   },
+   "phaseType": {
+    "code": "FF",
+    "alias": "FINAL FOUR",
+    "name": "Final Four",
+    "isGroupPhase": false
+   },
+   "round": 47,
+   "roundAlias": "Round 47",
+   "roundName": "Round 47",
+   "played": true,
+   "date": "2026-05-24T20:00:00",
+   "confirmedDate": true,
+   "confirmedHour": true,
+   "localTimeZone": 3,
+   "localDate": "2026-05-24T21:00:00",
+   "utcDate": "2026-05-24T18:00:00Z",
+   "local": {
+    "club": {
+     "code": "OLY",
+     "name": "Olympiacos Piraeus",
+     "abbreviatedName": "Olympiacos",
+     "editorialName": "Olympiacos",
+     "tvCode": "OLY",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+     }
+    },
+    "score": 92,
+    "standingsScore": 92,
+    "partials": {
+     "partials1": 19,
+     "partials2": 27,
+     "partials3": 15,
+     "partials4": 31,
+     "extraPeriods": {}
+    }
+   },
+   "road": {
+    "club": {
+     "code": "MAD",
+     "name": "Real Madrid",
+     "abbreviatedName": "Real",
+     "editorialName": "Real",
+     "tvCode": "RMB",
+     "isVirtual": false,
+     "images": {
+      "crest": "https://media-cdn.incrowdsports.com/371b0d9b-9250-4c09-bda7-0686cf024657.png"
+     }
+    },
+    "score": 85,
+    "standingsScore": 85,
+    "partials": {
+     "partials1": 26,
+     "partials2": 18,
+     "partials3": 21,
+     "partials4": 20,
+     "extraPeriods": {}
+    }
+   },
+   "audience": 0,
+   "audienceConfirmed": true,
+   "socialFeed": "",
+   "operationsCode": null,
+   "referee1": {
+    "code": "OJCZ",
+    "name": "RADOVIC, SRETEN",
+    "alias": "RADOVIC, S.",
+    "country": {
+     "code": "CRO",
+     "name": "Croatia"
+    },
+    "images": {
+     "verticalSmall": "8864r3sdiwfigeb9"
+    },
+    "active": true
+   },
+   "referee2": {
+    "code": "OJCL",
+    "name": "LOTTERMOSER, ROBERT",
+    "alias": "LOTTERMOSER, R.",
+    "country": {
+     "code": "GER",
+     "name": "Germany"
+    },
+    "images": {
+     "verticalSmall": "8845rp7o4ifpg9kf"
+    },
+    "active": true
+   },
+   "referee3": {
+    "code": "OJDF",
+    "name": "LATISEVS, OLEGS",
+    "alias": "LATISEVS, O.",
+    "country": {
+     "code": "LAT",
+     "name": "Latvia"
+    },
+    "images": {
+     "verticalSmall": "8845j7vs5indngbw"
+    },
+    "active": true
+   },
+   "referee4": null,
+   "venue": {
+    "name": "TELEKOM CENTER ATHENS",
+    "code": "AUM6",
+    "capacity": 18500,
+    "address": "37 Kifisias Avenue, 15123 Marousi",
+    "images": {
+     "medium": null
+    },
+    "active": true,
+    "notes": ""
+   },
+   "isNeutralVenue": false,
+   "gameStatus": "Confirmed",
+   "winner": {
+    "code": "OLY",
+    "name": "Olympiacos Piraeus",
+    "abbreviatedName": "Olympiacos",
+    "editorialName": "Olympiacos",
+    "tvCode": "OLY",
+    "isVirtual": false,
+    "images": {
+     "crest": "https://media-cdn.incrowdsports.com/789423ac-3cdf-4b89-b11c-b458aa5f59a6.png"
+    }
+   }
+  }
+ ],
+ "total": 21
+}
