@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from sportsbet.dataloaders import BaseDataLoader, DataLoader
-from sportsbet.sources import BaseOddsSource, BaseStatsSource, FootballDataOdds, FootballDataStats
+from sportsbet.sources import BaseStatsSource, FootballDataOdds, FootballDataStats
 from tests.conftest import SnapshotsDataLoader
 
 PROVIDERS = ['market_average', 'market_maximum']
@@ -46,10 +46,6 @@ class _Available:
 
 class _AvailableStats(_Available, BaseStatsSource):
     """The statistics of a source publishing a fixed set of combinations."""
-
-
-class _AvailableOdds(_Available, BaseOddsSource):
-    """The odds of a source publishing a fixed set of combinations."""
 
 
 def test_a_source_is_asked_without_a_dataloader():

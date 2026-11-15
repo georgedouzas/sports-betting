@@ -18,34 +18,59 @@ from rich.panel import Panel
 from ..dataloaders import load_dataloader
 from ..evaluation import load_bettor
 from ..execution import (
+    BaseBrowserVenue,
     BaseVenue,
     BetIdentity,
     BrowserSession,
-    FixedSession,
+    EventRunRecord,
     build_venue,
     execute_event,
 )
+from ..execution._event import DEFAULT_LEDGER
 from ._building import _report_errors
 from ._utils import _print_console
 
 
-def _load_venue(venue_ref: str) -> BaseVenue:
-    """Return the venue a reference names, authenticated."""
+def _build_venue(venue_ref: str) -> BaseVenue:
+    """Return the venue a reference names, refusing a bare browser session."""
     built = build_venue(venue_ref)
     if not isinstance(built, BaseVenue):
-        msg = f'`{venue_ref}` is a browser session, which has no bets of its own to place. Use `execution page`.'
+        msg = (
+            f'`{venue_ref}` is a browser session, which has no bets of its own to place. Write a `BaseBrowserVenue` '
+            'for the bookmaker, or use `execution page` to explore the site.'
+        )
         raise click.UsageError(msg)
+    return built
+
+
+def _load_venue(venue_ref: str) -> BaseVenue:
+    """Return the venue a reference names, authenticated."""
+    built = _build_venue(venue_ref)
     asyncio.run(built.authenticate())
     return built
 
 
 def _load_session(venue_ref: str) -> BrowserSession:
-    """Return the browser session a reference names."""
+    """Return the browser session a reference names, or the one a browser venue drives."""
     built = build_venue(venue_ref)
+    if isinstance(built, BaseBrowserVenue):
+        return built.session
     if isinstance(built, BaseVenue):
         msg = f'`{venue_ref}` is a venue with an API rather than a browser session, so `page` does not apply.'
         raise click.UsageError(msg)
     return built
+
+
+def _write_record(record: EventRunRecord, output: str | None) -> None:
+    """Print the steps and the receipt of a run, and write them where asked."""
+    _print_console([record.steps], ['Steps'])
+    if not record.receipts.empty:
+        _print_console([record.receipts], ['Receipt'])
+    if output is not None:
+        written = Path(output) / 'sports-betting-data'
+        written.mkdir(parents=True, exist_ok=True)
+        record.steps.to_csv(written / 'run_steps.csv', index=False)
+        record.receipts.to_csv(written / 'receipts.csv', index=False)
 
 
 @contextmanager
@@ -62,18 +87,6 @@ def _logging_to_terminal() -> Iterator[None]:
     finally:
         _logger.removeHandler(handler)
         _logger.setLevel(level)
-
-
-def _parse_locators(given: tuple[str, ...]) -> dict[str, str]:
-    """Return what was found, each of them a name and a locator."""
-    found = {}
-    for pair in given:
-        name, sep, locator = pair.partition('=')
-        if not sep or not name or not locator:
-            msg = f'`{pair}` should be a name and a locator, as in `stake=textbox[name="Stake"]`.'
-            raise click.UsageError(msg)
-        found[name] = locator
-    return found
 
 
 async def _read(session: BrowserSession, url: str | None, selector: str | None, depth: int | None) -> str:
@@ -102,21 +115,9 @@ async def _act(
             shot = await session.click(click_ref)
         elif type_ref:
             shot = await session.type(type_ref, text or '')
-        elif select_ref:
-            shot = await session.select(select_ref, value or '')
         else:
-            msg = 'Name what to do: `--click`, `--type` with `--text`, or `--select` with `--value`.'
-            raise click.UsageError(msg)
+            shot = await session.select(select_ref or '', value or '')
         return shot.yaml
-    finally:
-        await session.stop()
-
-
-async def _fix(session: BrowserSession, url: str, match: str, locators: dict[str, str]) -> FixedSession:
-    """Open the browser, pin what was found and close it."""
-    try:
-        await session.navigate(url)
-        return session.fix(match, locators)
     finally:
         await session.stop()
 
@@ -143,7 +144,7 @@ def venue(venue_ref: str) -> None:
 
 
 @execution.command()
-@click.option('--venue', 'venue_ref', required=True, help='Your browser session, as `venue.py:VENUE`.')
+@click.option('--venue', 'venue_ref', required=True, help='Your venue, API or browser, as `venue.py:VENUE`.')
 @click.option(
     '--dataloader',
     '-d',
@@ -162,48 +163,53 @@ def venue(venue_ref: str) -> None:
 )
 @click.option('--event', required=True, help='The one event to act on, as `Home vs Away`.')
 @click.option('--stake', type=float, required=True, help='The fixed stake to place.')
-@click.option('--url', 'urls', multiple=True, help='A candidate bookmaker URL. Repeatable.')
+@click.option('--lead', default='5min', show_default=True, help='How long before kickoff the bet goes on.')
+@click.option('--poll', default='5min', show_default=True, help='How often the event is read while waiting.')
+@click.option(
+    '--ledger',
+    'ledger_path',
+    default=DEFAULT_LEDGER,
+    show_default=True,
+    type=click.Path(),
+    help='The file that records each bet, so a rerun never places it twice.',
+)
 @click.option('--live', is_flag=True, help='Arm the run. Off by default, which is a dry run.')
-@click.option('--poll', default='30s', help='The source poll interval, as `30s` or `2min`.')
-@click.option('--output', '-o', 'output', type=click.Path(), help='A directory to write the receipt CSV to.')
+@click.option('--output', '-o', 'output', type=click.Path(), help='A directory to write the steps and receipt to.')
 def run(
     venue_ref: str,
     dataloader_path: str,
     bettor_path: str,
     event: str,
     stake: float,
-    urls: tuple[str, ...],
-    live: bool,
+    lead: str,
     poll: str,
+    ledger_path: str,
+    live: bool,
     output: str | None,
 ) -> None:
-    """Watch one event and place the model's bet at its moment.
+    """Watch one preplay event and place the model's bet at its moment.
 
-    It explores the URLs to match the event, prompts the login, logs the event to the terminal, and at the fitted moment
-    places the stake on the model's selection. Without `--live` it stakes nothing and logs the bet it would have made.
+    It checks the venue, logs the event on each poll, and at kickoff minus the lead time applies the model to fresh data
+    and reads the venue's price. Without `--live` it stakes nothing and records the bet it would have made.
     """
     with _report_errors(), _logging_to_terminal():
-        session = _load_session(venue_ref)
+        built = _build_venue(venue_ref)
         loader = load_dataloader(dataloader_path)
         bettor = load_bettor(bettor_path)
-        receipts = asyncio.run(
+        record = asyncio.run(
             execute_event(
                 event,
                 bettor,
                 loader,
-                session,
+                built,
                 stake=stake,
-                urls=list(urls),
-                live=live,
+                ledger_path=ledger_path,
+                lead=pd.Timedelta(lead),
                 poll=pd.Timedelta(poll),
+                live=live,
             ),
         )
-        if not receipts.empty:
-            _print_console([receipts], ['Receipts'])
-            if output is not None:
-                written = Path(output) / 'sports-betting-data'
-                written.mkdir(parents=True, exist_ok=True)
-                receipts.to_csv(written / 'receipts.csv', index=False)
+        _write_record(record, output)
 
 
 @execution.command()
@@ -305,24 +311,9 @@ def page_act(
     value: str | None,
 ) -> None:
     """Act on a page and show what the action produced."""
+    if not (click_ref or type_ref or select_ref):
+        msg = 'Name what to do: `--click`, `--type` with `--text`, or `--select` with `--value`.'
+        raise click.UsageError(msg)
     with _report_errors():
         session = _load_session(venue_ref)
         Console().print(asyncio.run(_act(session, url, click_ref, type_ref, text, select_ref, value)))
-
-
-@page.command('fix')
-@click.option('--venue', 'venue_ref', required=True, help='Your venue, as `venue.py:VENUE`.')
-@click.option('--url', required=True, help='The page that was explored.')
-@click.option('--match', required=True, help='The match to pin the session to.')
-@click.option(
-    '--locator',
-    'locators',
-    multiple=True,
-    help='Something found, as `name=locator`, e.g. `stake=textbox[name="Stake"]`. Repeatable.',
-)
-def page_fix(venue_ref: str, url: str, match: str, locators: tuple[str, ...]) -> None:
-    """Pin what exploring found."""
-    with _report_errors():
-        session = _load_session(venue_ref)
-        pinned = asyncio.run(_fix(session, url, match, _parse_locators(locators)))
-        Console().print(Panel.fit(f'[bold]{pinned.match}[/bold]\n{pinned.url}\n\n{pinned.locators}'))

@@ -1,16 +1,16 @@
 # Execution
 
-A bettor finds value bets. Execution places one of them, at a bookmaker where you have an account. You give it a fitted
-bettor, one upcoming match, and a stake. It watches the match and, at the moment the model bets, places the bet once.
-This spends real money, so read the risks first.
+A bettor finds value bets. Execution places one of them, at a venue where you hold an account. You give it a fitted
+bettor, one upcoming match and a stake. It waits for the match, and a few minutes before kickoff it applies the bettor
+to fresh data and places the bet once. This spends real money, so read the risks first.
 
 ## Risks
 
-* It uses a bookmaker's website. This breaks the terms of service of almost every bookmaker and puts the account and its
+* Driving a bookmaker's website breaks the terms of service of almost every bookmaker and puts the account and its
   balance at risk.
-* It watches one match. Running many matches is your own work, and a bookmaker may block or close an account for that.
-* It places the bet at the price on offer when it lands.
-* It does not evade a website's automation controls. If a website blocks automation, it reports that and stops.
+* It places one preplay bet on one match. Running many matches is your own work, and a bookmaker may block or close an
+  account for automating that.
+* It does not evade a website's automation controls. A site that blocks automation is reported and the run stops.
 
 ## Installation
 
@@ -19,202 +19,312 @@ pip install 'sports-betting[execution]'
 python -m playwright install chromium
 ```
 
-The browser is used to log in and to place the bet. Watching the match does not use the browser: it reads the event
-from the source and logs it to the terminal.
-
-## One match only
-
-It handles exactly one match. It binds one match, one fitted bettor, and one browser session, and places at most one bet
-over its whole run. Extending it to many matches is your own work, and a bookmaker that detects automation across many
-matches may close the account.
+Playwright is needed only for a bookmaker's website. A venue with an API needs nothing more.
 
 ## What a run does
 
-A run is a fixed, ordered sequence. Once it starts, it is not interactive.
+A run acts on exactly one match, named as `Home vs Away`, which must be among the dataloader's fixtures. It goes
+through a fixed sequence and is not interactive once it starts.
 
-1. Explore the URLs. You give it one or more candidate bookmaker URLs. It opens each one headless and keeps the page
-   that carries the event, then pins that page's controls. If no URL carries the event, it stops and stakes nothing.
-2. Open the site. It opens the bookmaker's site from the saved browser profile. A profile that already holds a login
-   lands logged in, so you log in once during setup and the headless run reuses it. If the site blocks the request, it
-   stops and stakes nothing.
-3. Watch and log. On a schedule it logs the event to the terminal: its identity, its status as it moves through
-   preplay, inplay and postplay, and the current price where it is available. The browser runs headless with no preview
-   window, so the terminal log is the whole view.
-4. Place at the moment. When the event reaches the moment the model bets at, it applies the bettor to the event's data.
-   If the model finds a value bet, it logs the market, stake and price, then places the stake on that market once. If
-   the model finds no value, it logs that and stakes nothing.
+1. It checks the venue once, by logging in, and releases it again.
+2. It waits for the betting moment. On each poll it reads the match's data from the dataloader again and logs the
+   match, the time left and the source's prices. It stops when the match leaves the fixtures, for example because it
+   was postponed.
+3. At the moment it reads the data once more and applies the bettor to it. When the bettor backs several markets, the
+   first in its market order is taken.
+4. It reads the venue's price for the selection, then records a dry run or places the bet once.
 
-The bettor decides whether to bet and which market to back. It never decides the stake.
+The bettor decides whether to bet and which side to back. `home_win` backs the home team, `away_win` the away team,
+`draw` backs `Draw`, and an over or under market backs its line, as in `Over 2.5`. The bettor never decides the stake,
+which is a parameter of the run.
 
 ## The betting moment
 
-The dataloader fixes the moment the model bets at. A preplay model bets at the kick-off. A live model, fitted with
-`target_event_status='inplay'` and a `target_event_time`, bets at the kick-off plus that time.
-[`find_betting_moment`][sportsbet.execution.find_betting_moment] returns that moment for a kick-off.
+Most bookmakers suspend a preplay market at kickoff, so the bet goes on a lead time before it. The lead time defaults
+to five minutes, and [`find_betting_moment`][sportsbet.execution.find_betting_moment] returns the moment for a kickoff.
+A run supports preplay models only. A dataloader fitted with `target_event_status='inplay'` is refused before any venue
+is contacted. A run that starts after its moment places nothing.
 
-The moment can already be past when it starts, when the event is in-play past the fitted moment or already finished. It
-then logs that the moment is unreachable, places nothing, and returns an empty frame.
+## The price
 
-## Dry run and live
+The lowest price the run accepts is the source's price the model saw value at. The venue's price is read before
+anything is staked, and a venue that offers less is refused with a `refused_price` receipt. The run never falls back to
+a made-up price, so some value bets are not placed. That is the intended trade.
 
-A run is a no-stakes dry run unless you arm it. A dry run does everything else. It explores, opens the site, watches,
-decides, and logs the exact bet it would place. It never calls the placer, so no money moves. If the model finds a value
-bet, the receipts frame holds one dry-run row describing the bet it would have placed; otherwise it is empty.
+## Dry run and armed
 
-You arm a run with `--live`. This is a single up-front opt-in. Once armed, it places automatically at the moment with no
-second confirmation. Its pre-place log line shows the action before it happens.
+A run is a dry run unless you arm it. A dry run does everything except stake and confirm. It reads the venue's real
+price for the selection, so it proves the whole path to the venue, and records the bet it would place. You arm a run
+with `live=True`, or `--live` on the command line. Once armed it places at the moment with no second confirmation,
+after logging the match, market, selection, stake, venue and minimum price.
 
-```bash
-# Pin the site's controls once, so it knows where the stake and confirm buttons are.
-sportsbet execution page fix --venue venue.py:VENUE --url "$URL" \
-  --match "Arsenal vs Chelsea" \
-  --locator stake='textbox[name="Stake"]' --locator confirm='button[name="Place bet"]'
+## A run in full
 
-# A dry run: watch the event and log the bet it would place, staking nothing.
-sportsbet execution run --venue venue.py:VENUE -d loader.pkl -b model.pkl \
-  --event "Arsenal vs Chelsea" --stake 10 --url "$URL"
+The example below builds everything inline, so it runs offline. Two small sources carry a season of four games whose
+last game is tomorrow, the venue is a minimal API venue, and an injected clock and wait stand in for the twelve minutes
+before the moment, so the run finishes at once.
 
-# Armed: the same run, placing the stake at the moment.
-sportsbet execution run --venue venue.py:VENUE -d loader.pkl -b model.pkl \
-  --event "Arsenal vs Chelsea" --stake 10 --url "$URL" --live
-```
-
-The stake is a parameter of the run, not of the bettor. It places exactly that amount when it bets.
-
-## The Python API
-
-The command line calls [`execute_event`][sportsbet.execution.execute_event]. Call it directly to run it from Python.
-
-```python
+```python exec="1" source="block" result="text"
 import asyncio
-import pandas as pd
-from sportsbet.dataloaders import load_dataloader
-from sportsbet.evaluation import load_bettor
-from sportsbet.execution import BrowserSession, execute_event
+import tempfile
+from pathlib import Path
 
-session = BrowserSession(key='novibet', url='https://www.novibet.gr/stoixima')
-receipts = asyncio.run(
+import pandas as pd
+from sportsbet.dataloaders import DataLoader
+from sportsbet.evaluation import OddsComparisonBettor
+from sportsbet.execution import BaseVenue, PlacementReceipt, PlacementStatus, execute_event
+from sportsbet.sources import BaseOddsSource, BaseStatsSource, derive_market_outcomes
+
+MARKETS = ['home_win', 'draw', 'away_win']
+IDENTITY = {'league': 'Ruritania', 'division': 1, 'year': 2027}
+TOMORROW = (pd.Timestamp.now(tz='UTC') + pd.Timedelta('1D')).floor('h').strftime('%Y-%m-%d %H:%M')
+GAMES = [
+    ('2026-08-22 14:00', 'Arsenal', 'Chelsea', 2, 1, (2.1, 3.4, 3.6), (2.2, 3.6, 3.8)),
+    ('2026-08-29 14:00', 'Chelsea', 'Everton', 1, 1, (1.8, 3.6, 4.5), (1.9, 3.8, 4.8)),
+    ('2026-09-05 14:00', 'Everton', 'Arsenal', 0, 2, (4.2, 3.6, 1.9), (4.4, 3.8, 2.0)),
+    (TOMORROW, 'Arsenal', 'Everton', -1, -1, (1.7, 3.8, 5.0), (1.9, 4.0, 5.4)),
+]
+
+
+def identify(date, home, away):
+    return {'date': pd.Timestamp(date, tz='UTC'), **IDENTITY, 'home_team': home, 'away_team': away}
+
+
+class Games(BaseStatsSource):
+    """A season written inline, its last game tomorrow."""
+
+    name = 'games'
+
+    def list_index_items(self, selection=None):
+        return []
+
+    def read_catalogue(self, payloads):
+        return [IDENTITY]
+
+    def list_required_items(self, params, schedule=None):
+        return []
+
+    def to_snapshots(self, payloads):
+        rows = []
+        for date, home, away, home_goals, away_goals, _, _ in GAMES:
+            game = identify(date, home, away)
+            rows.append({**game, 'event_status': 'preplay', 'event_time': 0})
+            if home_goals >= 0:
+                outcomes = derive_market_outcomes(pd.Series([home_goals]), pd.Series([away_goals]), MARKETS)
+                result = {'home_goals': home_goals, 'away_goals': away_goals, **outcomes.iloc[0].to_dict()}
+                rows.append({**game, 'event_status': 'postplay', 'event_time': 0, **result})
+        return pd.DataFrame(rows)
+
+
+class Prices(BaseOddsSource):
+    """The average and the best price of each game."""
+
+    name = 'prices'
+
+    def list_index_items(self, selection=None):
+        return []
+
+    def read_catalogue(self, payloads):
+        return [IDENTITY]
+
+    def list_required_items(self, params, schedule=None):
+        return []
+
+    def to_snapshots(self, payloads):
+        rows = []
+        for date, home, away, _, _, average, best in GAMES:
+            for provider, prices in (('market_average', average), ('market_maximum', best)):
+                quote = {'event_status': 'preplay', 'event_time': 0, 'provider': provider}
+                rows.append({**identify(date, home, away), **quote, **dict(zip(MARKETS, prices))})
+        return pd.DataFrame(rows)
+
+
+class Exchange(BaseVenue):
+    """A venue with an API, reduced to what a run needs."""
+
+    key = 'exchange'
+
+    async def authenticate(self):
+        return None
+
+    async def read_price(self, identity):
+        book = {('Arsenal vs Everton', 'home_win', 'Arsenal'): 1.95}
+        return book.get((identity.match, identity.market, identity.selection))
+
+    async def place(self, intent):
+        return PlacementReceipt(intent.identity, PlacementStatus.REJECTED, detail='A dry run never places.')
+
+
+dataloader = DataLoader(stats=Games(), odds=Prices())
+X, Y, O = dataloader.extract_train_data(odds_type='market_maximum')
+bettor = OddsComparisonBettor(alpha=0.03).fit(X, Y, O)
+
+X_fix, _, _ = dataloader.extract_fixtures_data()
+now = {'time': X_fix.index[0] - pd.Timedelta('17min')}
+
+
+async def wait(seconds):
+    now['time'] += pd.Timedelta(seconds=seconds)
+
+
+record = asyncio.run(
     execute_event(
-        'Arsenal vs Chelsea',
-        load_bettor('model.pkl'),
-        load_dataloader('loader.pkl'),
-        session,
+        'Arsenal vs Everton',
+        bettor,
+        dataloader,
+        Exchange(),
         stake=10.0,
-        urls=['https://www.novibet.gr/stoixima/arsenal-chelsea'],
-        live=False,
-        poll=pd.Timedelta('30s'),
+        ledger_path=Path(tempfile.mkdtemp()) / 'ledger.jsonl',
+        clock=lambda: now['time'],
+        wait=wait,
     ),
 )
+print(record.outcome.value)
+print(record.steps[['step', 'detail']].to_string(index=False))
+print(record.receipts[['selection', 'market', 'status', 'stake', 'price']].to_string(index=False))
 ```
 
-The call returns a receipts frame. It holds one row when the model backs a bet, whether the run placed it or only logged
-it as a dry run, and no rows otherwise. The arguments are:
+[`execute_event`][sportsbet.execution.execute_event] takes the match, the fitted bettor, the dataloader and the venue,
+and these settings:
 
-* `event` names the one match. It must be among the dataloader's fixtures.
-* `bettor` is a model fitted and saved by `evaluation fit`.
-* `dataloader` supplies the event's evolving data and carries the fitted moment.
 * `stake` is the fixed amount to place.
-* `urls` are the candidate pages.
+* `ledger_path` is the ledger file, described below.
+* `lead` is how long before kickoff the bet goes on, five minutes by default.
+* `poll` is how often the match is read while the run waits, five minutes by default. Each poll downloads the fixtures
+  again, so a shorter poll asks more of the source for no gain before kickoff.
 * `live` arms the run.
-* `poll` is how often it logs the event while it waits for the moment.
-* `clock` and `wait` are injection points for time, so a test can run the whole watch with no real waiting.
+* `clock` and `wait` replace the real time, as above, so a run can be tested with no waiting.
 
-### A custom placer
+## The run record
 
-By default it places the bet by entering the stake into the pinned `stake` control and clicking the pinned
-`confirm` control of the matched site. A `placer` replaces that for a site the default cannot operate. A placer is a
-coroutine. It takes the [`PlacementIntent`][sportsbet.execution.PlacementIntent] and the session, operates the site for
-the one bet, and returns a [`PlacementReceipt`][sportsbet.execution.PlacementReceipt]. A custom placer is Python only.
-The command line and the MCP tool place through the default placer over the pinned controls.
+A run returns an [`EventRunRecord`][sportsbet.execution.EventRunRecord]. It holds the match, the betting moment, how
+the run ended as a [`RunOutcome`][sportsbet.execution.RunOutcome], every step with its time and detail, and the receipt
+when there is one. The steps and the receipt are validated frames, and each step is also logged to the
+`sportsbet.execution` logger as it happens, so the terminal and the record agree. The outcomes are:
 
-```python
-async def placer(intent, session):
-    stake_control = await session.resolve('stake')
-    # operate the site for `intent`, then confirm the wager
-    return PlacementReceipt(identity=intent.identity, status=PlacementStatus.MATCHED_FULL, stake=intent.stake)
+* `placed`, `dry_run` and `no_value`, for a run that reached its decision.
+* `refused`, when the venue offered less, did not offer the selection, or refused the bet.
+* `already_placed`, when the ledger holds the bet.
+* `moment_passed`, `venue_failed`, `event_unlisted` and `data_failed`, for a run that stopped before deciding.
 
+## At most one bet
 
-receipts = asyncio.run(execute_event(event, bettor, dataloader, session, stake=10.0, urls=urls, placer=placer, live=True))
-```
+A run keeps a ledger file at the path you give, one JSON object per line. It records the bet as attempted before it
+asks the venue to place it, and records the receipt after. A rerun reads the latest line for its bet:
 
-## Credentials
+* a placed bet is not placed again, and the run records `already_placed`.
+* a bet attempted with no receipt, as after a crash, is not placed again. The run records `refused_unconfirmed` and
+  tells you to check the venue for the bet.
+* a dry run, a refused price or a rejection lets the bet go on.
 
-A venue names the variable that holds a secret. It never takes the secret itself. A secret passed as an argument ends up
-in a shell history, a transcript and a traceback.
+Keep one ledger for all your runs. The ledger holds no secret.
+
+## Writing an API venue
+
+A venue is a [`BaseVenue`][sportsbet.execution.BaseVenue] subclass with a `key` and three coroutines, as `Exchange`
+above shows.
+
+* `authenticate` logs in, reading each secret from the variable it is named by.
+* `read_price` returns the price on offer for a match, market and selection, or `None`, and stakes nothing.
+* `place` reads the price first, refuses with `refused_price` when it is below the intent's `min_price`, and otherwise
+  places the bet once. Its receipt carries only what the venue confirmed: the status, the price and the venue's bet
+  identifier. A bet the venue does not confirm is `refused_unconfirmed`.
+
+Listing markets, reading the balance, reading the status of bets and cancelling are optional. A venue that does not
+override them says it does not support them. `close` releases what the venue holds open, and does nothing by default.
+
+A secret is named, never passed. [`resolve`][sportsbet.execution.resolve] reads the variable a
+[`CredentialRef`][sportsbet.execution.CredentialRef] names, and a missing variable names itself and stops.
 
 ```python
 from sportsbet.execution import CredentialRef, resolve
 
-secret = resolve(CredentialRef('VENUE_API_KEY'))
+token = resolve(CredentialRef('EXCHANGE_TOKEN'))
 ```
 
-[`resolve`][sportsbet.execution.resolve] reads the variable where it is used. A missing variable names itself and stops.
-A fitted bettor holds no credential, so a saved and reloaded bettor cannot spend money.
+## Writing a browser venue
 
-## Using a bookmaker's website
+A bookmaker's website is a venue too. [`BaseBrowserVenue`][sportsbet.execution.BaseBrowserVenue] drives it through a
+[`BrowserSession`][sportsbet.execution.BrowserSession], and you complete it for your bookmaker by writing seven hooks.
+The base runs them in a fixed order: it opens the event, adds the selection to the slip, reads the slip, checks it holds
+the intended selection, checks the price, enters the stake, confirms and reads the confirmation. A step that fails stops
+the sequence before anything is staked. A hook reaches the page through `self.session.page_`, the playwright page.
 
-The library supplies the browser. You supply the knowledge of the site.
-[`BrowserSession`][sportsbet.execution.BrowserSession] takes the venue and how to reach it.
+The code below is reference code for a made-up bookmaker, since driving a real site cannot run here.
 
 ```python
-from sportsbet.execution import BrowserSession
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
-session = BrowserSession(
-    key='novibet',
-    url='https://www.novibet.gr/stoixima',
-    notes="""
-    Bet history is under My Account.
-    The slip opens on the right after clicking a price. Confirm is two steps.
-    """,
-    credential_env=('NOVIBET_USERNAME', 'NOVIBET_PASSWORD'),
-    user_data_dir='.novibet-profile',
-    min_interval=1.0,
-)
+from sportsbet.execution import BaseBrowserVenue, BrowserSession, Confirmation, PlacementStatus
+
+
+class Book(BaseBrowserVenue):
+    async def check_login(self):
+        return await self.session.page_.get_by_role('link', name='My account').count() > 0
+
+    async def find_event(self, match):
+        await self.session.navigate(f'{self.session.url}/football')
+        link = self.session.page_.get_by_role('link', name=match)
+        return await link.get_attribute('href') if await link.count() else None
+
+    async def add_selection(self, identity):
+        await self.session.page_.get_by_role('button', name=identity.selection).first.click()
+
+    async def read_slip(self):
+        slip = self.session.page_.get_by_role('form', name='Bet slip')
+        if not await slip.is_visible():
+            return None
+        return await slip.locator('.selection').inner_text(), float(await slip.locator('.price').inner_text())
+
+    async def enter_stake(self, stake):
+        await self.session.page_.get_by_role('textbox', name='Stake').fill(str(stake))
+
+    async def confirm_bet(self):
+        await self.session.page_.get_by_role('button', name='Place bet').click()
+
+    async def read_confirmation(self):
+        receipt = self.session.page_.get_by_role('status')
+        try:
+            await receipt.wait_for(timeout=10000)
+        except PlaywrightTimeoutError:
+            return None
+        return Confirmation(PlacementStatus.ACCEPTED, venue_bet_id=await receipt.get_attribute('data-bet-id'))
+
+
+VENUE = Book('book', BrowserSession(key='book', url='https://book.example', user_data_dir='.book-profile'))
 ```
 
-* `notes` is free text handed to an agent. Put your knowledge of the site here.
-* `credential_env` names the variables that hold the username and password.
-* `user_data_dir` is where the browser keeps its profile. A login survives a restart, so the headless run lands already
-  authenticated.
-* `min_interval` is the seconds to leave between actions.
-* `headless` hides the browser window. It is `True` by default, since it needs no window to watch.
+The session opens the browser from the profile in `user_data_dir`. Log in once with a visible browser, by building the
+session with `headless=False` and the same profile, and every later run lands logged in. A run whose profile holds no
+login stops and says so.
 
-### Explore, fix, then run
+`match_selection` compares the slip's label with the intended selection without case. Override it for a site that
+translates team names.
 
-The session controls the page through a small set of methods. `navigate(url)` goes to a page and returns it.
-`read_snapshot()` reads the page without acting. `click(ref)`, `type(ref, text)` and `select(ref, value)` act on the
-page. Each method returns the page it produced, as an accessibility snapshot. The snapshot is compact YAML with a ref
-for every element you can act on.
-
-```yaml
-- form "Bet slip" [ref=e2]:
-  - textbox "Stake" [ref=e3]: "10.00"
-  - button "Place bet" [ref=e4]
-```
-
-Exploring a page is slow, since it reads whole snapshots and reasons over them, while placing is fast. You explore once,
-pin what you found, and let it act against the pinned session.
-
-```python
-await session.navigate('https://www.novibet.gr/stoixima')
-await session.read_snapshot()
-session.fix('Arsenal vs Chelsea', {'stake': 'textbox[name="Stake"]', 'confirm': 'button[name="Place bet"]'})
-```
-
-[`fix`][sportsbet.execution.BrowserSession.fix] pins roles and accessible names. These survive the page re-rendering. It
-refuses a ref, which belongs to one state of the page. It stores no price, since the price is only read at the moment
-the bet is placed. The `execution page` commands `read`, `act` and `fix` do this exploring from
-the command line. The `browser_*` tools do it from the MCP server.
-
-## The three surfaces
-
-You reach execution from the command line and from the MCP server. An agent reaches it through the MCP server too.
+To find the locators, explore the site. `sportsbet execution page read` shows a page as an accessibility snapshot, with
+a ref for everything you can act on, and `sportsbet execution page act` clicks, fills or chooses by ref and shows the
+page it produced. Both accept a browser session or a browser venue. The `browser_*` tools of the MCP server do the same
+for an agent.
 
 ```bash
-sportsbet execution run --venue venue.py:VENUE --dataloader loader.pkl --bettor model.pkl \
-  --event "Arsenal vs Chelsea" --stake 10 --url "$URL" --live
+sportsbet execution page read --venue venue.py:VENUE --url https://book.example/football
 ```
 
-The MCP server exposes the same run as the `execution_run` tool, with the same parameters. The other execution commands
-`venue`, `markets`, `balance`, `status` and `cancel`, and the `page` group for exploring and pinning a site, map one to
-one to the `execution_*` and `browser_*` tools.
+## The command line and the tools
+
+The command runs the same run as the Python call.
+
+```bash
+# A dry run: read the venue's price and record the bet it would place, staking nothing.
+sportsbet execution run --venue venue.py:VENUE -d loader.pkl -b model.pkl \
+  --event "Arsenal vs Chelsea" --stake 10 --output out
+
+# Armed: the same run, placing the stake at the moment.
+sportsbet execution run --venue venue.py:VENUE -d loader.pkl -b model.pkl \
+  --event "Arsenal vs Chelsea" --stake 10 --live --output out
+```
+
+It takes `--lead`, `--poll` and `--ledger` as the Python call does, prints the steps and the receipt, and writes them
+to `out/sports-betting-data/run_steps.csv` and `out/sports-betting-data/receipts.csv`. The MCP server exposes the same
+run as the `execution_run` tool, which returns the outcome, the moment, the steps and the receipt. The other execution
+commands, `venue`, `markets`, `balance`, `status` and `cancel`, map one to one to the `execution_*` tools.
