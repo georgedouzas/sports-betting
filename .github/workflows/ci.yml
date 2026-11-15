@@ -25,10 +25,10 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install Python versions
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: |
             3.11
@@ -40,6 +40,9 @@ jobs:
       with:
         cache: true
         cache-dependency-path: pyproject.toml
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.3.3
 
     - name: Install dependencies
       run: pdm install --no-default -dG maintenance -dG checks
@@ -72,10 +75,10 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install Python versions
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: |
             3.11
@@ -87,6 +90,9 @@ jobs:
       with:
         cache: true
         cache-dependency-path: pyproject.toml
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.3.3
 
     - name: Install dependencies
       run: pdm install -dG maintenance -dG tests -G mcp -G execution
@@ -113,13 +119,16 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v4
       with:
         cache: true
         cache-dependency-path: pyproject.toml
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.3.3
 
     - name: Install dependencies
       run: pdm install -dG maintenance -dG docs

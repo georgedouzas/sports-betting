@@ -1,5 +1,7 @@
 """Test the dataloader commands."""
 
+from typing import Any
+
 import pandas as pd
 import pytest
 
@@ -145,7 +147,7 @@ def test_an_alias_names_the_odds_spelling_first(cli_runner, monkeypatch, tmp_pat
     """Test an alias written as the help says, odds name then stats name, pairs a club the pairing leaves over."""
     built = []
 
-    def build(**selection: object) -> DataLoader:
+    def build(**selection: Any) -> DataLoader:
         built.append(build_dataloader(**selection))
         return DataLoader(stats=SampleSoccerStats(), odds=SampleSoccerOdds())
 

@@ -200,7 +200,6 @@ class BrowserSession:
         timeout: float = 30000.0,
         headless: bool = True,
     ) -> None:
-        """Keep what the session was configured with."""
         self.key = key
         self.url = url
         self.notes = notes

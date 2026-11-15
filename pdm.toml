@@ -1,0 +1,2 @@
+# PDM resolves and installs with uv, which is much faster, while pdm.lock stays the only lock file.
+use_uv = true

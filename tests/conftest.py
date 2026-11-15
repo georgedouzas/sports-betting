@@ -320,7 +320,7 @@ def odds() -> pd.DataFrame:
 
 
 @pytest.fixture
-def stats_schema() -> BaseStatsSchema:
+def stats_schema() -> type[BaseStatsSchema]:
     """Load statistics schema."""
 
     class StatsSchema(BaseStatsSchema):
@@ -341,7 +341,7 @@ def stats_schema() -> BaseStatsSchema:
 
 
 @pytest.fixture
-def odds_schema() -> BaseOddsSchema:
+def odds_schema() -> type[BaseOddsSchema]:
     """Load odds schema."""
 
     class OddsSchema(BaseOddsSchema):

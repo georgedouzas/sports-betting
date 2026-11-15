@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits"
+  ],
+  "semanticCommitType": "chore",
+  "labels": ["dependencies"],
+  "schedule": ["before 6am on monday"],
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "pre-commit": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Group development tooling so the checks move together rather than one pull request at a time.",
+      "matchDepTypes": ["dev-dependencies", "devDependencies"],
+      "groupName": "development tooling"
+    },
+    {
+      "description": "Move the commit hooks with the rest of the development tooling.",
+      "matchManagers": ["pre-commit"],
+      "groupName": "development tooling"
+    },
+    {
+      "description": "Keep the workflow actions current, since a pinned action is a dependency like any other.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    }
+  ]
+}

@@ -41,7 +41,7 @@ TOOLS = [
 
 def _call(name, **arguments):
     """Call a tool the way an assistant would, and return what it answered."""
-    _, structured = asyncio.run(server.call_tool(name, arguments))
+    structured = asyncio.run(server.call_tool(name, arguments)).structured_content
     return structured.get('result', structured) if isinstance(structured, dict) else structured
 
 
@@ -63,7 +63,7 @@ def test_a_tool_is_told_what_to_do_in_its_arguments():
     """
     tools = asyncio.run(server.list_tools())
     for tool in tools:
-        properties = tool.inputSchema['properties']
+        properties = tool.input_schema['properties']
         assert 'config_path' not in properties
         if tool.name in SELECTS:
             assert 'stats' in properties
@@ -82,7 +82,7 @@ def test_a_key_is_never_an_argument():
     forbidden = {'key', 'password', 'secret', 'token', 'app_key', 'username', 'credential'}
     tools = asyncio.run(server.list_tools())
     for tool in tools:
-        properties = set(tool.inputSchema['properties'])
+        properties = set(tool.input_schema['properties'])
         assert not properties & forbidden, f'`{tool.name}` can be handed {sorted(properties & forbidden)}'
         if tool.name in SELECTS:
             assert 'odds_key_env' in properties
@@ -159,7 +159,7 @@ def test_the_seasons_are_downloaded_once(offline_dataloader, tmp_path):
 
 def test_the_tools_reach_what_the_commands_reach():
     """Test an assistant can say everything a command can say."""
-    tools = {tool.name: set(tool.inputSchema['properties']) for tool in asyncio.run(server.list_tools())}
+    tools = {tool.name: set(tool.input_schema['properties']) for tool in asyncio.run(server.list_tools())}
     assert 'model' in tools['backtest']
     assert 'model' in tools['fit']
     assert 'cv' in tools['backtest']

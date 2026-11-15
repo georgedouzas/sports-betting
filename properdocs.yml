@@ -41,7 +41,6 @@ nav:
   - Development:
     - development/index.md
     - Contributing: development/contributing.md
-    - Code of Conduct: development/code_of_conduct.md
 
 not_in_nav: |
   generated/gallery/**/mg_execution_times.md
