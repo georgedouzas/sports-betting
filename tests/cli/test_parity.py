@@ -58,10 +58,17 @@ def test_execution_reaches_what_the_api_reaches():
 
 def test_the_site_path_reaches_what_the_api_reaches():
     """Test the browser primitives are on the command line as well as in the tools."""
-    for command in (['read'], ['act'], ['fix']):
+    for command in (['read'], ['act']):
         assert 'venue_ref' in _options(['execution', 'page', *command])
     assert {'click_ref', 'type_ref', 'select_ref'} <= _options(['execution', 'page', 'act'])
-    assert {'match', 'locators'} <= _options(['execution', 'page', 'fix'])
+    assert 'fix' not in main.commands['execution'].commands['page'].commands
+
+
+def test_execution_run_reaches_what_the_api_run_reaches():
+    """Test the run command takes every parameter the Python run takes, apart from the injected clock and wait."""
+    wanted = {'event', 'bettor_path', 'dataloader_path', 'venue_ref', 'stake', 'ledger_path', 'lead', 'poll', 'live'}
+    assert wanted <= _options(['execution', 'run'])
+    assert 'urls' not in _options(['execution', 'run'])
 
 
 def test_cancelling_names_the_bet_by_what_makes_it_that_bet():

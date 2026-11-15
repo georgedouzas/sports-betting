@@ -70,13 +70,12 @@ venues and what driving a bookmaker risks.
 | `execution_list_markets` | The markets a venue offers on the given matches, with their prices. |
 | `execution_read_status` | What the venue holds for one bet. |
 | `execution_cancel` | Cancels a bet, where the venue cancels. |
-| `execution_run` | Watches one event and places the model's bet at its moment. Stakes nothing without `live`. |
+| `execution_run` | Runs one preplay event and returns its outcome, steps and receipt. Stakes nothing without `live`. |
 | `browser_navigate` | Opens a page of a bookmaker's website and returns it as an accessibility snapshot. |
 | `browser_snapshot` | Returns the page, or a part of it. |
 | `browser_click` | Clicks an element and returns the page it produced. |
 | `browser_type` | Fills an element and returns the page it produced. |
 | `browser_select` | Chooses an option and returns the page it produced. |
-| `browser_fix` | Pins the locators that exploring found. |
 
 A model is named as a Python expression, such as `OddsComparisonBettor(alpha=0.05)` or
 `ClassifierBettor(LogisticRegression())`, or one of your own as `models.py:BETTOR`, since no set of arguments can

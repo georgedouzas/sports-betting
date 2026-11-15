@@ -13,7 +13,6 @@ from sportsbet.sources import EuroLeagueStats, FootballDataOdds, NBAStats, OddsA
 from tests.conftest import SnapshotsDataLoader
 
 GAMES = [('Alba Berlin', 'Zalgiris', 77, 87), ('Zalgiris', 'Alba Berlin', 90, 80)]
-TWO_WAY = 2
 
 
 def _load_snapshots():

@@ -22,24 +22,6 @@ SLIP = """<!doctype html><html><body>
 </form>
 </body></html>"""
 
-MOVING = """<!doctype html><html><body>
-<form aria-label="Bet slip">
-  <label for="s">Stake</label><input id="s" value="10.00">
-  <span id="odds">2.10</span>
-  <button id="ready" type="button">Place bet</button>
-</form>
-<script>
-  let n = 0;
-  setInterval(() => {
-    const o = document.getElementById('odds');
-    const fresh = document.createElement('span');
-    fresh.id = 'odds';
-    fresh.textContent = (2.10 + (++n) * 0.01).toFixed(2);
-    o.replaceWith(fresh);
-  }, 60);
-</script>
-</body></html>"""
-
 
 class _Handler(BaseHTTPRequestHandler):
     """Serve the pages a test arranged, and nothing else."""
@@ -197,46 +179,18 @@ def test_a_blocked_site_is_reported_and_nothing_further_is_tried(session, served
         run(session.navigate(served(SLIP, path='/blocked', status=403)))
 
 
-def test_a_pinned_locator_survives_the_page_re_rendering(session, served, run):
-    """What is pinned is a role and a name, which outlive the re-render an odds widget does constantly."""
-    run(session.navigate(served(MOVING, path='/moving')))
-    session.fix(match='Arsenal vs Chelsea', locators={'stake': 'input#s'})
-    run(asyncio.sleep(0.25))
-    resolved = run(session.resolve('stake'))
-    assert 'textbox "Stake"' in resolved.yaml
+def test_page_is_the_page_the_session_drives(session, served, run):
+    """Test the session hands a browser venue the playwright page it is driving, at the page it navigated to."""
+    url = served(SLIP)
+    run(session.navigate(url))
+    assert session.page_.url == url
 
 
-def test_a_ref_cannot_be_pinned(session, served, run):
-    """A ref belongs to one state of the page, so pinning one pins something that stops existing."""
-    run(session.navigate(served(SLIP)))
-    with pytest.raises(ExecutionError, match='belongs to one state of the page'):
-        session.fix(match='Arsenal vs Chelsea', locators={'stake': 'e3'})
-    with pytest.raises(ExecutionError, match='belongs to one state of the page'):
-        session.fix(match='Arsenal vs Chelsea', locators={'stake': 'aria-ref=e3'})
-
-
-def test_a_price_cannot_be_pinned(session, served, run):
-    """A price is read when the bet is placed, since pinning it defeats the minimum price."""
-    run(session.navigate(served(SLIP)))
-    with pytest.raises(ExecutionError, match='looks like a price'):
-        session.fix(match='Arsenal vs Chelsea', locators={'price': 'span#odds'})
-
-
-def test_the_fixed_session_holds_no_price(session, served, run):
-    """What is pinned is where things are, never what they cost."""
-    run(session.navigate(served(SLIP)))
-    fixed = session.fix(match='Arsenal vs Chelsea', locators={'stake': 'input#s'})
-    assert fixed.match == 'Arsenal vs Chelsea'
-    assert set(fixed.locators) == {'stake'}
-    assert not hasattr(fixed, 'price')
-
-
-def test_resolving_something_that_was_never_pinned_says_what_is(session, served, run):
-    """Asking for something unpinned names what is pinned rather than failing obscurely."""
-    run(session.navigate(served(SLIP)))
-    session.fix(match='Arsenal vs Chelsea', locators={'stake': 'input#s'})
-    with pytest.raises(ExecutionError, match='Pinned: stake'):
-        run(session.resolve('confirm'))
+def test_page_before_the_browser_is_open_says_so():
+    """Test asking for the page before the browser opens says what is missing."""
+    built = BrowserSession(key='example', url='https://example.invalid')
+    with pytest.raises(ExecutionError, match='not open'):
+        _ = built.page_
 
 
 def test_acting_before_the_browser_is_open_says_so(run):

@@ -11,7 +11,7 @@ from typing import Any, cast
 from rich.console import Console
 from rich.panel import Panel
 
-from ..core import BuildError
+from ..core import BuildError, ExecutionError
 from ..dataloaders import BaseDataLoader, build_dataloader, build_extraction_settings
 from ..evaluation import BaseBettor, build_bettor
 
@@ -68,6 +68,6 @@ def _report_errors() -> Iterator[None]:
     """Say what went wrong."""
     try:
         yield
-    except (BuildError, ValueError) as error:
+    except (BuildError, ExecutionError, ValueError) as error:
         Console().print(Panel.fit(f'[bold red]{error}'))
         raise SystemExit(1) from None

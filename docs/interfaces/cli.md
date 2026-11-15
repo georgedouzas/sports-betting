@@ -24,6 +24,11 @@ sportsbet evaluation fit --dataloader italy.pkl --model "OddsComparisonBettor(al
 sportsbet evaluation bet --dataloader italy.pkl --bettor model.pkl
 ```
 
+`execution run` places one preplay bet at a venue where you hold an account. It is a dry run unless you pass `--live`,
+it bets `--lead` before kickoff, and its `--ledger` file stops a rerun from placing the bet twice. `execution page read`
+and `page act` explore a bookmaker's website while you write a browser venue for it. Read the execution page of the user
+guide before using any of them, since they spend real money.
+
 Before a param grid exists, `dataloader params` shows what a source publishes and `dataloader odds-types` shows the odds
 a selection carries. The full command reference below is generated from the tool itself, so it never falls out of date.
 

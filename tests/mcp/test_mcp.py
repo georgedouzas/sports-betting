@@ -8,7 +8,16 @@ import asyncio
 import pandas as pd
 import pytest
 
-from sportsbet.execution import BetIdentity, PlacementIntent, PlacementReceipt, PlacementStatus, build_receipts_frame
+from sportsbet.execution import (
+    BetIdentity,
+    EventRunRecord,
+    PlacementIntent,
+    PlacementReceipt,
+    PlacementStatus,
+    RunOutcome,
+    build_receipts_frame,
+    build_steps_frame,
+)
 from sportsbet.mcp import server
 from tests.conftest import FakeVenue
 
@@ -35,7 +44,6 @@ TOOLS = [
     'browser_click',
     'browser_type',
     'browser_select',
-    'browser_fix',
 ]
 
 
@@ -195,34 +203,45 @@ def test_the_notes_of_a_website_reach_the_agent(tmp_path):
     assert info['url'] == 'https://example.invalid/stoixima'
 
 
-def test_execution_run_dry_run_returns_the_bet_it_would_make(monkeypatch):
-    """A dry run through the tool returns the one receipt the unit would place, staking nothing."""
+def test_execution_run_dry_run_returns_the_run_record(monkeypatch):
+    """Test a dry run through the tool returns the outcome, the moment, the steps and the receipt."""
+    told = {}
 
-    async def fake_execute_event(event, bettor, loader, session, *, stake, urls, live, poll):
+    async def fake_execute_event(event, bettor, loader, venue, *, stake, ledger_path, lead, poll, live):
+        told.update(ledger_path=ledger_path, lead=lead, poll=poll, live=live)
         receipt = PlacementReceipt(
             identity=BetIdentity('stub', event, 'home_win', 'Arsenal'),
             status=PlacementStatus.DRY_RUN,
+            stake=stake,
+            price=2.2,
             value_bet=f'{event}|home_win',
         )
-        return build_receipts_frame([receipt])
+        now = pd.Timestamp('2026-11-15 14:55', tz='UTC')
+        steps = build_steps_frame([(now, 'decision', 'Backs Arsenal.')])
+        return EventRunRecord(event, now, RunOutcome.DRY_RUN, steps, build_receipts_frame([receipt]))
 
-    monkeypatch.setattr('sportsbet.mcp._server.build_venue', lambda ref: object())
+    monkeypatch.setattr('sportsbet.mcp._server._load_venue', lambda ref: object())
     monkeypatch.setattr('sportsbet.mcp._server.load_dataloader', lambda path: object())
     monkeypatch.setattr('sportsbet.mcp._server.load_bettor', lambda path: object())
     monkeypatch.setattr('sportsbet.mcp._server.execute_event', fake_execute_event)
-    records = _call(
+    result = _call(
         'execution_run',
         venue='venue.py:VENUE',
         dataloader='loader.pkl',
         bettor='model.pkl',
         event='Arsenal vs Chelsea',
         stake=10.0,
-        urls=['https://book.invalid/ac'],
-        live=False,
     )
-    assert len(records) == 1
-    assert records[0]['selection'] == 'Arsenal'
-    assert records[0]['status'] == 'dry_run'
+    assert result['outcome'] == 'dry_run'
+    assert result['moment'].startswith('2026-11-15T14:55')
+    assert [step['step'] for step in result['steps']] == ['decision']
+    assert result['receipts'][0]['selection'] == 'Arsenal'
+    assert told == {
+        'ledger_path': 'sports-betting-ledger.jsonl',
+        'lead': pd.Timedelta('5min'),
+        'poll': pd.Timedelta('5min'),
+        'live': False,
+    }
 
 
 def test_execution_read_status_returns_what_the_venue_holds_for_one_bet(monkeypatch):

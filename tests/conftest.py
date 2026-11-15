@@ -112,6 +112,10 @@ class FakeVenue(BaseVenue):
         """Return the balance and the exposure the test arranged."""
         return self.balance, self.exposure
 
+    async def read_price(self: 'FakeVenue', identity: BetIdentity) -> float | None:
+        """Return the price the test arranged, or nothing."""
+        return self.prices.get((identity.match, identity.market, identity.selection))
+
     async def place(self: 'FakeVenue', intent: PlacementIntent) -> PlacementReceipt:
         """Record a bet, unless one is already recorded for its identity."""
         ref = intent.identity.ref_

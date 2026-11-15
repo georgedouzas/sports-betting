@@ -17,6 +17,7 @@ RENAMED = {
     'bettor_path': 'bettor',
     'data_path': 'output',
     'venue_ref': 'venue',
+    'ledger_path': 'ledger',
 }
 UNREACHABLE = {'output'}
 SPELLED: dict[str, set[str]] = {}
@@ -103,3 +104,14 @@ def test_no_tool_takes_a_secret():
     forbidden = {'key', 'password', 'secret', 'token', 'app_key', 'username', 'credential'}
     for name, properties in _tools().items():
         assert not properties & forbidden, f'`{name}` can be handed {sorted(properties & forbidden)}'
+
+
+def test_execution_run_reaches_every_run_parameter():
+    """Test the run tool takes the venue, data, model, event, stake, lead, poll, ledger, arming flag and output."""
+    wanted = {'venue', 'dataloader', 'bettor', 'event', 'stake', 'lead', 'poll', 'ledger', 'live', 'output'}
+    assert wanted == _tools()['execution_run']
+
+
+def test_pinning_is_gone_from_the_tools():
+    """Test the tool that pinned locators in memory is gone, since a pin never outlived the call that made it."""
+    assert 'browser_fix' not in _tools()

@@ -18,12 +18,14 @@ from ..dataloaders import DEFAULT_KEY_ENV, build_dataloader, build_extraction_se
 from ..evaluation import backtest as run_backtest
 from ..evaluation import build_bettor, load_bettor, save_bettor
 from ..execution import (
+    BaseBrowserVenue,
     BaseVenue,
     BetIdentity,
     BrowserSession,
     build_venue,
     execute_event,
 )
+from ..execution._event import DEFAULT_LEDGER
 
 server: MCPServer = MCPServer('sportsbet')
 
@@ -159,7 +161,10 @@ def _load_venue(reference: str) -> BaseVenue:
     """Return the venue a reference names."""
     built = build_venue(reference)
     if not isinstance(built, BaseVenue):
-        msg = f'`{reference}` is a browser session, which has no bets of its own to place. Use the browser tools.'
+        msg = (
+            f'`{reference}` is a browser session, which has no bets of its own to place. Write a `BaseBrowserVenue` '
+            'for the bookmaker, or use the browser tools to explore the site.'
+        )
         raise ExecutionError(msg)
     return built
 
@@ -170,33 +175,45 @@ def _run_event(
     bettor: str,
     event: str,
     stake: float,
-    urls: list[str],
-    live: bool,
-    poll: str,
-    output: str | None,
-) -> pd.DataFrame:
-    """Watch one event and place the model's bet at its moment."""
-    session = build_venue(venue)
-    if isinstance(session, BaseVenue):
-        msg = f'`{venue}` is a venue with an API rather than a browser session, so `execution_run` does not apply.'
-        raise ExecutionError(msg)
+    settings: dict[str, Any],
+) -> dict[str, Any]:
+    """Watch one preplay event and place the model's bet at its moment, returning the run record."""
+    built = _load_venue(venue)
     loader = load_dataloader(dataloader)
     fitted = load_bettor(bettor)
-    receipts = asyncio.run(
-        execute_event(event, fitted, loader, session, stake=stake, urls=urls, live=live, poll=pd.Timedelta(poll)),
+    record = asyncio.run(
+        execute_event(
+            event,
+            fitted,
+            loader,
+            built,
+            stake=stake,
+            ledger_path=settings['ledger'],
+            lead=pd.Timedelta(settings['lead']),
+            poll=pd.Timedelta(settings['poll']),
+            live=settings['live'],
+        ),
     )
-    if output is not None:
-        written = Path(output) / 'sports-betting-data'
+    if settings['output'] is not None:
+        written = Path(settings['output']) / 'sports-betting-data'
         written.mkdir(parents=True, exist_ok=True)
-        receipts.to_csv(written / 'receipts.csv', index=False)
-    return receipts
+        record.steps.to_csv(written / 'run_steps.csv', index=False)
+        record.receipts.to_csv(written / 'receipts.csv', index=False)
+    return {
+        'outcome': record.outcome.value,
+        'moment': None if record.moment is None else record.moment.isoformat(),
+        'steps': _to_records(record.steps.assign(time=record.steps['time'].astype(str))),
+        'receipts': _to_records(record.receipts),
+    }
 
 
 async def _open_session(venue: str) -> BrowserSession:
     """Return the browser session a reference names, opening it once and keeping it open."""
     if venue not in SESSIONS:
         built = build_venue(venue)
-        if isinstance(built, BaseVenue):
+        if isinstance(built, BaseBrowserVenue):
+            built = built.session
+        elif isinstance(built, BaseVenue):
             msg = f'`{venue}` is a venue with an API rather than a browser session, so the browser tools do not apply.'
             raise ExecutionError(msg)
         await built.start()
@@ -466,19 +483,22 @@ async def execution_run(
     bettor: str,
     event: str,
     stake: float,
-    urls: list[str] | None = None,
+    lead: str = '5min',
+    poll: str = '5min',
+    ledger: str = DEFAULT_LEDGER,
     live: bool = False,
-    poll: str = '30s',
     output: str | None = None,
-) -> list[dict[str, Any]]:
-    """Watch one event and place the model's bet at its moment.
+) -> dict[str, Any]:
+    """Watch one preplay event and place the model's bet at its moment.
 
-    It reads the dataloader `extract_train_data` saved and the model `fit` saved, explores the URLs to match the event,
-    ensures the browser session is logged in, monitors the event to its fitted moment, and places the stake on the
-    model's selection when the model finds value. Without `live` it stakes nothing.
+    It reads the dataloader `extract_train_data` saved and the model `fit` saved, checks the venue, reads the event on
+    each poll, and at kickoff minus `lead` applies the model to fresh data and reads the venue's price. The ledger file
+    records each bet so a rerun never places it twice. Without `live` it stakes nothing. It returns the outcome, the
+    betting moment, the steps and the receipt.
     """
-    receipts = await _offload(_run_event, venue, dataloader, bettor, event, stake, urls or [], live, poll, output)
-    return _to_records(receipts)
+    settings = {'lead': lead, 'poll': poll, 'ledger': ledger, 'live': live, 'output': output}
+    result: dict[str, Any] = await _offload(_run_event, venue, dataloader, bettor, event, stake, settings)
+    return result
 
 
 @server.tool()
@@ -524,14 +544,6 @@ async def browser_select(venue: str, ref: str, value: str) -> dict[str, Any]:
     session = await _open_session(venue)
     shot = await session.select(ref, value)
     return {'yaml': shot.yaml, 'url': shot.url}
-
-
-@server.tool()
-async def browser_fix(venue: str, match: str, locators: dict[str, str]) -> dict[str, Any]:
-    """Pin the locators exploring found."""
-    session = await _open_session(venue)
-    pinned = session.fix(match, locators)
-    return {'match': pinned.match, 'url': pinned.url, 'locators': pinned.locators}
 
 
 def run() -> None:

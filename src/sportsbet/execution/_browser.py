@@ -6,17 +6,14 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from ..core import ExecutionError, VenueBlockedError
 
 BLOCKED_STATUS = frozenset({403, 429})
-REF_PATTERN = re.compile(r'^e\d+$')
-BROWSER_EXTRA = "Driving a site needs playwright's browser. Install it with `python -m playwright install chromium`."
 
 
 class _Response(Protocol):
@@ -135,21 +132,6 @@ class PageSnapshot:
     url: str
 
 
-@dataclass(frozen=True)
-class FixedSession:
-    """The locators found during exploration, pinned to a match.
-
-    Args:
-        match: The match the session is pinned to.
-        url: The page URL it was pinned at.
-        locators: The pinned locators, by name.
-    """
-
-    match: str
-    url: str
-    locators: dict[str, str] = field(default_factory=dict)
-
-
 class BrowserSession:
     """A bookmaker's website, driven in a real browser on your own account.
 
@@ -162,8 +144,6 @@ class BrowserSession:
             The bookmaker's site.
         notes:
             What you know about the site.
-        credential_env:
-            The names of the variables holding the username and the password.
         user_data_dir:
             Where the browser keeps its profile.
         min_interval:
@@ -194,7 +174,6 @@ class BrowserSession:
         url: str,
         *,
         notes: str | None = None,
-        credential_env: tuple[str, str] | None = None,
         user_data_dir: str | Path | None = None,
         min_interval: float = 1.0,
         timeout: float = 30000.0,
@@ -203,14 +182,23 @@ class BrowserSession:
         self.key = key
         self.url = url
         self.notes = notes
-        self.credential_env = credential_env
         self.user_data_dir = user_data_dir
         self.min_interval = min_interval
         self.timeout = timeout
         self.headless = headless
         self.context_: _Context | None = None
-        self.fixed_: FixedSession | None = None
         self._playwright: object | None = None
+
+    @property
+    def page_(self: BrowserSession) -> Any:  # noqa: ANN401  # the playwright page, untyped to keep the extra optional
+        """The page the browser is driving, as a playwright page.
+
+        A browser venue reaches the site through it, with ordinary playwright locators.
+
+        Raises:
+            ExecutionError: If the browser is not open or is open at no page.
+        """
+        return self._read_page()
 
     def _read_page(self: BrowserSession) -> _Page:
         """Return the page being driven."""
@@ -352,54 +340,3 @@ class BrowserSession:
         await self._wait_interval()
         await self._read_page().locator(f'aria-ref={ref}').select_option(value, timeout=self.timeout)
         return await self._capture()
-
-    def fix(self: BrowserSession, match: str, locators: dict[str, str]) -> FixedSession:
-        """Pin the locators exploring found for a match.
-
-        Args:
-            match:
-                The match this session is pinned to.
-            locators:
-                What was found, by name, as in `{'stake': 'textbox[name="Stake"]'}`.
-
-        Returns:
-            fixed:
-                The pinned session.
-
-        Raises:
-            ExecutionError: If a locator is a ref or looks like a price.
-        """
-        for name, locator in locators.items():
-            if REF_PATTERN.match(locator) or locator.startswith('aria-ref='):
-                msg = (
-                    f'`{name}` is pinned to the ref `{locator}`, which belongs to one state of the page. '
-                    f'Pin a role and an accessible name instead, as in `textbox[name="Stake"]`.'
-                )
-                raise ExecutionError(msg)
-            if 'price' in name or 'odds' in name:
-                msg = f'`{name}` looks like a price. A price is read when the bet is placed rather than pinned.'
-                raise ExecutionError(msg)
-        self.fixed_ = FixedSession(match=match, url=self._read_page().url, locators=dict(locators))
-        return self.fixed_
-
-    async def resolve(self: BrowserSession, name: str) -> PageSnapshot:
-        """Read what a pinned locator points at now.
-
-        Args:
-            name:
-                The name it was pinned under.
-
-        Returns:
-            snapshot:
-                What is there now.
-
-        Raises:
-            ExecutionError: If nothing is pinned or the name is not pinned.
-        """
-        if self.fixed_ is None:
-            msg = 'Nothing is pinned. Call `fix` with what exploring found.'
-            raise ExecutionError(msg)
-        if name not in self.fixed_.locators:
-            msg = f'`{name}` is not pinned. Pinned: {", ".join(sorted(self.fixed_.locators))}.'
-            raise ExecutionError(msg)
-        return await self._capture(self.fixed_.locators[name])

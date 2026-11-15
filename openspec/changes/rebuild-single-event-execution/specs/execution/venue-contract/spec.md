@@ -34,6 +34,21 @@ secret MUST NOT appear in a receipt, a run record, a ledger or a log line.
 - **WHEN** an armed run with an API venue that reads a token from a named variable writes its ledger and run record
 - **THEN** neither file contains the token's value
 
+### Requirement: Placement statuses
+
+A receipt status SHALL be one of `dry_run`, `accepted`, `matched_full`, `matched_partial`, `already_placed`,
+`refused_limit`, `refused_price`, `refused_unconfirmed` or `rejected`.
+
+#### Scenario: Unknown status
+
+- **WHEN** a caller builds a placement status from the string `pending`
+- **THEN** Python raises `ValueError`
+
+#### Scenario: Statuses nothing produces are gone
+
+- **WHEN** a caller builds a placement status from `refused_killed` or `blocked`
+- **THEN** Python raises `ValueError`, since no run or venue produces either
+
 ## ADDED Requirements
 
 ### Requirement: Optional venue operations

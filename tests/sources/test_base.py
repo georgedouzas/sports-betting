@@ -22,8 +22,6 @@ from sportsbet.sources import (
 from tests.conftest import SnapshotsDataLoader
 
 PARAMS = [{'league': 'England', 'division': 1, 'year': 2024}, {'league': 'Spain', 'division': 1, 'year': 2024}]
-ITEM_COST = 2
-TOTAL_COST = 4
 DISTINCT_ITEMS = 2
 KEY = 'secret'
 UNAUTHORIZED = 401
