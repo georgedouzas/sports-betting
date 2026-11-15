@@ -7,10 +7,10 @@
 [ruff]: <https://github.com/charliermarsh/ruff>
 [mypy badge]: <http://www.mypy-lang.org/static/mypy_badge.svg>
 [mypy]: <http://mypy-lang.org>
-[mkdocs badge]: <https://img.shields.io/badge/docs-mkdocs%20material-blue.svg?style=flat>
-[mkdocs]: <https://squidfunk.github.io/mkdocs-material>
-[safety badge]: <https://img.shields.io/badge/safety-checked-green>
-[safety]: <https://github.com/pyupio/safety>
+[properdocs badge]: <https://img.shields.io/badge/docs-properdocs-blue.svg?style=flat>
+[properdocs]: <https://properdocs.org>
+[pip-audit badge]: <https://img.shields.io/badge/security-pip--audit-green>
+[pip-audit]: <https://github.com/pypa/pip-audit>
 [bandit badge]: <https://img.shields.io/badge/security-bandit-yellow>
 [bandit]: <https://github.com/PyCQA/bandit>
 [pytest badge]: <https://img.shields.io/badge/tests-pytest-blue>
@@ -39,13 +39,13 @@
 
 | Category          | Tools    |
 | ------------------| -------- |
-| Development   | [![black][black badge]][black] [![ruff][ruff badge]][ruff] [![mypy][mypy badge]][mypy] [![docformatter][docformatter badge]][docformatter] |
-| Testing       | [![pytest][pytest badge]][pytest] [![coverage][coverage badge]][coverage] [![interrogate][interrogate badge]][interrogate] |
-| Security      | [![safety][safety badge]][safety] [![bandit][bandit badge]][bandit] |
-| Automation    | [![nox][nox badge]][nox] [![pre-commit][pre-commit badge]][pre-commit] |
-| Package       | ![version][version badge] ![pythonversion][pythonversion badge] ![downloads][downloads badge] |
-| Documentation | [![mkdocs][mkdocs badge]][mkdocs]|
-| Communication | [![discussions][discussions badge]][discussions] |
+| **Development**   | [![black][black badge]][black] [![ruff][ruff badge]][ruff] [![mypy][mypy badge]][mypy] [![docformatter][docformatter badge]][docformatter] |
+| **Testing**       | [![pytest][pytest badge]][pytest] [![coverage][coverage badge]][coverage] [![interrogate][interrogate badge]][interrogate] |
+| **Security**      | [![pip-audit][pip-audit badge]][pip-audit] [![bandit][bandit badge]][bandit] |
+| **Automation**    | [![nox][nox badge]][nox] [![pre-commit][pre-commit badge]][pre-commit] |
+| **Package**       | ![version][version badge] ![pythonversion][pythonversion badge] ![downloads][downloads badge] |
+| **Documentation** | [![properdocs][properdocs badge]][properdocs]|
+| **Communication** | [![discussions][discussions badge]][discussions] |
 
 ## Introduction
 
@@ -98,7 +98,8 @@ python -m playwright install chromium
 ### Development
 
 For development, clone the repository and install the project with [PDM](https://github.com/pdm-project/pdm). This
-installs the main and development dependencies.
+installs the main and development dependencies. PDM installs
+through [uv](https://github.com/astral-sh/uv), so both must be installed.
 
 ```bash
 git clone https://github.com/georgedouzas/sports-betting.git
@@ -232,3 +233,10 @@ classifier = make_pipeline(
 )
 bettor = ClassifierBettor(classifier, betting_markets=['draw'], init_cash=10000.0, stake=50.0)
 ```
+
+## Spec-driven development
+
+The project's engineering constitution lives in `openspec/constitution.md` and binds all work. The
+project uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for spec-driven development: run
+`openspec init` once to add the workflow, and `openspec/config.yaml` already names the constitution
+as binding.

@@ -150,6 +150,7 @@ def _serve_status(status: int) -> Iterator[str]:
 
         def log_message(self, *args: object) -> None:
             """Keep the test output quiet."""
+            return
 
     server = HTTPServer(('127.0.0.1', 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

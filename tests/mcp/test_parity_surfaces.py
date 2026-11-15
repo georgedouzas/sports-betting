@@ -39,7 +39,7 @@ PAIRS = [
 
 def _tools():
     """Return every tool and what it can be told."""
-    return {tool.name: set(tool.inputSchema['properties']) for tool in asyncio.run(server.list_tools())}
+    return {tool.name: set(tool.input_schema['properties']) for tool in asyncio.run(server.list_tools())}
 
 
 def _command(path):

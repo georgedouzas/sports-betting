@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 import pandas as pd
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from sklearn.model_selection import TimeSeriesSplit
 
 from ..core import ExecutionError
@@ -25,7 +25,7 @@ from ..execution import (
     execute_event,
 )
 
-server: FastMCP = FastMCP('sportsbet')
+server: MCPServer = MCPServer('sportsbet')
 
 Answer = TypeVar('Answer')
 Selection = dict[str, Any]

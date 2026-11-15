@@ -2,6 +2,8 @@
 
 import os
 import shutil
+import sys
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -24,31 +26,30 @@ CHANGELOG_ARGS: dict[str, Any] = {
 }
 
 
-def check_cli(session: nox.Session, args: list[str]) -> str:
+def check_cli(session: nox.Session, args: list[str], default: str = 'all') -> str:
     """Check the CLI arguments.
 
     Arguments:
         session: The nox session.
         args: The available CLI arguments.
+        default: The subcommand used when none is given.
     """
     available_args = ', '.join([f'`{arg}`' for arg in args])
     msg = f'Available subcommands are one of {available_args}.'
-    session_args = list(session.posargs)
-    if not session_args:
-        session_args = ['all']
-    elif len(session_args) > 1 or session_args[0] not in args:
+    session_args = list(session.posargs) or [default]
+    if len(session_args) > 1 or session_args[0] not in args:
         session.skip(f'{msg} Instead `{" ".join(session_args)}` was given')
     return session_args[0]
 
 
 @nox.session
 def clean(session: nox.Session) -> None:
-    """Clean build artifacts and cache files.
+    """Clean build artifacts, cache files, and the project's virtual environment.
 
     Arguments:
         session: The nox session.
     """
-    paths = [
+    dir_paths = [
         '.mypy_cache',
         '.pytest_cache',
         'tests/.pytest_cache',
@@ -60,20 +61,24 @@ def clean(session: nox.Session) -> None:
         '__pycache__',
         'docs/generated',
         '.nox',
+        '.venv',
         '.ruff_cache',
-        'coverage.xml',
-        'pdm.lock',
     ]
-    for path in paths:
-        shutil.rmtree(path, ignore_errors=True)
+    file_patterns = ['*.rej', '.coverage*', 'coverage.xml']
+    if sys.platform == 'win32' and Path(sys.prefix).resolve().is_relative_to(Path('.venv').resolve()):
+        dir_paths.remove('.venv')
+        session.warn(
+            'Kept .venv, since Windows cannot delete the environment this task runs from. Remove it after the '
+            'task exits, with `Remove-Item -Recurse -Force .venv` in PowerShell or `rmdir /s /q .venv` in cmd.',
+        )
+    for dir_path in dir_paths:
+        shutil.rmtree(dir_path, ignore_errors=True)
     for cache_path in Path().rglob('__pycache__'):
         shutil.rmtree(cache_path, ignore_errors=True)
-    for file in Path().rglob('*.rej'):
-        if file.exists():
-            file.unlink()
-    for file in Path().rglob('.coverage*'):
-        if file.exists():
-            file.unlink()
+    for file_pattern in file_patterns:
+        for file_path in Path().rglob(file_pattern):
+            if file_path.exists():
+                file_path.unlink()
 
 
 @nox.session
@@ -83,7 +88,7 @@ def docs(session: nox.Session) -> None:
     Arguments:
         session: The nox session.
     """
-    arg = check_cli(session, ['serve', 'build'])
+    arg = check_cli(session, ['serve', 'build'], default='serve')
     session.run('pdm', 'install', '-dG', 'docs', external=True)
     session.run('properdocs', arg, env={'DISABLE_MKDOCS_2_WARNING': 'true'})
 
@@ -124,6 +129,7 @@ def checks(session: nox.Session, file: str) -> None:
         session.run('bandit', '-c', 'pyproject.toml', '-r', file)
     if arg in ['docs', 'all'] and file == 'src':
         session.run('interrogate', file)
+        session.run('pydoclint', file)
     if arg in ['dependencies', 'all']:
         requirements_path = (Path(session.create_tmp()) / 'requirements.txt').as_posix()
         args_groups = [['--prod']] + [['-dG', group] for group in ['tests', 'docs', 'maintenance']]
@@ -140,7 +146,11 @@ def checks(session: nox.Session, file: str) -> None:
             requirements_path,
         ]
         session.run(*(args + dict(requirements_types)[file]), external=True)
-        session.run('pip-audit', '-r', requirements_path)
+        config = tomllib.loads(Path('pyproject.toml').read_text())
+        ignored = config.get('tool', {}).get('pip-audit', {}).get('ignore-vulns', [])
+        ignore_args = [flag for vuln in ignored for flag in ('--ignore-vuln', vuln)]
+        session.run('pip-audit', '-r', requirements_path, *ignore_args)
+        session.run('deptry', 'src', 'tests')
 
 
 @nox.session(python=PYTHON_VERSIONS)
@@ -203,8 +213,7 @@ def release(session: nox.Session) -> None:
     session.run('gh', 'pr', 'create', '--base', 'main', '--fill', external=True)
     session.run('gh', 'pr', 'merge', '--rebase', '--delete-branch', external=True)
 
-    # Create and push the tag, which triggers the release workflow to build and
-    # publish the distribution to GitHub and PyPI.
+    # Create and push the release tag, which is what the pipeline reacts to
     session.run('git', 'checkout', 'main', external=True)
     session.run('git', 'pull', '--rebase', external=True)
     session.run('git', 'tag', version, external=True)
