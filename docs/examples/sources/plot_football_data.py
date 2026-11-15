@@ -30,8 +30,8 @@ len(params)
 sorted({param['league'] for param in params})
 
 # %%
-# It is free. It is the only feed in the library that gives both statistics and odds for nothing. The odds are the
-# closing prices offered before kick-off.
+# It is free. It is the only feed in the library that gives both statistics and odds for nothing. The odds are
+# pre-match prices recorded before the closing line, and the closing prices fill a gap only where those are missing.
 
 odds = FootballDataOdds()
 odds.name, odds.kind, odds.sport

@@ -24,7 +24,7 @@ os.environ['ODDS_API_KEY'] = 'your-key'
 # --------------
 #
 # It carries prices with a timestamp, so you can backtest an in-play bet against the odds that were on offer at the
-# minute you would have placed it. The free feeds cannot do that, because they publish the closing price only.
+# minute you would have placed it. The free feeds cannot do that, because they publish one pre-match price only.
 #
 # Every market, region and moment is a separate request. Each one adds to the work.
 

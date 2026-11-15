@@ -46,17 +46,37 @@ An agent that knows this asks before pointing a paid key at a large selection, r
 
 | Tool | Does |
 | --- | --- |
-| `available_params` | What leagues, divisions and seasons exist. Downloads nothing. |
-| `odds_types` | The odds types a selection carries. Downloads nothing. |
+| `available_params` | What leagues, divisions and seasons exist. Reads the source's index and no season. |
+| `odds_types` | The odds types a selection carries. Downloads the selected seasons to read them. |
 | `extract_exploration_data` | Downloads and returns the features on their own, with no targets or odds. |
-| `extract_train_data` | Downloads and returns the training data. |
-| `extract_fixtures_data` | Downloads and returns the games not yet played. |
-| `backtest` | Backtests a betting model. |
-| `fit` | Fits a model and saves it. |
-| `bet` | The value bets for the fixtures, from a fitted model. |
+| `extract_train_data` | Downloads and returns the training data, and saves the dataloader to `output`. |
+| `extract_fixtures_data` | The games not yet played, from a saved dataloader. |
+| `backtest` | Backtests a betting model on a saved dataloader. |
+| `fit` | Fits a model on a saved dataloader and saves it. |
+| `bet` | The value bets for the fixtures, from a saved dataloader and a fitted model. |
 
-Every one of them takes `stats` and, optionally, `odds`, because a dataloader does not choose where its data comes from,
-you do.
+The first four take `stats` and, optionally, `odds`, because a dataloader does not choose where its data comes from,
+you do. `extract_train_data` writes the dataloader it built to `output`, and the last four name that file as
+`dataloader`, so the selection is described once.
+
+The server also carries the execution tools, which place bets at a venue. The [execution guide][execution] explains
+venues and what driving a bookmaker risks.
+
+| Tool | Does |
+| --- | --- |
+| `execution_venue_info` | What a venue is, whether it cancels, and its owner's notes. |
+| `execution_authenticate` | Logs in at a venue, reading each secret from the variable the venue names. |
+| `execution_read_balance` | The balance and what is at stake. |
+| `execution_list_markets` | The markets a venue offers on the given matches, with their prices. |
+| `execution_read_status` | What the venue holds for one bet. |
+| `execution_cancel` | Cancels a bet, where the venue cancels. |
+| `execution_run` | Watches one event and places the model's bet at its moment. Stakes nothing without `live`. |
+| `browser_navigate` | Opens a page of a bookmaker's website and returns it as an accessibility snapshot. |
+| `browser_snapshot` | Returns the page, or a part of it. |
+| `browser_click` | Clicks an element and returns the page it produced. |
+| `browser_type` | Fills an element and returns the page it produced. |
+| `browser_select` | Chooses an option and returns the page it produced. |
+| `browser_fix` | Pins the locators that exploring found. |
 
 A model is named as a Python expression, such as `OddsComparisonBettor(alpha=0.05)` or
 `ClassifierBettor(LogisticRegression())`, or one of your own as `models.py:BETTOR`, since no set of arguments can
@@ -65,3 +85,5 @@ it, and tells you whether it was any good.
 
 Everything the command line can do, an agent can do, because they are told the same things in the same way. Since the
 command line reaches every sport and every source, that means all of it.
+
+[execution]: ../overview/user_guide/execution.md

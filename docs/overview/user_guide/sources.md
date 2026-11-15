@@ -55,7 +55,8 @@ An odds source provides the betting odds. Two ship with the library.
 
 ### FootballDataOdds
 
-Soccer odds from football-data.co.uk, free, the pre-match closing prices.
+Soccer odds from football-data.co.uk, free. They are pre-match prices recorded before the closing line, and the closing
+prices fill a gap only where those are missing.
 
 ```python exec="1" source="block" result="text"
 from sportsbet.sources import FootballDataOdds
@@ -156,7 +157,7 @@ print((payload.item.key, payload.content))
 Here are two feeds for a league the library does not ship, one for statistics and one for odds. Each declares its items
 and turns the payloads into snapshots.
 
-```python exec="1" source="block"
+```python exec="1" source="block" result="text"
 import io
 import json
 
@@ -172,7 +173,7 @@ class MyStats(BaseStatsSource):
 
     name = 'my_stats'
 
-    def list_index_items(self):
+    def list_index_items(self, selection=None):
         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
     def read_catalogue(self, payloads):
@@ -213,7 +214,7 @@ class MyOdds(BaseOddsSource):
 
     name = 'my_odds'
 
-    def list_index_items(self):
+    def list_index_items(self, selection=None):
         return [RawItem(source=self.name, key='seasons', url='https://example.com/seasons.json')]
 
     def read_catalogue(self, payloads):
@@ -229,6 +230,11 @@ class MyOdds(BaseOddsSource):
         odds = pd.concat([pd.read_csv(io.BytesIO(payload.content)) for payload in payloads], ignore_index=True)
         odds['date'] = pd.to_datetime(odds['date'], utc=True)
         return odds.assign(event_status='preplay', event_time=0)
+
+
+selection = [{'league': ['Ruritania']}]
+for source in (MyStats(), MyOdds()):
+    print(source.list_index_items(selection))
 ```
 
 That is the whole source. You declare no grammar: the library derives it from the snapshots `to_snapshots` returns. The

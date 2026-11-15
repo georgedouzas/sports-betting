@@ -9,7 +9,9 @@ from .._common._football_data import FootballDataSource
 
 
 class FootballDataOdds(FootballDataSource, BaseOddsSource):
-    """The pre-match closing odds of the market average and market maximum from the football-data.co.uk feed.
+    """The pre-match odds of the market average and market maximum from the football-data.co.uk feed.
+
+    The prices are recorded before the closing line. The closing prices fill a gap only where those are missing.
 
     Read more in the [user guide][user-guide].
 
