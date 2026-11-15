@@ -37,14 +37,13 @@ nav:
     - Python API: api/
     - CLI: interfaces/cli.md
     - Agents: interfaces/agents.md
-  - Examples: generated/gallery
+  - Examples: generated/examples/
   - Development:
     - development/index.md
     - Contributing: development/contributing.md
 
-not_in_nav: |
-  generated/gallery/**/mg_execution_times.md
-  generated/gallery/mg_execution_times.md
+exclude_docs: |
+  /examples/
 
 extra_css:
   - css/style.css
@@ -74,16 +73,11 @@ extra_javascript:
 plugins:
   - search
   - autorefs
-  - gallery:
-      conf_script: docs/gallery_conf.py
-      examples_dirs:
-        - docs/examples
-      gallery_dirs:
-        - docs/generated/gallery
   - markdown-exec
   - gen-files:
       scripts:
       - docs/generate_api.py
+      - docs/generate_examples.py
   - literate-nav:
       nav_file: SUMMARY.md
   - section-index

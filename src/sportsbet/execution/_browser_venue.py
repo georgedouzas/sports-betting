@@ -44,11 +44,10 @@ class BaseBrowserVenue(BaseVenue):
         ...     async def enter_stake(self, stake): return None
         ...     async def confirm_bet(self): return None
         ...     async def read_confirmation(self): return None
-        >>> try:
-        ...     Book('book', BrowserSession(key='book', url='https://example.invalid'))
-        ... except TypeError as error:
-        ...     print('add_selection' in str(error))
-        True
+        >>> Book('book', BrowserSession(key='book', url='https://example.invalid'))
+        Traceback (most recent call last):
+        ...
+        TypeError: Can't instantiate abstract class Book without an implementation for abstract method 'add_selection'
     """
 
     def __init__(self: BaseBrowserVenue, key: str, session: BrowserSession) -> None:

@@ -4,8 +4,9 @@ Contributions are welcome, and they are greatly appreciated.
 
 ## The constitution
 
-Every rule this project is held to lives in [`openspec/constitution.md`](openspec/constitution.md). Read it before
-writing code here.
+Every rule this project is held to lives in
+[`openspec/constitution.md`](https://github.com/georgedouzas/sports-betting/blob/main/openspec/constitution.md).
+Read it before writing code here.
 
 It is binding rather than advisory. Every rule is stated with MUST or MUST NOT, and each section carries an example
 and a counter-example, so a rule shows what it means as well as saying it. It covers what the code obeys, how it is

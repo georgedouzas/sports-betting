@@ -1,6 +1,19 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 12.0.0 -> 13.0.0
+Rationale: Support Python 3.14 and drop Python 3.11. The cap kept 3.14 users from installing the package at all, while
+numpy and scipy had already stopped supporting 3.11, so a 3.11 user ran an older numerical stack than the one the
+package is developed against. The range stays three versions wide, so the gate takes no longer. MAJOR: the Language
+rule narrows, and a caller on 3.11 can no longer install a new release.
+
+Modified sections:
+  - Project Profile: the Language rule supports `>=3.12, <3.15`, targeting `py312`.
+  - Compliance: the example gate names 3.12, 3.13, and 3.14.
+  - Documentation: the build runs the example pages in strict mode, since `mkdocs-gallery` cannot parse a script on
+    3.14 and markdown-exec now runs the examples.
+
+---- history ----
 Version change: 11.6.1 -> 12.0.0
 Rationale: Every named exception lives in one errors module of the shared-leaves package and is offered by that
 package alone. They were scattered across three packages, so a caller catching what the library raises had to learn
@@ -776,7 +789,7 @@ silently degrading.
 - A user-facing behavioral change MUST update the affected documentation, and MUST add or amend a changelog entry where
   it changes public behavior.
 - Every code example in the documentation and the docstrings MUST run, and the build MUST prove it, the documentation
-  build running the gallery examples and the doctest run running the docstring examples.
+  strict build running the example pages and the doctest run running the docstring examples.
 - An example MUST NOT be a fragment, pseudo-code, or a demo that cannot run.
 - An example MUST exercise the thing it documents. An example that spends its lines building another object documents
   that object instead, and the reader of the first one learns nothing about it.
@@ -1511,7 +1524,7 @@ A PR stating the principles it touches, the gate it ran, and its deviations.
 ## Compliance
 
 - Principles touched: Tests, Gates.
-- Gate: `pdm run tests` green on 3.11, 3.12, and 3.13.
+- Gate: `pdm run tests` green on 3.12, 3.13, and 3.14.
 - Deviations: none.
 ```
 
@@ -1569,7 +1582,7 @@ A contributor reads the repository before they read this file, so what they find
 - Delivery surfaces: the surfaces MUST be the Python API, the CLI (`sportsbet`), and the MCP server (`sportsbet-mcp`).
 - Schema validation: the boundary frames, the training data, the fixtures, and the odds, MUST be validated against a
   `pandera` schema.
-- Language: the package MUST support Python `>=3.11, <3.14`, targeting `py311`.
+- Language: the package MUST support Python `>=3.12, <3.15`, targeting `py312`.
 - Core dependencies: the package MUST depend on `scikit-learn`, `pandas`, `pandera`, `click`, `rich`, and `aiohttp`, and
   the optional `mcp` extra MUST ship the `sportsbet-mcp` server.
 - Build and tooling: the build MUST use PDM with SCM-derived versioning and a `src` layout. The `nox` sessions MUST be
@@ -1618,4 +1631,4 @@ Rationale:
 One repo-specific section keeps the body portable. A reader of another repository reads the same rules and a different
 profile.
 
-**Version**: 12.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-22
+**Version**: 13.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-11-15
