@@ -23,7 +23,7 @@ from public surfaces.
 - [x] 2.2 Add `BaseBrowserVenue` in a new `execution/_browser_venue.py` with the seven abstract hooks, the concrete
   `match_selection`, and `authenticate`, `read_price`, `place` and `close` in the order from design D2. Re-export it.
   Verify that a doctest shows a subclass missing `add_selection` raising `TypeError`.
-- [x] 2.3 Add the fake bookmaker pages under `tests/execution/site/` and a `served_site` fixture that serves them with
+- [x] 2.3 Add the fake bookmaker pages under `tests/execution/bookmaker/` and a `served_site` fixture that serves them with
   `http.server` on a free port. The pages cover login, event, selections, slip, stake, confirm, and a confirmation that
   can appear, refuse or never appear. Add the test subclass in `tests/execution/conftest.py`. Verify that a smoke test
   navigates to the served event page.
