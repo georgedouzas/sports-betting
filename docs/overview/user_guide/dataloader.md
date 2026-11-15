@@ -168,7 +168,7 @@ dataloader = DataLoader(
 Pass `stats` to say where the statistics come from, and pass `odds` for the markets to bet on. Omit `odds` and use
 `extract_exploration_data` when you only want the features.
 
-Statistics and odds are separate on purpose. The free feed carries pre-match closing odds, which are enough to backtest
+Statistics and odds are separate on purpose. The free feed carries pre-match odds, which are enough to backtest
 a pre-match bet. A source with time-stamped prices backtests an in-play bet too. Free statistics with your own paid odds
 is the realistic setup.
 
@@ -240,7 +240,9 @@ X_fix, Y_fix, O_fix = dataloader.extract_fixtures_data()
 ```
 
 `extract_train_data` downloads the selected seasons. `extract_fixtures_data` downloads the current data the upcoming
-matches need. Each call downloads afresh, so the object carries the latest data, held as `stats_` and `odds_`.
+matches need. The first extraction downloads the snapshots and holds them as `stats_` and `odds_`. A later training
+or exploration extraction with the same `odds_type` reuses them and fetches nothing. A different `odds_type` loads
+them again.
 
 The dataloader reads the catalogue scoped to the selection. Three selected leagues read three indexes, and a paid feed
 prices only the matches you selected and those still to be played.
